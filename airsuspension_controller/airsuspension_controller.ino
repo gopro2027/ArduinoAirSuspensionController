@@ -368,19 +368,24 @@ void readPressures() {
 
 const int sensorreadDelay = 100; //constant integer to set the sensor read delay in milliseconds
 unsigned long lastPressureReadTime = 0;
+bool pause_exe = false;
 void loop() {
-  if (millis() - lastPressureReadTime > sensorreadDelay) {
-    readPressures();
-    lastPressureReadTime = millis();
+
+  bt_cmd();
+
+  if (pause_exe == false) {
+    if (millis() - lastPressureReadTime > sensorreadDelay) {
+      readPressures();
+      lastPressureReadTime = millis();
+    }
+
+    drawPSIReadings();
+
+    pressureGoalRoutine();
+
+    readButtonInput();
+  
   }
-
-  drawPSIReadings();
-
-  pressureGoalRoutine();
-
-  readButtonInput();
-
-  //add bluetooth controls
   
   delay(10);
 }
@@ -462,6 +467,52 @@ void drawairtekklogo(void) {
   delay(2000);//2 seconds
 }
 
+//https://www.seeedstudio.com/blog/2020/01/02/how-to-control-arduino-with-bluetooth-module-and-shields-to-get-started/
+#define PASSWORD "6352869660"
+String inString = "";
+void bt_cmd() {
+
+  //Get input as string
+  if (bt.available() && pause_exe == false) {
+    while (Serial.available() > 0) {
+      Serial.read();
+    }
+    delay(200);
+    bt.println("OKAY1234");
+    pause_exe = true;
+    return;
+  }
+  while (bt.available()) {
+    char c = bt.read();
+    if (c == '\n') {
+      runInput();//execute command
+      inString = "";
+      pause_exe = false;//unpause
+      continue;//just to skip writing out the original \n, could also be break but whatever
+    }
+    inString += c;
+  }
+  bt.read();
+}
+
+
+//print to COM
+void println(String str) {
+  Serial.println(str);
+}
+
+void runInput() {
+  //run input
+  if (inString.indexOf("ON") != -1) {
+    println("led on!");
+  }
+  if (inString.indexOf("OFF") != -1) {
+    println("led off!");
+  }
+  if (inString.indexOf(PASSWORD"DEFAULT") != -1) {
+
+  }
+}
 
 
 /*
