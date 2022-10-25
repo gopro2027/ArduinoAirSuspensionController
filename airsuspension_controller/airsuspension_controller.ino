@@ -37,11 +37,10 @@
  //solenoid rear (passenger) in to D8
  //solenoid rear (passenger) out to D9
 
-//unused yet
- //solenoid fd (driver) in to D10
- //solenoid fd (driver) out to D11
- //solenoid rd (driver) in to D12
- //solenoid rd (driver) out to D13
+ //solenoid front (driver) in to D10
+ //solenoid front (driver) out to D11
+ //solenoid rear (driver) in to D12
+ //solenoid rear (driver) out to D13
  
 
 #include <SPI.h>
@@ -51,7 +50,9 @@
 #include <EEPROM.h>
 
 #include <SoftwareSerial.h> // use the software uart
-SoftwareSerial bt(2, 3); // RX, TX
+
+#include "solenoid.h"
+#include "wheel.h"
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -66,27 +67,32 @@ SoftwareSerial bt(2, 3); // RX, TX
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
+#define WHEEL_FRONT_PASSENGER 0
+#define WHEEL_REAR_PASSENGER 1
+#define WHEEL_FRONT_DRIVER 2
+#define WHEEL_REAR_DRIVER 3
 
 
-const int pressureInputFront = A0; //select the analog input pin for the pressure transducer FRONT
-const int pressureInputRear = A1; //select the analog input pin for the pressure transducer REAR
-const int pressureInputTank = A2; //select the analog input pin for the pressure transducer TANK
-const float pressureZero = 102.4; //analog reading of pressure transducer at 0psi
-const float pressureMax = 921.6; //analog reading of pressure transducer at 100psi
-const int pressuretransducermaxPSI = 300; //psi value of transducer being used
-int sensorreadDelay = 100; //constant integer to set the sensor read delay in milliseconds
-float pressureValueFront = 0; //variable to store the value coming from the pressure transducer
-float pressureValueRear = 0; //variable to store the value coming from the pressure transducer
-float pressureValueTank = 0; //variable to store the value coming from the pressure transducer
-unsigned long lastPressureReadTime = 0;
-int maxPressureSafety = 150;
-const int solenoidFrontInPin = 6;
-const int solenoidFrontOutPin = 7;
-const int solenoidRearInPin = 8;
-const int solenoidRearOutPin = 9;
-
+//Digital pins
+SoftwareSerial bt(2, 3); // RX, TX
 const int buttonRisePin = 4;
 const int buttonFallPin = 5;
+const int solenoidFrontPassengerInPin = 6;
+const int solenoidFrontPassengerOutPin = 7;
+const int solenoidRearPassengerInPin = 8;
+const int solenoidRearPassengerOutPin = 9;
+const int solenoidFrontDriverInPin = 10;
+const int solenoidFrontDriverOutPin = 11;
+const int solenoidRearDriverInPin = 12;
+const int solenoidRearDriverOutPin = 13;
+
+//Analog pins
+const int pressureInputFrontPassenger = A0; //select the analog input pin for the pressure transducer FRONT
+const int pressureInputRearPassenger = A1; //select the analog input pin for the pressure transducer REAR
+const int pressureInputFrontDriver = A2; //select the analog input pin for the pressure transducer FRONT
+const int pressureInputRearDriver = A3; //select the analog input pin for the pressure transducer REAR
+//A4 and A5 are the screen
+const int pressureInputTank = A6; //select the analog input pin for the pressure transducer TANK
 
 
 //https://www.dcode.fr/binary-image
@@ -94,6 +100,10 @@ const int buttonFallPin = 5;
   //regex for website output to array:
   //([0-1][0-1][0-1][0-1][0-1][0-1][0-1][0-1])
   //0b$1, 
+
+
+
+
 
 
 static const unsigned char PROGMEM logo_bmp_corvette[] = 
@@ -195,76 +205,59 @@ static const unsigned char PROGMEM logo_bmp_airtekk[] =
 };
 
 
-int rideHeightFrontAddr = 0;
-int rideHeightRearAddr = 1;
-int riseOnStartAddr = 2;
+const int rideHeightFrontPassengerAddr = 0;
+const int rideHeightRearPassengerAddr = 1;
+const int rideHeightFrontDriverAddr = 2;
+const int rideHeightRearDriverAddr = 3;
+const int riseOnStartAddr = 4;
 
-void setRideHeightFront(byte value) {
-   EEPROM.write(rideHeightFrontAddr, value);
+void setRideHeightFrontPassenger(byte value) {
+   EEPROM.write(rideHeightFrontPassengerAddr, value);
 }
-void setRideHeightRear(byte value) {
-   EEPROM.write(rideHeightRearAddr, value);
+void setRideHeightRearPassenger(byte value) {
+   EEPROM.write(rideHeightRearPassengerAddr, value);
+}
+void setRideHeightFrontDriver(byte value) {
+   EEPROM.write(rideHeightFrontDriverAddr, value);
+}
+void setRideHeightRearDriver(byte value) {
+   EEPROM.write(rideHeightRearDriverAddr, value);
 }
 void setRiseOnStart(bool value) {
    EEPROM.write(riseOnStartAddr, value);
 }
-byte getRideHeightFront() {
-   return EEPROM.read(rideHeightFrontAddr);
+byte getRideHeightFrontPassenger() {
+   return EEPROM.read(rideHeightFrontPassengerAddr);
 }
-byte getRideHeightRear() {
-   return EEPROM.read(rideHeightRearAddr);
+byte getRideHeightRearPassenger() {
+   return EEPROM.read(rideHeightRearPassengerAddr);
+}
+byte getRideHeightFrontDriver() {
+   return EEPROM.read(rideHeightFrontDriverAddr);
+}
+byte getRideHeightRearDriver() {
+   return EEPROM.read(rideHeightRearDriverAddr);
 }
 bool getRiseOnStart() {
    return EEPROM.read(riseOnStartAddr);
 }
 
-bool frontAiringOut = false;
-bool frontAiringIn = false;
-bool rearAiringOut = false;
-bool rearAiringIn = false;
+
 int frontPressureGoal = 0;
 int rearPressureGoal = 0;
-void setSolenoidFrontIn(bool _open) {
-  frontAiringIn = _open;
-  if (_open) {
-    Serial.println("Starting front in");
-    digitalWrite(solenoidFrontInPin, HIGH);
-  } else {
-    Serial.println("Stopping front in");
-    digitalWrite(solenoidFrontInPin, LOW);
-  }
-  //true opens it
-}
-void setSolenoidFrontOut(bool _open) {
-  frontAiringOut = _open;
-  if (_open) {
-    digitalWrite(solenoidFrontOutPin, HIGH);
-  } else {
-    digitalWrite(solenoidFrontOutPin, LOW);
-  }
-}
-void setSolenoidRearIn(bool _open) {
-  rearAiringIn = _open;
-  if (_open) {
-    digitalWrite(solenoidRearInPin, HIGH);
-  } else {
-    digitalWrite(solenoidRearInPin, LOW);
-  }
-}
-void setSolenoidRearOut(bool _open) {
-  rearAiringOut = _open;
-  if (_open) {
-    digitalWrite(solenoidRearOutPin, HIGH);
-  } else {
-    digitalWrite(solenoidRearOutPin, LOW);
-  }
-}
+
 
 void setupSolenoidPins() {
-  pinMode(solenoidFrontInPin, OUTPUT);
-  pinMode(solenoidFrontOutPin, OUTPUT);
-  pinMode(solenoidRearInPin, OUTPUT);
-  pinMode(solenoidRearOutPin, OUTPUT);
+
+  pinMode(solenoidFrontPassengerInPin, OUTPUT);
+  pinMode(solenoidFrontPassengerOutPin, OUTPUT);
+  pinMode(solenoidRearPassengerInPin, OUTPUT);
+  pinMode(solenoidRearPassengerOutPin, OUTPUT);
+
+  pinMode(solenoidFrontDriverInPin, OUTPUT);
+  pinMode(solenoidFrontDriverOutPin, OUTPUT);
+  pinMode(solenoidRearDriverInPin, OUTPUT);
+  pinMode(solenoidRearDriverOutPin, OUTPUT);
 
   pinMode(buttonRisePin, INPUT);
   pinMode(buttonFallPin, INPUT);
@@ -273,131 +266,43 @@ void setupSolenoidPins() {
   //digitalWrite(13, HIGH);
 }
 
-int pressureDelta = 3;//Pressure will go to +- 3 psi to verify
-unsigned long routineTimeout = 10 * 1000;//10 seconds is too long
-
-unsigned long frontRoutineStartTime = 0;
-void initPressureGoalFront(int newPressure) {
-  int frontPressure = getFrontPressure();
-  int pressureDif = newPressure - frontPressure;//negative if airing out, positive if airing up
-  if (abs(pressureDif) <= pressureDelta) {
-    //literally do nothing, it's close enough already
-    return;
-  } else {
-    //okay we need to set the values
-    frontRoutineStartTime = millis();
-    frontPressureGoal = newPressure;
-    if (pressureDif < 0) {
-      Serial.println("Airing out front!");
-      setSolenoidFrontOut(true);//start airing out
-    } else {
-      if (getTankPressure() > newPressure) {
-        Serial.println("Airing in front!");
-        setSolenoidFrontIn(true);//start airing in
-      } else {
-        Serial.println("not enough tank pressure (front)!");
-        //don't even bother trying cuz there won't be enough pressure in the tank lol but i guess it won't hurt anything even if it did it just might act weird
-      }
-    }
-  }
-}
-
-unsigned long rearRoutineStartTime = 0;
-void initPressureGoalRear(int newPressure) {
-  int rearPressure = getRearPressure();
-  int pressureDif = newPressure - rearPressure;//negative if airing out, positive if airing up
-  if (abs(pressureDif) <= pressureDelta) {
-    //literally do nothing, it's close enough already
-    return;
-  } else {
-    //okay we need to set the values
-    rearRoutineStartTime = millis();
-    rearPressureGoal = newPressure;
-    if (pressureDif < 0) {
-      Serial.println("Airing out rear!");
-      setSolenoidRearOut(true);//start airing out
-    } else {
-      if (getTankPressure() > newPressure) {
-        Serial.println("Airing in front!");
-        setSolenoidRearIn(true);//start airing in
-      } else {
-        Serial.println("not enough tank pressure (front)!");
-        //don't even bother trying cuz there won't be enough pressure in the tank lol but i guess it won't hurt anything even if it did it just might act weird
-      }
-    }
-  }
-}
-
-void pressureGoalFrontRoutine() {
-  int frontPressure = getFrontPressure();
-  if (frontAiringIn) {
-    if (frontPressure > maxPressureSafety) {
-      setSolenoidFrontIn(false);
-    }
-    if (frontPressure >= frontPressureGoal) {
-      //stop
-      setSolenoidFrontIn(false);
-    } else {
-      if (millis() > frontRoutineStartTime + routineTimeout) {
-        setSolenoidFrontIn(false);
-      }
-    }
-  }
-  if (frontAiringOut) {
-    if (frontPressure <= frontPressureGoal) {
-      //stop
-      setSolenoidFrontOut(false);
-    } else {
-      if (millis() > frontRoutineStartTime + routineTimeout) {
-        setSolenoidFrontOut(false);
-      }
-    }
-  }
-}
-
-void pressureGoalRearRoutine() {
-  int rearPressure = getRearPressure();
-  if (rearAiringIn) {
-    if (rearPressure > maxPressureSafety) {
-      setSolenoidRearIn(false);
-    }
-    if (rearPressure >= rearPressureGoal) {
-      //stop
-      setSolenoidRearIn(false);
-    } else {
-      if (millis() > rearRoutineStartTime + routineTimeout) {
-        setSolenoidRearIn(false);
-      }
-    }
-  }
-  if (rearAiringOut) {
-    if (rearPressure <= rearPressureGoal) {
-      //stop
-      setSolenoidRearOut(false);
-    } else {
-      if (millis() > rearRoutineStartTime + routineTimeout) {
-        setSolenoidRearOut(false);
-      }
-    }
-  }
-}
 
 void pressureGoalRoutine() {
-  if (frontAiringIn || frontAiringOut || rearAiringIn || rearAiringOut) {
+  bool active = false;
+  for (int i = 0; i < 4; i++) {
+    if (getWheel(i).isActive()) {
+      active = true;
+    }
+  }
+  if (active) {
     readPressures();
   }
-  pressureGoalFrontRoutine();
-  pressureGoalRearRoutine();
+  for (int i = 0; i < 4; i++) {
+    getWheel(i).pressureGoalRoutine();
+  }
 }
 
 void airUp() {
-  initPressureGoalFront(getRideHeightFront());
-  initPressureGoalRear(getRideHeightRear());
+  
+  getWheel(WHEEL_FRONT_PASSENGER).initPressureGoal(getRideHeightFrontPassenger());
+  getWheel(WHEEL_REAR_PASSENGER).initPressureGoal(getRideHeightRearPassenger());
+  getWheel(WHEEL_FRONT_DRIVER).initPressureGoal(getRideHeightFrontDriver());
+  getWheel(WHEEL_REAR_DRIVER).initPressureGoal(getRideHeightRearDriver());
+  
 }
 
 void airOut() {
-  initPressureGoalFront(10);
-  initPressureGoalRear(10);
+
+  getWheel(WHEEL_FRONT_PASSENGER).initPressureGoal(10);
+  getWheel(WHEEL_REAR_PASSENGER).initPressureGoal(10);
+  getWheel(WHEEL_FRONT_DRIVER).initPressureGoal(10);
+  getWheel(WHEEL_REAR_DRIVER).initPressureGoal(10);
+  
+}
+
+Wheel wheel[4];
+Wheel getWheel(int i) {
+  return wheel[i];
 }
 
 void setup() {
@@ -407,8 +312,10 @@ void setup() {
   delay(200); // wait for voltage stabilize
 
   if (TEST_MODE) {
-    setRideHeightFront(90);
-    setRideHeightRear(100);
+    setRideHeightFrontPassenger(90);
+    setRideHeightRearPassenger(100);
+    setRideHeightFrontDriver(90);
+    setRideHeightRearDriver(100);
     setRiseOnStart(false);
     bt.print("AT+NAMEvaair"); // place your name in here to configure the bluetooth name.
                                        // will require reboot for settings to take affect. 
@@ -424,6 +331,12 @@ void setup() {
   }
   
   delay(20);
+
+  wheel[WHEEL_FRONT_PASSENGER] = Wheel(solenoidFrontPassengerInPin, solenoidFrontPassengerOutPin, pressureInputFrontPassenger);
+  wheel[WHEEL_REAR_PASSENGER] = Wheel(solenoidRearPassengerInPin, solenoidRearPassengerOutPin, pressureInputRearPassenger);
+  wheel[WHEEL_FRONT_DRIVER] = Wheel(solenoidFrontDriverInPin, solenoidFrontDriverOutPin, pressureInputFrontDriver);
+  wheel[WHEEL_REAR_DRIVER] = Wheel(solenoidRearDriverInPin, solenoidRearDriverOutPin, pressureInputRearDriver);
+
   readPressures();
 
   drawairtekklogo();
@@ -434,35 +347,27 @@ void setup() {
   //testdrawchar();
   //testdrawstyles();
   //testscrolltext();
-  initPressureGoalFront(100);
+  //initPressureGoalFront(100);
 }
 
-float readPressure(int pin) {
-  return float((float(analogRead(pin))-pressureZero)*pressuretransducermaxPSI)/(pressureMax-pressureZero); //conversion equation to convert analog reading to psi
-}
-
+float pressureValueTank = 0;
 int getTankPressure() {
   if (TEST_MODE)
     return 999;
   return pressureValueTank;
 }
-int getFrontPressure() {
-  if (TEST_MODE)
-    return 50;
-  return pressureValueFront;
-}
-int getRearPressure() {
-  if (TEST_MODE)
-    return 50;
-  return pressureValueRear;
-}
 
+float readPinPressure(int pin);
 void readPressures() {
-  pressureValueFront = readPressure(pressureInputFront);
-  pressureValueRear = readPressure(pressureInputRear);
-  pressureValueTank = readPressure(pressureInputTank);
+  pressureValueTank = readPinPressure(pressureInputTank);
+  for (int i = 0; i < 4; i++) {
+    getWheel(i).readPressure();
+  }
 }
 
+
+const int sensorreadDelay = 100; //constant integer to set the sensor read delay in milliseconds
+unsigned long lastPressureReadTime = 0;
 void loop() {
   if (millis() - lastPressureReadTime > sensorreadDelay) {
     readPressures();
@@ -474,10 +379,10 @@ void loop() {
   pressureGoalRoutine();
 
   readButtonInput();
+
+  //add bluetooth controls
   
   delay(10);
-
-  
 }
 
 unsigned long lastButtonReadTime = 0;
@@ -501,28 +406,44 @@ void drawPSIReadings() {
   display.setTextColor(SSD1306_WHITE);
 
   int textHeightPx = 10;
+  int secondRowXPos = SCREEN_WIDTH/2;
 
-  display.setCursor(0,2*textHeightPx);
+  /*display.setCursor(0,2*textHeightPx);
   display.print(F("Front"));
 
-  int secondRowXPos = SCREEN_WIDTH/2;
   display.setCursor(secondRowXPos,2*textHeightPx);
-  display.print(F("Rear"));
-
+  display.print(F("Rear"));*/
 
   display.setCursor(0,5*textHeightPx+5);
   display.print(F("Tank: "));
   display.print(int(getTankPressure()));
-  
 
-  display.setTextSize(3);
+//Front
+  display.setCursor(0,3*textHeightPx+5);
+  display.print(F("FD: "));
+  display.print(int(wheel[WHEEL_FRONT_DRIVER].getPressure()));//front driver
+
+  display.setCursor(secondRowXPos,3*textHeightPx+5);
+  display.print(F("FP: "));
+  display.print(int(wheel[WHEEL_FRONT_PASSENGER].getPressure()));//front passenger
+
+//Rear
+  display.setCursor(0,4*textHeightPx+5);
+  display.print(F("RD: "));
+  display.print(int(wheel[WHEEL_REAR_DRIVER].getPressure()));//rear driver
+
+  display.setCursor(secondRowXPos,4*textHeightPx+5);
+  display.print(F("RP: "));
+  display.print(int(wheel[WHEEL_REAR_PASSENGER].getPressure()));//rear passenger
+
+  /*display.setTextSize(3);
   display.setTextColor(SSD1306_WHITE);
   
   display.setCursor(0,3*textHeightPx);
   display.print(int(getFrontPressure()));
 
   display.setCursor(secondRowXPos,3*textHeightPx);
-  display.print(int(getRearPressure()));
+  display.print(int(getRearPressure()));*/
 
   display.display();
 }

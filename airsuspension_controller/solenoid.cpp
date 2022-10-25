@@ -1,13 +1,8 @@
-class Solenoid {
-private:
-  int pin;
-  boolean bopen;
-public:
-  Solenoid(int pin);
-  void open();
-  void close();
-  boolean isOpen();
-};
+#include "solenoid.h"
+#include <Wire.h>
+#include <SPI.h>
+
+Solenoid::Solenoid() {}
 
 Solenoid::Solenoid(int pin) {
   pinMode(pin, OUTPUT);
@@ -22,6 +17,6 @@ void Solenoid::close() {
   digitalWrite(this->pin, LOW);
   this->bopen = false;
 }
-boolean Solenoid::isOpen() {
+bool Solenoid::isOpen() {
   return this->bopen;
 }
