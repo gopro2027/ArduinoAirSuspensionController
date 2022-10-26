@@ -348,6 +348,10 @@ void setup() {
   //testdrawstyles();
   //testscrolltext();
   //initPressureGoalFront(100);
+
+  if (getRiseOnStart() == true) {
+    airUp();
+  }
 }
 
 float pressureValueTank = 0;
@@ -509,8 +513,35 @@ void runInput() {
   if (inString.indexOf("OFF") != -1) {
     println("led off!");
   }
-  if (inString.indexOf(PASSWORD"DEFAULT") != -1) {
-
+  if (inString.indexOf(PASSWORD"AIRUP") != -1) {
+    airUp();
+  }
+  if (inString.indexOf(PASSWORD"AIROUT") != -1) {
+    airOut();
+  }
+  if (inString.indexOf(PASSWORD"AIRHEIGHTA") != -1) {
+    unsigned long height = inString.substring(inString.indexOf(PASSWORD"AIRHEIGHTA") + strlen(PASSWORD"AIRHEIGHTA")).toInt();
+    setRideHeightFrontPassenger(height);
+  }
+  if (inString.indexOf(PASSWORD"AIRHEIGHTB") != -1) {
+    unsigned long height = inString.substring(inString.indexOf(PASSWORD"AIRHEIGHTB") + strlen(PASSWORD"AIRHEIGHTB")).toInt();
+    setRideHeightRearPassenger(height);
+  }
+  if (inString.indexOf(PASSWORD"AIRHEIGHTC") != -1) {
+    unsigned long height = inString.substring(inString.indexOf(PASSWORD"AIRHEIGHTC") + strlen(PASSWORD"AIRHEIGHTC")).toInt();
+    setRideHeightFrontDriver(height);
+  }
+  if (inString.indexOf(PASSWORD"AIRHEIGHTD") != -1) {
+    unsigned long height = inString.substring(inString.indexOf(PASSWORD"AIRHEIGHTD") + strlen(PASSWORD"AIRHEIGHTD")).toInt();
+    setRideHeightRearDriver(height);
+  }
+  if (inString.indexOf(PASSWORD"RISEONSTART") != -1) {
+    unsigned long ros = inString.substring(inString.indexOf(PASSWORD"RISEONSTART") + strlen(PASSWORD"RISEONSTART")).toInt();
+    if (ros == 0) {
+      setRiseOnStart(false);
+    } else {
+      setRiseOnStart(true);
+    }
   }
 }
 
