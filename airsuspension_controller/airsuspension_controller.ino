@@ -204,7 +204,6 @@ static const unsigned char PROGMEM logo_bmp_airtekk[] =
 
 };
 
-
 const int rideHeightFrontPassengerAddr = 0;
 const int rideHeightRearPassengerAddr = 1;
 const int rideHeightFrontDriverAddr = 2;
@@ -305,6 +304,7 @@ Wheel getWheel(int i) {
   return wheel[i];
 }
 
+
 void setup() {
   Serial.begin(9600);
 
@@ -317,13 +317,12 @@ void setup() {
     setRideHeightFrontDriver(90);
     setRideHeightRearDriver(100);
     setRiseOnStart(false);
-    bt.print("AT+NAMEvaair"); // place your name in here to configure the bluetooth name.
+    bt.print(F("AT+NAMEvaair")); // place your name in here to configure the bluetooth name.
                                        // will require reboot for settings to take affect. 
     delay(3000); // wait for settings to take affect. 
   }
 
   setupSolenoidPins();
-
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
@@ -341,6 +340,8 @@ void setup() {
 
   drawairtekklogo();
 
+  
+
   // Show initial display buffer contents on the screen --
   // the library initializes this with an Adafruit splash screen.
 
@@ -349,10 +350,11 @@ void setup() {
   //testscrolltext();
   //initPressureGoalFront(100);
 
-  if (getRiseOnStart() == true) {
-    airUp();
-  }
+  //if (getRiseOnStart() == true) {
+  //  airUp();
+  //}
 }
+
 
 float pressureValueTank = 0;
 int getTankPressure() {
@@ -369,20 +371,16 @@ void readPressures() {
   }
 }
 
-
 const int sensorreadDelay = 100; //constant integer to set the sensor read delay in milliseconds
 unsigned long lastPressureReadTime = 0;
 bool pause_exe = false;
 void loop() {
-
   bt_cmd();
-
   if (pause_exe == false) {
     if (millis() - lastPressureReadTime > sensorreadDelay) {
       readPressures();
       lastPressureReadTime = millis();
     }
-
     drawPSIReadings();
 
     pressureGoalRoutine();
@@ -393,7 +391,6 @@ void loop() {
   
   delay(10);
 }
-
 unsigned long lastButtonReadTime = 0;
 void readButtonInput() {
   if (digitalRead(buttonRisePin) == HIGH && millis() > (lastButtonReadTime + 3000)) {
@@ -428,20 +425,21 @@ void drawPSIReadings() {
   display.print(int(getTankPressure()));
 
 //Front
-  display.setCursor(0,3*textHeightPx+5);
+  
+  display.setCursor(0,2*textHeightPx+5);
   display.print(F("FD: "));
   display.print(int(wheel[WHEEL_FRONT_DRIVER].getPressure()));//front driver
 
-  display.setCursor(secondRowXPos,3*textHeightPx+5);
+  display.setCursor(secondRowXPos,2*textHeightPx+5);
   display.print(F("FP: "));
   display.print(int(wheel[WHEEL_FRONT_PASSENGER].getPressure()));//front passenger
 
 //Rear
-  display.setCursor(0,4*textHeightPx+5);
+  display.setCursor(0,3.5*textHeightPx+5);
   display.print(F("RD: "));
   display.print(int(wheel[WHEEL_REAR_DRIVER].getPressure()));//rear driver
 
-  display.setCursor(secondRowXPos,4*textHeightPx+5);
+  display.setCursor(secondRowXPos,3.5*textHeightPx+5);
   display.print(F("RP: "));
   display.print(int(wheel[WHEEL_REAR_PASSENGER].getPressure()));//rear passenger
 
@@ -482,7 +480,7 @@ void bt_cmd() {
       Serial.read();
     }
     delay(200);
-    bt.println("OKAY1234");
+    bt.println(F("OKAY1234"));
     pause_exe = true;
     return;
   }
@@ -505,38 +503,48 @@ void println(String str) {
   Serial.println(str);
 }
 
+int trailingInt(String str) {
+  return inString.substring(inString.indexOf(str) + str.length()).toInt();
+}
+
 void runInput() {
   //run input
-  if (inString.indexOf("ON") != -1) {
-    println("led on!");
+  String str = "";
+  if (inString.indexOf(F("ON")) != -1) {
+    println(F("led on!"));
   }
-  if (inString.indexOf("OFF") != -1) {
-    println("led off!");
+  if (inString.indexOf(F("OFF")) != -1) {
+    println(F("led off!"));
   }
-  if (inString.indexOf(PASSWORD"AIRUP") != -1) {
+  if (inString.indexOf(F(PASSWORD"AIRUP")) != -1) {
     airUp();
   }
-  if (inString.indexOf(PASSWORD"AIROUT") != -1) {
+  if (inString.indexOf(F(PASSWORD"AIROUT")) != -1) {
     airOut();
   }
-  if (inString.indexOf(PASSWORD"AIRHEIGHTA") != -1) {
-    unsigned long height = inString.substring(inString.indexOf(PASSWORD"AIRHEIGHTA") + strlen(PASSWORD"AIRHEIGHTA")).toInt();
+  str = F(PASSWORD"AIRHEIGHTA");
+  if (inString.indexOf(str) != -1) {
+    unsigned long height = trailingInt(str);//inString.substring(inString.indexOf(F((PASSWORD"AIRHEIGHTA"))) + strlen(F((PASSWORD"AIRHEIGHTA")))).toInt();
     setRideHeightFrontPassenger(height);
   }
-  if (inString.indexOf(PASSWORD"AIRHEIGHTB") != -1) {
-    unsigned long height = inString.substring(inString.indexOf(PASSWORD"AIRHEIGHTB") + strlen(PASSWORD"AIRHEIGHTB")).toInt();
+  str = F(PASSWORD"AIRHEIGHTB");
+  if (inString.indexOf(str) != -1) {
+    unsigned long height = trailingInt(str);//inString.substring(inString.indexOf(F(PASSWORD"AIRHEIGHTB")) + strlen(F(PASSWORD"AIRHEIGHTB"))).toInt();
     setRideHeightRearPassenger(height);
   }
-  if (inString.indexOf(PASSWORD"AIRHEIGHTC") != -1) {
-    unsigned long height = inString.substring(inString.indexOf(PASSWORD"AIRHEIGHTC") + strlen(PASSWORD"AIRHEIGHTC")).toInt();
+  str = F(PASSWORD"AIRHEIGHTC");
+  if (inString.indexOf(str) != -1) {
+    unsigned long height = trailingInt(str);//inString.substring(inString.indexOf(F(PASSWORD"AIRHEIGHTC")) + strlen(F(PASSWORD"AIRHEIGHTC"))).toInt();
     setRideHeightFrontDriver(height);
   }
-  if (inString.indexOf(PASSWORD"AIRHEIGHTD") != -1) {
-    unsigned long height = inString.substring(inString.indexOf(PASSWORD"AIRHEIGHTD") + strlen(PASSWORD"AIRHEIGHTD")).toInt();
+  str = F(PASSWORD"AIRHEIGHTD");
+  if (inString.indexOf(str) != -1) {
+    unsigned long height = trailingInt(str);//inString.substring(inString.indexOf(F(PASSWORD"AIRHEIGHTD")) + strlen(F(PASSWORD"AIRHEIGHTD"))).toInt();
     setRideHeightRearDriver(height);
   }
-  if (inString.indexOf(PASSWORD"RISEONSTART") != -1) {
-    unsigned long ros = inString.substring(inString.indexOf(PASSWORD"RISEONSTART") + strlen(PASSWORD"RISEONSTART")).toInt();
+  str = F(PASSWORD"RISEONSTART");
+  if (inString.indexOf(str) != -1) {
+    unsigned long ros = trailingInt(str);//inString.substring(inString.indexOf(F(PASSWORD"RISEONSTART")) + strlen(F(PASSWORD"RISEONSTART"))).toInt();
     if (ros == 0) {
       setRiseOnStart(false);
     } else {
