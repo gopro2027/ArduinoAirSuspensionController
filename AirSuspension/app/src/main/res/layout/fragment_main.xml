@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".MainFragment">
+
+    <Button
+        android:id="@+id/button_airup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/airup" />
+
+    <Button
+        android:id="@+id/button_airout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/airout" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/button_setfrontpressure"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:text="@string/setfrontpressure" />
+
+        <EditText
+            android:id="@+id/edittext_setfrontpressure"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:inputType="number"
+            android:maxLength="3" />
+
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/button_setrearpressure"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:text="@string/setrearpressure" />
+
+        <EditText
+            android:id="@+id/edittext_setrearpressure"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:inputType="number"
+            android:maxLength="3" />
+
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="RX:"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/read_buffer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.9"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="&lt;Read Buffer>" />
+    </LinearLayout>
+
+
+</LinearLayout>
