@@ -74,7 +74,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 
 //Digital pins
-SoftwareSerial bt(2, 3); // RX, TX
+SoftwareSerial bt(3, 2); // RX, TX
 const int buttonRisePin = 4;
 const int buttonFallPin = 5;
 const int solenoidFrontPassengerInPin = 6;
@@ -311,15 +311,17 @@ void setup() {
   bt.begin(9600); // start the bluetooth uart at 9600 which is its default
   delay(200); // wait for voltage stabilize
 
+  Serial.println("Startup!");
+
   if (TEST_MODE) {
-    setRideHeightFrontPassenger(90);
-    setRideHeightRearPassenger(100);
-    setRideHeightFrontDriver(90);
-    setRideHeightRearDriver(100);
-    setRiseOnStart(false);
-    bt.print(F("AT+NAMEvaair")); // place your name in here to configure the bluetooth name.
+    //setRideHeightFrontPassenger(90);
+    //setRideHeightRearPassenger(100);
+    //setRideHeightFrontDriver(90);
+    //setRideHeightRearDriver(100);
+    //setRiseOnStart(false);
+    //bt.print(F("AT+NAMEvaair")); // place your name in here to configure the bluetooth name.
                                        // will require reboot for settings to take affect. 
-    delay(3000); // wait for settings to take affect. 
+    //delay(3000); // wait for settings to take affect. 
   }
 
   setupSolenoidPins();
@@ -469,10 +471,30 @@ void drawairtekklogo(void) {
   delay(2000);//2 seconds
 }
 
+#define PASSWORD     "35264978"
+#define PASSWORDSEND "56347893"
+void sendHeartbeat() {
+  bt.print(F(PASSWORDSEND));
+  bt.print(int(wheel[WHEEL_FRONT_PASSENGER].getPressure()));
+  bt.print(F(":"));
+  bt.print(int(wheel[WHEEL_REAR_PASSENGER].getPressure()));
+  bt.print(F(":"));
+  bt.print(int(wheel[WHEEL_FRONT_DRIVER].getPressure()));
+  bt.print(F(":"));
+  bt.print(int(wheel[WHEEL_REAR_DRIVER].getPressure()));
+  bt.print(F("\n"));
+  //Serial.println(int(wheel[WHEEL_REAR_DRIVER].getPressure()));
+}
+
 //https://www.seeedstudio.com/blog/2020/01/02/how-to-control-arduino-with-bluetooth-module-and-shields-to-get-started/
-#define PASSWORD "6352869660"
+
 String inString = "";
+unsigned long lastHeartbeat = 0;
 void bt_cmd() {
+  if (millis() - lastHeartbeat > 500) {
+    sendHeartbeat();
+    lastHeartbeat = millis();
+  } else {
 
   //Get input as string
   if (bt.available() && pause_exe == false) {
@@ -486,6 +508,7 @@ void bt_cmd() {
   }
   while (bt.available()) {
     char c = bt.read();
+    Serial.print(c);
     if (c == '\n') {
       runInput();//execute command
       inString = "";
@@ -495,6 +518,8 @@ void bt_cmd() {
     inString += c;
   }
   bt.read();
+
+  }
 }
 
 
