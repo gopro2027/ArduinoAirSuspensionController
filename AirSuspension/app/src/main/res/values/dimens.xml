@@ -1,5 +1,7 @@
 <resources>
     <dimen name="fab_margin">16dp</dimen>
+    <dimen name="vette_pressure_size">50dp</dimen>
+    <dimen name="vette_pressure_size_w">10dp</dimen>
 
     <!--
 Refer to App Widget Documentation for margin information

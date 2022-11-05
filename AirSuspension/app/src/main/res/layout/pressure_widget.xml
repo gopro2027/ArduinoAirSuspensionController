@@ -1,0 +1,62 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Widget.AirSuspension.AppWidget.Container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:theme="@style/Theme.AirSuspension.AppWidgetContainer">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/pressure_fd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentTop="true"
+            android:text="199"
+            android:textSize="@dimen/vette_pressure_size_w" />
+
+        <TextView
+            android:id="@+id/pressure_fp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentRight="true"
+            android:text="199"
+            android:textSize="@dimen/vette_pressure_size_w" />
+
+        <TextView
+            android:id="@+id/pressure_rd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentBottom="true"
+            android:text="199"
+            android:textSize="@dimen/vette_pressure_size_w" />
+
+        <TextView
+            android:id="@+id/pressure_rp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentBottom="true"
+            android:text="199"
+            android:textSize="@dimen/vette_pressure_size_w" />
+
+        <TextView
+            android:id="@+id/pressure_tank"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:paddingTop="@dimen/vette_pressure_size_w"
+            android:paddingBottom="@dimen/vette_pressure_size_w"
+            android:text="199"
+            android:textSize="@dimen/vette_pressure_size_w" />
+
+
+    </RelativeLayout>
+</LinearLayout>

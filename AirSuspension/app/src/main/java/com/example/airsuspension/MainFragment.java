@@ -68,6 +68,34 @@ public class MainFragment extends Fragment {
                 }
             }
         });
+
+
+        binding.buttonTestsol.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                try {
+                    getAirSuspensionController().testSolenoid(Integer.parseInt(binding.edittextTestsol.getText().toString()));
+                } catch (Exception e) {
+                    getAirSuspensionController().toast("Please input a valid number!");
+                }
+            }
+        });
+
+        binding.buttonSetriseonstartenabled.setOnClickListener(v -> {
+            getAirSuspensionController().setRiseOnStart(true);
+        });
+
+        binding.buttonSetriseonstartdisabled.setOnClickListener(v -> {
+            getAirSuspensionController().setRiseOnStart(false);
+        });
+
+        getAirSuspensionController().setUpdatePressure((fp, rp,  fd,  rd,  tank) -> {
+            binding.pressureFp.setText(fp);
+            binding.pressureRp.setText(rp);
+            binding.pressureFd.setText(fd);
+            binding.pressureRd.setText(rd);
+            binding.pressureTank.setText(tank);
+        });
     }
 
     @Override

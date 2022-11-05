@@ -2,10 +2,12 @@ package com.example.airsuspension;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.appwidget.AppWidgetManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -15,6 +17,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.widget.ArrayAdapter;
+import android.widget.RemoteViews;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -52,13 +55,20 @@ public class AirSuspensionController {
 
     private long heartbeat = 0;
 
-    private TextView mReadBuffer;
+    public TextView mReadBuffer;
 
-    AppCompatActivity activity;
+    MainActivity activity;
 
-    AirSuspensionController(AppCompatActivity activity) {
+    interface UpdatePressure {
+        void updatePressure(String fp, String rp, String fd, String rd, String tank);
+    }
 
-        mReadBuffer = (TextView) activity.findViewById(R.id.read_buffer);
+    private UpdatePressure updatePressure;
+    public void setUpdatePressure(UpdatePressure updatePressure) {
+        this.updatePressure = updatePressure;
+    }
+
+    AirSuspensionController(MainActivity activity) {
 
         // Ask for location permission if not already allowed
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
@@ -75,11 +85,50 @@ public class AirSuspensionController {
             @Override
             public void handleMessage(Message msg) {
                 if (msg.what == MESSAGE_READ) {
-                    String readMessage = null;
-                    readMessage = new String((byte[]) msg.obj, StandardCharsets.UTF_8).substring(0, msg.arg1);
-                    mReadBuffer.setText(readMessage);
-                    Log.i("Received",readMessage);
-                    heartbeat = System.currentTimeMillis();
+                    String readMessage = new String((byte[]) msg.obj, StandardCharsets.UTF_8).substring(0, msg.arg1 - 1);//-1 bc all messages are terminated by a \n
+
+                    String recv_password = "56347893";
+
+                    if (readMessage.startsWith(recv_password)) {
+
+                        readMessage = readMessage.substring(recv_password.length());
+
+                        if (mReadBuffer != null) {
+                            mReadBuffer.setText(readMessage);
+                        }
+
+                        Log.i("Received", readMessage);
+                        heartbeat = System.currentTimeMillis();
+
+                        String[] arr = readMessage.split(":");
+                        if (arr.length == 5) {
+
+                            String fp = arr[0];
+                            String rp = arr[1];
+                            String fd = arr[2];
+                            String rd = arr[3];
+                            String tank = arr[4];
+
+                            try {
+
+                                AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(activity);
+                                RemoteViews remoteViews = new RemoteViews(((Context) activity).getPackageName(), R.layout.pressure_widget);
+                                ComponentName thisWidget = new ComponentName(activity, PressureWidget.class);
+                                remoteViews.setTextViewText(R.id.pressure_fp, fp);
+                                remoteViews.setTextViewText(R.id.pressure_rp, rp);
+                                remoteViews.setTextViewText(R.id.pressure_fd, fd);
+                                remoteViews.setTextViewText(R.id.pressure_rd, rd);
+                                remoteViews.setTextViewText(R.id.pressure_tank, tank);
+
+                                if (updatePressure != null)
+                                    updatePressure.updatePressure(fp,rp,fd,rd,tank);
+
+                                appWidgetManager.updateAppWidget(thisWidget, remoteViews);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
                 }
 
                 if (msg.what == CONNECTING_STATUS) {
@@ -134,6 +183,18 @@ public class AirSuspensionController {
         if (mConnectedThread != null) { //First check to make sure thread created
             mConnectedThread.write("RISEONSTART"+(riseOnStart ? "1" : "0")+"\n");
             toast("Set rise on start");
+        }
+    }
+
+    public void testSolenoid(int pinNum) {
+        bluetoothOn();
+        if (mConnectedThread != null) { //First check to make sure thread created
+            if (pinNum >= 6 && pinNum <= 13) {
+                mConnectedThread.write("TESTSOL" + pinNum + "\n");
+                toast("Tested solenoid on pin " + pinNum);
+            } else {
+                toast("Please use a pin between 6 and 13");
+            }
         }
     }
 

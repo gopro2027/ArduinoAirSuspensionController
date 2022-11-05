@@ -1,15 +1,11 @@
 package com.example.airsuspension;
 
-import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.Fragment;
-
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.util.Log;
 import android.view.View;
 
 import androidx.navigation.NavController;
@@ -26,7 +22,7 @@ import android.view.MenuItem;
 public class MainActivity extends AppCompatActivity {
 
     private AppBarConfiguration appBarConfiguration;
-    private ActivityMainBinding binding;
+    public ActivityMainBinding binding;
     private AirSuspensionController airSuspensionController;
 
     @Override
@@ -38,26 +34,16 @@ public class MainActivity extends AppCompatActivity {
 
         new PermissionHelper(this);
 
-        airSuspensionController  = new AirSuspensionController(this);
-
         setSupportActionBar(binding.toolbar);
 
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
         appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
-
-        binding.fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                NavDestination destination = navController.getCurrentDestination();
-                if (destination.getId() != R.id.BluetoothFragment) {
-                    navController.navigate(R.id.action_to_BluetoothFragment);
-                }
-            }
-        });
     }
 
     AirSuspensionController getAirSuspensionController() {
+        if (airSuspensionController == null)
+            airSuspensionController  = new AirSuspensionController(this);
         return airSuspensionController;
     }
 
@@ -76,8 +62,12 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        if (id == R.id.action_bluetooth) {
+            NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+            NavDestination destination = navController.getCurrentDestination();
+            if (destination.getId() != R.id.BluetoothFragment) {
+                navController.navigate(R.id.action_to_BluetoothFragment);
+            }
         }
 
         return super.onOptionsItemSelected(item);
@@ -93,6 +83,6 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("MissingSuperCall")
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent Data){
-        airSuspensionController.onActivityResult(requestCode,resultCode,Data);
+        getAirSuspensionController().onActivityResult(requestCode,resultCode,Data);
     }
 }

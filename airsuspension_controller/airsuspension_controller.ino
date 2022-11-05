@@ -360,8 +360,8 @@ void setup() {
 
 float pressureValueTank = 0;
 int getTankPressure() {
-  if (TEST_MODE)
-    return 999;
+  //if (TEST_MODE)
+  //  return 999;
   return pressureValueTank;
 }
 
@@ -482,6 +482,8 @@ void sendHeartbeat() {
   bt.print(int(wheel[WHEEL_FRONT_DRIVER].getPressure()));
   bt.print(F(":"));
   bt.print(int(wheel[WHEEL_REAR_DRIVER].getPressure()));
+  bt.print(F(":"));
+  bt.print(int(getTankPressure()));
   bt.print(F("\n"));
   //Serial.println(int(wheel[WHEEL_REAR_DRIVER].getPressure()));
 }
@@ -502,7 +504,7 @@ void bt_cmd() {
       Serial.read();
     }
     delay(200);
-    bt.println(F("OKAY1234"));
+    //bt.println(F("OKAY1234"));
     pause_exe = true;
     return;
   }
@@ -535,37 +537,37 @@ int trailingInt(String str) {
 void runInput() {
   //run input
   String str = "";
-  if (inString.indexOf(F("ON")) != -1) {
-    println(F("led on!"));
-  }
-  if (inString.indexOf(F("OFF")) != -1) {
-    println(F("led off!"));
-  }
   if (inString.indexOf(F(PASSWORD"AIRUP")) != -1) {
     airUp();
+    return;
   }
   if (inString.indexOf(F(PASSWORD"AIROUT")) != -1) {
     airOut();
+    return;
   }
   str = F(PASSWORD"AIRHEIGHTA");
   if (inString.indexOf(str) != -1) {
     unsigned long height = trailingInt(str);//inString.substring(inString.indexOf(F((PASSWORD"AIRHEIGHTA"))) + strlen(F((PASSWORD"AIRHEIGHTA")))).toInt();
     setRideHeightFrontPassenger(height);
+    return;
   }
   str = F(PASSWORD"AIRHEIGHTB");
   if (inString.indexOf(str) != -1) {
     unsigned long height = trailingInt(str);//inString.substring(inString.indexOf(F(PASSWORD"AIRHEIGHTB")) + strlen(F(PASSWORD"AIRHEIGHTB"))).toInt();
     setRideHeightRearPassenger(height);
+    return;
   }
   str = F(PASSWORD"AIRHEIGHTC");
   if (inString.indexOf(str) != -1) {
     unsigned long height = trailingInt(str);//inString.substring(inString.indexOf(F(PASSWORD"AIRHEIGHTC")) + strlen(F(PASSWORD"AIRHEIGHTC"))).toInt();
     setRideHeightFrontDriver(height);
+    return;
   }
   str = F(PASSWORD"AIRHEIGHTD");
   if (inString.indexOf(str) != -1) {
     unsigned long height = trailingInt(str);//inString.substring(inString.indexOf(F(PASSWORD"AIRHEIGHTD")) + strlen(F(PASSWORD"AIRHEIGHTD"))).toInt();
     setRideHeightRearDriver(height);
+    return;
   }
   str = F(PASSWORD"RISEONSTART");
   if (inString.indexOf(str) != -1) {
@@ -575,6 +577,19 @@ void runInput() {
     } else {
       setRiseOnStart(true);
     }
+    return;
+  }
+  if (TEST_MODE) {
+  str = F(PASSWORD"TESTSOL");
+  if (inString.indexOf(str) != -1) {
+    unsigned long pin = trailingInt(str);//inString.substring(inString.indexOf(F(PASSWORD"RISEONSTART")) + strlen(F(PASSWORD"RISEONSTART"))).toInt();
+    if (pin >= 6 && pin <= 13) {
+      digitalWrite(pin, HIGH);
+      delay(100);//sleep 100ms
+      digitalWrite(pin, LOW);
+    }
+    return;
+  }
   }
 }
 

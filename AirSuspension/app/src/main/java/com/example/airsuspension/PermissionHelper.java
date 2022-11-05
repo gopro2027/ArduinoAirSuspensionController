@@ -38,7 +38,7 @@ public class PermissionHelper {
             ActivityCompat.requestPermissions(mainActivity, new String[] { permission }, requestCode);
         }
         else {
-            Toast.makeText(mainActivity, "Permission already granted", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(mainActivity, "Permission already granted", Toast.LENGTH_SHORT).show();
         }
     }
 
