@@ -211,18 +211,23 @@ const int rideHeightRearDriverAddr = 3;
 const int riseOnStartAddr = 4;
 
 void setRideHeightFrontPassenger(byte value) {
+  if (getRideHeightFrontPassenger() != value && value <= MAX_PRESSURE_SAFETY)
    EEPROM.write(rideHeightFrontPassengerAddr, value);
 }
 void setRideHeightRearPassenger(byte value) {
+  if (getRideHeightRearPassenger() != value && value <= MAX_PRESSURE_SAFETY)
    EEPROM.write(rideHeightRearPassengerAddr, value);
 }
 void setRideHeightFrontDriver(byte value) {
+  if (getRideHeightFrontDriver() != value && value <= MAX_PRESSURE_SAFETY)
    EEPROM.write(rideHeightFrontDriverAddr, value);
 }
 void setRideHeightRearDriver(byte value) {
+  if (getRideHeightRearDriver() != value && value <= MAX_PRESSURE_SAFETY)
    EEPROM.write(rideHeightRearDriverAddr, value);
 }
 void setRiseOnStart(bool value) {
+  if (getRiseOnStart() != value)
    EEPROM.write(riseOnStartAddr, value);
 }
 byte getRideHeightFrontPassenger() {
@@ -258,8 +263,8 @@ void setupSolenoidPins() {
   pinMode(solenoidRearDriverInPin, OUTPUT);
   pinMode(solenoidRearDriverOutPin, OUTPUT);
 
-  pinMode(buttonRisePin, INPUT);
-  pinMode(buttonFallPin, INPUT);
+  //pinMode(buttonRisePin, INPUT);
+  //pinMode(buttonFallPin, INPUT);
 
   //pinMode(13, OUTPUT);
   //digitalWrite(13, HIGH);
@@ -311,7 +316,7 @@ void setup() {
   bt.begin(9600); // start the bluetooth uart at 9600 which is its default
   delay(200); // wait for voltage stabilize
 
-  Serial.println("Startup!");
+  Serial.println(F("Startup!"));
 
   if (TEST_MODE) {
     //setRideHeightFrontPassenger(90);
@@ -352,9 +357,11 @@ void setup() {
   //testscrolltext();
   //initPressureGoalFront(100);
 
-  //if (getRiseOnStart() == true) {
-  //  airUp();
-  //}
+  if (TEST_MODE == false) {
+    if (getRiseOnStart() == true) {
+      airUp();
+    }
+  }
 }
 
 
@@ -387,13 +394,13 @@ void loop() {
 
     pressureGoalRoutine();
 
-    readButtonInput();
+    //readButtonInput();
   
   }
   
   delay(10);
 }
-unsigned long lastButtonReadTime = 0;
+/*unsigned long lastButtonReadTime = 0;
 void readButtonInput() {
   if (digitalRead(buttonRisePin) == HIGH && millis() > (lastButtonReadTime + 3000)) {
     lastButtonReadTime = millis();
@@ -403,7 +410,7 @@ void readButtonInput() {
     lastButtonReadTime = millis();
     airOut();
   }
-}
+}*/
 
 void drawPSIReadings() {
   display.clearDisplay();
@@ -476,13 +483,13 @@ void drawairtekklogo(void) {
 void sendHeartbeat() {
   bt.print(F(PASSWORDSEND));
   bt.print(int(wheel[WHEEL_FRONT_PASSENGER].getPressure()));
-  bt.print(F(":"));
+  bt.print(F("|"));
   bt.print(int(wheel[WHEEL_REAR_PASSENGER].getPressure()));
-  bt.print(F(":"));
+  bt.print(F("|"));
   bt.print(int(wheel[WHEEL_FRONT_DRIVER].getPressure()));
-  bt.print(F(":"));
+  bt.print(F("|"));
   bt.print(int(wheel[WHEEL_REAR_DRIVER].getPressure()));
-  bt.print(F(":"));
+  bt.print(F("|"));
   bt.print(int(getTankPressure()));
   bt.print(F("\n"));
   //Serial.println(int(wheel[WHEEL_REAR_DRIVER].getPressure()));
@@ -490,16 +497,29 @@ void sendHeartbeat() {
 
 //https://www.seeedstudio.com/blog/2020/01/02/how-to-control-arduino-with-bluetooth-module-and-shields-to-get-started/
 
-String inString = "";
+char *outString = "";
+//String inString = "";
+char inBuffer[30];
 unsigned long lastHeartbeat = 0;
 void bt_cmd() {
   if (millis() - lastHeartbeat > 500) {
-    sendHeartbeat();
+
+    if (strlen(outString) > 0) {
+      bt.print(F(PASSWORDSEND));
+      bt.print(F("NOTIF"));
+      bt.print(outString);
+      bt.print(F("\n"));
+      Serial.println(outString);
+      outString = "";
+    }else {
+      sendHeartbeat();
+    }
     lastHeartbeat = millis();
   } else {
 
   //Get input as string
-  if (bt.available() && pause_exe == false) {
+  if (pause_exe == false) {
+  if (bt.available()) {
     while (Serial.available() > 0) {
       Serial.read();
     }
@@ -508,16 +528,25 @@ void bt_cmd() {
     pause_exe = true;
     return;
   }
+  }
+  
   while (bt.available()) {
     char c = bt.read();
-    Serial.print(c);
+    
     if (c == '\n') {
-      runInput();//execute command
-      inString = "";
+      //inString = String(inBuffer);
+      bool valid = runInput();//execute command
+      if (valid == true) {
+        outString = "Received command";
+      }
+      //inString = "";
+      memset(inBuffer, 0, sizeof(inBuffer));
       pause_exe = false;//unpause
       continue;//just to skip writing out the original \n, could also be break but whatever
     }
-    inString += c;
+    //bool completed = inString.concat(c);
+    inBuffer[strlen(inBuffer)] = c;
+    //Serial.println(completed);
   }
   bt.read();
 
@@ -530,67 +559,105 @@ void println(String str) {
   Serial.println(str);
 }
 
-int trailingInt(String str) {
-  return inString.substring(inString.indexOf(str) + str.length()).toInt();
+int trailingInt(const char str[]) {
+  //return inString.substring(inString.indexOf(str) + str.length()).toInt();
+  return atoi( &inBuffer[strlen_P(str)] );
 }
 
-void runInput() {
+
+const char _AIRUP[] PROGMEM = PASSWORD"AIRUP\0";
+const char _AIROUT[] PROGMEM = PASSWORD"AIROUT\0";
+const char _AIRHEIGHTA[] PROGMEM = PASSWORD"AIRHEIGHTA\0";
+const char _AIRHEIGHTB[] PROGMEM = PASSWORD"AIRHEIGHTB\0";
+const char _AIRHEIGHTC[] PROGMEM = PASSWORD"AIRHEIGHTC\0";
+const char _AIRHEIGHTD[] PROGMEM = PASSWORD"AIRHEIGHTD\0";
+const char _RISEONSTART[] PROGMEM = PASSWORD"RISEONSTART\0";
+const char _TESTSOL[] PROGMEM = PASSWORD"TESTSOL\0";
+
+bool comp(char *str1, const char str2[]) {
+  //return strstr(str1,str2) != NULL;
+
+  int len1 = strlen(str1);
+  int len2 = strlen_P(str2);
+  //Serial.print(F("Len: "));
+  //Serial.print(len1);
+  //Serial.print(F(" "));
+  //Serial.println(len2);
+  if (len1 >= len2) {
+    for (int i = 0; i < len2; i++) {
+      char c1 = str1[i];
+      char c2 = pgm_read_byte_near(str2 + i);;
+      //Serial.print(i);
+      //Serial.print(F(": "));
+      //Serial.print(c1);
+      //Serial.print(F(" "));
+      //Serial.println(c2);
+      if (c1 != c2) {
+        //Serial.println(F("False"));
+        return false;
+      }
+    }
+    //Serial.println(F("True"));
+    return true;
+  }
+  //Serial.println(F("False"));
+  return false;
+}
+
+bool runInput() {
   //run input
-  String str = "";
-  if (inString.indexOf(F(PASSWORD"AIRUP")) != -1) {
+  Serial.print(F("inBuffer: "));
+  Serial.println(inBuffer);
+  if (comp(inBuffer,_AIRUP)) {
     airUp();
-    return;
+    return true;
   }
-  if (inString.indexOf(F(PASSWORD"AIROUT")) != -1) {
+  if (comp(inBuffer,_AIROUT)) {
     airOut();
-    return;
+    return true;
   }
-  str = F(PASSWORD"AIRHEIGHTA");
-  if (inString.indexOf(str) != -1) {
-    unsigned long height = trailingInt(str);//inString.substring(inString.indexOf(F((PASSWORD"AIRHEIGHTA"))) + strlen(F((PASSWORD"AIRHEIGHTA")))).toInt();
+  if (comp(inBuffer,_AIRHEIGHTA)) {
+    unsigned long height = trailingInt(_AIRHEIGHTA);//inString.substring(inString.indexOf(F((PASSWORD"AIRHEIGHTA"))) + strlen(F((PASSWORD"AIRHEIGHTA")))).toInt();
     setRideHeightFrontPassenger(height);
-    return;
+    return true;
   }
-  str = F(PASSWORD"AIRHEIGHTB");
-  if (inString.indexOf(str) != -1) {
-    unsigned long height = trailingInt(str);//inString.substring(inString.indexOf(F(PASSWORD"AIRHEIGHTB")) + strlen(F(PASSWORD"AIRHEIGHTB"))).toInt();
+  if (comp(inBuffer,_AIRHEIGHTB)) {
+    unsigned long height = trailingInt(_AIRHEIGHTB);//inString.substring(inString.indexOf(F(PASSWORD"AIRHEIGHTB")) + strlen(F(PASSWORD"AIRHEIGHTB"))).toInt();
     setRideHeightRearPassenger(height);
-    return;
+    return true;
   }
-  str = F(PASSWORD"AIRHEIGHTC");
-  if (inString.indexOf(str) != -1) {
-    unsigned long height = trailingInt(str);//inString.substring(inString.indexOf(F(PASSWORD"AIRHEIGHTC")) + strlen(F(PASSWORD"AIRHEIGHTC"))).toInt();
+  if (comp(inBuffer,_AIRHEIGHTC)) {
+    unsigned long height = trailingInt(_AIRHEIGHTC);//inString.substring(inString.indexOf(F(PASSWORD"AIRHEIGHTC")) + strlen(F(PASSWORD"AIRHEIGHTC"))).toInt();
     setRideHeightFrontDriver(height);
-    return;
+    return true;
   }
-  str = F(PASSWORD"AIRHEIGHTD");
-  if (inString.indexOf(str) != -1) {
-    unsigned long height = trailingInt(str);//inString.substring(inString.indexOf(F(PASSWORD"AIRHEIGHTD")) + strlen(F(PASSWORD"AIRHEIGHTD"))).toInt();
+  if (comp(inBuffer,_AIRHEIGHTD)) {
+    unsigned long height = trailingInt(_AIRHEIGHTD);//inString.substring(inString.indexOf(F(PASSWORD"AIRHEIGHTD")) + strlen(F(PASSWORD"AIRHEIGHTD"))).toInt();
     setRideHeightRearDriver(height);
-    return;
+    return true;
   }
-  str = F(PASSWORD"RISEONSTART");
-  if (inString.indexOf(str) != -1) {
-    unsigned long ros = trailingInt(str);//inString.substring(inString.indexOf(F(PASSWORD"RISEONSTART")) + strlen(F(PASSWORD"RISEONSTART"))).toInt();
+  if (comp(inBuffer,_RISEONSTART)) {
+    unsigned long ros = trailingInt(_RISEONSTART);//inString.substring(inString.indexOf(F(PASSWORD"RISEONSTART")) + strlen(F(PASSWORD"RISEONSTART"))).toInt();
     if (ros == 0) {
       setRiseOnStart(false);
     } else {
       setRiseOnStart(true);
     }
-    return;
+    return true;
   }
   if (TEST_MODE) {
-  str = F(PASSWORD"TESTSOL");
-  if (inString.indexOf(str) != -1) {
-    unsigned long pin = trailingInt(str);//inString.substring(inString.indexOf(F(PASSWORD"RISEONSTART")) + strlen(F(PASSWORD"RISEONSTART"))).toInt();
-    if (pin >= 6 && pin <= 13) {
-      digitalWrite(pin, HIGH);
-      delay(100);//sleep 100ms
-      digitalWrite(pin, LOW);
+    if (comp(inBuffer,_TESTSOL)) {
+      unsigned long pin = trailingInt(_TESTSOL);//inString.substring(inString.indexOf(F(PASSWORD"RISEONSTART")) + strlen(F(PASSWORD"RISEONSTART"))).toInt();
+      Serial.println(pin);
+      if (pin >= 6 && pin <= 13) {
+        digitalWrite(pin, HIGH);
+        delay(100);//sleep 100ms
+       digitalWrite(pin, LOW);
+      }
+      return true;
     }
-    return;
   }
-  }
+  return false;
 }
 
 

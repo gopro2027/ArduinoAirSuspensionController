@@ -2,6 +2,7 @@ package com.example.airsuspension;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.appwidget.AppWidgetManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -57,23 +58,40 @@ public class AirSuspensionController {
 
     public TextView mReadBuffer;
 
-    MainActivity activity;
+    Activity activity;
+
+    void close() {
+        try {
+            mConnectedThread.cancel();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
 
     interface UpdatePressure {
         void updatePressure(String fp, String rp, String fd, String rd, String tank);
     }
 
-    private UpdatePressure updatePressure;
+    interface BluetoothCommand {
+        void command();
+    }
+
+    private UpdatePressure updatePressure = null;
+    private BluetoothCommand onConnectedCmd = null;
+
     public void setUpdatePressure(UpdatePressure updatePressure) {
         this.updatePressure = updatePressure;
     }
 
-    AirSuspensionController(MainActivity activity) {
+    AirSuspensionController(Activity activity) {
 
         // Ask for location permission if not already allowed
-        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-            ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
+        if (activity != null) {
+            if (ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+                ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
 
+        }
 
         mBTAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBTAdapter == null) {
@@ -87,45 +105,68 @@ public class AirSuspensionController {
                 if (msg.what == MESSAGE_READ) {
                     String readMessage = new String((byte[]) msg.obj, StandardCharsets.UTF_8).substring(0, msg.arg1 - 1);//-1 bc all messages are terminated by a \n
 
-                    String recv_password = "56347893";
+                    String messages[] = readMessage.split("\n");
 
-                    if (readMessage.startsWith(recv_password)) {
+                    for (String message : messages) {
 
-                        readMessage = readMessage.substring(recv_password.length());
+                        String recv_password = "56347893";
 
-                        if (mReadBuffer != null) {
-                            mReadBuffer.setText(readMessage);
-                        }
+                        if (message.startsWith(recv_password)) {
 
-                        Log.i("Received", readMessage);
-                        heartbeat = System.currentTimeMillis();
+                            message = message.substring(recv_password.length());
 
-                        String[] arr = readMessage.split(":");
-                        if (arr.length == 5) {
+                            if (mReadBuffer != null) {
+                                mReadBuffer.setText(message);
+                            }
 
-                            String fp = arr[0];
-                            String rp = arr[1];
-                            String fd = arr[2];
-                            String rd = arr[3];
-                            String tank = arr[4];
+                            Log.i("Received", message);
+                            heartbeat = System.currentTimeMillis();
 
-                            try {
+                            String[] arr = message.split("\\|");
+                            if (arr.length == 1) {
 
-                                AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(activity);
-                                RemoteViews remoteViews = new RemoteViews(((Context) activity).getPackageName(), R.layout.pressure_widget);
-                                ComponentName thisWidget = new ComponentName(activity, PressureWidget.class);
-                                remoteViews.setTextViewText(R.id.pressure_fp, fp);
-                                remoteViews.setTextViewText(R.id.pressure_rp, rp);
-                                remoteViews.setTextViewText(R.id.pressure_fd, fd);
-                                remoteViews.setTextViewText(R.id.pressure_rd, rd);
-                                remoteViews.setTextViewText(R.id.pressure_tank, tank);
 
-                                if (updatePressure != null)
-                                    updatePressure.updatePressure(fp,rp,fd,rd,tank);
+                                String cmd_key = "NOTIF";
+                                if (message.startsWith(cmd_key)) {
+                                    message = message.substring(cmd_key.length());
+                                    toast(message);
+                                }
 
-                                appWidgetManager.updateAppWidget(thisWidget, remoteViews);
-                            } catch (Exception e) {
-                                e.printStackTrace();
+
+                            }
+                            if (arr.length == 5) {
+
+                                if (onConnectedCmd != null) {
+                                    onConnectedCmd.command();
+                                    onConnectedCmd = null;
+                                }
+
+                                String fp = arr[0];
+                                String rp = arr[1];
+                                String fd = arr[2];
+                                String rd = arr[3];
+                                String tank = arr[4];
+
+                                try {
+
+                                    AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(activity);
+                                    RemoteViews remoteViews = new RemoteViews(((Context) activity).getPackageName(), R.layout.pressure_widget);
+                                    ComponentName thisWidget = new ComponentName(activity, PressureWidget.class);
+                                    remoteViews.setTextViewText(R.id.pressure_fp, fp);
+                                    remoteViews.setTextViewText(R.id.pressure_rp, rp);
+                                    remoteViews.setTextViewText(R.id.pressure_fd, fd);
+                                    remoteViews.setTextViewText(R.id.pressure_rd, rd);
+                                    remoteViews.setTextViewText(R.id.pressure_tank, tank);
+
+                                    if (updatePressure != null)
+                                        updatePressure.updatePressure(fp, rp, fd, rd, tank);
+
+                                    appWidgetManager.updateAppWidget(thisWidget, remoteViews);
+
+
+                                } catch (Exception e) {
+                                    //e.printStackTrace();
+                                }
                             }
                         }
                     }
@@ -145,70 +186,81 @@ public class AirSuspensionController {
     }
 
     public void airUp() {
-        bluetoothOn();
-        if (mConnectedThread != null) { //First check to make sure thread created
-            mConnectedThread.write("AIRUP\n");
-            toast("Sent air up");
-        }
+        bluetoothOn(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("AIRUP\n");
+                toast("Sent air up");
+            }
+        });
     }
 
     public void airOut() {
-        bluetoothOn();
-        if (mConnectedThread != null) { //First check to make sure thread created
-            mConnectedThread.write("AIROUT\n");
-            toast("Sent air out");
-        }
+        bluetoothOn(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("AIROUT\n");
+                toast("Sent air out");
+            }
+        });
     }
 
     public void setFrontPressure(int pressure) {
-        bluetoothOn();
-        if (mConnectedThread != null) { //First check to make sure thread created
-            mConnectedThread.write("AIRHEIGHTA"+pressure+"\n");
-            mConnectedThread.write("AIRHEIGHTC"+pressure+"\n");
-            toast("Set front pressure");
-        }
+        bluetoothOn(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("AIRHEIGHTA" + pressure + "\n");
+                mConnectedThread.write("AIRHEIGHTC" + pressure + "\n");
+                toast("Set front pressure");
+            }
+        });
     }
 
     public void setRearPressure(int pressure) {
-        bluetoothOn();
-        if (mConnectedThread != null) { //First check to make sure thread created
-            mConnectedThread.write("AIRHEIGHTB"+pressure+"\n");
-            mConnectedThread.write("AIRHEIGHTD"+pressure+"\n");
-            toast("Set front pressure");
-        }
+        bluetoothOn(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("AIRHEIGHTB" + pressure + "\n");
+                mConnectedThread.write("AIRHEIGHTD" + pressure + "\n");
+                toast("Set front pressure");
+            }
+        });
     }
 
     public void setRiseOnStart(boolean riseOnStart) {
-        bluetoothOn();
-        if (mConnectedThread != null) { //First check to make sure thread created
-            mConnectedThread.write("RISEONSTART"+(riseOnStart ? "1" : "0")+"\n");
-            toast("Set rise on start");
-        }
+        bluetoothOn(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("RISEONSTART" + (riseOnStart ? "1" : "0") + "\n");
+                toast("Set rise on start");
+            }
+        });
     }
 
     public void testSolenoid(int pinNum) {
-        bluetoothOn();
-        if (mConnectedThread != null) { //First check to make sure thread created
-            if (pinNum >= 6 && pinNum <= 13) {
-                mConnectedThread.write("TESTSOL" + pinNum + "\n");
-                toast("Tested solenoid on pin " + pinNum);
-            } else {
-                toast("Please use a pin between 6 and 13");
+        bluetoothOn(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                if (pinNum >= 6 && pinNum <= 13) {
+                    mConnectedThread.write("TESTSOL" + pinNum + "\n");
+                    toast("Tested solenoid on pin " + pinNum);
+                } else {
+                    toast("Please use a pin between 6 and 13");
+                }
             }
-        }
+        });
     }
 
     @SuppressLint("MissingPermission")
-    public void bluetoothOn() {
+    public void bluetoothOn(BluetoothCommand cmd) {
+        onConnectedCmd = cmd;
         if (System.currentTimeMillis() - heartbeat < 5000) {
             //toast("Socket is already connected!");
             return;
         }
 
-
         if (!mBTAdapter.isEnabled()) {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            activity.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+            if (activity != null) {
+                activity.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+            } else {
+                //no activity
+                return;//this would be the widget if it's null idk
+            }
             //toast("Bluetooth turned on");
         } else {
             //toast("Bluetooth is already on");
@@ -219,13 +271,10 @@ public class AirSuspensionController {
     }
 
     public void toast(String text) {
-        Toast.makeText(activity.getApplicationContext(), text, Toast.LENGTH_SHORT).show();
-        Log.i(TAG,text);
+        if (activity != null)
+            Toast.makeText(activity.getApplicationContext(), text, Toast.LENGTH_SHORT).show();
+        Log.i(TAG, "Toast said: "+text);
     }
-
-
-
-
 
 
     // Enter here after user selects "yes" or "no" to enabling radio
@@ -234,7 +283,7 @@ public class AirSuspensionController {
         // Check which request we're responding to
         if (requestCode == REQUEST_ENABLE_BT) {
             // Make sure the request was successful
-            if (resultCode == activity.RESULT_OK) {
+            if (resultCode == Activity.RESULT_OK) {
                 // The user picked a contact.
                 // The Intent's data Uri identifies which contact was selected.
                 toast("status: Enabled");

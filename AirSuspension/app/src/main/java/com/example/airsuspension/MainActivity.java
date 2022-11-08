@@ -1,11 +1,14 @@
 package com.example.airsuspension;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.util.Log;
 import android.view.View;
 
 import androidx.navigation.NavController;
@@ -23,7 +26,7 @@ public class MainActivity extends AppCompatActivity {
 
     private AppBarConfiguration appBarConfiguration;
     public ActivityMainBinding binding;
-    private AirSuspensionController airSuspensionController;
+    public static AirSuspensionController airSuspensionController;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,9 +44,13 @@ public class MainActivity extends AppCompatActivity {
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
     }
 
-    AirSuspensionController getAirSuspensionController() {
-        if (airSuspensionController == null)
-            airSuspensionController  = new AirSuspensionController(this);
+    public static AirSuspensionController getAirSuspensionController(Activity activity) {
+        if (airSuspensionController == null || (airSuspensionController.activity == null && activity != null)) {
+            if (airSuspensionController != null) {
+                airSuspensionController.close();
+            }
+            airSuspensionController = new AirSuspensionController(activity);
+        }
         return airSuspensionController;
     }
 
@@ -83,6 +90,8 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("MissingSuperCall")
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent Data){
-        getAirSuspensionController().onActivityResult(requestCode,resultCode,Data);
+        getAirSuspensionController(this).onActivityResult(requestCode,resultCode,Data);
     }
+
+
 }

@@ -90,11 +90,13 @@ public class MainFragment extends Fragment {
         });
 
         getAirSuspensionController().setUpdatePressure((fp, rp,  fd,  rd,  tank) -> {
-            binding.pressureFp.setText(fp);
-            binding.pressureRp.setText(rp);
-            binding.pressureFd.setText(fd);
-            binding.pressureRd.setText(rd);
-            binding.pressureTank.setText(tank);
+            if (binding != null) {
+                binding.pressureFp.setText(fp);
+                binding.pressureRp.setText(rp);
+                binding.pressureFd.setText(fd);
+                binding.pressureRd.setText(rd);
+                binding.pressureTank.setText(tank);
+            }
         });
     }
 
@@ -105,7 +107,7 @@ public class MainFragment extends Fragment {
     }
 
     public AirSuspensionController getAirSuspensionController() {
-        return ((MainActivity) getActivity()).getAirSuspensionController();
+        return MainActivity.getAirSuspensionController(getActivity());
     }
 
 }

@@ -24,4 +24,6 @@ public:
   bool isActive();
 };
 
+const int MAX_PRESSURE_SAFETY = 150;
+
 #endif

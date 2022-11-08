@@ -38,7 +38,7 @@ public class BluetoothFragment extends Fragment {
             public void onClick(View view) {
                 //Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                 //        .setAction("Action", null).show();
-                getAirSuspensionController().bluetoothOn();
+                getAirSuspensionController().bluetoothOn(null);
             }
         });
     }
@@ -50,7 +50,7 @@ public class BluetoothFragment extends Fragment {
     }
 
     public AirSuspensionController getAirSuspensionController() {
-        return ((MainActivity)getActivity()).getAirSuspensionController();
+        return MainActivity.getAirSuspensionController(getActivity());
     }
 
 }

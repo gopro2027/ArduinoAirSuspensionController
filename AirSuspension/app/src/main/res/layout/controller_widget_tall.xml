@@ -9,6 +9,7 @@
 
 
     <Button
+        android:id="@+id/button_airup_w"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_weight="1"
@@ -16,6 +17,7 @@
         android:layout_marginBottom="5dp" />
 
     <Button
+        android:id="@+id/button_airout_w"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_weight="1"

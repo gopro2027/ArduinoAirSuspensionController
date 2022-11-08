@@ -6,7 +6,6 @@ int getTankPressure();//from main
 
 const int PRESSURE_DELTA = 3;//Pressure will go to +- 3 psi to verify
 const unsigned long ROUTINE_TIMEOUT = 10 * 1000;//10 seconds is too long
-const int MAX_PRESSURE_SAFETY = 150;
 
 Wheel::Wheel() {}
 
@@ -48,6 +47,10 @@ bool Wheel::isActive() {
 }
 
 void Wheel::initPressureGoal(int newPressure) {
+  if (newPressure > MAX_PRESSURE_SAFETY) {
+    //hardcode not to go above 150PSI
+    return;
+  }
   int pressureDif = newPressure - this->pressureValue;//negative if airing out, positive if airing up
   if (abs(pressureDif) <= PRESSURE_DELTA) {
     //literally do nothing, it's close enough already
