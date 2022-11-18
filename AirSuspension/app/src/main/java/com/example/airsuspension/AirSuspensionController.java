@@ -40,7 +40,8 @@ public class AirSuspensionController {
     public String TAG = "AirSuspensionController";
 
     private static final UUID BT_MODULE_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); // "random" unique identifier
-    private static final String BT_MAC = "00:14:03:05:59:F6";
+    //private static final String BT_MAC = "00:14:03:05:59:F6";
+    private static final String BT_MAC = "00:14:03:05:59:EA";
 
     // #defines for identifying shared types between calling functions
     private final static int REQUEST_ENABLE_BT = 1; // used to identify adding bluetooth names

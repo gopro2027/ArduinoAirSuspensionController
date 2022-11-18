@@ -57,15 +57,18 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define TEST_MODE true
+#define SCREEN_MOODE true
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 // The pins for I2C are defined by the Wire-library. 
 // On an arduino UNO:       A4(SDA), A5(SCL)
 // On an arduino MEGA 2560: 20(SDA), 21(SCL)
 // On an arduino LEONARDO:   2(SDA),  3(SCL), ...
+#if SCREEN_MOODE == true
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#endif
 
 #define WHEEL_FRONT_PASSENGER 0
 #define WHEEL_REAR_PASSENGER 1
@@ -316,7 +319,11 @@ void setup() {
   bt.begin(9600); // start the bluetooth uart at 9600 which is its default
   delay(200); // wait for voltage stabilize
 
+  #if SCREEN_MOODE == true
   Serial.println(F("Startup!"));
+  #else
+  Serial.println(F("Startup (s)!"));
+  #endif
 
   if (TEST_MODE) {
     //setRideHeightFrontPassenger(90);
@@ -330,11 +337,13 @@ void setup() {
   }
 
   setupSolenoidPins();
+  #if SCREEN_MOODE == true
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
     for(;;); // Don't proceed, loop forever
   }
+  #endif
   
   delay(20);
 
@@ -345,7 +354,9 @@ void setup() {
 
   readPressures();
 
+#if SCREEN_MOODE == true
   drawairtekklogo();
+#endif
 
   
 
@@ -390,7 +401,9 @@ void loop() {
       readPressures();
       lastPressureReadTime = millis();
     }
+#if SCREEN_MOODE == true
     drawPSIReadings();
+#endif
 
     pressureGoalRoutine();
 
@@ -412,6 +425,7 @@ void readButtonInput() {
   }
 }*/
 
+#if SCREEN_MOODE == true
 void drawPSIReadings() {
   display.clearDisplay();
 
@@ -477,6 +491,7 @@ void drawairtekklogo(void) {
   display.display();
   delay(2000);//2 seconds
 }
+#endif
 
 #define PASSWORD     "35264978"
 #define PASSWORDSEND "56347893"
@@ -546,6 +561,7 @@ void bt_cmd() {
     }
     //bool completed = inString.concat(c);
     inBuffer[strlen(inBuffer)] = c;
+    Serial.print(c);
     //Serial.println(completed);
   }
   bt.read();
@@ -651,8 +667,8 @@ bool runInput() {
       Serial.println(pin);
       if (pin >= 6 && pin <= 13) {
         digitalWrite(pin, HIGH);
-        delay(100);//sleep 100ms
-       digitalWrite(pin, LOW);
+        delay(1000);//sleep 100ms
+        digitalWrite(pin, LOW);
       }
       return true;
     }
