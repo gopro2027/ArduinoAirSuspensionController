@@ -81,12 +81,12 @@ SoftwareSerial bt(3, 2); // RX, TX
 const int buttonRisePin = 4;
 const int buttonFallPin = 5;
 const int solenoidFrontPassengerInPin = 6;
-const int solenoidFrontPassengerOutPin = 7;
-const int solenoidRearPassengerInPin = 8;
-const int solenoidRearPassengerOutPin = 9;
-const int solenoidFrontDriverInPin = 10;
-const int solenoidFrontDriverOutPin = 11;
-const int solenoidRearDriverInPin = 12;
+const int solenoidFrontPassengerOutPin = 8;
+const int solenoidRearPassengerInPin = 7;
+const int solenoidRearPassengerOutPin = 10;
+const int solenoidFrontDriverInPin = 9;
+const int solenoidFrontDriverOutPin = 12;
+const int solenoidRearDriverInPin = 11;
 const int solenoidRearDriverOutPin = 13;
 
 //Analog pins
@@ -277,7 +277,7 @@ void setupSolenoidPins() {
 void pressureGoalRoutine() {
   bool active = false;
   for (int i = 0; i < 4; i++) {
-    if (getWheel(i).isActive()) {
+    if (getWheel(i)->isActive()) {
       active = true;
     }
   }
@@ -285,30 +285,30 @@ void pressureGoalRoutine() {
     readPressures();
   }
   for (int i = 0; i < 4; i++) {
-    getWheel(i).pressureGoalRoutine();
+    getWheel(i)->pressureGoalRoutine();
   }
 }
 
 void airUp() {
   
-  getWheel(WHEEL_FRONT_PASSENGER).initPressureGoal(getRideHeightFrontPassenger());
-  getWheel(WHEEL_REAR_PASSENGER).initPressureGoal(getRideHeightRearPassenger());
-  getWheel(WHEEL_FRONT_DRIVER).initPressureGoal(getRideHeightFrontDriver());
-  getWheel(WHEEL_REAR_DRIVER).initPressureGoal(getRideHeightRearDriver());
+  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getRideHeightFrontPassenger());
+  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getRideHeightRearPassenger());
+  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getRideHeightFrontDriver());
+  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getRideHeightRearDriver());
   
 }
 
 void airOut() {
 
-  getWheel(WHEEL_FRONT_PASSENGER).initPressureGoal(10);
-  getWheel(WHEEL_REAR_PASSENGER).initPressureGoal(10);
-  getWheel(WHEEL_FRONT_DRIVER).initPressureGoal(10);
-  getWheel(WHEEL_REAR_DRIVER).initPressureGoal(10);
+  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(10);
+  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(10);
+  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(10);
+  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(10);
   
 }
 
-Wheel wheel[4];
-Wheel getWheel(int i) {
+Wheel *wheel[4];
+Wheel *getWheel(int i) {
   return wheel[i];
 }
 
@@ -325,17 +325,6 @@ void setup() {
   Serial.println(F("Startup (s)!"));
   #endif
 
-  if (TEST_MODE) {
-    //setRideHeightFrontPassenger(90);
-    //setRideHeightRearPassenger(100);
-    //setRideHeightFrontDriver(90);
-    //setRideHeightRearDriver(100);
-    //setRiseOnStart(false);
-    //bt.print(F("AT+NAMEvaair")); // place your name in here to configure the bluetooth name.
-                                       // will require reboot for settings to take affect. 
-    //delay(3000); // wait for settings to take affect. 
-  }
-
   setupSolenoidPins();
   #if SCREEN_MOODE == true
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
@@ -347,10 +336,10 @@ void setup() {
   
   delay(20);
 
-  wheel[WHEEL_FRONT_PASSENGER] = Wheel(solenoidFrontPassengerInPin, solenoidFrontPassengerOutPin, pressureInputFrontPassenger);
-  wheel[WHEEL_REAR_PASSENGER] = Wheel(solenoidRearPassengerInPin, solenoidRearPassengerOutPin, pressureInputRearPassenger);
-  wheel[WHEEL_FRONT_DRIVER] = Wheel(solenoidFrontDriverInPin, solenoidFrontDriverOutPin, pressureInputFrontDriver);
-  wheel[WHEEL_REAR_DRIVER] = Wheel(solenoidRearDriverInPin, solenoidRearDriverOutPin, pressureInputRearDriver);
+  wheel[WHEEL_FRONT_PASSENGER] = new Wheel(solenoidFrontPassengerInPin, solenoidFrontPassengerOutPin, pressureInputFrontPassenger);
+  wheel[WHEEL_REAR_PASSENGER] = new Wheel(solenoidRearPassengerInPin, solenoidRearPassengerOutPin, pressureInputRearPassenger);
+  wheel[WHEEL_FRONT_DRIVER] = new Wheel(solenoidFrontDriverInPin, solenoidFrontDriverOutPin, pressureInputFrontDriver);
+  wheel[WHEEL_REAR_DRIVER] = new Wheel(solenoidRearDriverInPin, solenoidRearDriverOutPin, pressureInputRearDriver);
 
   readPressures();
 
@@ -368,18 +357,16 @@ void setup() {
   //testscrolltext();
   //initPressureGoalFront(100);
 
-  if (TEST_MODE == false) {
+  #if TEST_MOODE == false
     if (getRiseOnStart() == true) {
       airUp();
     }
-  }
+  #endif
 }
 
 
 float pressureValueTank = 0;
 int getTankPressure() {
-  //if (TEST_MODE)
-  //  return 999;
   return pressureValueTank;
 }
 
@@ -387,7 +374,7 @@ float readPinPressure(int pin);
 void readPressures() {
   pressureValueTank = readPinPressure(pressureInputTank);
   for (int i = 0; i < 4; i++) {
-    getWheel(i).readPressure();
+    getWheel(i)->readPressure();
   }
 }
 
@@ -399,6 +386,16 @@ void loop() {
   if (pause_exe == false) {
     if (millis() - lastPressureReadTime > sensorreadDelay) {
       readPressures();
+      /*for (int i = 0; i < 8; i++) {
+          Serial.print((char)('0'+i));
+          Serial.print(": ");
+          Serial.print(analogRead(A0+i));
+          Serial.print("(");
+          Serial.print(readPinPressure(A0+i));
+          Serial.print(")");
+          Serial.print(", ");
+      }
+      Serial.println();*/
       lastPressureReadTime = millis();
     }
 #if SCREEN_MOODE == true
@@ -451,20 +448,20 @@ void drawPSIReadings() {
   
   display.setCursor(0,2*textHeightPx+5);
   display.print(F("FD: "));
-  display.print(int(wheel[WHEEL_FRONT_DRIVER].getPressure()));//front driver
+  display.print(int(getWheel(WHEEL_FRONT_DRIVER)->getPressure()));//front driver
 
   display.setCursor(secondRowXPos,2*textHeightPx+5);
   display.print(F("FP: "));
-  display.print(int(wheel[WHEEL_FRONT_PASSENGER].getPressure()));//front passenger
+  display.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getPressure()));//front passenger
 
 //Rear
   display.setCursor(0,3.5*textHeightPx+5);
   display.print(F("RD: "));
-  display.print(int(wheel[WHEEL_REAR_DRIVER].getPressure()));//rear driver
+  display.print(int(getWheel(WHEEL_REAR_DRIVER)->getPressure()));//rear driver
 
   display.setCursor(secondRowXPos,3.5*textHeightPx+5);
   display.print(F("RP: "));
-  display.print(int(wheel[WHEEL_REAR_PASSENGER].getPressure()));//rear passenger
+  display.print(int(getWheel(WHEEL_REAR_PASSENGER)->getPressure()));//rear passenger
 
   /*display.setTextSize(3);
   display.setTextColor(SSD1306_WHITE);
@@ -497,17 +494,19 @@ void drawairtekklogo(void) {
 #define PASSWORDSEND "56347893"
 void sendHeartbeat() {
   bt.print(F(PASSWORDSEND));
-  bt.print(int(wheel[WHEEL_FRONT_PASSENGER].getPressure()));
+  bt.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getPressure()));
   bt.print(F("|"));
-  bt.print(int(wheel[WHEEL_REAR_PASSENGER].getPressure()));
+  bt.print(int(getWheel(WHEEL_REAR_PASSENGER)->getPressure()));
   bt.print(F("|"));
-  bt.print(int(wheel[WHEEL_FRONT_DRIVER].getPressure()));
+  bt.print(int(getWheel(WHEEL_FRONT_DRIVER)->getPressure()));
   bt.print(F("|"));
-  bt.print(int(wheel[WHEEL_REAR_DRIVER].getPressure()));
+  bt.print(int(getWheel(WHEEL_REAR_DRIVER)->getPressure()));
   bt.print(F("|"));
   bt.print(int(getTankPressure()));
   bt.print(F("\n"));
-  //Serial.println(int(wheel[WHEEL_REAR_DRIVER].getPressure()));
+  //Serial.println(int(getTankPressure()));
+  //Serial.println(int(wheel[WHEEL_REAR_DRIVER].getPressure()));//this is wrong
+  //Serial.println(int(readPinPressure(pressureInputRearDriver)));//thhis is right
 }
 
 //https://www.seeedstudio.com/blog/2020/01/02/how-to-control-arduino-with-bluetooth-module-and-shields-to-get-started/
@@ -661,7 +660,7 @@ bool runInput() {
     }
     return true;
   }
-  if (TEST_MODE) {
+  #if TEST_MOODE == true
     if (comp(inBuffer,_TESTSOL)) {
       unsigned long pin = trailingInt(_TESTSOL);//inString.substring(inString.indexOf(F(PASSWORD"RISEONSTART")) + strlen(F(PASSWORD"RISEONSTART"))).toInt();
       Serial.println(pin);
@@ -672,7 +671,7 @@ bool runInput() {
       }
       return true;
     }
-  }
+  #endif
   return false;
 }
 
