@@ -357,7 +357,7 @@ void setup() {
   //testscrolltext();
   //initPressureGoalFront(100);
 
-  #if TEST_MOODE == false
+  #if TEST_MODE == false
     if (getRiseOnStart() == true) {
       airUp();
     }
@@ -660,7 +660,7 @@ bool runInput() {
     }
     return true;
   }
-  #if TEST_MOODE == true
+  #if TEST_MODE == true
     if (comp(inBuffer,_TESTSOL)) {
       unsigned long pin = trailingInt(_TESTSOL);//inString.substring(inString.indexOf(F(PASSWORD"RISEONSTART")) + strlen(F(PASSWORD"RISEONSTART"))).toInt();
       Serial.println(pin);
