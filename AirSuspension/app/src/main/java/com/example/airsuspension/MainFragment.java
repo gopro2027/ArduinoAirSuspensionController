@@ -30,55 +30,71 @@ public class MainFragment extends Fragment {
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        binding.buttonAirup.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                //NavHostFragment.findNavController(MainFragment.this)
-                //        .navigate(R.id.action_FirstFragment_to_SecondFragment);
-                getAirSuspensionController().airUp();
-            }
-        });
+        binding.buttonAirup.setOnClickListener((v) -> getAirSuspensionController().airUp());
 
-        binding.buttonAirout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                getAirSuspensionController().airOut();
-            }
-        });
+        binding.buttonAirout.setOnClickListener((v) -> getAirSuspensionController().airOut()
+        );
 
-
-        binding.buttonSetfrontpressure.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
+        binding.buttonSetfrontpressureD.setOnClickListener((v) -> {
                 try {
-                    getAirSuspensionController().setFrontPressure(Integer.parseInt(binding.edittextSetfrontpressure.getText().toString()));
+                    getAirSuspensionController().setFrontPressureD(Integer.parseInt(binding.edittextSetfrontpressureD.getText().toString()));
+                } catch (Exception e) {
+                    getAirSuspensionController().toast("Please input a valid number!");
+                }
+        });
+
+        binding.buttonSetfrontpressureP.setOnClickListener((v) -> {
+                try {
+                    getAirSuspensionController().setFrontPressureP(Integer.parseInt(binding.edittextSetfrontpressureP.getText().toString()));
                 } catch (Exception e) {
                     getAirSuspensionController().toast("Please input a valid number!");
                 }
             }
+        );
+
+        binding.buttonSetrearpressureD.setOnClickListener((v) -> {
+                try {
+                    getAirSuspensionController().setRearPressureD(Integer.parseInt(binding.edittextSetrearpressureD.getText().toString()));
+                } catch (Exception e) {
+                    getAirSuspensionController().toast("Please input a valid number!");
+                }
+
         });
 
-        binding.buttonSetrearpressure.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
+        binding.buttonSetrearpressureP.setOnClickListener((v) -> {
                 try {
-                    getAirSuspensionController().setRearPressure(Integer.parseInt(binding.edittextSetrearpressure.getText().toString()));
+                    getAirSuspensionController().setRearPressureP(Integer.parseInt(binding.edittextSetrearpressureP.getText().toString()));
                 } catch (Exception e) {
                     getAirSuspensionController().toast("Please input a valid number!");
                 }
             }
-        });
+        );
 
+        binding.profileNum.setMinValue(1);
+        binding.profileNum.setMaxValue(4);
+        binding.buttonLoadProfile.setOnClickListener((v) -> getAirSuspensionController().readProfile(binding.profileNum.getValue()-1));
+        binding.buttonSaveProfile.setOnClickListener((v) -> getAirSuspensionController().saveToProfile(binding.profileNum.getValue()-1));
+        binding.buttonDefaultProfile.setOnClickListener((v) -> getAirSuspensionController().setBaseProfile(binding.profileNum.getValue()-1));
+        /*
+        binding.buttonLoad1.setOnClickListener((v) -> getAirSuspensionController().readProfile(0));
+        binding.buttonLoad2.setOnClickListener((v) -> getAirSuspensionController().readProfile(1));
+        binding.buttonLoad3.setOnClickListener((v) -> getAirSuspensionController().readProfile(2));
 
-        binding.buttonTestsol.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
+        binding.buttonSave1.setOnClickListener((v) -> getAirSuspensionController().saveToProfile(0));
+        binding.buttonSave2.setOnClickListener((v) -> getAirSuspensionController().saveToProfile(1));
+        binding.buttonSave3.setOnClickListener((v) -> getAirSuspensionController().saveToProfile(2));
+
+        binding.buttonBp1.setOnClickListener((v) -> getAirSuspensionController().setBaseProfile(0));
+        binding.buttonBp2.setOnClickListener((v) -> getAirSuspensionController().setBaseProfile(1));
+        binding.buttonBp3.setOnClickListener((v) -> getAirSuspensionController().setBaseProfile(2));
+*/
+
+        binding.buttonTestsol.setOnClickListener((v) -> {
                 try {
                     getAirSuspensionController().testSolenoid(Integer.parseInt(binding.edittextTestsol.getText().toString()));
                 } catch (Exception e) {
                     getAirSuspensionController().toast("Please input a valid number!");
                 }
-            }
         });
 
         binding.buttonSetriseonstartenabled.setOnClickListener(v -> {

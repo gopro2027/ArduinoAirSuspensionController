@@ -79,13 +79,16 @@ void Wheel::pressureGoalRoutine() {
   if (this->s_AirIn.isOpen()) {
     if (readPressure > MAX_PRESSURE_SAFETY) {
       this->s_AirIn.close();
+      displayCode = 1;
     }
     if (readPressure >= this->pressureGoal) {
       //stop
       this->s_AirIn.close();
+      displayCode = 2;
     } else {
       if (millis() > this->routineStartTime + ROUTINE_TIMEOUT) {
         this->s_AirIn.close();
+        displayCode = 3;
       }
     }
   }

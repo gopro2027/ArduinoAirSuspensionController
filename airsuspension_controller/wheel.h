@@ -25,5 +25,6 @@ public:
 };
 
 const int MAX_PRESSURE_SAFETY = 150;
+extern int displayCode;
 
 #endif

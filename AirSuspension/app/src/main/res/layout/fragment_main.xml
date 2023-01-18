@@ -25,16 +25,39 @@
         android:orientation="horizontal">
 
         <Button
-            android:id="@+id/button_setfrontpressure"
+            android:id="@+id/button_setfrontpressureD"
+            android:padding="0px"
             android:layout_width="0px"
             android:layout_height="wrap_content"
-            android:layout_weight="2"
-            android:text="@string/setfrontpressure" />
+            android:layout_weight="1"
+            android:text="@string/setfrontpressureD" />
 
         <EditText
-            android:id="@+id/edittext_setfrontpressure"
+            android:id="@+id/edittext_setfrontpressureD"
+
+            android:layout_width="0px"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:inputType="number"
+            android:maxLength="3" />
+
+        <Space
+            android:layout_width="12dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"/>
+
+        <Button
+            android:id="@+id/button_setfrontpressureP"
+            android:padding="0px"
             android:layout_width="0px"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/setfrontpressureD" />
+
+        <EditText
+            android:id="@+id/edittext_setfrontpressureP"
+            android:layout_width="0px"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:inputType="number"
             android:maxLength="3" />
@@ -48,20 +71,189 @@
         android:orientation="horizontal">
 
         <Button
-            android:id="@+id/button_setrearpressure"
+            android:id="@+id/button_setrearpressureD"
+            android:padding="0px"
             android:layout_width="0px"
             android:layout_height="wrap_content"
             android:layout_weight="2"
-            android:text="@string/setrearpressure" />
+            android:text="@string/setrearpressureD" />
 
         <EditText
-            android:id="@+id/edittext_setrearpressure"
+            android:id="@+id/edittext_setrearpressureD"
             android:layout_width="0px"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:inputType="number"
             android:maxLength="3" />
 
+        <Space
+            android:layout_width="12dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"/>
+
+        <Button
+            android:id="@+id/button_setrearpressureP"
+            android:padding="0px"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:text="@string/setrearpressureP" />
+
+        <EditText
+            android:id="@+id/edittext_setrearpressureP"
+            android:layout_width="0px"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:inputType="number"
+            android:maxLength="3" />
+
+
+    </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Profiles:"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <NumberPicker
+            android:id="@+id/profileNum"
+            android:layout_width="wrap_content"
+            android:layout_height="100dp"
+            />
+
+        <Button
+            android:id="@+id/button_loadProfile"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:padding="0dp"
+            android:text="Load Profile" />
+
+        <Button
+            android:id="@+id/button_saveProfile"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:padding="0dp"
+            android:text="Save To Profile" />
+
+        <Button
+            android:id="@+id/button_defaultProfile"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:padding="0dp"
+            android:text="Set As Default Profile" />
+
+
+    </LinearLayout>
+
+<!--
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/button_load1"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Load Prof 1" />
+        <Button
+            android:id="@+id/button_load2"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Load Prof 2" />
+        <Button
+            android:id="@+id/button_load3"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Load Prof 3" />
+
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/button_save1"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Save To Prof 1" />
+        <Button
+            android:id="@+id/button_save2"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Save To Prof 2" />
+        <Button
+            android:id="@+id/button_save3"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Save To Prof 3" />
+
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/button_bp1"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Prof 1 On Start" />
+        <Button
+            android:id="@+id/button_bp2"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Prof 2 On Start" />
+        <Button
+            android:id="@+id/button_bp3"
+            android:layout_width="0px"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Prof 3 On Start" />
+
+
+    </LinearLayout>
+    -->
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/button_setriseonstartenabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/setriseonstartenabled" />
+
+        <Button
+            android:id="@+id/button_setriseonstartdisabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/setriseonstartdisabled" />
 
     </LinearLayout>
 
@@ -85,27 +277,6 @@
             android:inputType="number"
             android:maxLength="2" />
 
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/button_setriseonstartenabled"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/setriseonstartenabled" />
-
-        <Button
-            android:id="@+id/button_setriseonstartdisabled"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/setriseonstartdisabled" />
 
     </LinearLayout>
 

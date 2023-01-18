@@ -204,22 +204,65 @@ public class AirSuspensionController {
         });
     }
 
-    public void setFrontPressure(int pressure) {
+    public void setBaseProfile(int profileNum) {
         bluetoothOn(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
-                mConnectedThread.write("AIRHEIGHTA" + pressure + "\n");
-                mConnectedThread.write("AIRHEIGHTC" + pressure + "\n");
-                toast("Set front pressure");
+                mConnectedThread.write("PRBOF" + profileNum + "\n");
+                toast("Set base profile (loaded on car start) to "+profileNum);
             }
         });
     }
 
-    public void setRearPressure(int pressure) {
+    public void saveToProfile(int profileNum) {
+        bluetoothOn(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("SPROF" + profileNum + "\n");
+                toast("Saved to profile "+profileNum);
+            }
+        });
+    }
+
+    public void readProfile(int profileNum) {
+        bluetoothOn(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("PROFR" + profileNum + "\n");
+                toast("Loaded profile "+profileNum);
+            }
+        });
+    }
+
+    public void setFrontPressureD(int pressure) {
+        bluetoothOn(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("AIRHEIGHTC" + pressure + "\n");
+                toast("Set front driver pressure");
+            }
+        });
+    }
+
+    public void setFrontPressureP(int pressure) {
+        bluetoothOn(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("AIRHEIGHTA" + pressure + "\n");
+                toast("Set front passenger pressure");
+            }
+        });
+    }
+
+    public void setRearPressureD(int pressure) {
+        bluetoothOn(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("AIRHEIGHTD" + pressure + "\n");
+                toast("Set rear driver pressure");
+            }
+        });
+    }
+
+    public void setRearPressureP(int pressure) {
         bluetoothOn(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIRHEIGHTB" + pressure + "\n");
-                mConnectedThread.write("AIRHEIGHTD" + pressure + "\n");
-                toast("Set front pressure");
+                toast("Set rear passenger pressure");
             }
         });
     }

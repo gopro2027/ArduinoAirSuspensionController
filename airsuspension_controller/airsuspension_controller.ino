@@ -75,6 +75,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define WHEEL_FRONT_DRIVER 2
 #define WHEEL_REAR_DRIVER 3
 
+#define MAX_PROFILE_COUNT 4
+
+int displayCode = -1;
 
 //Digital pins
 SoftwareSerial bt(3, 2); // RX, TX
@@ -96,7 +99,6 @@ const int pressureInputFrontDriver = A2; //select the analog input pin for the p
 const int pressureInputRearDriver = A3; //select the analog input pin for the pressure transducer REAR
 //A4 and A5 are the screen
 const int pressureInputTank = A6; //select the analog input pin for the pressure transducer TANK
-
 
 //https://www.dcode.fr/binary-image
 
@@ -207,46 +209,69 @@ static const unsigned char PROGMEM logo_bmp_airtekk[] =
 
 };
 
-const int rideHeightFrontPassengerAddr = 0;
-const int rideHeightRearPassengerAddr = 1;
-const int rideHeightFrontDriverAddr = 2;
-const int rideHeightRearDriverAddr = 3;
-const int riseOnStartAddr = 4;
+//const int rideHeightFrontPassengerAddr = 0;
+//const int rideHeightRearPassengerAddr = 1;
+//const int rideHeightFrontDriverAddr = 2;
+//const int rideHeightRearDriverAddr = 3;
+const int riseOnStartAddr = 0;
+const int baseProfileAddr = 1;
+#define profileStartAddress 2;
+
+byte currentProfile[4];
+/*
+#define WHEEL_FRONT_PASSENGER 0
+#define WHEEL_REAR_PASSENGER 1
+#define WHEEL_FRONT_DRIVER 2
+#define WHEEL_REAR_DRIVER 3
+*/
+
+void readProfile(byte profileIndex) {
+  int base = profileStartAddress + (4 * profileIndex);
+  currentProfile[WHEEL_FRONT_PASSENGER] = EEPROM.read(base + WHEEL_FRONT_PASSENGER);
+  currentProfile[WHEEL_REAR_PASSENGER] = EEPROM.read(base + WHEEL_REAR_PASSENGER);
+  currentProfile[WHEEL_FRONT_DRIVER] = EEPROM.read(base + WHEEL_FRONT_DRIVER);
+  currentProfile[WHEEL_REAR_DRIVER] = EEPROM.read(base + WHEEL_REAR_DRIVER);
+}
+
+void writeWithCheck(byte addr, byte val) {
+  if (EEPROM.read(addr) != val) {
+    EEPROM.write(addr, val);
+  }
+}
+
+void writeProfile(byte profileIndex) {
+  int base = profileStartAddress + (4 * profileIndex);
+  writeWithCheck(base + WHEEL_FRONT_PASSENGER, currentProfile[WHEEL_FRONT_PASSENGER]);
+  writeWithCheck(base + WHEEL_REAR_PASSENGER, currentProfile[WHEEL_REAR_PASSENGER]);
+  writeWithCheck(base + WHEEL_FRONT_DRIVER, currentProfile[WHEEL_FRONT_DRIVER]);
+  writeWithCheck(base + WHEEL_REAR_DRIVER, currentProfile[WHEEL_REAR_DRIVER]);
+}
 
 void setRideHeightFrontPassenger(byte value) {
-  if (getRideHeightFrontPassenger() != value && value <= MAX_PRESSURE_SAFETY)
-   EEPROM.write(rideHeightFrontPassengerAddr, value);
+  currentProfile[WHEEL_FRONT_PASSENGER] = value;
 }
 void setRideHeightRearPassenger(byte value) {
-  if (getRideHeightRearPassenger() != value && value <= MAX_PRESSURE_SAFETY)
-   EEPROM.write(rideHeightRearPassengerAddr, value);
+  currentProfile[WHEEL_REAR_PASSENGER] = value;
 }
 void setRideHeightFrontDriver(byte value) {
-  if (getRideHeightFrontDriver() != value && value <= MAX_PRESSURE_SAFETY)
-   EEPROM.write(rideHeightFrontDriverAddr, value);
+  currentProfile[WHEEL_FRONT_DRIVER] = value;
 }
 void setRideHeightRearDriver(byte value) {
-  if (getRideHeightRearDriver() != value && value <= MAX_PRESSURE_SAFETY)
-   EEPROM.write(rideHeightRearDriverAddr, value);
+  currentProfile[WHEEL_REAR_DRIVER] = value;
 }
 void setRiseOnStart(bool value) {
   if (getRiseOnStart() != value)
    EEPROM.write(riseOnStartAddr, value);
 }
-byte getRideHeightFrontPassenger() {
-   return EEPROM.read(rideHeightFrontPassengerAddr);
-}
-byte getRideHeightRearPassenger() {
-   return EEPROM.read(rideHeightRearPassengerAddr);
-}
-byte getRideHeightFrontDriver() {
-   return EEPROM.read(rideHeightFrontDriverAddr);
-}
-byte getRideHeightRearDriver() {
-   return EEPROM.read(rideHeightRearDriverAddr);
-}
 bool getRiseOnStart() {
    return EEPROM.read(riseOnStartAddr);
+}
+void setBaseProfile(byte value) {
+  if (getBaseProfile() != value)
+   EEPROM.write(baseProfileAddr, value);
+}
+byte getBaseProfile() {
+   return EEPROM.read(baseProfileAddr);
 }
 
 
@@ -290,11 +315,10 @@ void pressureGoalRoutine() {
 }
 
 void airUp() {
-  
-  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getRideHeightFrontPassenger());
-  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getRideHeightRearPassenger());
-  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getRideHeightFrontDriver());
-  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getRideHeightRearDriver());
+  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(currentProfile[WHEEL_FRONT_PASSENGER]);
+  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(currentProfile[WHEEL_REAR_PASSENGER]);
+  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(currentProfile[WHEEL_FRONT_DRIVER]);
+  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(currentProfile[WHEEL_REAR_DRIVER]);
   
 }
 
@@ -340,6 +364,8 @@ void setup() {
   wheel[WHEEL_REAR_PASSENGER] = new Wheel(solenoidRearPassengerInPin, solenoidRearPassengerOutPin, pressureInputRearPassenger);
   wheel[WHEEL_FRONT_DRIVER] = new Wheel(solenoidFrontDriverInPin, solenoidFrontDriverOutPin, pressureInputFrontDriver);
   wheel[WHEEL_REAR_DRIVER] = new Wheel(solenoidRearDriverInPin, solenoidRearDriverOutPin, pressureInputRearDriver);
+
+  readProfile(getBaseProfile());
 
   readPressures();
 
@@ -443,6 +469,10 @@ void drawPSIReadings() {
   display.setCursor(0,5*textHeightPx+5);
   display.print(F("Tank: "));
   display.print(int(getTankPressure()));
+
+  display.setCursor(secondRowXPos, 5*textHeightPx+5);
+  display.print(F("E"));
+  display.print(int(displayCode));
 
 //Front
   
@@ -582,6 +612,9 @@ int trailingInt(const char str[]) {
 
 const char _AIRUP[] PROGMEM = PASSWORD"AIRUP\0";
 const char _AIROUT[] PROGMEM = PASSWORD"AIROUT\0";
+const char _SAVETOPROFILE[] PROGMEM = PASSWORD"SPROF\0";
+const char _READPROFILE[] PROGMEM = PASSWORD"PROFR\0";
+const char _BASEPROFILE[] PROGMEM = PASSWORD"PRBOF\0";
 const char _AIRHEIGHTA[] PROGMEM = PASSWORD"AIRHEIGHTA\0";
 const char _AIRHEIGHTB[] PROGMEM = PASSWORD"AIRHEIGHTB\0";
 const char _AIRHEIGHTC[] PROGMEM = PASSWORD"AIRHEIGHTC\0";
@@ -629,6 +662,30 @@ bool runInput() {
   }
   if (comp(inBuffer,_AIROUT)) {
     airOut();
+    return true;
+  }
+  if (comp(inBuffer,_SAVETOPROFILE)) {
+    unsigned long profileIndex = trailingInt(_SAVETOPROFILE);
+    if (profileIndex > MAX_PROFILE_COUNT) {
+      return false;
+    }
+    writeProfile(profileIndex);
+    return true;
+  }
+  if (comp(inBuffer,_BASEPROFILE)) {
+    unsigned long profileIndex = trailingInt(_BASEPROFILE);
+    if (profileIndex > MAX_PROFILE_COUNT) {
+      return false;
+    }
+    setBaseProfile(profileIndex);
+    return true;
+  }
+  if (comp(inBuffer,_READPROFILE)) {
+    unsigned long profileIndex = trailingInt(_READPROFILE);
+    if (profileIndex > MAX_PROFILE_COUNT) {
+      return false;
+    }
+    readProfile(profileIndex);
     return true;
   }
   if (comp(inBuffer,_AIRHEIGHTA)) {
