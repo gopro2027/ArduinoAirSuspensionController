@@ -3,35 +3,23 @@ Air Suspension Controller
 
 Parts list (screenshots in images folder):
 
-Generic ebay manifold - $100 version wires only https://www.ebay.com/itm/324238773355
-
-Arduino nano (offbrand old bootloader works fine, many places to obtain)
-
-HC-06 Bluetooth https://www.amazon.com/gp/product/B074J5WMH1
-
-5v to 3v board https://www.amazon.com/gp/product/B07CP4P5XJ/
-
-i2c display https://www.amazon.com/gp/product/B09JWLDK9F/
-
-12v to 5v converter https://www.ebay.com/itm/234840680851
-
-5 300psi pressure sensors (links vary... make sure to check reviews some suck. 200psi also works just modify code)
-
-8 FQP30N06 Mosfet https://www.ebay.com/itm/153938539967
-
-8 Fuses https://www.ebay.com/itm/273505548256
-
-8 1N4007 Diode https://www.ebay.com/itm/393973959592?var=662531753553
-
-8 10k ohm resistors https://www.ebay.com/itm/324683051749?var=513694032962
-
-8 150 ohm resistors https://www.ebay.com/itm/324683051749?var=513694032918
-
-Also need loosely:
-Various wires
-Relay for turning the manifold on and off
-3D printer for hat and base
-Android device to control arduino
+Generic ebay manifold - $100 version wires only https://www.ebay.com/itm/324238773355<br>
+Arduino nano (offbrand old bootloader works fine, many places to obtain)<br>
+HC-06 Bluetooth https://www.amazon.com/gp/product/B074J5WMH1<br>
+5v to 3v board https://www.amazon.com/gp/product/B07CP4P5XJ/<br>
+i2c display https://www.amazon.com/gp/product/B09JWLDK9F/<br>
+12v to 5v converter https://www.ebay.com/itm/234840680851<br>
+5 300psi pressure sensors (links vary... make sure to check reviews some suck. 200psi also works just modify code)<br>
+8 FQP30N06 Mosfet https://www.ebay.com/itm/153938539967<br>
+8 Fuses https://www.ebay.com/itm/273505548256<br>
+8 1N4007 Diode https://www.ebay.com/itm/393973959592?var=662531753553<br>
+8 10k ohm resistors https://www.ebay.com/itm/324683051749?var=513694032962<br>
+8 150 ohm resistors https://www.ebay.com/itm/324683051749?var=513694032918<br>
+Also need loosely:<br>
+Various wires<br>
+Relay for turning the manifold on and off<br>
+3D printer for hat and base<br>
+Android device to control arduino<br>
 
 Loose steps:
 1. Order parts, order circuit board on JLPCB website, 3d print parts
