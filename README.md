@@ -17,6 +17,7 @@ i2c display https://www.amazon.com/gp/product/B09JWLDK9F/<br>
 8 150 ohm resistors https://www.ebay.com/itm/324683051749?var=513694032918<br>
 Also need loosely:<br>
 Various wires<br>
+Various pipes and connectrs<br>
 Relay for turning the manifold on and off<br>
 3D printer for hat and base<br>
 Android device to control arduino<br>
