@@ -85,6 +85,8 @@ void Wheel::pressureGoalRoutine() {
       //stop
       this->s_AirIn.close();
       displayCode = 2;
+      displayCode2 = readPressure;
+      displayCode3 = this->pressureGoal;
     } else {
       if (millis() > this->routineStartTime + ROUTINE_TIMEOUT) {
         this->s_AirIn.close();

@@ -26,5 +26,7 @@ public:
 
 const int MAX_PRESSURE_SAFETY = 150;
 extern int displayCode;
+extern int displayCode2;
+extern int displayCode3;
 
 #endif

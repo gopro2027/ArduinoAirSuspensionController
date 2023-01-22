@@ -78,6 +78,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define MAX_PROFILE_COUNT 4
 
 int displayCode = -1;
+int displayCode2 = -1;
+int displayCode3 = -1;
 
 //Digital pins
 SoftwareSerial bt(3, 2); // RX, TX
@@ -473,6 +475,10 @@ void drawPSIReadings() {
   display.setCursor(secondRowXPos, 5*textHeightPx+5);
   display.print(F("E"));
   display.print(int(displayCode));
+  display.print(F(" "));
+  display.print(int(displayCode2));
+  display.print(F(" "));
+  display.print(int(displayCode3));
 
 //Front
   
