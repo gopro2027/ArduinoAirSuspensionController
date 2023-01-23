@@ -300,16 +300,17 @@ void setupSolenoidPins() {
   //digitalWrite(13, HIGH);
 }
 
-
-void pressureGoalRoutine() {
-  bool active = false;
+bool isAnyWheelActive() {
   for (int i = 0; i < 4; i++) {
     if (getWheel(i)->isActive()) {
-      active = true;
+      return true;
     }
   }
-  if (active) {
-    readPressures();
+  return false;
+}
+void pressureGoalRoutine() {
+  if (isAnyWheelActive()) {
+     readPressures();
   }
   for (int i = 0; i < 4; i++) {
     getWheel(i)->pressureGoalRoutine();
@@ -326,10 +327,10 @@ void airUp() {
 
 void airOut() {
 
-  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(10);
-  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(10);
-  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(10);
-  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(10);
+  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(0);
+  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(0);
+  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(0);
+  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(0);
   
 }
 
@@ -413,7 +414,9 @@ void loop() {
   bt_cmd();
   if (pause_exe == false) {
     if (millis() - lastPressureReadTime > sensorreadDelay) {
-      readPressures();
+      if (!isAnyWheelActive()) {
+        readPressures();
+      }
       /*for (int i = 0; i < 8; i++) {
           Serial.print((char)('0'+i));
           Serial.print(": ");
@@ -473,6 +476,8 @@ void drawPSIReadings() {
   display.print(int(getTankPressure()));
 
   display.setCursor(secondRowXPos, 5*textHeightPx+5);
+
+  displayCode = analogRead(pressureInputTank);
   display.print(F("E"));
   display.print(int(displayCode));
   display.print(F(" "));
