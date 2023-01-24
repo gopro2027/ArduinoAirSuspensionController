@@ -400,10 +400,37 @@ int getTankPressure() {
 }
 
 float readPinPressure(int pin);
+const int time_solenoid_movement_delta = 200;//ms
+const int time_solenoid_open_time = 5;//ms
 void readPressures() {
   pressureValueTank = readPinPressure(pressureInputTank);
+
+  //check if any air up solenoids are open and if so, close them for reading
+  bool safePressureReadAny = false;
+  for (int i = 0; i < 4; i++) {
+    if (getWheel(i)->prepareSafePressureRead()) {
+      safePressureReadAny = true;
+    }
+  }
+
+  //wait a bit of time for the solenoids to physically close
+  if (safePressureReadAny) {
+    delay(time_solenoid_movement_delta);
+  }
+
+  //read the pressures
   for (int i = 0; i < 4; i++) {
     getWheel(i)->readPressure();
+  }
+
+  //re-open solenoids if necessary
+  for (int i = 0; i < 4; i++) {
+    getWheel(i)->safePressureClose();
+  }
+
+  //give them a brief pause to stay open (not super necessary)
+  if (safePressureReadAny) {
+    delay(time_solenoid_open_time);
   }
 }
 

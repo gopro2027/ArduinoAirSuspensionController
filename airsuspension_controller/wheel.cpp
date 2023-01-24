@@ -6,8 +6,6 @@ int getTankPressure();//from main
 
 const int PRESSURE_DELTA = 3;//Pressure will go to +- 3 psi to verify
 const unsigned long ROUTINE_TIMEOUT = 10 * 1000;//10 seconds is too long
-const int time_solenoid_movement_delta = 1000;//ms
-const int time_solenoid_open_time = 5;//ms
 const int pressureAdjustment = -10;//my sensors are reading about -10 too high
 
 Wheel::Wheel() {}
@@ -21,42 +19,35 @@ Wheel::Wheel(int solenoidInPin, int solenoidOutPin, int pressurePin) {
   this->routineStartTime = 0;
   this->pressureValue = 0;
   this->pressureGoal = 0;
+  this->isInSafePressureRead = false;
 }
 
 const float pressureZero = 102.4; //analog reading of pressure transducer at 0psi
-const float pressureMax = 921.6; //analog reading of pressure transducer at 100psi
+const float pressureMax = 921.6; //analog reading of pressure transducer at max psi (300)
 const int pressuretransducermaxPSI = 300; //psi value of transducer being used
 
 float readPinPressure(int pin) {
   return float((float(analogRead(pin))-pressureZero)*pressuretransducermaxPSI)/(pressureMax-pressureZero) + pressureAdjustment; //conversion equation to convert analog reading to psi
 }
 
-void Wheel::readPressure() {
-  bool o_i = false;
-  bool o_o = false;
+bool Wheel::prepareSafePressureRead() {
+  this->isInSafePressureRead = false;
   if (this->s_AirIn.isOpen()) {
-    o_i = true;
     this->s_AirIn.close();
+    this->isInSafePressureRead = true;
   }
-  if (this->s_AirOut.isOpen()) {
-    //Note: I don't think it really needs to close the solenoid to test the out pressure
-    //o_o = true;
-    //this->s_AirOut.close();
-  }
-  if (o_i || o_o) {
-    delay(time_solenoid_movement_delta);
-  }
-  this->pressureValue = readPinPressure(this->pressurePin);
-  
-  if (o_i) {
+  return this->isInSafePressureRead;
+}
+
+void Wheel::safePressureClose() {
+  if (this->isInSafePressureRead) {
     this->s_AirIn.open();
+    this->isInSafePressureRead = false;
   }
-  if (o_o) {
-    this->s_AirOut.open();
-  }
-  if (o_i || o_o) {
-    delay(time_solenoid_open_time);
-  }
+}
+
+void Wheel::readPressure() {
+  this->pressureValue = readPinPressure(this->pressurePin);
 }
 
 float Wheel::getPressure() {
