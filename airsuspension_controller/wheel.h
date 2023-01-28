@@ -27,7 +27,7 @@ public:
   void safePressureClose();
 };
 
-const int MAX_PRESSURE_SAFETY = 150;
+const int MAX_PRESSURE_SAFETY = 200;
 extern int displayCode;
 extern int displayCode2;
 extern int displayCode3;
