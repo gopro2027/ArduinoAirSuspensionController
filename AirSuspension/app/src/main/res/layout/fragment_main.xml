@@ -52,7 +52,7 @@
             android:layout_width="0px"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/setfrontpressureD" />
+            android:text="@string/setfrontpressureP" />
 
         <EditText
             android:id="@+id/edittext_setfrontpressureP"
