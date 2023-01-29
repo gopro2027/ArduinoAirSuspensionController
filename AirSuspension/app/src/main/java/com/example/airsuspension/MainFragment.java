@@ -1,6 +1,7 @@
 package com.example.airsuspension;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,45 +37,45 @@ public class MainFragment extends Fragment {
         );
 
         binding.buttonSetfrontpressureD.setOnClickListener((v) -> {
-                try {
-                    getAirSuspensionController().setFrontPressureD(Integer.parseInt(binding.edittextSetfrontpressureD.getText().toString()));
-                } catch (Exception e) {
-                    getAirSuspensionController().toast("Please input a valid number!");
-                }
+            try {
+                getAirSuspensionController().setFrontPressureD(Integer.parseInt(binding.edittextSetfrontpressureD.getText().toString()));
+            } catch (Exception e) {
+                getAirSuspensionController().toast("Please input a valid number!");
+            }
         });
 
         binding.buttonSetfrontpressureP.setOnClickListener((v) -> {
-                try {
-                    getAirSuspensionController().setFrontPressureP(Integer.parseInt(binding.edittextSetfrontpressureP.getText().toString()));
-                } catch (Exception e) {
-                    getAirSuspensionController().toast("Please input a valid number!");
+                    try {
+                        getAirSuspensionController().setFrontPressureP(Integer.parseInt(binding.edittextSetfrontpressureP.getText().toString()));
+                    } catch (Exception e) {
+                        getAirSuspensionController().toast("Please input a valid number!");
+                    }
                 }
-            }
         );
 
         binding.buttonSetrearpressureD.setOnClickListener((v) -> {
-                try {
-                    getAirSuspensionController().setRearPressureD(Integer.parseInt(binding.edittextSetrearpressureD.getText().toString()));
-                } catch (Exception e) {
-                    getAirSuspensionController().toast("Please input a valid number!");
-                }
+            try {
+                getAirSuspensionController().setRearPressureD(Integer.parseInt(binding.edittextSetrearpressureD.getText().toString()));
+            } catch (Exception e) {
+                getAirSuspensionController().toast("Please input a valid number!");
+            }
 
         });
 
         binding.buttonSetrearpressureP.setOnClickListener((v) -> {
-                try {
-                    getAirSuspensionController().setRearPressureP(Integer.parseInt(binding.edittextSetrearpressureP.getText().toString()));
-                } catch (Exception e) {
-                    getAirSuspensionController().toast("Please input a valid number!");
+                    try {
+                        getAirSuspensionController().setRearPressureP(Integer.parseInt(binding.edittextSetrearpressureP.getText().toString()));
+                    } catch (Exception e) {
+                        getAirSuspensionController().toast("Please input a valid number!");
+                    }
                 }
-            }
         );
 
         binding.profileNum.setMinValue(1);
         binding.profileNum.setMaxValue(4);
-        binding.buttonLoadProfile.setOnClickListener((v) -> getAirSuspensionController().readProfile(binding.profileNum.getValue()-1));
-        binding.buttonSaveProfile.setOnClickListener((v) -> getAirSuspensionController().saveToProfile(binding.profileNum.getValue()-1));
-        binding.buttonDefaultProfile.setOnClickListener((v) -> getAirSuspensionController().setBaseProfile(binding.profileNum.getValue()-1));
+        binding.buttonLoadProfile.setOnClickListener((v) -> getAirSuspensionController().readProfile(binding.profileNum.getValue() - 1));
+        binding.buttonSaveProfile.setOnClickListener((v) -> getAirSuspensionController().saveToProfile(binding.profileNum.getValue() - 1));
+        binding.buttonDefaultProfile.setOnClickListener((v) -> getAirSuspensionController().setBaseProfile(binding.profileNum.getValue() - 1));
         /*
         binding.buttonLoad1.setOnClickListener((v) -> getAirSuspensionController().readProfile(0));
         binding.buttonLoad2.setOnClickListener((v) -> getAirSuspensionController().readProfile(1));
@@ -89,13 +90,13 @@ public class MainFragment extends Fragment {
         binding.buttonBp3.setOnClickListener((v) -> getAirSuspensionController().setBaseProfile(2));
 */
 
-        binding.buttonTestsol.setOnClickListener((v) -> {
+        /*binding.buttonTestsol.setOnClickListener((v) -> {
                 try {
                     getAirSuspensionController().testSolenoid(Integer.parseInt(binding.edittextTestsol.getText().toString()));
                 } catch (Exception e) {
                     getAirSuspensionController().toast("Please input a valid number!");
                 }
-        });
+        });*/
 
         binding.buttonSetriseonstartenabled.setOnClickListener(v -> {
             getAirSuspensionController().setRiseOnStart(true);
@@ -105,7 +106,15 @@ public class MainFragment extends Fragment {
             getAirSuspensionController().setRiseOnStart(false);
         });
 
-        getAirSuspensionController().setUpdatePressure((fp, rp,  fd,  rd,  tank) -> {
+        binding.buttonSetraiseonpressuresetenabled.setOnClickListener(v -> {
+            getAirSuspensionController().setRaiseOnPressureSet(true);
+        });
+
+        binding.buttonSetraiseonpressuresetdisabled.setOnClickListener(v -> {
+            getAirSuspensionController().setRaiseOnPressureSet(false);
+        });
+
+        getAirSuspensionController().setUpdatePressure((fp, rp, fd, rd, tank) -> {
             if (binding != null) {
                 binding.pressureFp.setText(fp);
                 binding.pressureRp.setText(rp);
@@ -114,6 +123,19 @@ public class MainFragment extends Fragment {
                 binding.pressureTank.setText(tank);
             }
         });
+    }
+
+    /*@Override
+    public void onResume() {
+        super.onResume();
+        Log.i("MainFragment","onResume");
+        getAirSuspensionController().bluetoothOn(null);
+    }*/
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        getAirSuspensionController().bluetoothOn(null);
     }
 
     @Override

@@ -263,6 +263,28 @@
         android:orientation="horizontal">
 
         <Button
+            android:id="@+id/button_setraiseonpressuresetenabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/setraiseonpressuresetenabled" />
+
+        <Button
+            android:id="@+id/button_setraiseonpressuresetdisabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/setraiseonpressuresetdisabled" />
+
+    </LinearLayout>
+
+    <!--
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
             android:id="@+id/button_testsol"
             android:layout_width="0px"
             android:layout_height="wrap_content"
@@ -278,7 +300,7 @@
             android:maxLength="2" />
 
 
-    </LinearLayout>
+    </LinearLayout>-->
 
     <RelativeLayout
         android:layout_width="match_parent"

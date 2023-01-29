@@ -276,6 +276,15 @@ public class AirSuspensionController {
         });
     }
 
+    public void setRaiseOnPressureSet(boolean riseOnStart) {
+        bluetoothOn(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("ROPS" + (riseOnStart ? "1" : "0") + "\n");
+                toast("Set rise on start");
+            }
+        });
+    }
+
     public void testSolenoid(int pinNum) {
         bluetoothOn(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
