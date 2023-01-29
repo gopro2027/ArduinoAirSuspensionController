@@ -4,7 +4,7 @@
 
 int getTankPressure();//from main
 
-const int PRESSURE_DELTA = 3;//Pressure will go to +- 3 psi to verify
+const int PRESSURE_DELTA = 7;//Pressure will go to +- psi to verify before starting a routine
 const unsigned long ROUTINE_TIMEOUT = 10 * 1000;//10 seconds is too long
 const int pressureAdjustment = -10;//my sensors are reading about -10 too high
 
@@ -20,6 +20,7 @@ Wheel::Wheel(int solenoidInPin, int solenoidOutPin, int pressurePin) {
   this->pressureValue = 0;
   this->pressureGoal = 0;
   this->isInSafePressureRead = false;
+  this->isClosePaused = false;
 }
 
 const float pressureZero = 102.4; //analog reading of pressure transducer at 0psi
@@ -43,6 +44,21 @@ void Wheel::safePressureClose() {
   if (this->isInSafePressureRead) {
     this->s_AirIn.open();
     this->isInSafePressureRead = false;
+  }
+}
+
+void Wheel::safePressureReadPauseClose() {
+  this->isClosePaused = false;
+  if (this->s_AirOut.isOpen()) {
+    this->s_AirOut.close();
+    this->isClosePaused = true;
+  }
+}
+
+void Wheel::safePressureReadResumeClose() {
+  if (this->isClosePaused) {
+    this->s_AirOut.open();
+    this->isClosePaused = false;
   }
 }
 

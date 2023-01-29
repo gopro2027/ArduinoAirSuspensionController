@@ -15,6 +15,7 @@ private:
   unsigned long routineStartTime;
   int pressureGoal;
   bool isInSafePressureRead;
+  bool isClosePaused;
 public:
   Wheel();
   Wheel(int solenoidInPin, int solenoidOutPin, int pressurePin);
@@ -25,6 +26,8 @@ public:
   bool isActive();
   bool prepareSafePressureRead();
   void safePressureClose();
+  void safePressureReadPauseClose();
+  void safePressureReadResumeClose();
 };
 
 const int MAX_PRESSURE_SAFETY = 200;

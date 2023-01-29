@@ -217,7 +217,8 @@ static const unsigned char PROGMEM logo_bmp_airtekk[] =
 //const int rideHeightRearDriverAddr = 3;
 const int riseOnStartAddr = 0;
 const int baseProfileAddr = 1;
-#define profileStartAddress 2;
+const int raiseOnPressureAddr = 2;
+#define profileStartAddress 3;
 
 byte currentProfile[4];
 /*
@@ -251,16 +252,29 @@ void writeProfile(byte profileIndex) {
 
 void setRideHeightFrontPassenger(byte value) {
   currentProfile[WHEEL_FRONT_PASSENGER] = value;
+  if (getRaiseOnPressureSet()) {
+    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(value);
+  }
 }
 void setRideHeightRearPassenger(byte value) {
   currentProfile[WHEEL_REAR_PASSENGER] = value;
+  if (getRaiseOnPressureSet()) {
+    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(value);
+  }
 }
 void setRideHeightFrontDriver(byte value) {
   currentProfile[WHEEL_FRONT_DRIVER] = value;
+  if (getRaiseOnPressureSet()) {
+    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(value);
+  }
 }
 void setRideHeightRearDriver(byte value) {
   currentProfile[WHEEL_REAR_DRIVER] = value;
+  if (getRaiseOnPressureSet()) {
+    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(value);
+  }
 }
+
 void setRiseOnStart(bool value) {
   if (getRiseOnStart() != value)
    EEPROM.write(riseOnStartAddr, value);
@@ -268,12 +282,21 @@ void setRiseOnStart(bool value) {
 bool getRiseOnStart() {
    return EEPROM.read(riseOnStartAddr);
 }
+
 void setBaseProfile(byte value) {
   if (getBaseProfile() != value)
    EEPROM.write(baseProfileAddr, value);
 }
 byte getBaseProfile() {
    return EEPROM.read(baseProfileAddr);
+}
+
+void setRaiseOnPressureSet(bool value) {
+  if (getRaiseOnPressureSet() != value)
+   EEPROM.write(raiseOnPressureAddr, value);
+}
+bool getRaiseOnPressureSet() {
+   return EEPROM.read(raiseOnPressureAddr);
 }
 
 
@@ -400,7 +423,7 @@ int getTankPressure() {
 }
 
 float readPinPressure(int pin);
-const int time_solenoid_movement_delta = 200;//ms
+const int time_solenoid_movement_delta = 500;//ms
 const int time_solenoid_open_time = 5;//ms
 void readPressures() {
   pressureValueTank = readPinPressure(pressureInputTank);
@@ -415,6 +438,9 @@ void readPressures() {
 
   //wait a bit of time for the solenoids to physically close
   if (safePressureReadAny) {
+    for (int i = 0; i < 4; i++) {
+      getWheel(i)->safePressureReadPauseClose();
+    }
     delay(time_solenoid_movement_delta);
   }
 
@@ -431,6 +457,10 @@ void readPressures() {
   //give them a brief pause to stay open (not super necessary)
   if (safePressureReadAny) {
     delay(time_solenoid_open_time);
+    //resume wheels after delay
+    for (int i = 0; i < 4; i++) {
+      getWheel(i)->safePressureReadResumeClose();
+    }
   }
 }
 
@@ -658,6 +688,7 @@ const char _AIRHEIGHTB[] PROGMEM = PASSWORD"AIRHEIGHTB\0";
 const char _AIRHEIGHTC[] PROGMEM = PASSWORD"AIRHEIGHTC\0";
 const char _AIRHEIGHTD[] PROGMEM = PASSWORD"AIRHEIGHTD\0";
 const char _RISEONSTART[] PROGMEM = PASSWORD"RISEONSTART\0";
+const char _RAISEONPRESSURESET[] PROGMEM = PASSWORD"ROPS\0";
 const char _TESTSOL[] PROGMEM = PASSWORD"TESTSOL\0";
 
 bool comp(char *str1, const char str2[]) {
@@ -752,6 +783,15 @@ bool runInput() {
       setRiseOnStart(false);
     } else {
       setRiseOnStart(true);
+    }
+    return true;
+  }
+  if (comp(inBuffer,_RAISEONPRESSURESET)) {
+    unsigned long rops = trailingInt(_RAISEONPRESSURESET);
+    if (rops == 0) {
+      setRaiseOnPressureSet(false);
+    } else {
+      setRaiseOnPressureSet(true);
     }
     return true;
   }
