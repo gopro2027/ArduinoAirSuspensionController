@@ -1,6 +1,9 @@
 # ArduinoAirSuspensionController
 Air Suspension Controller
 
+Overview:
+This is intended as a DIY replacement for products such as Airlift 3P ($1500) or Airtek Stage 2+ ($1000) with a build cost of roughly $500. Combined with the customizability of open sourced code, I hope this is a tempting option for some DIY-ers out there. This github repo includes an android app and arduino code along with some 3d printable files and a PCB. The PCB is pre-made and ready for upload in JLCPCB to order and should hopefully make the electrinics/soldering learning curve a lot smaller for the average diy-er, as compared to having to solder every wire by scratch according to a diagram. This was designed as an upgrade from airtekk stage 1, which is just bags, tank, compressor, tubing and fittings, guages and manual paddle switches. So that is what you would need already prior to creating this, similarly to what you would need for one of the on-the-shelf manifolds listed above.
+
 Parts list (screenshots in images folder):
 
 Generic ebay manifold - $100 version wires only https://www.ebay.com/itm/324238773355<br>
@@ -15,7 +18,9 @@ i2c display https://www.amazon.com/gp/product/B09JWLDK9F/<br>
 8 1N4007 Diode https://www.ebay.com/itm/393973959592?var=662531753553<br>
 8 10k ohm resistors https://www.ebay.com/itm/324683051749?var=513694032962<br>
 8 150 ohm resistors https://www.ebay.com/itm/324683051749?var=513694032918<br>
+Also probably want a 12v voltage stabalizer<br>
 Also need loosely:<br>
+Some pin headers to make the arduino easily replacable in case it gets fried accidentally<br>
 Various wires<br>
 Various pipes and connectrs<br>
 Relay for turning the manifold on and off<br>
