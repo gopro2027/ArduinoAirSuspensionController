@@ -56,7 +56,7 @@
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
-#define TEST_MODE true
+#define TEST_MODE false
 #define SCREEN_MOODE true
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
@@ -424,7 +424,7 @@ int getTankPressure() {
 
 float readPinPressure(int pin);
 const int time_solenoid_movement_delta = 500;//ms
-const int time_solenoid_open_time = 5;//ms
+const int time_solenoid_open_time = 1;//ms
 void readPressures() {
   pressureValueTank = readPinPressure(pressureInputTank);
 
