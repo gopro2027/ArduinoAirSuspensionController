@@ -4,7 +4,7 @@
 
 int getTankPressure();//from main
 
-const int PRESSURE_DELTA = 7;//Pressure will go to +- psi to verify before starting a routine
+const int PRESSURE_DELTA = 3;//Pressure will go to +- psi to verify before starting a routine
 const unsigned long ROUTINE_TIMEOUT = 10 * 1000;//10 seconds is too long
 const int pressureAdjustment = -10;//my sensors are reading about -10 too high
 
