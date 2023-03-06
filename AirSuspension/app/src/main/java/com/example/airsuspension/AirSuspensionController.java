@@ -180,26 +180,29 @@ public class AirSuspensionController {
                             toast("Can't retry, thread is already active :(");
                         } else {
                             if (lastBluetoothRequestTime + 30000 > System.currentTimeMillis()) {
-                                toast("retrying...");
-                                btStartThread(BT_MAC);
+                               // toast("retrying...");
+
+
+                                //mBluetoothStatus.setText(getString(R.string.BTconnFail))
+                                toast("Connection fail");
+
+                                //BT_MODULE_UUID = UUID.randomUUID();
+                                mBTAdapter = BluetoothAdapter.getDefaultAdapter();
+                                close();
+                                try {
+                                    mBTSocket.close();
+                                } catch(Exception e){}//swallow
+                                mBTSocket = null; // bi-directional client-to-client data path
+
+
+                                //btStartThread(BT_MAC);
                             } else {
                                 toast("Connection timeout!");
                             }
                         }
 
-                        /*
 
-                        //mBluetoothStatus.setText(getString(R.string.BTconnFail));
-                        toast("Connection fail");
 
-                        //BT_MODULE_UUID = UUID.randomUUID();
-                        mBTAdapter = BluetoothAdapter.getDefaultAdapter();
-                        close();
-                        try {
-                            mBTSocket.close();
-                        } catch(Exception e){}//swallow
-                        mBTSocket = null; // bi-directional client-to-client data path
-                        */
 
                     }
                 }
