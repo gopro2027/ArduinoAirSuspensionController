@@ -7,17 +7,44 @@
     android:orientation="vertical"
     tools:context=".MainFragment">
 
-    <Button
-        android:id="@+id/button_airup"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/airup" />
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/button_airup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/airup" />
 
-    <Button
-        android:id="@+id/button_airout"
+        <Button
+            android:id="@+id/button_airupsm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/airupsm" />
+    </LinearLayout>
+
+
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/airout" />
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/button_airout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/airout" />
+        <Button
+            android:id="@+id/button_airoutsm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/airoutsm" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"

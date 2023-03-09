@@ -33,8 +33,11 @@ public class MainFragment extends Fragment {
 
         binding.buttonAirup.setOnClickListener((v) -> getAirSuspensionController().airUp());
 
-        binding.buttonAirout.setOnClickListener((v) -> getAirSuspensionController().airOut()
-        );
+        binding.buttonAirout.setOnClickListener((v) -> getAirSuspensionController().airOut());
+
+        binding.buttonAirupsm.setOnClickListener((v) -> getAirSuspensionController().airSm(10));
+
+        binding.buttonAiroutsm.setOnClickListener((v) -> getAirSuspensionController().airSm(-10));
 
         binding.buttonSetfrontpressureD.setOnClickListener((v) -> {
             try {
@@ -121,6 +124,15 @@ public class MainFragment extends Fragment {
                 binding.pressureFd.setText(fd);
                 binding.pressureRd.setText(rd);
                 binding.pressureTank.setText(tank);
+            }
+        });
+
+        getAirSuspensionController().setUpdatePressureProfile((fp, rp, fd, rd, tank) -> {
+            if (binding != null) {
+                binding.edittextSetfrontpressureP.setText(fp);
+                binding.edittextSetrearpressureP.setText(rp);
+                binding.edittextSetfrontpressureD.setText(fd);
+                binding.edittextSetrearpressureD.setText(rd);
             }
         });
     }

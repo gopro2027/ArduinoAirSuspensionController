@@ -74,10 +74,15 @@ public class AirSuspensionController {
     }
 
     private UpdatePressure updatePressure = null;
+    private UpdatePressure updatePressureProfile = null;
     private BluetoothCommand onConnectedCmd = null;
 
     public void setUpdatePressure(UpdatePressure updatePressure) {
         this.updatePressure = updatePressure;
+    }
+
+    public void setUpdatePressureProfile(UpdatePressure updatePressure) {
+        this.updatePressureProfile = updatePressure;
     }
 
     AirSuspensionController(Activity activity) {
@@ -120,50 +125,65 @@ public class AirSuspensionController {
                             Log.i("Received", message);
                             heartbeat = System.currentTimeMillis();
 
-                            String[] arr = message.split("\\|");
-                            if (arr.length == 1) {
+
+                            //if (arr.length == 1) {
 
 
-                                String cmd_key = "NOTIF";
-                                if (message.startsWith(cmd_key)) {
-                                    message = message.substring(cmd_key.length());
-                                    toast(message);
+                            if (message.startsWith("NOTIF")) {
+                                message = message.substring("NOTIF".length());
+                                toast(message);
+                            } else if (message.startsWith("PROF")) {
+                                message = message.substring("PROF".length());
+                                String[] arr = message.split("\\|");
+                                if (arr.length == 4) {
+                                    String fp = arr[0];
+                                    String rp = arr[1];
+                                    String fd = arr[2];
+                                    String rd = arr[3];
+
+                                    if (updatePressureProfile != null)
+                                        updatePressureProfile.updatePressure(fp, rp, fd, rd, null);// no tank pressure
                                 }
 
+                            } else if (message.startsWith("PRES")) {
+                                message = message.substring("PRES".length());
 
-                            }
-                            if (arr.length == 5) {
+                                String[] arr = message.split("\\|");
 
-                                if (onConnectedCmd != null) {
-                                    onConnectedCmd.command();
-                                    onConnectedCmd = null;
-                                }
+                                //}
+                                if (arr.length == 5) {
 
-                                String fp = arr[0];
-                                String rp = arr[1];
-                                String fd = arr[2];
-                                String rd = arr[3];
-                                String tank = arr[4];
+                                    if (onConnectedCmd != null) {
+                                        onConnectedCmd.command();
+                                        onConnectedCmd = null;
+                                    }
 
-                                try {
+                                    String fp = arr[0];
+                                    String rp = arr[1];
+                                    String fd = arr[2];
+                                    String rd = arr[3];
+                                    String tank = arr[4];
 
-                                    AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(activity);
-                                    RemoteViews remoteViews = new RemoteViews(((Context) activity).getPackageName(), R.layout.pressure_widget);
-                                    ComponentName thisWidget = new ComponentName(activity, PressureWidget.class);
-                                    remoteViews.setTextViewText(R.id.pressure_fp, fp);
-                                    remoteViews.setTextViewText(R.id.pressure_rp, rp);
-                                    remoteViews.setTextViewText(R.id.pressure_fd, fd);
-                                    remoteViews.setTextViewText(R.id.pressure_rd, rd);
-                                    remoteViews.setTextViewText(R.id.pressure_tank, tank);
+                                    try {
 
-                                    if (updatePressure != null)
-                                        updatePressure.updatePressure(fp, rp, fd, rd, tank);
+                                        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(activity);
+                                        RemoteViews remoteViews = new RemoteViews(((Context) activity).getPackageName(), R.layout.pressure_widget);
+                                        ComponentName thisWidget = new ComponentName(activity, PressureWidget.class);
+                                        remoteViews.setTextViewText(R.id.pressure_fp, fp);
+                                        remoteViews.setTextViewText(R.id.pressure_rp, rp);
+                                        remoteViews.setTextViewText(R.id.pressure_fd, fd);
+                                        remoteViews.setTextViewText(R.id.pressure_rd, rd);
+                                        remoteViews.setTextViewText(R.id.pressure_tank, tank);
 
-                                    appWidgetManager.updateAppWidget(thisWidget, remoteViews);
+                                        if (updatePressure != null)
+                                            updatePressure.updatePressure(fp, rp, fd, rd, tank);
+
+                                        appWidgetManager.updateAppWidget(thisWidget, remoteViews);
 
 
-                                } catch (Exception e) {
-                                    //e.printStackTrace();
+                                    } catch (Exception e) {
+                                        //e.printStackTrace();
+                                    }
                                 }
                             }
                         }
@@ -180,7 +200,7 @@ public class AirSuspensionController {
                             toast("Can't retry, thread is already active :(");
                         } else {
                             if (lastBluetoothRequestTime + 30000 > System.currentTimeMillis()) {
-                               // toast("retrying...");
+                                // toast("retrying...");
 
 
                                 //mBluetoothStatus.setText(getString(R.string.BTconnFail))
@@ -191,7 +211,8 @@ public class AirSuspensionController {
                                 close();
                                 try {
                                     mBTSocket.close();
-                                } catch(Exception e){}//swallow
+                                } catch (Exception e) {
+                                }//swallow
                                 mBTSocket = null; // bi-directional client-to-client data path
 
 
@@ -200,8 +221,6 @@ public class AirSuspensionController {
                                 toast("Connection timeout!");
                             }
                         }
-
-
 
 
                     }
@@ -228,11 +247,20 @@ public class AirSuspensionController {
         });
     }
 
+    public void airSm(int psi) {
+        bluetoothOn(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("AIRSM" + psi + "\n");
+                toast("Adding this much pressure: " + psi);
+            }
+        });
+    }
+
     public void setBaseProfile(int profileNum) {
         bluetoothOn(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("PRBOF" + profileNum + "\n");
-                toast("Set base profile (loaded on car start) to "+profileNum);
+                toast("Set base profile (loaded on car start) to " + (profileNum+1));
             }
         });
     }
@@ -241,7 +269,7 @@ public class AirSuspensionController {
         bluetoothOn(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("SPROF" + profileNum + "\n");
-                toast("Saved to profile "+profileNum);
+                toast("Saved to profile " + (profileNum+1));
             }
         });
     }
@@ -250,7 +278,7 @@ public class AirSuspensionController {
         bluetoothOn(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("PROFR" + profileNum + "\n");
-                toast("Loaded profile "+profileNum);
+                toast("Loaded profile " + (profileNum+1));
             }
         });
     }
@@ -295,7 +323,7 @@ public class AirSuspensionController {
         bluetoothOn(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("RISEONSTART" + (riseOnStart ? "1" : "0") + "\n");
-                toast("Set rise on start "+riseOnStart);
+                toast("Set rise on start " + riseOnStart);
             }
         });
     }
@@ -304,7 +332,7 @@ public class AirSuspensionController {
         bluetoothOn(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("ROPS" + (raiseOnPressureSet ? "1" : "0") + "\n");
-                toast("Set raise on pressure set "+raiseOnPressureSet);
+                toast("Set raise on pressure set " + raiseOnPressureSet);
             }
         });
     }
@@ -349,6 +377,7 @@ public class AirSuspensionController {
     }
 
     private Toast previousToast;
+
     public void toast(String text) {
         if (previousToast != null) {
             previousToast.cancel();
@@ -357,7 +386,7 @@ public class AirSuspensionController {
             previousToast = Toast.makeText(activity.getApplicationContext(), text, Toast.LENGTH_SHORT);
             previousToast.show();
         }
-        Log.i(TAG, "Toast said: "+text);
+        Log.i(TAG, "Toast said: " + text);
     }
 
 
@@ -379,9 +408,9 @@ public class AirSuspensionController {
     @SuppressLint("MissingPermission")
     private BluetoothSocket createBluetoothSocket(BluetoothDevice device) throws IOException {
         try {
-            final Method m = device.getClass().getMethod("createInsecureRfcommSocketToServiceRecord", UUID.class);
-            return (BluetoothSocket) m.invoke(device, BT_MODULE_UUID);
-            //return device.createInsecureRfcommSocketToServiceRecord(BT_MODULE_UUID);
+            //final Method m = device.getClass().getMethod("createInsecureRfcommSocketToServiceRecord", UUID.class);
+            //return (BluetoothSocket) m.invoke(device, BT_MODULE_UUID);
+            return device.createInsecureRfcommSocketToServiceRecord(BT_MODULE_UUID);
         } catch (Exception e) {
             e.printStackTrace();
             Log.e(TAG, "Could not create Insecure RFComm Connection", e);
@@ -389,8 +418,21 @@ public class AirSuspensionController {
         return device.createRfcommSocketToServiceRecord(BT_MODULE_UUID);
     }
 
+    @SuppressLint("MissingPermission")
+    private BluetoothSocket createBluetoothSocket2(BluetoothDevice device) throws IOException {
+        try {
+            Method createMethod = device.getClass().getMethod("createInsecureRfcommSocket", new Class[] { int.class });
+            return (BluetoothSocket)createMethod.invoke(device, 1);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e(TAG, "Could not create Insecure RFComm Connection 2", e);
+        }
+        return device.createRfcommSocketToServiceRecord(BT_MODULE_UUID);
+    }
+
     public boolean btConnectTryingRunning = false;
     private long lastBluetoothRequestTime = 0;
+
     public void btStartThread(String address) {
         if (!mBTAdapter.isEnabled()) {
             toast("BT not on!");
@@ -406,6 +448,8 @@ public class AirSuspensionController {
                     btConnectTryingRunning = true;
                     boolean fail = false;
 
+                    //mBTAdapter.cancelDiscovery();//permissions error
+
                     BluetoothDevice device = mBTAdapter.getRemoteDevice(address);
 
                     try {
@@ -418,15 +462,31 @@ public class AirSuspensionController {
                     try {
                         mBTSocket.connect();
                     } catch (IOException e) {
-                        e.printStackTrace();
+
                         try {
-                            fail = true;
-                            mBTSocket.close();
-                            mHandler.obtainMessage(CONNECTING_STATUS, -1, -1)
-                                    .sendToTarget();
+                            //try version 2
+                            try {
+                                mBTSocket = createBluetoothSocket2(device);
+                            } catch (IOException e2) {
+                                fail = true;
+                                toast("Error creating socket 2");
+                            }
+                            mBTSocket.connect();
+
+
                         } catch (IOException e2) {
-                            //insert code to deal with this
-                            toast("Error creating socket");
+
+
+                            e2.printStackTrace();
+                            try {
+                                fail = true;
+                                mBTSocket.close();
+                                mHandler.obtainMessage(CONNECTING_STATUS, -1, -1)
+                                        .sendToTarget();
+                            } catch (IOException e3) {
+                                //insert code to deal with this
+                                toast("Error connecting socket");
+                            }
                         }
                     }
                     if (!fail) {

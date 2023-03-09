@@ -6,6 +6,8 @@
     <string name="second_fragment_label">Bluetooth Fragment</string>
     <string name="airup">Air Up</string>
     <string name="airout">Air Out</string>
+    <string name="airupsm">Air Up 10psi</string>
+    <string name="airoutsm">Air Out 10psi</string>
     <string name="setfrontpressureD">Set Front Pressure Driver</string>
     <string name="setrearpressureD">Set Rear Pressure Driver</string>
     <string name="setfrontpressureP">Set Front Pressure Passenger</string>
