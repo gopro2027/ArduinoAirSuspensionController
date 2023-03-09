@@ -65,13 +65,19 @@ void Wheel::safePressureReadResumeClose() {
   }
 }
 
+void Wheel::calcAvg() {
+  if (this->pressureAverageTotal != 0) {
+    this->pressureAverage = this->pressureAverageTotal / this->pressureAverageCount;
+    this->pressureAverageTotal = 0;
+    this->pressureAverageCount = 0;
+  }
+}
+
 void Wheel::readPressure() {
   this->pressureValue = readPinPressure(this->pressurePin);
 
   if (this->pressureAverageCount == 255) {
-    this->pressureAverage = this->pressureAverageTotal / this->pressureAverageCount;
-    this->pressureAverageTotal = 0;
-    this->pressureAverageCount = 0;
+    this->calcAvg();
   }
   this->pressureAverageTotal = this->pressureAverageTotal + this->pressureValue;
   this->pressureAverageCount = this->pressureAverageCount + 1;
@@ -96,6 +102,49 @@ bool Wheel::isActive() {
   return false;
 }
 
+#define sleepTimeAirDelta 10
+#define sleepTimeWait 100
+
+void Wheel::percisionGoToPressure(byte goalPressure) {
+  int wheelSolenoidMask = 0;
+  for (int i = 0; i < 8; i++) {
+    bool val = digitalRead(i+6) == HIGH;// solenoidFrontPassengerInPin
+    if (val) {
+      wheelSolenoidMask = wheelSolenoidMask | (1 << i);
+      digitalWrite(i+6, LOW);
+    }
+  }
+  
+  unsigned long startTime = millis();
+  delay(sleepTimeWait);
+  while (millis() - startTime < 2000) {
+    int currentPressure = readPinPressure(this->pressurePin);
+    if (currentPressure == goalPressure) {
+      break;
+    }
+    if (currentPressure < goalPressure) {
+      //air up
+      this->s_AirIn.open();
+      delay(sleepTimeAirDelta);
+      this->s_AirIn.close();
+    } else if (currentPressure > goalPressure) {
+      //air out
+      this->s_AirOut.open();
+      delay(sleepTimeAirDelta);
+      this->s_AirOut.close();
+    }
+    delay(sleepTimeWait);
+  }
+
+  for (int i = 0; i < 8; i++) {
+    bool val = (wheelSolenoidMask & (1 << i)) > 0;
+    if (val) {
+      digitalWrite(i+6, HIGH);
+    }
+  }
+  
+}
+
 void Wheel::initPressureGoal(int newPressure) {
   if (newPressure > MAX_PRESSURE_SAFETY) {
     //hardcode not to go above 150PSI
@@ -103,8 +152,7 @@ void Wheel::initPressureGoal(int newPressure) {
   }
   int pressureDif = newPressure - this->pressureValue;//negative if airing out, positive if airing up
   if (abs(pressureDif) <= PRESSURE_DELTA) {
-    //literally do nothing, it's close enough already
-    return;
+    this->percisionGoToPressure(newPressure);
   } else {
     //okay we need to set the values
     this->routineStartTime = millis();
@@ -133,6 +181,7 @@ void Wheel::pressureGoalRoutine() {
     if (readPressure >= this->pressureGoal) {
       //stop
       this->s_AirIn.close();
+      this->percisionGoToPressure(this->pressureGoal);
     } else {
       if (millis() > this->routineStartTime + ROUTINE_TIMEOUT) {
         this->s_AirIn.close();
@@ -143,6 +192,7 @@ void Wheel::pressureGoalRoutine() {
     if (readPressure <= this->pressureGoal) {
       //stop
       this->s_AirOut.close();
+      this->percisionGoToPressure(this->pressureGoal);
     } else {
       if (millis() > this->routineStartTime + ROUTINE_TIMEOUT) {
         this->s_AirOut.close();

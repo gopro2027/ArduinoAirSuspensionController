@@ -641,6 +641,9 @@ void bt_cmd() {
       sendCurrentProfileData();
     }
     else {
+      for (int i = 0; i < 4; i++) {
+        getWheel(i)->calcAvg();
+      }
       sendHeartbeat();
     }
     lastHeartbeat = millis();

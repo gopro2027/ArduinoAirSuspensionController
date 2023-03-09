@@ -39,6 +39,8 @@ public:
   void safePressureClose();
   void safePressureReadPauseClose();
   void safePressureReadResumeClose();
+  void calcAvg();
+  void percisionGoToPressure(byte goalPressure);
 };
 
 const int MAX_PRESSURE_SAFETY = 200;

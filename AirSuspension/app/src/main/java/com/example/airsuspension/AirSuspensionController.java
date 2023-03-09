@@ -379,14 +379,16 @@ public class AirSuspensionController {
     private Toast previousToast;
 
     public void toast(String text) {
-        if (previousToast != null) {
-            previousToast.cancel();
-        }
-        if (activity != null) {
-            previousToast = Toast.makeText(activity.getApplicationContext(), text, Toast.LENGTH_SHORT);
-            previousToast.show();
-        }
-        Log.i(TAG, "Toast said: " + text);
+        try {
+            if (previousToast != null) {
+                previousToast.cancel();
+            }
+            if (activity != null) {
+                previousToast = Toast.makeText(activity.getApplicationContext(), text, Toast.LENGTH_SHORT);
+                previousToast.show();
+            }
+            Log.i(TAG, "Toast said: " + text);
+        } catch (Exception e) {}
     }
 
 
@@ -454,27 +456,27 @@ public class AirSuspensionController {
 
                     try {
                         mBTSocket = createBluetoothSocket(device);
-                    } catch (IOException e) {
+                    } catch (Exception e) {
                         fail = true;
                         toast("Error creating socket");
                     }
                     // Establish the Bluetooth socket connection.
                     try {
                         mBTSocket.connect();
-                    } catch (IOException e) {
+                    } catch (Exception e) {
 
                         try {
                             //try version 2
                             try {
                                 mBTSocket = createBluetoothSocket2(device);
-                            } catch (IOException e2) {
+                            } catch (Exception e2) {
                                 fail = true;
                                 toast("Error creating socket 2");
                             }
                             mBTSocket.connect();
 
 
-                        } catch (IOException e2) {
+                        } catch (Exception e2) {
 
 
                             e2.printStackTrace();
@@ -483,7 +485,7 @@ public class AirSuspensionController {
                                 mBTSocket.close();
                                 mHandler.obtainMessage(CONNECTING_STATUS, -1, -1)
                                         .sendToTarget();
-                            } catch (IOException e3) {
+                            } catch (Exception e3) {
                                 //insert code to deal with this
                                 toast("Error connecting socket");
                             }

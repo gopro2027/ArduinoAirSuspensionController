@@ -34,11 +34,12 @@ public class PermissionHelper {
     {
         if (ContextCompat.checkSelfPermission(mainActivity, permission) == PackageManager.PERMISSION_DENIED) {
 
+            Toast.makeText(mainActivity, "we dont have "+permission, Toast.LENGTH_SHORT).show();
             // Requesting the permission
             ActivityCompat.requestPermissions(mainActivity, new String[] { permission }, requestCode);
         }
         else {
-            //Toast.makeText(mainActivity, "Permission already granted", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(mainActivity, "Permission already granted "+permission, Toast.LENGTH_SHORT).show();
         }
     }
 
