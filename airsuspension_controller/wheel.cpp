@@ -10,7 +10,7 @@ const int pressureAdjustment = -10;//my sensors are reading about -10 too high
 
 Wheel::Wheel() {}
 
-Wheel::Wheel(int solenoidInPin, int solenoidOutPin, int pressurePin) {
+Wheel::Wheel(byte solenoidInPin, byte solenoidOutPin, byte pressurePin) {
   this->solenoidInPin = solenoidInPin;
   this->solenoidOutPin = solenoidOutPin;
   this->pressurePin = pressurePin;
@@ -21,6 +21,9 @@ Wheel::Wheel(int solenoidInPin, int solenoidOutPin, int pressurePin) {
   this->pressureGoal = 0;
   this->isInSafePressureRead = false;
   this->isClosePaused = false;
+  this->pressureAverage = 0;
+  this->pressureAverageTotal = 0;
+  this->pressureAverageCount = 0;
 }
 
 const float pressureZero = 102.4; //analog reading of pressure transducer at 0psi
@@ -64,10 +67,23 @@ void Wheel::safePressureReadResumeClose() {
 
 void Wheel::readPressure() {
   this->pressureValue = readPinPressure(this->pressurePin);
+
+  if (this->pressureAverageCount == 255) {
+    this->pressureAverage = this->pressureAverageTotal / this->pressureAverageCount;
+    this->pressureAverageTotal = 0;
+    this->pressureAverageCount = 0;
+  }
+  this->pressureAverageTotal = this->pressureAverageTotal + this->pressureValue;
+  this->pressureAverageCount = this->pressureAverageCount + 1;
+  
 }
 
 float Wheel::getPressure() {
   return this->pressureValue;
+}
+
+byte Wheel::getPressureAverage() {
+  return this->pressureAverage;
 }
 
 bool Wheel::isActive() {
@@ -113,18 +129,13 @@ void Wheel::pressureGoalRoutine() {
   if (this->s_AirIn.isOpen()) {
     if (readPressure > MAX_PRESSURE_SAFETY) {
       this->s_AirIn.close();
-      displayCode = 1;
     }
     if (readPressure >= this->pressureGoal) {
       //stop
       this->s_AirIn.close();
-      displayCode = 2;
-      displayCode2 = readPressure;
-      displayCode3 = this->pressureGoal;
     } else {
       if (millis() > this->routineStartTime + ROUTINE_TIMEOUT) {
         this->s_AirIn.close();
-        displayCode = 3;
       }
     }
   }

@@ -3,26 +3,37 @@
 
 
 #include "solenoid.h"
+#include <arduino.h>
 
 class Wheel {
 private:
-  int solenoidInPin;
-  int solenoidOutPin;
-  int pressurePin;
-  float pressureValue;
-  Solenoid s_AirIn;
-  Solenoid s_AirOut;
-  unsigned long routineStartTime;
-  int pressureGoal;
+  byte solenoidInPin;
+  byte solenoidOutPin;
+  byte pressurePin;
+
+  byte pressureAverageCount;//1 byte, 0 to 256 (so pressureAverageTotal can contain 256 values between 0 and 256)
+  byte pressureAverage;// 1 byte, final value
+
   bool isInSafePressureRead;
   bool isClosePaused;
+  
+  unsigned int pressureAverageTotal;//2 bytes, 0 to 65535
+  int pressureGoal;
+  
+  unsigned long routineStartTime;
+  float pressureValue;
+
+  Solenoid s_AirIn;
+  Solenoid s_AirOut;
+  
 public:
   Wheel();
-  Wheel(int solenoidInPin, int solenoidOutPin, int pressurePin);
+  Wheel(byte solenoidInPin, byte solenoidOutPin, byte pressurePin);
   void initPressureGoal(int newPressure);
   void pressureGoalRoutine();
   void readPressure();
   float getPressure();
+  byte getPressureAverage();
   bool isActive();
   bool prepareSafePressureRead();
   void safePressureClose();
@@ -31,8 +42,5 @@ public:
 };
 
 const int MAX_PRESSURE_SAFETY = 200;
-extern int displayCode;
-extern int displayCode2;
-extern int displayCode3;
 
 #endif

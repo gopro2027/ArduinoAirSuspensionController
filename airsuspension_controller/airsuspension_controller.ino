@@ -77,22 +77,18 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #define MAX_PROFILE_COUNT 4
 
-int displayCode = -1;
-int displayCode2 = -1;
-int displayCode3 = -1;
-
 //Digital pins
 SoftwareSerial bt(3, 2); // RX, TX
 const int buttonRisePin = 4;
 const int buttonFallPin = 5;
-const int solenoidFrontPassengerInPin = 6;
-const int solenoidFrontPassengerOutPin = 8;
-const int solenoidRearPassengerInPin = 7;
-const int solenoidRearPassengerOutPin = 10;
-const int solenoidFrontDriverInPin = 9;
-const int solenoidFrontDriverOutPin = 12;
-const int solenoidRearDriverInPin = 11;
-const int solenoidRearDriverOutPin = 13;
+#define solenoidFrontPassengerInPin 6
+#define solenoidFrontPassengerOutPin 8
+#define solenoidRearPassengerInPin 7
+#define solenoidRearPassengerOutPin 10
+#define solenoidFrontDriverInPin 9
+#define solenoidFrontDriverOutPin 12
+#define solenoidRearDriverInPin 11
+#define solenoidRearDriverOutPin 13
 
 //Analog pins
 const int pressureInputFrontPassenger = A0; //select the analog input pin for the pressure transducer FRONT
@@ -218,7 +214,7 @@ static const unsigned char PROGMEM logo_bmp_airtekk[] =
 const int riseOnStartAddr = 0;
 const int baseProfileAddr = 1;
 const int raiseOnPressureAddr = 2;
-#define profileStartAddress 3;
+#define profileStartAddress 3
 
 byte currentProfile[4];
 /*
@@ -228,12 +224,16 @@ byte currentProfile[4];
 #define WHEEL_REAR_DRIVER 3
 */
 
+bool sendProfileBT = false;
+
 void readProfile(byte profileIndex) {
-  int base = profileStartAddress + (4 * profileIndex);
+  byte base = profileStartAddress + (4 * profileIndex);
   currentProfile[WHEEL_FRONT_PASSENGER] = EEPROM.read(base + WHEEL_FRONT_PASSENGER);
   currentProfile[WHEEL_REAR_PASSENGER] = EEPROM.read(base + WHEEL_REAR_PASSENGER);
   currentProfile[WHEEL_FRONT_DRIVER] = EEPROM.read(base + WHEEL_FRONT_DRIVER);
   currentProfile[WHEEL_REAR_DRIVER] = EEPROM.read(base + WHEEL_REAR_DRIVER);
+
+  sendProfileBT = true;
 }
 
 void writeWithCheck(byte addr, byte val) {
@@ -243,7 +243,7 @@ void writeWithCheck(byte addr, byte val) {
 }
 
 void writeProfile(byte profileIndex) {
-  int base = profileStartAddress + (4 * profileIndex);
+  byte base = profileStartAddress + (4 * profileIndex);
   writeWithCheck(base + WHEEL_FRONT_PASSENGER, currentProfile[WHEEL_FRONT_PASSENGER]);
   writeWithCheck(base + WHEEL_REAR_PASSENGER, currentProfile[WHEEL_REAR_PASSENGER]);
   writeWithCheck(base + WHEEL_FRONT_DRIVER, currentProfile[WHEEL_FRONT_DRIVER]);
@@ -303,7 +303,6 @@ bool getRaiseOnPressureSet() {
 int frontPressureGoal = 0;
 int rearPressureGoal = 0;
 
-
 void setupSolenoidPins() {
 
   pinMode(solenoidFrontPassengerInPin, OUTPUT);
@@ -354,6 +353,15 @@ void airOut() {
   getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(0);
   getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(0);
   getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(0);
+  
+}
+
+void airUpRelativeToAverage(int value) {
+  
+  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getWheel(WHEEL_FRONT_PASSENGER)->getPressureAverage() + value);
+  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getPressureAverage() + value);
+  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getPressureAverage() + value);
+  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getPressureAverage() + value);
   
 }
 
@@ -532,16 +540,6 @@ void drawPSIReadings() {
   display.print(F("Tank: "));
   display.print(int(getTankPressure()));
 
-  display.setCursor(secondRowXPos, 5*textHeightPx+5);
-
-  displayCode = analogRead(pressureInputTank);
-  display.print(F("E"));
-  display.print(int(displayCode));
-  display.print(F(" "));
-  display.print(int(displayCode2));
-  display.print(F(" "));
-  display.print(int(displayCode3));
-
 //Front
   
   display.setCursor(0,2*textHeightPx+5);
@@ -592,19 +590,33 @@ void drawairtekklogo(void) {
 #define PASSWORDSEND "56347893"
 void sendHeartbeat() {
   bt.print(F(PASSWORDSEND));
-  bt.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getPressure()));
+  bt.print(F("PRES"));
+  bt.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getPressureAverage()));
   bt.print(F("|"));
-  bt.print(int(getWheel(WHEEL_REAR_PASSENGER)->getPressure()));
+  bt.print(int(getWheel(WHEEL_REAR_PASSENGER)->getPressureAverage()));
   bt.print(F("|"));
-  bt.print(int(getWheel(WHEEL_FRONT_DRIVER)->getPressure()));
+  bt.print(int(getWheel(WHEEL_FRONT_DRIVER)->getPressureAverage()));
   bt.print(F("|"));
-  bt.print(int(getWheel(WHEEL_REAR_DRIVER)->getPressure()));
+  bt.print(int(getWheel(WHEEL_REAR_DRIVER)->getPressureAverage()));
   bt.print(F("|"));
   bt.print(int(getTankPressure()));
   bt.print(F("\n"));
   //Serial.println(int(getTankPressure()));
   //Serial.println(int(wheel[WHEEL_REAR_DRIVER].getPressure()));//this is wrong
   //Serial.println(int(readPinPressure(pressureInputRearDriver)));//thhis is right
+}
+
+void sendCurrentProfileData() {
+  bt.print(F(PASSWORDSEND));
+  bt.print(F("PROF"));
+  bt.print(int(currentProfile[WHEEL_FRONT_PASSENGER]));
+  bt.print(F("|"));
+  bt.print(int(currentProfile[WHEEL_REAR_PASSENGER]));
+  bt.print(F("|"));
+  bt.print(int(currentProfile[WHEEL_FRONT_DRIVER]));
+  bt.print(F("|"));
+  bt.print(int(currentProfile[WHEEL_REAR_DRIVER]));
+  bt.print(F("\n"));
 }
 
 //https://www.seeedstudio.com/blog/2020/01/02/how-to-control-arduino-with-bluetooth-module-and-shields-to-get-started/
@@ -623,7 +635,12 @@ void bt_cmd() {
       bt.print(F("\n"));
       Serial.println(outString);
       outString = "";
-    }else {
+    }
+    else if (sendProfileBT == true) {
+      sendProfileBT = false;
+      sendCurrentProfileData();
+    }
+    else {
       sendHeartbeat();
     }
     lastHeartbeat = millis();
@@ -680,6 +697,7 @@ int trailingInt(const char str[]) {
 
 const char _AIRUP[] PROGMEM = PASSWORD"AIRUP\0";
 const char _AIROUT[] PROGMEM = PASSWORD"AIROUT\0";
+const char _AIRSM[] PROGMEM = PASSWORD"AIRSM\0";
 const char _SAVETOPROFILE[] PROGMEM = PASSWORD"SPROF\0";
 const char _READPROFILE[] PROGMEM = PASSWORD"PROFR\0";
 const char _BASEPROFILE[] PROGMEM = PASSWORD"PRBOF\0";
@@ -731,6 +749,11 @@ bool runInput() {
   }
   if (comp(inBuffer,_AIROUT)) {
     airOut();
+    return true;
+  }
+  if (comp(inBuffer,_AIRSM)) {
+    int value = trailingInt(_AIRSM);
+    airUpRelativeToAverage(value);
     return true;
   }
   if (comp(inBuffer,_SAVETOPROFILE)) {
