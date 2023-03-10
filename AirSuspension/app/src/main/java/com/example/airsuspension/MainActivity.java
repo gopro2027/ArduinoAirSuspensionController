@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -21,12 +22,15 @@ import com.example.airsuspension.databinding.ActivityMainBinding;
 
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
     private AppBarConfiguration appBarConfiguration;
     public ActivityMainBinding binding;
     public static AirSuspensionController airSuspensionController;
+
+    private PermissionHelper permissionHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,7 +39,8 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        new PermissionHelper(this);
+        permissionHelper = new PermissionHelper(this);
+        permissionHelper.start();
 
         setSupportActionBar(binding.toolbar);
 
@@ -91,6 +96,22 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent Data){
         getAirSuspensionController(this).onActivityResult(requestCode,resultCode,Data);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                                           int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (permissions.length >= 1) {
+            if (permissions[0].equalsIgnoreCase(permissionHelper.currentPermissionCheck())) {
+                if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
+                    permissionHelper.retryLastPermission();
+                    Log.i("MYINFO", "Denied gonna retry " + permissions[0]);
+                    Toast.makeText(this, "Denied " + permissions[0], Toast.LENGTH_SHORT).show();
+                }
+                permissionHelper.nextPermission();
+            }
+        }
     }
 
 

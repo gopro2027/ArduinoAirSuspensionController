@@ -60,7 +60,8 @@ public class AirSuspensionController {
         try {
             mConnectedThread.cancel();
         } catch (Exception e) {
-            e.printStackTrace();
+            //swallow bc it errors a lot
+            //e.printStackTrace();
         }
 
     }
