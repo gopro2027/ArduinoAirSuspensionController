@@ -377,6 +377,13 @@ void setup() {
   bt.begin(9600); // start the bluetooth uart at 9600 which is its default
   delay(200); // wait for voltage stabilize
 
+  //delay(1000);
+  //bt.print("AT+NAMEvetteair");
+  //delay(1000);
+  //bt.print("AT+PIN0000");
+  //delay(1000);
+  //return;
+
   #if SCREEN_MOODE == true
   Serial.println(F("Startup!"));
   #else

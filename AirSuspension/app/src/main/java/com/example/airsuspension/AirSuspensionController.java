@@ -22,6 +22,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.MutableLiveData;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -53,6 +54,7 @@ public class AirSuspensionController {
     private long heartbeat = 0;
 
     public TextView mReadBuffer;
+    public TextView mLogBuffer;
 
     Activity activity;
 
@@ -99,7 +101,9 @@ public class AirSuspensionController {
 
         mBTAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBTAdapter == null) {
-            Log.e(TAG, "Bluetooth unavailable on this device");
+            appendToLog("Bluetooth unavailable on this device (null)");
+        } else {
+
         }
         this.activity = activity;
 
@@ -356,20 +360,27 @@ public class AirSuspensionController {
         onConnectedCmd = cmd;
         if (System.currentTimeMillis() - heartbeat < 5000) {
             //toast("Socket is already connected!");
+            appendToLog("socket already connected");
             return;
         }
 
-        if (!mBTAdapter.isEnabled()) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            if (activity != null) {
-                activity.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        if (mBTAdapter != null) {
+            if (!mBTAdapter.isEnabled()) {
+                appendToLog("bt adapter not enabled... sending intent");
+                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                if (activity != null) {
+                    activity.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+                } else {
+                    //no activity
+                    return;//this would be the widget if it's null idk
+                }
+                //toast("Bluetooth turned on");
             } else {
-                //no activity
-                return;//this would be the widget if it's null idk
+                //toast("Bluetooth is already on");
+                appendToLog("bt adapter enabled");
             }
-            //toast("Bluetooth turned on");
         } else {
-            //toast("Bluetooth is already on");
+            appendToLog("bt adapter null");
         }
 
         //discover();
@@ -378,8 +389,17 @@ public class AirSuspensionController {
     }
 
     private Toast previousToast;
+    private StringBuffer toastLog = new StringBuffer();
+
+    public void appendToLog(String text) {
+        toastLog.append(text+"\n");
+        if (mLogBuffer != null) {
+            mLogBuffer.setText(toastLog.toString());
+        }
+    }
 
     public void toast(String text) {
+        appendToLog(text);
         try {
             if (previousToast != null) {
                 previousToast.cancel();
@@ -402,6 +422,7 @@ public class AirSuspensionController {
             if (resultCode == Activity.RESULT_OK) {
                 // The user picked a contact.
                 // The Intent's data Uri identifies which contact was selected.
+                //mBTAdapter.enable();
                 toast("status: Enabled");
             } else
                 toast("status: Disabled");
@@ -428,7 +449,7 @@ public class AirSuspensionController {
             return (BluetoothSocket)createMethod.invoke(device, 1);
         } catch (Exception e) {
             e.printStackTrace();
-            Log.e(TAG, "Could not create Insecure RFComm Connection 2", e);
+            toast("Could not create Insecure RFComm Connection 2");
         }
         return device.createRfcommSocketToServiceRecord(BT_MODULE_UUID);
     }
@@ -437,7 +458,7 @@ public class AirSuspensionController {
     private long lastBluetoothRequestTime = 0;
 
     public void btStartThread(String address) {
-        if (!mBTAdapter.isEnabled()) {
+        if (mBTAdapter == null || !mBTAdapter.isEnabled()) {
             toast("BT not on!");
             return;
         }
@@ -454,9 +475,10 @@ public class AirSuspensionController {
                     //mBTAdapter.cancelDiscovery();//permissions error
 
                     BluetoothDevice device = mBTAdapter.getRemoteDevice(address);
-
+                    appendToLog("device created");
                     try {
                         mBTSocket = createBluetoothSocket(device);
+                        appendToLog("socket created");
                     } catch (Exception e) {
                         fail = true;
                         toast("Error creating socket");
@@ -464,12 +486,14 @@ public class AirSuspensionController {
                     // Establish the Bluetooth socket connection.
                     try {
                         mBTSocket.connect();
+                        appendToLog("socket connected");
                     } catch (Exception e) {
 
                         try {
                             //try version 2
                             try {
                                 mBTSocket = createBluetoothSocket2(device);
+                                appendToLog("socket connected (v2)");
                             } catch (Exception e2) {
                                 fail = true;
                                 toast("Error creating socket 2");
@@ -486,17 +510,22 @@ public class AirSuspensionController {
                                 mBTSocket.close();
                                 mHandler.obtainMessage(CONNECTING_STATUS, -1, -1)
                                         .sendToTarget();
+                                appendToLog("ah shoot we failed both connections");
                             } catch (Exception e3) {
                                 //insert code to deal with this
+                                fail = true;
                                 toast("Error connecting socket");
                             }
                         }
                     }
                     if (!fail) {
+                        appendToLog("I think I connected!");
                         mConnectedThread = new ConnectedThread(mBTSocket, mHandler);
                         mConnectedThread.start();
                         mHandler.obtainMessage(CONNECTING_STATUS, 1, -1, "Specified MAC")
                                 .sendToTarget();
+                    } else {
+                        appendToLog("Definitely failed connection");
                     }
                     btConnectTryingRunning = false;
                 }

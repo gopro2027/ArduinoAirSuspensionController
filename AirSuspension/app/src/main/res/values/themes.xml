@@ -6,8 +6,8 @@
         <item name="colorPrimaryVariant">@color/light_blue_600</item>
         <item name="colorOnPrimary">@color/white</item>
         <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/material_dynamic_primary0</item>
-        <item name="colorSecondaryVariant">@color/material_dynamic_primary10</item>
+        <item name="colorSecondary">@color/light_blue_200</item>
+        <item name="colorSecondaryVariant">@color/light_blue_200</item>
         <item name="colorOnSecondary">@color/white</item>
         <!-- Status bar color. -->
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>

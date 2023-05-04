@@ -102,8 +102,8 @@ bool Wheel::isActive() {
   return false;
 }
 
-#define sleepTimeAirDelta 10
-#define sleepTimeWait 100
+#define sleepTimeAirDelta 1
+#define sleepTimeWait 150
 
 void Wheel::percisionGoToPressure(byte goalPressure) {
   int wheelSolenoidMask = 0;
@@ -117,7 +117,7 @@ void Wheel::percisionGoToPressure(byte goalPressure) {
   
   unsigned long startTime = millis();
   delay(sleepTimeWait);
-  while (millis() - startTime < 2000) {
+  while (millis() - startTime < 5000) {
     int currentPressure = readPinPressure(this->pressurePin);
     if (currentPressure == goalPressure) {
       break;

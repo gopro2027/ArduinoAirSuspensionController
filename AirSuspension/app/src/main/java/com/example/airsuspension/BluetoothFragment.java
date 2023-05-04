@@ -1,6 +1,7 @@
 package com.example.airsuspension;
 
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -32,7 +33,8 @@ public class BluetoothFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         getAirSuspensionController().mReadBuffer = (TextView) getActivity().findViewById(R.id.read_buffer);
-
+        getAirSuspensionController().mLogBuffer = (TextView) getActivity().findViewById(R.id.log_buffer);
+        getAirSuspensionController().mLogBuffer.setMovementMethod(new ScrollingMovementMethod());
         binding.enableButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -41,6 +43,7 @@ public class BluetoothFragment extends Fragment {
                 getAirSuspensionController().bluetoothOn(null);
             }
         });
+
     }
 
     @Override

@@ -36,7 +36,17 @@
             android:maxLines="1"
             android:text="&lt;Read Buffer>" />
 
+
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/log_buffer"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_weight="0.9"
+        android:maxLines="20"
+        android:scrollbars = "vertical"
+        android:text="&lt;Log Buffer>" />
 
 
 </LinearLayout>
