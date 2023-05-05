@@ -12,13 +12,13 @@ private:
   byte pressurePin;
   byte thisWheelNum;
 
-  byte pressureAverageCount;//1 byte, 0 to 256 (so pressureAverageTotal can contain 256 values between 0 and 256)
-  byte pressureAverage;// 1 byte, final value
+  //byte pressureAverageCount;//1 byte, 0 to 256 (so pressureAverageTotal can contain 256 values between 0 and 256)
+  //byte pressureAverage;// 1 byte, final value
 
   bool isInSafePressureRead;
   bool isClosePaused;
   
-  unsigned int pressureAverageTotal;//2 bytes, 0 to 65535
+  //unsigned int pressureAverageTotal;//2 bytes, 0 to 65535
   byte pressureGoal;
   
   unsigned long routineStartTime;
@@ -34,7 +34,7 @@ public:
   void pressureGoalRoutine();
   void readPressure();
   float getPressure();
-  byte getPressureAverage();
+  //byte getPressureAverage();
   bool isActive();
   bool prepareSafePressureRead();
   void safePressureClose();

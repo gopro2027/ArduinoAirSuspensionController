@@ -22,9 +22,9 @@ Wheel::Wheel(byte solenoidInPin, byte solenoidOutPin, byte pressurePin, byte thi
   this->pressureGoal = 0;
   this->isInSafePressureRead = false;
   this->isClosePaused = false;
-  this->pressureAverage = 0;
-  this->pressureAverageTotal = 0;
-  this->pressureAverageCount = 0;
+  //this->pressureAverage = 0;
+  //this->pressureAverageTotal = 0;
+  //this->pressureAverageCount = 0;
 }
 
 #define pressureZero (float)102.4 //analog reading of pressure transducer at 0psi
@@ -66,22 +66,22 @@ void Wheel::safePressureReadResumeClose() {
   }
 }
 
-void Wheel::calcAvg() {
-  if (this->pressureAverageTotal != 0) {
-    this->pressureAverage = this->pressureAverageTotal / this->pressureAverageCount;
-    this->pressureAverageTotal = 0;
-    this->pressureAverageCount = 0;
-  }
-}
+//void Wheel::calcAvg() {
+//  if (this->pressureAverageTotal != 0) {
+//    this->pressureAverage = this->pressureAverageTotal / this->pressureAverageCount;
+//    this->pressureAverageTotal = 0;
+//    this->pressureAverageCount = 0;
+//  }
+//}
 
 void Wheel::readPressure() {
   this->pressureValue = readPinPressure(this->pressurePin);
 
-  if (this->pressureAverageCount == 255) {
-    this->calcAvg();
-  }
-  this->pressureAverageTotal = this->pressureAverageTotal + this->pressureValue;
-  this->pressureAverageCount = this->pressureAverageCount + 1;
+  //if (this->pressureAverageCount == 255) {
+  //  this->calcAvg();
+  //}
+  //this->pressureAverageTotal = this->pressureAverageTotal + this->pressureValue;
+  //this->pressureAverageCount = this->pressureAverageCount + 1;
   
 }
 
@@ -89,9 +89,9 @@ float Wheel::getPressure() {
   return this->pressureValue;
 }
 
-byte Wheel::getPressureAverage() {
-  return this->pressureAverage;
-}
+//byte Wheel::getPressureAverage() {
+//  return this->pressureAverage;
+//}
 
 bool Wheel::isActive() {
   if (this->s_AirIn.isOpen()) {

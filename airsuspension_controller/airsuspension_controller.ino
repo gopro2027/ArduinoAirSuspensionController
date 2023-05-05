@@ -354,6 +354,12 @@ void pressureGoalRoutine() {
       for (byte i = 0; i < 4; i++) {
         if (shouldDoPressureGoalOnWheel(i)) {
           getWheel(i)->percisionGoToPressure();
+        }
+      }
+      //run a second time :P and also set it to not run again
+      for (byte i = 0; i < 4; i++) {
+        if (shouldDoPressureGoalOnWheel(i)) {
+          getWheel(i)->percisionGoToPressure();
           setNotGoToPressureGoalPercise(i);
         }
       }
@@ -371,19 +377,24 @@ void airUp() {
 
 void airOut() {
 
-  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(0);
-  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(0);
-  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(0);
-  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(0);
+  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(30);
+  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(30);
+  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(30);
+  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(30);
   
 }
 
 void airUpRelativeToAverage(int value) {
   
-  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getWheel(WHEEL_FRONT_PASSENGER)->getPressureAverage() + value);
-  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getPressureAverage() + value);
-  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getPressureAverage() + value);
-  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getPressureAverage() + value);
+  //getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getWheel(WHEEL_FRONT_PASSENGER)->getPressureAverage() + value);
+  //getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getPressureAverage() + value);
+  //getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getPressureAverage() + value);
+  //getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getPressureAverage() + value);
+
+  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getWheel(WHEEL_FRONT_PASSENGER)->getPressure() + value);
+  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getPressure() + value);
+  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getPressure() + value);
+  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getPressure() + value);
   
 }
 
@@ -620,13 +631,13 @@ void drawairtekklogo(void) {
 void sendHeartbeat() {
   bt.print(F(PASSWORDSEND));
   bt.print(F("PRES"));
-  bt.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getPressureAverage()));
+  bt.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getPressure()));//getPressureAverage()
   bt.print(F("|"));
-  bt.print(int(getWheel(WHEEL_REAR_PASSENGER)->getPressureAverage()));
+  bt.print(int(getWheel(WHEEL_REAR_PASSENGER)->getPressure()));//getPressureAverage()
   bt.print(F("|"));
-  bt.print(int(getWheel(WHEEL_FRONT_DRIVER)->getPressureAverage()));
+  bt.print(int(getWheel(WHEEL_FRONT_DRIVER)->getPressure()));//getPressureAverage()
   bt.print(F("|"));
-  bt.print(int(getWheel(WHEEL_REAR_DRIVER)->getPressureAverage()));
+  bt.print(int(getWheel(WHEEL_REAR_DRIVER)->getPressure()));//getPressureAverage()
   bt.print(F("|"));
   bt.print(int(getTankPressure()));
   bt.print(F("\n"));
@@ -670,9 +681,9 @@ void bt_cmd() {
       sendCurrentProfileData();
     }
     else {
-      for (int i = 0; i < 4; i++) {
-        getWheel(i)->calcAvg();
-      }
+      //for (int i = 0; i < 4; i++) {
+      //  getWheel(i)->calcAvg();
+      //}
       sendHeartbeat();
     }
     lastHeartbeat = millis();
