@@ -330,12 +330,34 @@ bool isAnyWheelActive() {
   }
   return false;
 }
+byte goToPerciseBitset = 0;
+void setGoToPressureGoalPercise(byte wheelnum) {
+  goToPerciseBitset = goToPerciseBitset | (1 << wheelnum);
+}
+void setNotGoToPressureGoalPercise(byte wheelnum) {
+  goToPerciseBitset = goToPerciseBitset & ~(1 << wheelnum);
+}
+bool shouldDoPressureGoalOnWheel(byte wheelnum) {
+  return (goToPerciseBitset >> wheelnum) & 1;
+}
 void pressureGoalRoutine() {
+  bool a = false;
   if (isAnyWheelActive()) {
      readPressures();
+     a = true;
   }
   for (int i = 0; i < 4; i++) {
     getWheel(i)->pressureGoalRoutine();
+  }
+  if (a == false) {
+    if (goToPerciseBitset != 0) {
+      for (byte i = 0; i < 4; i++) {
+        if (shouldDoPressureGoalOnWheel(i)) {
+          getWheel(i)->percisionGoToPressure();
+          setNotGoToPressureGoalPercise(i);
+        }
+      }
+    }
   }
 }
 
@@ -401,10 +423,10 @@ void setup() {
   
   delay(20);
 
-  wheel[WHEEL_FRONT_PASSENGER] = new Wheel(solenoidFrontPassengerInPin, solenoidFrontPassengerOutPin, pressureInputFrontPassenger);
-  wheel[WHEEL_REAR_PASSENGER] = new Wheel(solenoidRearPassengerInPin, solenoidRearPassengerOutPin, pressureInputRearPassenger);
-  wheel[WHEEL_FRONT_DRIVER] = new Wheel(solenoidFrontDriverInPin, solenoidFrontDriverOutPin, pressureInputFrontDriver);
-  wheel[WHEEL_REAR_DRIVER] = new Wheel(solenoidRearDriverInPin, solenoidRearDriverOutPin, pressureInputRearDriver);
+  wheel[WHEEL_FRONT_PASSENGER] = new Wheel(solenoidFrontPassengerInPin, solenoidFrontPassengerOutPin, pressureInputFrontPassenger, WHEEL_FRONT_PASSENGER);
+  wheel[WHEEL_REAR_PASSENGER] = new Wheel(solenoidRearPassengerInPin, solenoidRearPassengerOutPin, pressureInputRearPassenger, WHEEL_REAR_PASSENGER);
+  wheel[WHEEL_FRONT_DRIVER] = new Wheel(solenoidFrontDriverInPin, solenoidFrontDriverOutPin, pressureInputFrontDriver, WHEEL_FRONT_DRIVER);
+  wheel[WHEEL_REAR_DRIVER] = new Wheel(solenoidRearDriverInPin, solenoidRearDriverOutPin, pressureInputRearDriver, WHEEL_REAR_DRIVER);
 
   readProfile(getBaseProfile());
 

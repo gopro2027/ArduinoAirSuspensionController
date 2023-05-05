@@ -10,10 +10,11 @@ const int pressureAdjustment = -10;//my sensors are reading about -10 too high
 
 Wheel::Wheel() {}
 
-Wheel::Wheel(byte solenoidInPin, byte solenoidOutPin, byte pressurePin) {
+Wheel::Wheel(byte solenoidInPin, byte solenoidOutPin, byte pressurePin, byte thisWheelNum) {
   this->solenoidInPin = solenoidInPin;
   this->solenoidOutPin = solenoidOutPin;
   this->pressurePin = pressurePin;
+  this->thisWheelNum = thisWheelNum;
   this->s_AirIn = Solenoid(solenoidInPin);
   this->s_AirOut = Solenoid(solenoidOutPin);
   this->routineStartTime = 0;
@@ -26,9 +27,9 @@ Wheel::Wheel(byte solenoidInPin, byte solenoidOutPin, byte pressurePin) {
   this->pressureAverageCount = 0;
 }
 
-const float pressureZero = 102.4; //analog reading of pressure transducer at 0psi
-const float pressureMax = 921.6; //analog reading of pressure transducer at max psi (300)
-const int pressuretransducermaxPSI = 300; //psi value of transducer being used
+#define pressureZero (float)102.4 //analog reading of pressure transducer at 0psi
+#define pressureMax (float)921.6 //analog reading of pressure transducer at max psi (300)
+#define pressuretransducermaxPSI 300 //psi value of transducer being used
 
 float readPinPressure(int pin) {
   return float((float(analogRead(pin))-pressureZero)*pressuretransducermaxPSI)/(pressureMax-pressureZero) + pressureAdjustment; //conversion equation to convert analog reading to psi
@@ -102,10 +103,15 @@ bool Wheel::isActive() {
   return false;
 }
 
-#define sleepTimeAirDelta 1
+#define sleepTimeAirDelta 10
 #define sleepTimeWait 150
 
-void Wheel::percisionGoToPressure(byte goalPressure) {
+void Wheel::percisionGoToPressureQue(byte goalPressure) {
+  this->pressureGoal = goalPressure;
+  setGoToPressureGoalPercise(this->thisWheelNum);
+}
+void Wheel::percisionGoToPressure() {
+  int goalPressure = this->pressureGoal;
   int wheelSolenoidMask = 0;
   for (int i = 0; i < 8; i++) {
     bool val = digitalRead(i+6) == HIGH;// solenoidFrontPassengerInPin
@@ -152,7 +158,7 @@ void Wheel::initPressureGoal(int newPressure) {
   }
   int pressureDif = newPressure - this->pressureValue;//negative if airing out, positive if airing up
   if (abs(pressureDif) <= PRESSURE_DELTA) {
-    this->percisionGoToPressure(newPressure);
+    this->percisionGoToPressureQue(newPressure);
   } else {
     //okay we need to set the values
     this->routineStartTime = millis();
@@ -181,7 +187,7 @@ void Wheel::pressureGoalRoutine() {
     if (readPressure >= this->pressureGoal) {
       //stop
       this->s_AirIn.close();
-      this->percisionGoToPressure(this->pressureGoal);
+      this->percisionGoToPressureQue(this->pressureGoal);
     } else {
       if (millis() > this->routineStartTime + ROUTINE_TIMEOUT) {
         this->s_AirIn.close();
@@ -192,7 +198,7 @@ void Wheel::pressureGoalRoutine() {
     if (readPressure <= this->pressureGoal) {
       //stop
       this->s_AirOut.close();
-      this->percisionGoToPressure(this->pressureGoal);
+      this->percisionGoToPressureQue(this->pressureGoal);
     } else {
       if (millis() > this->routineStartTime + ROUTINE_TIMEOUT) {
         this->s_AirOut.close();

@@ -358,7 +358,7 @@ public class AirSuspensionController {
     @SuppressLint("MissingPermission")
     public void bluetoothOn(BluetoothCommand cmd) {
         onConnectedCmd = cmd;
-        if (System.currentTimeMillis() - heartbeat < 5000) {
+        if (System.currentTimeMillis() - heartbeat < 30000) {//30 seconds timeout eek
             //toast("Socket is already connected!");
             appendToLog("socket already connected");
             return;
@@ -395,6 +395,9 @@ public class AirSuspensionController {
         toastLog.append(text+"\n");
         if (mLogBuffer != null) {
             mLogBuffer.setText(toastLog.toString());
+        }
+        if (toastLog.toString().length() > 1000) {
+            toastLog = new StringBuffer();//gross it's sooo long
         }
     }
 
@@ -519,7 +522,7 @@ public class AirSuspensionController {
                         }
                     }
                     if (!fail) {
-                        appendToLog("I think I connected!");
+                        //appendToLog("I think I connected!");
                         mConnectedThread = new ConnectedThread(mBTSocket, mHandler);
                         mConnectedThread.start();
                         mHandler.obtainMessage(CONNECTING_STATUS, 1, -1, "Specified MAC")
