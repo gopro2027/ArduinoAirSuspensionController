@@ -284,11 +284,12 @@ bool getRiseOnStart() {
 }
 
 void setBaseProfile(byte value) {
-  if (getBaseProfile() != value)
-   EEPROM.write(baseProfileAddr, value);
+  //if (getBaseProfile() != value)
+  // EEPROM.write(baseProfileAddr, value);
 }
 byte getBaseProfile() {
-   return EEPROM.read(baseProfileAddr);
+   //return EEPROM.read(baseProfileAddr);
+   return 0;
 }
 
 void setRaiseOnPressureSet(bool value) {
@@ -351,11 +352,12 @@ void pressureGoalRoutine() {
   }
   if (a == false) {
     if (goToPerciseBitset != 0) {
-      for (byte i = 0; i < 4; i++) {
+      //Uncomment this to make it run twice for more precision
+      /*for (byte i = 0; i < 4; i++) {
         if (shouldDoPressureGoalOnWheel(i)) {
           getWheel(i)->percisionGoToPressure();
         }
-      }
+      }*/
       //run a second time :P and also set it to not run again
       for (byte i = 0; i < 4; i++) {
         if (shouldDoPressureGoalOnWheel(i)) {
@@ -743,7 +745,8 @@ const char _AIROUT[] PROGMEM = PASSWORD"AIROUT\0";
 const char _AIRSM[] PROGMEM = PASSWORD"AIRSM\0";
 const char _SAVETOPROFILE[] PROGMEM = PASSWORD"SPROF\0";
 const char _READPROFILE[] PROGMEM = PASSWORD"PROFR\0";
-const char _BASEPROFILE[] PROGMEM = PASSWORD"PRBOF\0";
+const char _AIRUPQUICK[] PROGMEM = PASSWORD"AUQ\0";
+//const char _BASEPROFILE[] PROGMEM = PASSWORD"PRBOF\0";
 const char _AIRHEIGHTA[] PROGMEM = PASSWORD"AIRHEIGHTA\0";
 const char _AIRHEIGHTB[] PROGMEM = PASSWORD"AIRHEIGHTB\0";
 const char _AIRHEIGHTC[] PROGMEM = PASSWORD"AIRHEIGHTC\0";
@@ -807,20 +810,30 @@ bool runInput() {
     writeProfile(profileIndex);
     return true;
   }
-  if (comp(inBuffer,_BASEPROFILE)) {
+  /*if (comp(inBuffer,_BASEPROFILE)) {
     unsigned long profileIndex = trailingInt(_BASEPROFILE);
     if (profileIndex > MAX_PROFILE_COUNT) {
       return false;
     }
     setBaseProfile(profileIndex);
     return true;
-  }
+  }*/
   if (comp(inBuffer,_READPROFILE)) {
     unsigned long profileIndex = trailingInt(_READPROFILE);
     if (profileIndex > MAX_PROFILE_COUNT) {
       return false;
     }
     readProfile(profileIndex);
+    return true;
+  }
+  if (comp(inBuffer,_AIRUPQUICK)) {
+    unsigned long profileIndex = trailingInt(_AIRUPQUICK);
+    if (profileIndex > MAX_PROFILE_COUNT) {
+      return false;
+    }
+    //load profile then air up
+    readProfile(profileIndex);
+    airUp();
     return true;
   }
   if (comp(inBuffer,_AIRHEIGHTA)) {
