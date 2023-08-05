@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.NumberPicker;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -58,40 +59,59 @@ public class MainFragment extends Fragment {
 
         binding.buttonAiroutsm.setOnClickListener((v) -> getAirSuspensionController().airSm(-10));
 
-        binding.buttonSetfrontpressureD.setOnClickListener((v) -> {
-            try {
-                getAirSuspensionController().setFrontPressureD(Integer.parseInt(binding.edittextSetfrontpressureD.getText().toString()));
-            } catch (Exception e) {
-                getAirSuspensionController().toast("Please input a valid number!");
+        final int numberPickerIncrement = 5;
+
+        binding.numberpickerSetfrontpressureD.setMinValue(20/numberPickerIncrement);
+        binding.numberpickerSetfrontpressureD.setMaxValue(200/numberPickerIncrement);
+        binding.numberpickerSetfrontpressureP.setMinValue(20/numberPickerIncrement);
+        binding.numberpickerSetfrontpressureP.setMaxValue(200/numberPickerIncrement);
+        binding.numberpickerSetrearpressureD.setMinValue(20/numberPickerIncrement);
+        binding.numberpickerSetrearpressureD.setMaxValue(200/numberPickerIncrement);
+        binding.numberpickerSetrearpressureP.setMinValue(20/numberPickerIncrement);
+        binding.numberpickerSetrearpressureP.setMaxValue(200/numberPickerIncrement);
+
+        NumberPicker.Formatter formatter = new NumberPicker.Formatter() {
+            @Override
+            public String format(int value) {
+                int temp = value * numberPickerIncrement;
+                return "" + temp;
             }
+        };
+        binding.numberpickerSetfrontpressureD.setFormatter(formatter);
+        binding.numberpickerSetfrontpressureP.setFormatter(formatter);
+        binding.numberpickerSetrearpressureD.setFormatter(formatter);
+        binding.numberpickerSetrearpressureP.setFormatter(formatter);
+
+
+
+        binding.buttonSetfrontpressureD.setOnClickListener((v) -> {
+            getAirSuspensionController().setFrontPressureD(binding.numberpickerSetfrontpressureD.getValue()*numberPickerIncrement);
         });
 
         binding.buttonSetfrontpressureP.setOnClickListener((v) -> {
-                    try {
-                        getAirSuspensionController().setFrontPressureP(Integer.parseInt(binding.edittextSetfrontpressureP.getText().toString()));
-                    } catch (Exception e) {
-                        getAirSuspensionController().toast("Please input a valid number!");
-                    }
-                }
-        );
+            getAirSuspensionController().setFrontPressureP(binding.numberpickerSetfrontpressureP.getValue()*numberPickerIncrement);
+        });
 
         binding.buttonSetrearpressureD.setOnClickListener((v) -> {
-            try {
-                getAirSuspensionController().setRearPressureD(Integer.parseInt(binding.edittextSetrearpressureD.getText().toString()));
-            } catch (Exception e) {
-                getAirSuspensionController().toast("Please input a valid number!");
-            }
-
+            getAirSuspensionController().setRearPressureD(binding.numberpickerSetrearpressureD.getValue()*numberPickerIncrement);
         });
 
         binding.buttonSetrearpressureP.setOnClickListener((v) -> {
-                    try {
-                        getAirSuspensionController().setRearPressureP(Integer.parseInt(binding.edittextSetrearpressureP.getText().toString()));
-                    } catch (Exception e) {
-                        getAirSuspensionController().toast("Please input a valid number!");
-                    }
-                }
-        );
+            getAirSuspensionController().setRearPressureP(binding.numberpickerSetrearpressureP.getValue()*numberPickerIncrement);
+        });
+
+        binding.buttonSetProfile1.setOnClickListener((v) -> {
+            getAirSuspensionController().quickAirUp(0);
+        });
+        binding.buttonSetProfile2.setOnClickListener((v) -> {
+            getAirSuspensionController().quickAirUp(1);
+        });
+        binding.buttonSetProfile3.setOnClickListener((v) -> {
+            getAirSuspensionController().quickAirUp(2);
+        });
+        binding.buttonSetProfile4.setOnClickListener((v) -> {
+            getAirSuspensionController().quickAirUp(3);
+        });
 
         binding.profileNum.setMinValue(1);
         binding.profileNum.setMaxValue(4);
@@ -148,10 +168,16 @@ public class MainFragment extends Fragment {
 
         getAirSuspensionController().setUpdatePressureProfile((fp, rp, fd, rd, tank) -> {
             if (binding != null) {
-                binding.edittextSetfrontpressureP.setText(fp);
-                binding.edittextSetrearpressureP.setText(rp);
-                binding.edittextSetfrontpressureD.setText(fd);
-                binding.edittextSetrearpressureD.setText(rd);
+                try {
+                    int _fp = Integer.parseInt(fp) / numberPickerIncrement;
+                    int _rp = Integer.parseInt(rp) / numberPickerIncrement;
+                    int _fd = Integer.parseInt(fd) / numberPickerIncrement;
+                    int _rd = Integer.parseInt(rd) / numberPickerIncrement;
+                    binding.numberpickerSetfrontpressureP.setValue(_fp);
+                    binding.numberpickerSetrearpressureP.setValue(_rp);
+                    binding.numberpickerSetfrontpressureD.setValue(_fd);
+                    binding.numberpickerSetrearpressureD.setValue(_rd);
+                } catch (Exception e){getAirSuspensionController().toast("Could not update values! Inproper data received");}
             }
         });
     }
@@ -166,7 +192,8 @@ public class MainFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
-        getAirSuspensionController().bluetoothOn(null);
+        //getAirSuspensionController().bluetoothOn(null);
+        getAirSuspensionController().readProfile(0);
     }
 
     @Override

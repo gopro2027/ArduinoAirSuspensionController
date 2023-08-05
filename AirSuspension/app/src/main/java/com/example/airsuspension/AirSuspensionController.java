@@ -205,8 +205,8 @@ public class AirSuspensionController {
                             toast("Can't retry, thread is already active :(");
                         } else {
                             if (lastBluetoothRequestTime + 30000 > System.currentTimeMillis()) {
-                                // toast("retrying...");
-
+                                 toast("retrying...");
+/*
 
                                 //mBluetoothStatus.setText(getString(R.string.BTconnFail))
                                 toast("Connection fail");
@@ -219,9 +219,16 @@ public class AirSuspensionController {
                                 } catch (Exception e) {
                                 }//swallow
                                 mBTSocket = null; // bi-directional client-to-client data path
+                                */
 
+                                //restart bluetooth connect after 100ms
+                                new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        btStartThread(BT_MAC);
+                                    }
+                                }, 100);
 
-                                //btStartThread(BT_MAC);
                             } else {
                                 toast("Connection timeout!");
                             }
@@ -284,6 +291,15 @@ public class AirSuspensionController {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("PROFR" + profileNum + "\n");
                 toast("Loaded profile " + (profileNum+1));
+            }
+        });
+    }
+
+    public void quickAirUp(int profileNum) {
+        bluetoothOn(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("AUQ" + profileNum + "\n");
+                toast("Airing up on profile " + (profileNum+1));
             }
         });
     }
