@@ -60,39 +60,36 @@
             android:id="@+id/button_setfrontpressureD"
             android:padding="0px"
             android:layout_width="0px"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:text="@string/setfrontpressureD" />
 
-        <EditText
-            android:id="@+id/edittext_setfrontpressureD"
-
-            android:layout_width="0px"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:inputType="number"
-            android:maxLength="3" />
+        <NumberPicker
+            android:theme="@style/AppTheme.Picker"
+            android:id="@+id/numberpicker_setfrontpressureD"
+            android:layout_width="wrap_content"
+            android:layout_height="120dp"
+            />
 
         <Space
             android:layout_width="12dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"/>
 
+        <NumberPicker
+            android:theme="@style/AppTheme.Picker"
+            android:id="@+id/numberpicker_setfrontpressureP"
+            android:layout_width="wrap_content"
+            android:layout_height="120dp"
+            />
+
         <Button
             android:id="@+id/button_setfrontpressureP"
             android:padding="0px"
             android:layout_width="0px"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/setfrontpressureP" />
-
-        <EditText
-            android:id="@+id/edittext_setfrontpressureP"
-            android:layout_width="0px"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:inputType="number"
-            android:maxLength="3" />
+            android:text="@string/setfrontpressureP" />
 
     </LinearLayout>
 
@@ -106,39 +103,82 @@
             android:id="@+id/button_setrearpressureD"
             android:padding="0px"
             android:layout_width="0px"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="2"
             android:text="@string/setrearpressureD" />
 
-        <EditText
-            android:id="@+id/edittext_setrearpressureD"
-            android:layout_width="0px"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:inputType="number"
-            android:maxLength="3" />
+        <NumberPicker
+            android:theme="@style/AppTheme.Picker"
+            android:id="@+id/numberpicker_setrearpressureD"
+            android:layout_width="wrap_content"
+            android:layout_height="120dp"
+            />
 
         <Space
             android:layout_width="12dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"/>
 
+        <NumberPicker
+            android:theme="@style/AppTheme.Picker"
+            android:id="@+id/numberpicker_setrearpressureP"
+            android:layout_width="wrap_content"
+            android:layout_height="120dp"
+            />
+
         <Button
             android:id="@+id/button_setrearpressureP"
             android:padding="0px"
             android:layout_width="0px"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="2"
             android:text="@string/setrearpressureP" />
 
-        <EditText
-            android:id="@+id/edittext_setrearpressureP"
-            android:layout_width="0px"
+
+
+
+    </LinearLayout>
+
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Quick Air Up:"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/button_setProfile1"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:inputType="number"
-            android:maxLength="3" />
-
+            android:padding="0dp"
+            android:text="AirUp Profile 1"
+            android:layout_width="match_parent"/>
+        <Button
+            android:id="@+id/button_setProfile2"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:padding="0dp"
+            android:text="AirUp Profile 2"
+            android:layout_width="match_parent"/>
+        <Button
+            android:id="@+id/button_setProfile3"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:padding="0dp"
+            android:text="AirUp Profile 3"
+            android:layout_width="match_parent"/>
+        <Button
+            android:id="@+id/button_setProfile4"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:padding="0dp"
+            android:text="AirUp Profile 4"
+            android:layout_width="match_parent"/>
 
     </LinearLayout>
 
@@ -151,11 +191,77 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center">
+<!--
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <Button
+                android:id="@+id/button_loadProfile1"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="Load Profile 1"
+                android:layout_width="match_parent"/>
+
+            <Button
+                android:id="@+id/button_saveProfile1"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="Save"
+                android:layout_width="match_parent"/>
+
+            <Button
+                android:id="@+id/button_defaultProfile1"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="Set Default"
+                android:layout_width="match_parent"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <Button
+                android:id="@+id/button_loadProfile2"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="Load Profile 2"
+                android:layout_width="match_parent"/>
+
+            <Button
+                android:id="@+id/button_saveProfile2"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="Save"
+                android:layout_width="match_parent"/>
+
+            <Button
+                android:id="@+id/button_defaultProfile2"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="Set Default"
+                android:layout_width="match_parent"/>
+
+        </LinearLayout>
+-->
 
         <NumberPicker
+            android:theme="@style/AppTheme.Picker"
             android:id="@+id/profileNum"
             android:layout_width="wrap_content"
-            android:layout_height="100dp"
+            android:layout_height="120dp"
             />
 
         <Button
