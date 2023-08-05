@@ -48,5 +48,6 @@ public:
 #define MAX_PRESSURE_SAFETY 200
 
 extern void setGoToPressureGoalPercise(byte wheelnum);
+extern bool skipPerciseSet;
 
 #endif

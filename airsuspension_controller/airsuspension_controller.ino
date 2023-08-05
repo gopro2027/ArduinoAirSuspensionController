@@ -341,6 +341,7 @@ void setNotGoToPressureGoalPercise(byte wheelnum) {
 bool shouldDoPressureGoalOnWheel(byte wheelnum) {
   return (goToPerciseBitset >> wheelnum) & 1;
 }
+bool skipPerciseSet = false;
 void pressureGoalRoutine() {
   bool a = false;
   if (isAnyWheelActive()) {
@@ -353,15 +354,17 @@ void pressureGoalRoutine() {
   if (a == false) {
     if (goToPerciseBitset != 0) {
       //Uncomment this to make it run twice for more precision
-      /*for (byte i = 0; i < 4; i++) {
+      for (byte i = 0; i < 4; i++) {
         if (shouldDoPressureGoalOnWheel(i)) {
-          getWheel(i)->percisionGoToPressure();
+          if (skipPerciseSet == false)
+            getWheel(i)->percisionGoToPressure();
         }
-      }*/
+      }
       //run a second time :P and also set it to not run again
       for (byte i = 0; i < 4; i++) {
         if (shouldDoPressureGoalOnWheel(i)) {
-          getWheel(i)->percisionGoToPressure();
+          if (skipPerciseSet == false)
+            getWheel(i)->percisionGoToPressure();
           setNotGoToPressureGoalPercise(i);
         }
       }
@@ -378,7 +381,6 @@ void airUp() {
 }
 
 void airOut() {
-
   getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(30);
   getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(30);
   getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(30);
@@ -800,6 +802,7 @@ bool runInput() {
   if (comp(inBuffer,_AIRSM)) {
     int value = trailingInt(_AIRSM);
     airUpRelativeToAverage(value);
+    skipPerciseSet = true;//will be reset by any call to Wheel::initPressureGoal
     return true;
   }
   if (comp(inBuffer,_SAVETOPROFILE)) {
@@ -834,6 +837,7 @@ bool runInput() {
     //load profile then air up
     readProfile(profileIndex);
     airUp();
+    skipPerciseSet = true;//will be reset by any call to Wheel::initPressureGoal
     return true;
   }
   if (comp(inBuffer,_AIRHEIGHTA)) {

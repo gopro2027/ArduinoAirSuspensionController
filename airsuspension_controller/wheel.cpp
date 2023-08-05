@@ -152,6 +152,7 @@ void Wheel::percisionGoToPressure() {
 }
 
 void Wheel::initPressureGoal(int newPressure) {
+  skipPerciseSet = false;
   if (newPressure > MAX_PRESSURE_SAFETY) {
     //hardcode not to go above 150PSI
     return;
