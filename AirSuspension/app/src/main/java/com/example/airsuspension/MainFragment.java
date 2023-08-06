@@ -117,7 +117,7 @@ public class MainFragment extends Fragment {
         binding.profileNum.setMaxValue(4);
         binding.buttonLoadProfile.setOnClickListener((v) -> getAirSuspensionController().readProfile(binding.profileNum.getValue() - 1));
         binding.buttonSaveProfile.setOnClickListener((v) -> getAirSuspensionController().saveToProfile(binding.profileNum.getValue() - 1));
-        binding.buttonDefaultProfile.setOnClickListener((v) -> getAirSuspensionController().setBaseProfile(binding.profileNum.getValue() - 1));
+        //binding.buttonDefaultProfile.setOnClickListener((v) -> getAirSuspensionController().setBaseProfile(binding.profileNum.getValue() - 1));
         /*
         binding.buttonLoad1.setOnClickListener((v) -> getAirSuspensionController().readProfile(0));
         binding.buttonLoad2.setOnClickListener((v) -> getAirSuspensionController().readProfile(1));

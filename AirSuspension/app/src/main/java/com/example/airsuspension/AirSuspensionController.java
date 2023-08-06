@@ -268,6 +268,8 @@ public class AirSuspensionController {
         });
     }
 
+    /*
+    disabled now, 1 is hardcoded default profile
     public void setBaseProfile(int profileNum) {
         bluetoothOn(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
@@ -275,7 +277,7 @@ public class AirSuspensionController {
                 toast("Set base profile (loaded on car start) to " + (profileNum+1));
             }
         });
-    }
+    }*/
 
     public void saveToProfile(int profileNum) {
         bluetoothOn(() -> {
