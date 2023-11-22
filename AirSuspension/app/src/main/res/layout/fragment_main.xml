@@ -156,28 +156,28 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:padding="0dp"
-            android:text="AirUp Profile 1"
+            android:text="1 - Ride Height"
             android:layout_width="match_parent"/>
         <Button
             android:id="@+id/button_setProfile2"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:padding="0dp"
-            android:text="AirUp Profile 2"
+            android:text="2 - Low"
             android:layout_width="match_parent"/>
         <Button
             android:id="@+id/button_setProfile3"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:padding="0dp"
-            android:text="AirUp Profile 3"
+            android:text="3 - Max"
             android:layout_width="match_parent"/>
         <Button
             android:id="@+id/button_setProfile4"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:padding="0dp"
-            android:text="AirUp Profile 4"
+            android:text="4 - Extra Ride Height"
             android:layout_width="match_parent"/>
 
     </LinearLayout>
@@ -446,6 +446,7 @@
 
 
         <ImageView
+            android:id="@+id/corvette_img"
             android:layout_width="wrap_content"
             android:layout_height="200dp"
             android:layout_alignParentTop="true"
@@ -461,7 +462,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_alignParentTop="true"
-            android:paddingLeft="20dp"
+            android:paddingLeft="40dp"
             android:text="199"
             android:textSize="@dimen/vette_pressure_size" />
 
@@ -470,7 +471,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentTop="true"
-            android:paddingRight="20dp"
+            android:paddingRight="40dp"
             android:layout_alignParentRight="true"
             android:text="199"
             android:textSize="@dimen/vette_pressure_size" />
@@ -481,7 +482,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_alignParentBottom="true"
-            android:paddingLeft="20dp"
+            android:paddingLeft="40dp"
             android:paddingBottom="@dimen/vette_pressure_size"
             android:text="199"
             android:textSize="@dimen/vette_pressure_size" />
@@ -492,7 +493,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
             android:layout_alignParentBottom="true"
-            android:paddingRight="20dp"
+            android:paddingRight="40dp"
             android:paddingBottom="@dimen/vette_pressure_size"
             android:text="199"
             android:textSize="@dimen/vette_pressure_size" />

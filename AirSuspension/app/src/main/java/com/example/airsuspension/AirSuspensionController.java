@@ -201,11 +201,14 @@ public class AirSuspensionController {
                         //mBluetoothStatus.setText(getString(R.string.BTConnected) + msg.obj);
                         toast("Connection to: " + msg.obj);
                     else {
-                        if (btConnectTryingRunning) {
-                            toast("Can't retry, thread is already active :(");
-                        } else {
-                            if (lastBluetoothRequestTime + 30000 > System.currentTimeMillis()) {
-                                 toast("retrying...");
+                        // Make it post to the main thread so that the previous thread (the one that will be setting btConnectTryingRunning to false) will complete
+                        new Handler(Looper.getMainLooper()).postDelayed(()-> {
+                            if (btConnectTryingRunning) {
+                                toast("Can't retry, thread is already active :(");
+                            } else {
+                                int timeoutMS = (5 * 60 * 1000);// 5 minutes
+                                if (lastBluetoothRequestTime + timeoutMS > System.currentTimeMillis()) {
+                                    toast("retrying connection...");
 /*
 
                                 //mBluetoothStatus.setText(getString(R.string.BTconnFail))
@@ -221,18 +224,16 @@ public class AirSuspensionController {
                                 mBTSocket = null; // bi-directional client-to-client data path
                                 */
 
-                                //restart bluetooth connect after 100ms
-                                new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        btStartThread(BT_MAC);
-                                    }
-                                }, 100);
+                                    //restart bluetooth connect after 100ms
+                                    new Handler(Looper.getMainLooper()).postDelayed(
+                                            () -> btStartThread(BT_MAC)
+                                            , 250);
 
-                            } else {
-                                toast("Connection timeout!");
+                                } else {
+                                    toast("Connection timeout!");
+                                }
                             }
-                        }
+                        }, 250);
 
 
                     }
@@ -422,6 +423,7 @@ public class AirSuspensionController {
     public void toast(String text) {
         appendToLog(text);
         try {
+            Log.i(TAG, "Toast said: " + text);
             if (previousToast != null) {
                 previousToast.cancel();
             }
@@ -429,7 +431,6 @@ public class AirSuspensionController {
                 previousToast = Toast.makeText(activity.getApplicationContext(), text, Toast.LENGTH_SHORT);
                 previousToast.show();
             }
-            Log.i(TAG, "Toast said: " + text);
         } catch (Exception e) {}
     }
 
@@ -463,7 +464,7 @@ public class AirSuspensionController {
         return device.createRfcommSocketToServiceRecord(BT_MODULE_UUID);
     }
 
-    @SuppressLint("MissingPermission")
+    /*@SuppressLint("MissingPermission")
     private BluetoothSocket createBluetoothSocket2(BluetoothDevice device) throws IOException {
         try {
             Method createMethod = device.getClass().getMethod("createInsecureRfcommSocket", new Class[] { int.class });
@@ -473,12 +474,14 @@ public class AirSuspensionController {
             toast("Could not create Insecure RFComm Connection 2");
         }
         return device.createRfcommSocketToServiceRecord(BT_MODULE_UUID);
-    }
+    }*/
 
     public boolean btConnectTryingRunning = false;
     private long lastBluetoothRequestTime = 0;
 
     public void btStartThread(String address) {
+        final boolean stop[] = {false, false};
+        //toast("Connection Attempting...");
         if (mBTAdapter == null || !mBTAdapter.isEnabled()) {
             toast("BT not on!");
             return;
@@ -486,18 +489,25 @@ public class AirSuspensionController {
 
         if (!btConnectTryingRunning) {
             // Spawn a new thread to avoid blocking the GUI one
-            new Thread() {
+            Thread t = new Thread() {
                 @SuppressLint("MissingPermission")
                 @Override
                 public void run() {
                     btConnectTryingRunning = true;
                     boolean fail = false;
 
+                    //if it's open already... close it
+                    try {
+                        mBTSocket.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
                     //mBTAdapter.cancelDiscovery();//permissions error
 
                     BluetoothDevice device = mBTAdapter.getRemoteDevice(address);
                     appendToLog("device created");
-                    try {
+                    /*try {
                         mBTSocket = createBluetoothSocket(device);
                         appendToLog("socket created");
                     } catch (Exception e) {
@@ -508,24 +518,27 @@ public class AirSuspensionController {
                     try {
                         mBTSocket.connect();
                         appendToLog("socket connected");
-                    } catch (Exception e) {
+                    } catch (Exception e) {*/
 
                         try {
                             //try version 2
-                            try {
-                                mBTSocket = createBluetoothSocket2(device);
-                                appendToLog("socket connected (v2)");
-                            } catch (Exception e2) {
-                                fail = true;
-                                toast("Error creating socket 2");
-                            }
+                            //try {
+                                mBTSocket = createBluetoothSocket(device);
+                                appendToLog("socket connected ");
+                            //} catch (Exception e2) {
+                            //    fail = true;
+                            //    toast("Error creating socket");
+                            //}
                             mBTSocket.connect();
 
 
                         } catch (Exception e2) {
 
+                            //cut short if socket failed but we are waiting
+                            if (stop[0] == true) {
+                                return;
+                            }
 
-                            e2.printStackTrace();
                             try {
                                 fail = true;
                                 mBTSocket.close();
@@ -538,7 +551,7 @@ public class AirSuspensionController {
                                 toast("Error connecting socket");
                             }
                         }
-                    }
+                    //}
                     if (!fail) {
                         //appendToLog("I think I connected!");
                         mConnectedThread = new ConnectedThread(mBTSocket, mHandler);
@@ -548,9 +561,35 @@ public class AirSuspensionController {
                     } else {
                         appendToLog("Definitely failed connection");
                     }
+                    stop[1] = true;
                     btConnectTryingRunning = false;
                 }
-            }.start();
+            };
+            t.start();
+
+            // Connection timeout (making it quicker)
+            // JK it seems as though the socket just glitches out if we try to end it early, and causes a failure in the code above when running mBTSocket.connect();
+            /*new Handler(Looper.getMainLooper()).postDelayed(
+                    () -> {
+                        if (btConnectTryingRunning && stop[1] == false) {
+                            if (mBTSocket != null) {
+                                toast("Cancelled early");
+                                try {
+                                    mBTSocket.close();
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                                stop[0] = true;
+                                toast("stop[0] = true;");
+                                btConnectTryingRunning = false;
+                                mHandler.obtainMessage(CONNECTING_STATUS, -1, -1).sendToTarget();
+                            }
+                        }
+                    }
+                    , 2500);*/
+
+        } else {
+            toast("Connection thread already running...");
         }
     }
 }

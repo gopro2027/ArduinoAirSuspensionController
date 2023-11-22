@@ -3,10 +3,14 @@ package com.example.airsuspension;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
+import android.widget.EditText;
 import android.widget.NumberPicker;
 
 import androidx.annotation.NonNull;
@@ -15,24 +19,54 @@ import androidx.navigation.fragment.NavHostFragment;
 
 import com.example.airsuspension.databinding.FragmentMainBinding;
 
+import java.lang.reflect.Field;
+
 public class MainFragment extends Fragment {
 
     private FragmentMainBinding binding;
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        final View rootView = requireActivity().getWindow().getDecorView().getRootView();
+        rootView.getViewTreeObserver().addOnGlobalLayoutListener(
+                () -> {
+
+                    int height = binding.getRoot().getHeight();
+                    int width = binding.getRoot().getWidth();
+                    int padding = width/8;
+                    Log.i("MainFragment",padding+" padding");
+                    binding.corvetteImg.getLayoutParams().height = height;
+                    binding.corvetteImg.setImageResource(R.drawable.corvette_gray_untrimmed); // height doesn't update until I set the drawable
+                    setLeftPadding(binding.pressureFd, padding);
+                    setRightPadding(binding.pressureFp, padding);
+                    setLeftPadding(binding.pressureRd, padding);
+                    setRightPadding(binding.pressureRp, padding);
+
+                });
+    }
+
+    public void setLeftPadding(View view, int padding) {
+        view.setPadding(padding, view.getPaddingTop(), view.getPaddingRight(), view.getPaddingBottom());
+    }
+
+    public void setRightPadding(View view, int padding) {
+        view.setPadding(view.getPaddingLeft(), view.getPaddingTop(), padding, view.getPaddingBottom());
+    }
 
     @Override
     public View onCreateView(
             LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState
     ) {
-
-
         binding = FragmentMainBinding.inflate(inflater, container, false);
         return binding.getRoot();
-
     }
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+
 
         binding.buttonAirup.setOnClickListener((v) -> getAirSuspensionController().airUp());
 
@@ -177,9 +211,25 @@ public class MainFragment extends Fragment {
                     binding.numberpickerSetrearpressureP.setValue(_rp);
                     binding.numberpickerSetfrontpressureD.setValue(_fd);
                     binding.numberpickerSetrearpressureD.setValue(_rd);
+                    fixNumberPicker(binding.numberpickerSetfrontpressureP);
+                    fixNumberPicker(binding.numberpickerSetrearpressureP);
+                    fixNumberPicker(binding.numberpickerSetfrontpressureD);
+                    fixNumberPicker(binding.numberpickerSetrearpressureD);
                 } catch (Exception e){getAirSuspensionController().toast("Could not update values! Inproper data received");}
             }
         });
+    }
+
+    // Used to fix a bug where when you set a number pickers value and it hasn't visually loaded yet it won't show anything. With a default value of 25, this will occur when setting anything 45 and above
+    private void fixNumberPicker(NumberPicker picker) {
+        try {
+            Field field = NumberPicker.class.getDeclaredField("mInputText");
+            field.setAccessible(true);
+            EditText inputText = (EditText) field.get(picker);
+            inputText.setVisibility(View.INVISIBLE);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /*@Override
