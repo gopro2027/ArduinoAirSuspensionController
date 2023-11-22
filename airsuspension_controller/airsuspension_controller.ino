@@ -284,11 +284,12 @@ bool getRiseOnStart() {
 }
 
 void setBaseProfile(byte value) {
-  if (getBaseProfile() != value)
-   EEPROM.write(baseProfileAddr, value);
+  //if (getBaseProfile() != value)
+  // EEPROM.write(baseProfileAddr, value);
 }
 byte getBaseProfile() {
-   return EEPROM.read(baseProfileAddr);
+   //return EEPROM.read(baseProfileAddr);
+   return 0;
 }
 
 void setRaiseOnPressureSet(bool value) {
@@ -330,12 +331,44 @@ bool isAnyWheelActive() {
   }
   return false;
 }
+byte goToPerciseBitset = 0;
+void setGoToPressureGoalPercise(byte wheelnum) {
+  goToPerciseBitset = goToPerciseBitset | (1 << wheelnum);
+}
+void setNotGoToPressureGoalPercise(byte wheelnum) {
+  goToPerciseBitset = goToPerciseBitset & ~(1 << wheelnum);
+}
+bool shouldDoPressureGoalOnWheel(byte wheelnum) {
+  return (goToPerciseBitset >> wheelnum) & 1;
+}
+bool skipPerciseSet = false;
 void pressureGoalRoutine() {
+  bool a = false;
   if (isAnyWheelActive()) {
      readPressures();
+     a = true;
   }
   for (int i = 0; i < 4; i++) {
     getWheel(i)->pressureGoalRoutine();
+  }
+  if (a == false) {
+    if (goToPerciseBitset != 0) {
+      //Uncomment this to make it run twice for more precision
+      for (byte i = 0; i < 4; i++) {
+        if (shouldDoPressureGoalOnWheel(i)) {
+          if (skipPerciseSet == false)
+            getWheel(i)->percisionGoToPressure();
+        }
+      }
+      //run a second time :P and also set it to not run again
+      for (byte i = 0; i < 4; i++) {
+        if (shouldDoPressureGoalOnWheel(i)) {
+          if (skipPerciseSet == false)
+            getWheel(i)->percisionGoToPressure();
+          setNotGoToPressureGoalPercise(i);
+        }
+      }
+    }
   }
 }
 
@@ -348,20 +381,24 @@ void airUp() {
 }
 
 void airOut() {
-
-  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(0);
-  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(0);
-  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(0);
-  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(0);
+  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(30);
+  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(30);
+  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(30);
+  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(30);
   
 }
 
 void airUpRelativeToAverage(int value) {
   
-  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getWheel(WHEEL_FRONT_PASSENGER)->getPressureAverage() + value);
-  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getPressureAverage() + value);
-  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getPressureAverage() + value);
-  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getPressureAverage() + value);
+  //getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getWheel(WHEEL_FRONT_PASSENGER)->getPressureAverage() + value);
+  //getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getPressureAverage() + value);
+  //getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getPressureAverage() + value);
+  //getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getPressureAverage() + value);
+
+  getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getWheel(WHEEL_FRONT_PASSENGER)->getPressure() + value);
+  getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getPressure() + value);
+  getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getPressure() + value);
+  getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getPressure() + value);
   
 }
 
@@ -376,6 +413,13 @@ void setup() {
 
   bt.begin(9600); // start the bluetooth uart at 9600 which is its default
   delay(200); // wait for voltage stabilize
+
+  //delay(1000);
+  //bt.print("AT+NAMEvetteair");
+  //delay(1000);
+  //bt.print("AT+PIN0000");
+  //delay(1000);
+  //return;
 
   #if SCREEN_MOODE == true
   Serial.println(F("Startup!"));
@@ -394,10 +438,10 @@ void setup() {
   
   delay(20);
 
-  wheel[WHEEL_FRONT_PASSENGER] = new Wheel(solenoidFrontPassengerInPin, solenoidFrontPassengerOutPin, pressureInputFrontPassenger);
-  wheel[WHEEL_REAR_PASSENGER] = new Wheel(solenoidRearPassengerInPin, solenoidRearPassengerOutPin, pressureInputRearPassenger);
-  wheel[WHEEL_FRONT_DRIVER] = new Wheel(solenoidFrontDriverInPin, solenoidFrontDriverOutPin, pressureInputFrontDriver);
-  wheel[WHEEL_REAR_DRIVER] = new Wheel(solenoidRearDriverInPin, solenoidRearDriverOutPin, pressureInputRearDriver);
+  wheel[WHEEL_FRONT_PASSENGER] = new Wheel(solenoidFrontPassengerInPin, solenoidFrontPassengerOutPin, pressureInputFrontPassenger, WHEEL_FRONT_PASSENGER);
+  wheel[WHEEL_REAR_PASSENGER] = new Wheel(solenoidRearPassengerInPin, solenoidRearPassengerOutPin, pressureInputRearPassenger, WHEEL_REAR_PASSENGER);
+  wheel[WHEEL_FRONT_DRIVER] = new Wheel(solenoidFrontDriverInPin, solenoidFrontDriverOutPin, pressureInputFrontDriver, WHEEL_FRONT_DRIVER);
+  wheel[WHEEL_REAR_DRIVER] = new Wheel(solenoidRearDriverInPin, solenoidRearDriverOutPin, pressureInputRearDriver, WHEEL_REAR_DRIVER);
 
   readProfile(getBaseProfile());
 
@@ -591,13 +635,13 @@ void drawairtekklogo(void) {
 void sendHeartbeat() {
   bt.print(F(PASSWORDSEND));
   bt.print(F("PRES"));
-  bt.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getPressureAverage()));
+  bt.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getPressure()));//getPressureAverage()
   bt.print(F("|"));
-  bt.print(int(getWheel(WHEEL_REAR_PASSENGER)->getPressureAverage()));
+  bt.print(int(getWheel(WHEEL_REAR_PASSENGER)->getPressure()));//getPressureAverage()
   bt.print(F("|"));
-  bt.print(int(getWheel(WHEEL_FRONT_DRIVER)->getPressureAverage()));
+  bt.print(int(getWheel(WHEEL_FRONT_DRIVER)->getPressure()));//getPressureAverage()
   bt.print(F("|"));
-  bt.print(int(getWheel(WHEEL_REAR_DRIVER)->getPressureAverage()));
+  bt.print(int(getWheel(WHEEL_REAR_DRIVER)->getPressure()));//getPressureAverage()
   bt.print(F("|"));
   bt.print(int(getTankPressure()));
   bt.print(F("\n"));
@@ -641,9 +685,9 @@ void bt_cmd() {
       sendCurrentProfileData();
     }
     else {
-      for (int i = 0; i < 4; i++) {
-        getWheel(i)->calcAvg();
-      }
+      //for (int i = 0; i < 4; i++) {
+      //  getWheel(i)->calcAvg();
+      //}
       sendHeartbeat();
     }
     lastHeartbeat = millis();
@@ -703,7 +747,8 @@ const char _AIROUT[] PROGMEM = PASSWORD"AIROUT\0";
 const char _AIRSM[] PROGMEM = PASSWORD"AIRSM\0";
 const char _SAVETOPROFILE[] PROGMEM = PASSWORD"SPROF\0";
 const char _READPROFILE[] PROGMEM = PASSWORD"PROFR\0";
-const char _BASEPROFILE[] PROGMEM = PASSWORD"PRBOF\0";
+const char _AIRUPQUICK[] PROGMEM = PASSWORD"AUQ\0";
+//const char _BASEPROFILE[] PROGMEM = PASSWORD"PRBOF\0";
 const char _AIRHEIGHTA[] PROGMEM = PASSWORD"AIRHEIGHTA\0";
 const char _AIRHEIGHTB[] PROGMEM = PASSWORD"AIRHEIGHTB\0";
 const char _AIRHEIGHTC[] PROGMEM = PASSWORD"AIRHEIGHTC\0";
@@ -757,6 +802,7 @@ bool runInput() {
   if (comp(inBuffer,_AIRSM)) {
     int value = trailingInt(_AIRSM);
     airUpRelativeToAverage(value);
+    skipPerciseSet = true;//will be reset by any call to Wheel::initPressureGoal
     return true;
   }
   if (comp(inBuffer,_SAVETOPROFILE)) {
@@ -767,20 +813,31 @@ bool runInput() {
     writeProfile(profileIndex);
     return true;
   }
-  if (comp(inBuffer,_BASEPROFILE)) {
+  /*if (comp(inBuffer,_BASEPROFILE)) {
     unsigned long profileIndex = trailingInt(_BASEPROFILE);
     if (profileIndex > MAX_PROFILE_COUNT) {
       return false;
     }
     setBaseProfile(profileIndex);
     return true;
-  }
+  }*/
   if (comp(inBuffer,_READPROFILE)) {
     unsigned long profileIndex = trailingInt(_READPROFILE);
     if (profileIndex > MAX_PROFILE_COUNT) {
       return false;
     }
     readProfile(profileIndex);
+    return true;
+  }
+  if (comp(inBuffer,_AIRUPQUICK)) {
+    unsigned long profileIndex = trailingInt(_AIRUPQUICK);
+    if (profileIndex > MAX_PROFILE_COUNT) {
+      return false;
+    }
+    //load profile then air up
+    readProfile(profileIndex);
+    airUp();
+    skipPerciseSet = true;//will be reset by any call to Wheel::initPressureGoal
     return true;
   }
   if (comp(inBuffer,_AIRHEIGHTA)) {

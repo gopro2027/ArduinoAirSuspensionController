@@ -10,10 +10,11 @@ const int pressureAdjustment = -10;//my sensors are reading about -10 too high
 
 Wheel::Wheel() {}
 
-Wheel::Wheel(byte solenoidInPin, byte solenoidOutPin, byte pressurePin) {
+Wheel::Wheel(byte solenoidInPin, byte solenoidOutPin, byte pressurePin, byte thisWheelNum) {
   this->solenoidInPin = solenoidInPin;
   this->solenoidOutPin = solenoidOutPin;
   this->pressurePin = pressurePin;
+  this->thisWheelNum = thisWheelNum;
   this->s_AirIn = Solenoid(solenoidInPin);
   this->s_AirOut = Solenoid(solenoidOutPin);
   this->routineStartTime = 0;
@@ -21,14 +22,14 @@ Wheel::Wheel(byte solenoidInPin, byte solenoidOutPin, byte pressurePin) {
   this->pressureGoal = 0;
   this->isInSafePressureRead = false;
   this->isClosePaused = false;
-  this->pressureAverage = 0;
-  this->pressureAverageTotal = 0;
-  this->pressureAverageCount = 0;
+  //this->pressureAverage = 0;
+  //this->pressureAverageTotal = 0;
+  //this->pressureAverageCount = 0;
 }
 
-const float pressureZero = 102.4; //analog reading of pressure transducer at 0psi
-const float pressureMax = 921.6; //analog reading of pressure transducer at max psi (300)
-const int pressuretransducermaxPSI = 300; //psi value of transducer being used
+#define pressureZero (float)102.4 //analog reading of pressure transducer at 0psi
+#define pressureMax (float)921.6 //analog reading of pressure transducer at max psi (300)
+#define pressuretransducermaxPSI 300 //psi value of transducer being used
 
 float readPinPressure(int pin) {
   return float((float(analogRead(pin))-pressureZero)*pressuretransducermaxPSI)/(pressureMax-pressureZero) + pressureAdjustment; //conversion equation to convert analog reading to psi
@@ -65,22 +66,22 @@ void Wheel::safePressureReadResumeClose() {
   }
 }
 
-void Wheel::calcAvg() {
-  if (this->pressureAverageTotal != 0) {
-    this->pressureAverage = this->pressureAverageTotal / this->pressureAverageCount;
-    this->pressureAverageTotal = 0;
-    this->pressureAverageCount = 0;
-  }
-}
+//void Wheel::calcAvg() {
+//  if (this->pressureAverageTotal != 0) {
+//    this->pressureAverage = this->pressureAverageTotal / this->pressureAverageCount;
+//    this->pressureAverageTotal = 0;
+//    this->pressureAverageCount = 0;
+//  }
+//}
 
 void Wheel::readPressure() {
   this->pressureValue = readPinPressure(this->pressurePin);
 
-  if (this->pressureAverageCount == 255) {
-    this->calcAvg();
-  }
-  this->pressureAverageTotal = this->pressureAverageTotal + this->pressureValue;
-  this->pressureAverageCount = this->pressureAverageCount + 1;
+  //if (this->pressureAverageCount == 255) {
+  //  this->calcAvg();
+  //}
+  //this->pressureAverageTotal = this->pressureAverageTotal + this->pressureValue;
+  //this->pressureAverageCount = this->pressureAverageCount + 1;
   
 }
 
@@ -88,9 +89,9 @@ float Wheel::getPressure() {
   return this->pressureValue;
 }
 
-byte Wheel::getPressureAverage() {
-  return this->pressureAverage;
-}
+//byte Wheel::getPressureAverage() {
+//  return this->pressureAverage;
+//}
 
 bool Wheel::isActive() {
   if (this->s_AirIn.isOpen()) {
@@ -103,9 +104,14 @@ bool Wheel::isActive() {
 }
 
 #define sleepTimeAirDelta 10
-#define sleepTimeWait 100
+#define sleepTimeWait 150
 
-void Wheel::percisionGoToPressure(byte goalPressure) {
+void Wheel::percisionGoToPressureQue(byte goalPressure) {
+  this->pressureGoal = goalPressure;
+  setGoToPressureGoalPercise(this->thisWheelNum);
+}
+void Wheel::percisionGoToPressure() {
+  int goalPressure = this->pressureGoal;
   int wheelSolenoidMask = 0;
   for (int i = 0; i < 8; i++) {
     bool val = digitalRead(i+6) == HIGH;// solenoidFrontPassengerInPin
@@ -117,7 +123,7 @@ void Wheel::percisionGoToPressure(byte goalPressure) {
   
   unsigned long startTime = millis();
   delay(sleepTimeWait);
-  while (millis() - startTime < 2000) {
+  while (millis() - startTime < 5000) {
     int currentPressure = readPinPressure(this->pressurePin);
     if (currentPressure == goalPressure) {
       break;
@@ -146,13 +152,14 @@ void Wheel::percisionGoToPressure(byte goalPressure) {
 }
 
 void Wheel::initPressureGoal(int newPressure) {
+  skipPerciseSet = false;
   if (newPressure > MAX_PRESSURE_SAFETY) {
     //hardcode not to go above 150PSI
     return;
   }
   int pressureDif = newPressure - this->pressureValue;//negative if airing out, positive if airing up
   if (abs(pressureDif) <= PRESSURE_DELTA) {
-    this->percisionGoToPressure(newPressure);
+    this->percisionGoToPressureQue(newPressure);
   } else {
     //okay we need to set the values
     this->routineStartTime = millis();
@@ -181,7 +188,7 @@ void Wheel::pressureGoalRoutine() {
     if (readPressure >= this->pressureGoal) {
       //stop
       this->s_AirIn.close();
-      this->percisionGoToPressure(this->pressureGoal);
+      this->percisionGoToPressureQue(this->pressureGoal);
     } else {
       if (millis() > this->routineStartTime + ROUTINE_TIMEOUT) {
         this->s_AirIn.close();
@@ -192,7 +199,7 @@ void Wheel::pressureGoalRoutine() {
     if (readPressure <= this->pressureGoal) {
       //stop
       this->s_AirOut.close();
-      this->percisionGoToPressure(this->pressureGoal);
+      this->percisionGoToPressureQue(this->pressureGoal);
     } else {
       if (millis() > this->routineStartTime + ROUTINE_TIMEOUT) {
         this->s_AirOut.close();

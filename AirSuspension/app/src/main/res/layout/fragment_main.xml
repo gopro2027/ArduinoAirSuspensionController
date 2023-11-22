@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     tools:context=".MainFragment">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -55,39 +60,36 @@
             android:id="@+id/button_setfrontpressureD"
             android:padding="0px"
             android:layout_width="0px"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:text="@string/setfrontpressureD" />
 
-        <EditText
-            android:id="@+id/edittext_setfrontpressureD"
-
-            android:layout_width="0px"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:inputType="number"
-            android:maxLength="3" />
+        <NumberPicker
+            android:theme="@style/AppTheme.Picker"
+            android:id="@+id/numberpicker_setfrontpressureD"
+            android:layout_width="wrap_content"
+            android:layout_height="120dp"
+            />
 
         <Space
             android:layout_width="12dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"/>
 
+        <NumberPicker
+            android:theme="@style/AppTheme.Picker"
+            android:id="@+id/numberpicker_setfrontpressureP"
+            android:layout_width="wrap_content"
+            android:layout_height="120dp"
+            />
+
         <Button
             android:id="@+id/button_setfrontpressureP"
             android:padding="0px"
             android:layout_width="0px"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/setfrontpressureP" />
-
-        <EditText
-            android:id="@+id/edittext_setfrontpressureP"
-            android:layout_width="0px"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:inputType="number"
-            android:maxLength="3" />
+            android:text="@string/setfrontpressureP" />
 
     </LinearLayout>
 
@@ -101,56 +103,165 @@
             android:id="@+id/button_setrearpressureD"
             android:padding="0px"
             android:layout_width="0px"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="2"
             android:text="@string/setrearpressureD" />
 
-        <EditText
-            android:id="@+id/edittext_setrearpressureD"
-            android:layout_width="0px"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:inputType="number"
-            android:maxLength="3" />
+        <NumberPicker
+            android:theme="@style/AppTheme.Picker"
+            android:id="@+id/numberpicker_setrearpressureD"
+            android:layout_width="wrap_content"
+            android:layout_height="120dp"
+            />
 
         <Space
             android:layout_width="12dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"/>
 
+        <NumberPicker
+            android:theme="@style/AppTheme.Picker"
+            android:id="@+id/numberpicker_setrearpressureP"
+            android:layout_width="wrap_content"
+            android:layout_height="120dp"
+            />
+
         <Button
             android:id="@+id/button_setrearpressureP"
             android:padding="0px"
             android:layout_width="0px"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="2"
             android:text="@string/setrearpressureP" />
 
-        <EditText
-            android:id="@+id/edittext_setrearpressureP"
-            android:layout_width="0px"
+
+
+
+    </LinearLayout>
+
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Quick Air Up:"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/button_setProfile1"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:inputType="number"
-            android:maxLength="3" />
-
+            android:padding="0dp"
+            android:text="1 - Ride Height"
+            android:layout_width="match_parent"/>
+        <Button
+            android:id="@+id/button_setProfile2"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:padding="0dp"
+            android:text="2 - Low"
+            android:layout_width="match_parent"/>
+        <Button
+            android:id="@+id/button_setProfile3"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:padding="0dp"
+            android:text="3 - Max"
+            android:layout_width="match_parent"/>
+        <Button
+            android:id="@+id/button_setProfile4"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:padding="0dp"
+            android:text="4 - Extra Ride Height"
+            android:layout_width="match_parent"/>
 
     </LinearLayout>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Profiles:"/>
+            android:text="Profiles (#1 is loaded on start):"/>
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center">
+<!--
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <Button
+                android:id="@+id/button_loadProfile1"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="Load Profile 1"
+                android:layout_width="match_parent"/>
+
+            <Button
+                android:id="@+id/button_saveProfile1"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="Save"
+                android:layout_width="match_parent"/>
+
+            <Button
+                android:id="@+id/button_defaultProfile1"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="Set Default"
+                android:layout_width="match_parent"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <Button
+                android:id="@+id/button_loadProfile2"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="Load Profile 2"
+                android:layout_width="match_parent"/>
+
+            <Button
+                android:id="@+id/button_saveProfile2"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="Save"
+                android:layout_width="match_parent"/>
+
+            <Button
+                android:id="@+id/button_defaultProfile2"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="0dp"
+                android:text="Set Default"
+                android:layout_width="match_parent"/>
+
+        </LinearLayout>
+-->
 
         <NumberPicker
+            android:theme="@style/AppTheme.Picker"
             android:id="@+id/profileNum"
             android:layout_width="wrap_content"
-            android:layout_height="100dp"
+            android:layout_height="120dp"
             />
 
         <Button
@@ -169,13 +280,13 @@
             android:padding="0dp"
             android:text="Save To Profile" />
 
-        <Button
+        <!--<Button
             android:id="@+id/button_defaultProfile"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:padding="0dp"
-            android:text="Set As Default Profile" />
+            android:text="Set As Default Profile" />-->
 
 
     </LinearLayout>
@@ -335,9 +446,11 @@
 
 
         <ImageView
+            android:id="@+id/corvette_img"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="200dp"
             android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"
             android:paddingLeft="@dimen/vette_pressure_size"
             android:paddingRight="@dimen/vette_pressure_size"
             android:paddingBottom="@dimen/vette_pressure_size"
@@ -349,6 +462,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_alignParentTop="true"
+            android:paddingLeft="40dp"
             android:text="199"
             android:textSize="@dimen/vette_pressure_size" />
 
@@ -357,6 +471,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentTop="true"
+            android:paddingRight="40dp"
             android:layout_alignParentRight="true"
             android:text="199"
             android:textSize="@dimen/vette_pressure_size" />
@@ -367,6 +482,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_alignParentBottom="true"
+            android:paddingLeft="40dp"
             android:paddingBottom="@dimen/vette_pressure_size"
             android:text="199"
             android:textSize="@dimen/vette_pressure_size" />
@@ -377,6 +493,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
             android:layout_alignParentBottom="true"
+            android:paddingRight="40dp"
             android:paddingBottom="@dimen/vette_pressure_size"
             android:text="199"
             android:textSize="@dimen/vette_pressure_size" />
@@ -395,3 +512,4 @@
 
 
 </LinearLayout>
+</ScrollView>

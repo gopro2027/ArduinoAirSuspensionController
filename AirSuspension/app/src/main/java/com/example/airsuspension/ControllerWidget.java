@@ -34,12 +34,12 @@ public class ControllerWidget extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
 
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
+        //if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
             // There may be multiple widgets active, so update all of them
             for (int appWidgetId : appWidgetIds) {
                 updateAppWidget(context, appWidgetManager, appWidgetId);
             }
-        } else {
+        /*} else {
             for (int appWidgetId : appWidgetIds) {
                 RemoteViews wideView =
                         new RemoteViews(context.getPackageName(), R.layout.controller_widget_wide);
@@ -63,7 +63,7 @@ public class ControllerWidget extends AppWidgetProvider {
 
 
             }
-        }
+        }*/
     }
 
     @Override
