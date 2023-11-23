@@ -51,7 +51,7 @@ public class AirSuspensionController {
     private ConnectedThread mConnectedThread; // bluetooth background worker thread to send and receive data
     private BluetoothSocket mBTSocket = null; // bi-directional client-to-client data path
 
-    private long heartbeat = 0;
+    public long heartbeat = 0;
 
     public TextView mReadBuffer;
     public TextView mLogBuffer;
@@ -202,27 +202,16 @@ public class AirSuspensionController {
                         toast("Connection to: " + msg.obj);
                     else {
                         // Make it post to the main thread so that the previous thread (the one that will be setting btConnectTryingRunning to false) will complete
-                        new Handler(Looper.getMainLooper()).postDelayed(()-> {
+                        /*new Handler(Looper.getMainLooper()).postDelayed(()-> {
+
+
+
                             if (btConnectTryingRunning) {
                                 toast("Can't retry, thread is already active :(");
                             } else {
                                 int timeoutMS = (5 * 60 * 1000);// 5 minutes
                                 if (lastBluetoothRequestTime + timeoutMS > System.currentTimeMillis()) {
                                     toast("retrying connection...");
-/*
-
-                                //mBluetoothStatus.setText(getString(R.string.BTconnFail))
-                                toast("Connection fail");
-
-                                //BT_MODULE_UUID = UUID.randomUUID();
-                                mBTAdapter = BluetoothAdapter.getDefaultAdapter();
-                                close();
-                                try {
-                                    mBTSocket.close();
-                                } catch (Exception e) {
-                                }//swallow
-                                mBTSocket = null; // bi-directional client-to-client data path
-                                */
 
                                     //restart bluetooth connect after 100ms
                                     new Handler(Looper.getMainLooper()).postDelayed(
@@ -233,7 +222,7 @@ public class AirSuspensionController {
                                     toast("Connection timeout!");
                                 }
                             }
-                        }, 250);
+                        }, 250);*/
 
 
                     }
@@ -374,20 +363,38 @@ public class AirSuspensionController {
         });
     }
 
+    //boolean forceReconnect = false;
+    public void forceReconnect() {
+        if (!btConnectTryingRunning) {
+            toast("Loop detected timeout! Reconnecting.");
+            //forceReconnect = true;
+            bluetoothOn();
+        }
+    }
+    public void forceReconnectLoop() {
+        if (System.currentTimeMillis() - heartbeat > 10000) {
+            forceReconnect();
+        }
+    }
+
     @SuppressLint("MissingPermission")
     public void bluetoothOn(BluetoothCommand cmd) {
-        onConnectedCmd = cmd;
-        if (System.currentTimeMillis() - heartbeat < 30000) {//30 seconds timeout eek
-            //toast("Socket is already connected!");
-            appendToLog("socket already connected");
-            return;
-        }
+        onConnectedCmd = cmd; // cue the command to run right after the next time we receive a heartbeat
+        //if (System.currentTimeMillis() - heartbeat < 10000) {//30 seconds timeout eek
+        //    //toast("Socket is already connected!");
+        //    appendToLog("socket already connected");
+        //    return;
+        //}
 
+        //bluetoothOn();
+    }
+
+    public void bluetoothOn() {
         if (mBTAdapter != null) {
-            if (!mBTAdapter.isEnabled()) {
+            if (!mBTAdapter.isEnabled() && activity.getIntent() != null) {
                 appendToLog("bt adapter not enabled... sending intent");
-                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                 if (activity != null) {
+                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                     activity.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
                 } else {
                     //no activity
@@ -396,10 +403,10 @@ public class AirSuspensionController {
                 //toast("Bluetooth turned on");
             } else {
                 //toast("Bluetooth is already on");
-                appendToLog("bt adapter enabled");
+                //appendToLog("bt adapter enabled");
             }
         } else {
-            appendToLog("bt adapter null");
+            //appendToLog("bt adapter null");
         }
 
         //discover();
@@ -480,10 +487,10 @@ public class AirSuspensionController {
     private long lastBluetoothRequestTime = 0;
 
     public void btStartThread(String address) {
-        final boolean stop[] = {false, false};
+        //final boolean stop[] = {false, false};
         //toast("Connection Attempting...");
         if (mBTAdapter == null || !mBTAdapter.isEnabled()) {
-            toast("BT not on!");
+            //toast("BT not on!");
             return;
         }
 
@@ -535,19 +542,17 @@ public class AirSuspensionController {
                         } catch (Exception e2) {
 
                             //cut short if socket failed but we are waiting
-                            if (stop[0] == true) {
-                                return;
-                            }
-
+                            //if (stop[0] == true) {
+                            //    return;
+                            //}
+                            fail = true;
                             try {
-                                fail = true;
                                 mBTSocket.close();
                                 mHandler.obtainMessage(CONNECTING_STATUS, -1, -1)
                                         .sendToTarget();
                                 appendToLog("ah shoot we failed both connections");
                             } catch (Exception e3) {
                                 //insert code to deal with this
-                                fail = true;
                                 toast("Error connecting socket");
                             }
                         }
@@ -558,10 +563,11 @@ public class AirSuspensionController {
                         mConnectedThread.start();
                         mHandler.obtainMessage(CONNECTING_STATUS, 1, -1, "Specified MAC")
                                 .sendToTarget();
+                        heartbeat = System.currentTimeMillis() - 4000;//make it 6 seconds wait time I guess lmao idk :( I wish it didn't think it was connected when it wasn't because then I could just set this to the current time and it would be great 100% of the time
                     } else {
                         appendToLog("Definitely failed connection");
                     }
-                    stop[1] = true;
+                    //stop[1] = true;
                     btConnectTryingRunning = false;
                 }
             };

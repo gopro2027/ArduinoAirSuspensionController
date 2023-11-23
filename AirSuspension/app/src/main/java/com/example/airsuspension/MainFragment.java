@@ -1,6 +1,9 @@
 package com.example.airsuspension;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+
+import android.os.Handler;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
@@ -32,16 +35,18 @@ public class MainFragment extends Fragment {
         rootView.getViewTreeObserver().addOnGlobalLayoutListener(
                 () -> {
 
-                    int height = binding.getRoot().getHeight();
-                    int width = binding.getRoot().getWidth();
-                    int padding = width/8;
-                    Log.i("MainFragment",padding+" padding");
-                    binding.corvetteImg.getLayoutParams().height = height;
-                    binding.corvetteImg.setImageResource(R.drawable.corvette_gray_untrimmed); // height doesn't update until I set the drawable
-                    setLeftPadding(binding.pressureFd, padding);
-                    setRightPadding(binding.pressureFp, padding);
-                    setLeftPadding(binding.pressureRd, padding);
-                    setRightPadding(binding.pressureRp, padding);
+                    if (binding != null) {
+                        int height = binding.getRoot().getHeight();
+                        int width = binding.getRoot().getWidth();
+                        int padding = width / 8;
+                        Log.i("MainFragment", padding + " padding");
+                        binding.corvetteImg.getLayoutParams().height = height;
+                        binding.corvetteImg.setImageResource(R.drawable.corvette_gray_untrimmed); // height doesn't update until I set the drawable
+                        setLeftPadding(binding.pressureFd, padding);
+                        setRightPadding(binding.pressureFp, padding);
+                        setLeftPadding(binding.pressureRd, padding);
+                        setRightPadding(binding.pressureRp, padding);
+                    }
 
                 });
     }
@@ -63,9 +68,25 @@ public class MainFragment extends Fragment {
         return binding.getRoot();
     }
 
+
+    private Handler handler = new Handler();
+
+    // Define the code block to be executed
+    private Runnable forceReconnectThread = new Runnable() {
+        @Override
+        public void run() {
+            // Insert custom code here
+            getAirSuspensionController().forceReconnectLoop();
+            // Repeat every 2 seconds
+            handler.postDelayed(forceReconnectThread, 2500);
+        }
+    };
+
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+
+        handler.post(forceReconnectThread);
 
 
         binding.buttonAirup.setOnClickListener((v) -> getAirSuspensionController().airUp());
