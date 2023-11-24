@@ -755,7 +755,9 @@ const char _AIRHEIGHTC[] PROGMEM = PASSWORD"AIRHEIGHTC\0";
 const char _AIRHEIGHTD[] PROGMEM = PASSWORD"AIRHEIGHTD\0";
 const char _RISEONSTART[] PROGMEM = PASSWORD"RISEONSTART\0";
 const char _RAISEONPRESSURESET[] PROGMEM = PASSWORD"ROPS\0";
+#if TEST_MODE == true
 const char _TESTSOL[] PROGMEM = PASSWORD"TESTSOL\0";
+#endif
 
 bool comp(char *str1, const char str2[]) {
   //return strstr(str1,str2) != NULL;

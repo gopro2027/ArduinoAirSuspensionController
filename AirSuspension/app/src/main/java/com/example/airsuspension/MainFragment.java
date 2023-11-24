@@ -172,28 +172,6 @@ public class MainFragment extends Fragment {
         binding.profileNum.setMaxValue(4);
         binding.buttonLoadProfile.setOnClickListener((v) -> getAirSuspensionController().readProfile(binding.profileNum.getValue() - 1));
         binding.buttonSaveProfile.setOnClickListener((v) -> getAirSuspensionController().saveToProfile(binding.profileNum.getValue() - 1));
-        //binding.buttonDefaultProfile.setOnClickListener((v) -> getAirSuspensionController().setBaseProfile(binding.profileNum.getValue() - 1));
-        /*
-        binding.buttonLoad1.setOnClickListener((v) -> getAirSuspensionController().readProfile(0));
-        binding.buttonLoad2.setOnClickListener((v) -> getAirSuspensionController().readProfile(1));
-        binding.buttonLoad3.setOnClickListener((v) -> getAirSuspensionController().readProfile(2));
-
-        binding.buttonSave1.setOnClickListener((v) -> getAirSuspensionController().saveToProfile(0));
-        binding.buttonSave2.setOnClickListener((v) -> getAirSuspensionController().saveToProfile(1));
-        binding.buttonSave3.setOnClickListener((v) -> getAirSuspensionController().saveToProfile(2));
-
-        binding.buttonBp1.setOnClickListener((v) -> getAirSuspensionController().setBaseProfile(0));
-        binding.buttonBp2.setOnClickListener((v) -> getAirSuspensionController().setBaseProfile(1));
-        binding.buttonBp3.setOnClickListener((v) -> getAirSuspensionController().setBaseProfile(2));
-*/
-
-        /*binding.buttonTestsol.setOnClickListener((v) -> {
-                try {
-                    getAirSuspensionController().testSolenoid(Integer.parseInt(binding.edittextTestsol.getText().toString()));
-                } catch (Exception e) {
-                    getAirSuspensionController().toast("Please input a valid number!");
-                }
-        });*/
 
         binding.buttonSetriseonstartenabled.setOnClickListener(v -> {
             getAirSuspensionController().setRiseOnStart(true);
@@ -253,17 +231,9 @@ public class MainFragment extends Fragment {
         }
     }
 
-    /*@Override
-    public void onResume() {
-        super.onResume();
-        Log.i("MainFragment","onResume");
-        getAirSuspensionController().bluetoothOn(null);
-    }*/
-
     @Override
     public void onStart() {
         super.onStart();
-        //getAirSuspensionController().bluetoothOn(null);
         getAirSuspensionController().readProfile(0);
     }
 

@@ -22,7 +22,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.lifecycle.MutableLiveData;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -36,17 +35,13 @@ public class AirSuspensionController {
     public String TAG = "AirSuspensionController";
     private static final UUID BT_MODULE_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); // "random" unique identifier
     private static final String BT_MAC = "00:14:03:05:59:F6";
-    //private static UUID BT_MODULE_UUID;
-    //private static final String BT_MAC = "00:14:03:05:59:EA";
 
-    // #defines for identifying shared types between calling functions
     private final static int REQUEST_ENABLE_BT = 1; // used to identify adding bluetooth names
     public final static int MESSAGE_READ = 2; // used in bluetooth handler to identify message update
     private final static int CONNECTING_STATUS = 3; // used in bluetooth handler to identify message status
 
     @NonNull
     private BluetoothAdapter mBTAdapter;
-    //private Set<BluetoothDevice> mPairedDevices;
     private Handler mHandler; // Our main handler that will receive callback notifications
     private ConnectedThread mConnectedThread; // bluetooth background worker thread to send and receive data
     private BluetoothSocket mBTSocket = null; // bi-directional client-to-client data path
@@ -63,11 +58,11 @@ public class AirSuspensionController {
             mConnectedThread.cancel();
         } catch (Exception e) {
             //swallow bc it errors a lot
-            //e.printStackTrace();
         }
 
     }
 
+    // Interfaces
     interface UpdatePressure {
         void updatePressure(String fp, String rp, String fd, String rd, String tank);
     }
@@ -89,27 +84,27 @@ public class AirSuspensionController {
     }
 
     AirSuspensionController(Activity activity) {
+        this.activity = activity;
 
         // Ask for location permission if not already allowed
         if (activity != null) {
             if (ContextCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
                 ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
-
         }
-
-        //BT_MODULE_UUID = UUID.randomUUID();
 
         mBTAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBTAdapter == null) {
             appendToLog("Bluetooth unavailable on this device (null)");
-        } else {
-
         }
-        this.activity = activity;
 
         mHandler = new Handler(Looper.getMainLooper()) {
             @Override
             public void handleMessage(Message msg) {
+                if (msg.what == CONNECTING_STATUS) {
+                    if (msg.arg1 == 1) {
+                        toast("Connection to: " + msg.obj);
+                    }
+                }
                 if (msg.what == MESSAGE_READ) {
                     String readMessage = new String((byte[]) msg.obj, StandardCharsets.UTF_8).substring(0, msg.arg1 - 1);//-1 bc all messages are terminated by a \n
 
@@ -117,7 +112,7 @@ public class AirSuspensionController {
 
                     for (String message : messages) {
 
-                        String recv_password = "56347893";
+                        String recv_password = "56347893"; // PASSWORDSEND on arduino
 
                         if (message.startsWith(recv_password)) {
 
@@ -129,9 +124,6 @@ public class AirSuspensionController {
 
                             Log.i("Received", message);
                             heartbeat = System.currentTimeMillis();
-
-
-                            //if (arr.length == 1) {
 
 
                             if (message.startsWith("NOTIF")) {
@@ -155,7 +147,6 @@ public class AirSuspensionController {
 
                                 String[] arr = message.split("\\|");
 
-                                //}
                                 if (arr.length == 5) {
 
                                     if (onConnectedCmd != null) {
@@ -187,7 +178,7 @@ public class AirSuspensionController {
 
 
                                     } catch (Exception e) {
-                                        //e.printStackTrace();
+                                        //swallow
                                     }
                                 }
                             }
@@ -195,44 +186,13 @@ public class AirSuspensionController {
                     }
                 }
 
-                if (msg.what == CONNECTING_STATUS) {
-                    char[] sConnected;
-                    if (msg.arg1 == 1)
-                        //mBluetoothStatus.setText(getString(R.string.BTConnected) + msg.obj);
-                        toast("Connection to: " + msg.obj);
-                    else {
-                        // Make it post to the main thread so that the previous thread (the one that will be setting btConnectTryingRunning to false) will complete
-                        /*new Handler(Looper.getMainLooper()).postDelayed(()-> {
 
-
-
-                            if (btConnectTryingRunning) {
-                                toast("Can't retry, thread is already active :(");
-                            } else {
-                                int timeoutMS = (5 * 60 * 1000);// 5 minutes
-                                if (lastBluetoothRequestTime + timeoutMS > System.currentTimeMillis()) {
-                                    toast("retrying connection...");
-
-                                    //restart bluetooth connect after 100ms
-                                    new Handler(Looper.getMainLooper()).postDelayed(
-                                            () -> btStartThread(BT_MAC)
-                                            , 250);
-
-                                } else {
-                                    toast("Connection timeout!");
-                                }
-                            }
-                        }, 250);*/
-
-
-                    }
-                }
             }
         };
     }
 
     public void airUp() {
-        bluetoothOn(() -> {
+        queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIRUP\n");
                 toast("Sent air up");
@@ -241,7 +201,7 @@ public class AirSuspensionController {
     }
 
     public void airOut() {
-        bluetoothOn(() -> {
+        queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIROUT\n");
                 toast("Sent air out");
@@ -250,7 +210,7 @@ public class AirSuspensionController {
     }
 
     public void airSm(int psi) {
-        bluetoothOn(() -> {
+        queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIRSM" + psi + "\n");
                 toast("Adding this much pressure: " + psi);
@@ -258,19 +218,8 @@ public class AirSuspensionController {
         });
     }
 
-    /*
-    disabled now, 1 is hardcoded default profile
-    public void setBaseProfile(int profileNum) {
-        bluetoothOn(() -> {
-            if (mConnectedThread != null) { //First check to make sure thread created
-                mConnectedThread.write("PRBOF" + profileNum + "\n");
-                toast("Set base profile (loaded on car start) to " + (profileNum+1));
-            }
-        });
-    }*/
-
     public void saveToProfile(int profileNum) {
-        bluetoothOn(() -> {
+        queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("SPROF" + profileNum + "\n");
                 toast("Saved to profile " + (profileNum+1));
@@ -279,7 +228,7 @@ public class AirSuspensionController {
     }
 
     public void readProfile(int profileNum) {
-        bluetoothOn(() -> {
+        queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("PROFR" + profileNum + "\n");
                 toast("Loaded profile " + (profileNum+1));
@@ -288,7 +237,7 @@ public class AirSuspensionController {
     }
 
     public void quickAirUp(int profileNum) {
-        bluetoothOn(() -> {
+        queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AUQ" + profileNum + "\n");
                 toast("Airing up on profile " + (profileNum+1));
@@ -297,7 +246,7 @@ public class AirSuspensionController {
     }
 
     public void setFrontPressureD(int pressure) {
-        bluetoothOn(() -> {
+        queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIRHEIGHTC" + pressure + "\n");
                 toast("Set front driver pressure");
@@ -306,7 +255,7 @@ public class AirSuspensionController {
     }
 
     public void setFrontPressureP(int pressure) {
-        bluetoothOn(() -> {
+        queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIRHEIGHTA" + pressure + "\n");
                 toast("Set front passenger pressure");
@@ -315,7 +264,7 @@ public class AirSuspensionController {
     }
 
     public void setRearPressureD(int pressure) {
-        bluetoothOn(() -> {
+        queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIRHEIGHTD" + pressure + "\n");
                 toast("Set rear driver pressure");
@@ -324,7 +273,7 @@ public class AirSuspensionController {
     }
 
     public void setRearPressureP(int pressure) {
-        bluetoothOn(() -> {
+        queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIRHEIGHTB" + pressure + "\n");
                 toast("Set rear passenger pressure");
@@ -333,7 +282,7 @@ public class AirSuspensionController {
     }
 
     public void setRiseOnStart(boolean riseOnStart) {
-        bluetoothOn(() -> {
+        queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("RISEONSTART" + (riseOnStart ? "1" : "0") + "\n");
                 toast("Set rise on start " + riseOnStart);
@@ -342,7 +291,7 @@ public class AirSuspensionController {
     }
 
     public void setRaiseOnPressureSet(boolean raiseOnPressureSet) {
-        bluetoothOn(() -> {
+        queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("ROPS" + (raiseOnPressureSet ? "1" : "0") + "\n");
                 toast("Set raise on pressure set " + raiseOnPressureSet);
@@ -350,8 +299,9 @@ public class AirSuspensionController {
         });
     }
 
+    // Only usable when TEST_MODE is enabled on the arduino
     public void testSolenoid(int pinNum) {
-        bluetoothOn(() -> {
+        queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 if (pinNum >= 6 && pinNum <= 13) {
                     mConnectedThread.write("TESTSOL" + pinNum + "\n");
@@ -363,30 +313,17 @@ public class AirSuspensionController {
         });
     }
 
-    //boolean forceReconnect = false;
-    public void forceReconnect() {
-        if (!btConnectTryingRunning) {
-            toast("Loop detected timeout! Reconnecting.");
-            //forceReconnect = true;
-            bluetoothOn();
-        }
-    }
     public void forceReconnectLoop() {
         if (System.currentTimeMillis() - heartbeat > 10000) {
-            forceReconnect();
+            if (!btConnectTryingRunning) {
+                toast("Loop detected timeout! Reconnecting.");
+                bluetoothOn();
+            }
         }
     }
 
-    @SuppressLint("MissingPermission")
-    public void bluetoothOn(BluetoothCommand cmd) {
+    public void queBluetoothCommand(BluetoothCommand cmd) {
         onConnectedCmd = cmd; // cue the command to run right after the next time we receive a heartbeat
-        //if (System.currentTimeMillis() - heartbeat < 10000) {//30 seconds timeout eek
-        //    //toast("Socket is already connected!");
-        //    appendToLog("socket already connected");
-        //    return;
-        //}
-
-        //bluetoothOn();
     }
 
     public void bluetoothOn() {
@@ -400,17 +337,9 @@ public class AirSuspensionController {
                     //no activity
                     return;//this would be the widget if it's null idk
                 }
-                //toast("Bluetooth turned on");
-            } else {
-                //toast("Bluetooth is already on");
-                //appendToLog("bt adapter enabled");
             }
-        } else {
-            //appendToLog("bt adapter null");
         }
 
-        //discover();
-        lastBluetoothRequestTime = System.currentTimeMillis();
         btStartThread(BT_MAC);
     }
 
@@ -443,7 +372,6 @@ public class AirSuspensionController {
 
 
     // Enter here after user selects "yes" or "no" to enabling radio
-
     protected void onActivityResult(int requestCode, int resultCode, Intent Data) {
         // Check which request we're responding to
         if (requestCode == REQUEST_ENABLE_BT) {
@@ -458,11 +386,17 @@ public class AirSuspensionController {
         }
     }
 
+    // https://stackoverflow.com/questions/16457693/the-differences-between-createrfcommsockettoservicerecord-and-createrfcommsocket
     @SuppressLint("MissingPermission")
     private BluetoothSocket createBluetoothSocket(BluetoothDevice device) throws IOException {
         try {
             //final Method m = device.getClass().getMethod("createInsecureRfcommSocketToServiceRecord", UUID.class);
             //return (BluetoothSocket) m.invoke(device, BT_MODULE_UUID);
+
+            //This method is supposed to connect without checking that it actually exists
+            //Method createMethod = device.getClass().getMethod("createInsecureRfcommSocket", new Class[] { int.class });
+            //return (BluetoothSocket)createMethod.invoke(device, 1);
+
             return device.createInsecureRfcommSocketToServiceRecord(BT_MODULE_UUID);
         } catch (Exception e) {
             e.printStackTrace();
@@ -471,24 +405,9 @@ public class AirSuspensionController {
         return device.createRfcommSocketToServiceRecord(BT_MODULE_UUID);
     }
 
-    /*@SuppressLint("MissingPermission")
-    private BluetoothSocket createBluetoothSocket2(BluetoothDevice device) throws IOException {
-        try {
-            Method createMethod = device.getClass().getMethod("createInsecureRfcommSocket", new Class[] { int.class });
-            return (BluetoothSocket)createMethod.invoke(device, 1);
-        } catch (Exception e) {
-            e.printStackTrace();
-            toast("Could not create Insecure RFComm Connection 2");
-        }
-        return device.createRfcommSocketToServiceRecord(BT_MODULE_UUID);
-    }*/
-
     public boolean btConnectTryingRunning = false;
-    private long lastBluetoothRequestTime = 0;
 
     public void btStartThread(String address) {
-        //final boolean stop[] = {false, false};
-        //toast("Connection Attempting...");
         if (mBTAdapter == null || !mBTAdapter.isEnabled()) {
             //toast("BT not on!");
             return;
@@ -496,7 +415,7 @@ public class AirSuspensionController {
 
         if (!btConnectTryingRunning) {
             // Spawn a new thread to avoid blocking the GUI one
-            Thread t = new Thread() {
+            new Thread() {
                 @SuppressLint("MissingPermission")
                 @Override
                 public void run() {
@@ -510,41 +429,17 @@ public class AirSuspensionController {
                         e.printStackTrace();
                     }
 
-                    //mBTAdapter.cancelDiscovery();//permissions error
-
                     BluetoothDevice device = mBTAdapter.getRemoteDevice(address);
                     appendToLog("device created");
-                    /*try {
-                        mBTSocket = createBluetoothSocket(device);
-                        appendToLog("socket created");
-                    } catch (Exception e) {
-                        fail = true;
-                        toast("Error creating socket");
-                    }
-                    // Establish the Bluetooth socket connection.
-                    try {
-                        mBTSocket.connect();
-                        appendToLog("socket connected");
-                    } catch (Exception e) {*/
 
                         try {
-                            //try version 2
-                            //try {
                                 mBTSocket = createBluetoothSocket(device);
                                 appendToLog("socket connected ");
-                            //} catch (Exception e2) {
-                            //    fail = true;
-                            //    toast("Error creating socket");
-                            //}
                             mBTSocket.connect();
 
 
                         } catch (Exception e2) {
 
-                            //cut short if socket failed but we are waiting
-                            //if (stop[0] == true) {
-                            //    return;
-                            //}
                             fail = true;
                             try {
                                 mBTSocket.close();
@@ -556,9 +451,7 @@ public class AirSuspensionController {
                                 toast("Error connecting socket");
                             }
                         }
-                    //}
                     if (!fail) {
-                        //appendToLog("I think I connected!");
                         mConnectedThread = new ConnectedThread(mBTSocket, mHandler);
                         mConnectedThread.start();
                         mHandler.obtainMessage(CONNECTING_STATUS, 1, -1, "Specified MAC")
@@ -567,33 +460,9 @@ public class AirSuspensionController {
                     } else {
                         appendToLog("Definitely failed connection");
                     }
-                    //stop[1] = true;
                     btConnectTryingRunning = false;
                 }
-            };
-            t.start();
-
-            // Connection timeout (making it quicker)
-            // JK it seems as though the socket just glitches out if we try to end it early, and causes a failure in the code above when running mBTSocket.connect();
-            /*new Handler(Looper.getMainLooper()).postDelayed(
-                    () -> {
-                        if (btConnectTryingRunning && stop[1] == false) {
-                            if (mBTSocket != null) {
-                                toast("Cancelled early");
-                                try {
-                                    mBTSocket.close();
-                                } catch (IOException e) {
-                                    throw new RuntimeException(e);
-                                }
-                                stop[0] = true;
-                                toast("stop[0] = true;");
-                                btConnectTryingRunning = false;
-                                mHandler.obtainMessage(CONNECTING_STATUS, -1, -1).sendToTarget();
-                            }
-                        }
-                    }
-                    , 2500);*/
-
+            }.start();
         } else {
             toast("Connection thread already running...");
         }
