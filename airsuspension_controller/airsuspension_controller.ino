@@ -409,6 +409,7 @@ Wheel *getWheel(int i) {
 
 
 void setup() {
+  setupSolenoidPins();
   Serial.begin(9600);
 
   bt.begin(9600); // start the bluetooth uart at 9600 which is its default
