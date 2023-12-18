@@ -83,7 +83,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 //Digital pins
 SoftwareSerial bt(3, 2); // RX, TX
-const int triggerCompressorPin = 4;
+#define triggerCompressorPin 4
 #define solenoidFrontPassengerInPin 5
 #define solenoidFrontPassengerOutPin 7
 #define solenoidRearPassengerInPin 6
