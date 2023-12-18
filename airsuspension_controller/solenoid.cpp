@@ -10,12 +10,16 @@ Solenoid::Solenoid(int pin) {
   this->bopen = false;
 }
 void Solenoid::open() {
-  digitalWrite(this->pin, HIGH);
-  this->bopen = true;
+  if (this->bopen == false) {
+    digitalWrite(this->pin, HIGH);
+    this->bopen = true;
+  }
 }
 void Solenoid::close() {
-  digitalWrite(this->pin, LOW);
-  this->bopen = false;
+  if (this->bopen == true) {
+    digitalWrite(this->pin, LOW);
+    this->bopen = false;
+  }
 }
 bool Solenoid::isOpen() {
   return this->bopen;
