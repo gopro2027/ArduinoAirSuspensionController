@@ -16,6 +16,9 @@
  BSD license, check license.txt for more information
  All text above, and the splash screen below must be
  included in any redistribution.
+
+ Must install 'Adafruit GFX Library' and 'Adafruit SSD1306' in the arduino library manager
+
  **************************************************************************/
 
  //Pressure Sensor Front (passenger) to A0
