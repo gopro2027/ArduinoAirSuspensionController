@@ -16,6 +16,9 @@
  BSD license, check license.txt for more information
  All text above, and the splash screen below must be
  included in any redistribution.
+
+ Must install 'Adafruit GFX Library' and 'Adafruit SSD1306' in the arduino library manager
+
  **************************************************************************/
 
  //Pressure Sensor Front (passenger) to A0
@@ -53,6 +56,7 @@
 
 #include "solenoid.h"
 #include "wheel.h"
+#include "compressor.h"
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -79,16 +83,15 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 //Digital pins
 SoftwareSerial bt(3, 2); // RX, TX
-const int buttonRisePin = 4;
-const int buttonFallPin = 5;
-#define solenoidFrontPassengerInPin 6
-#define solenoidFrontPassengerOutPin 8
-#define solenoidRearPassengerInPin 7
-#define solenoidRearPassengerOutPin 10
-#define solenoidFrontDriverInPin 9
-#define solenoidFrontDriverOutPin 12
-#define solenoidRearDriverInPin 11
-#define solenoidRearDriverOutPin 13
+const int triggerCompressorPin = 4;
+#define solenoidFrontPassengerInPin 5
+#define solenoidFrontPassengerOutPin 7
+#define solenoidRearPassengerInPin 6
+#define solenoidRearPassengerOutPin 9
+#define solenoidFrontDriverInPin 8
+#define solenoidFrontDriverOutPin 11
+#define solenoidRearDriverInPin 10
+#define solenoidRearDriverOutPin 12
 
 //Analog pins
 const int pressureInputFrontPassenger = A0; //select the analog input pin for the pressure transducer FRONT
@@ -402,6 +405,7 @@ void airUpRelativeToAverage(int value) {
   
 }
 
+Compressor *compressor;
 Wheel *wheel[4];
 Wheel *getWheel(int i) {
   return wheel[i];
@@ -443,6 +447,8 @@ void setup() {
   wheel[WHEEL_REAR_PASSENGER] = new Wheel(solenoidRearPassengerInPin, solenoidRearPassengerOutPin, pressureInputRearPassenger, WHEEL_REAR_PASSENGER);
   wheel[WHEEL_FRONT_DRIVER] = new Wheel(solenoidFrontDriverInPin, solenoidFrontDriverOutPin, pressureInputFrontDriver, WHEEL_FRONT_DRIVER);
   wheel[WHEEL_REAR_DRIVER] = new Wheel(solenoidRearDriverInPin, solenoidRearDriverOutPin, pressureInputRearDriver, WHEEL_REAR_DRIVER);
+
+  compressor = new Compressor(triggerCompressorPin, pressureInputTank);
 
   readProfile(getBaseProfile());
 
@@ -517,10 +523,20 @@ void readPressures() {
   }
 }
 
+void compressorLogic() {
+  if (isAnyWheelActive()) {
+    compressor->pause();
+  } else {
+    compressor->resume();
+  }
+  compressor->loop();
+}
+
 const int sensorreadDelay = 100; //constant integer to set the sensor read delay in milliseconds
 unsigned long lastPressureReadTime = 0;
 bool pause_exe = false;
 void loop() {
+  compressorLogic();
   bt_cmd();
   if (pause_exe == false) {
     if (millis() - lastPressureReadTime > sensorreadDelay) {
