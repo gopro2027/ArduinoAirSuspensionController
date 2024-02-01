@@ -1,17 +1,15 @@
-package com.example.airsuspension;
+package com.example.airsuspension.widget;
 
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.util.ArrayMap;
 import android.util.Log;
-import android.util.SizeF;
 import android.widget.RemoteViews;
 
-import java.util.Map;
+import com.example.airsuspension.MainActivity;
+import com.example.airsuspension.R;
 
 /**
  * Implementation of App Widget functionality.

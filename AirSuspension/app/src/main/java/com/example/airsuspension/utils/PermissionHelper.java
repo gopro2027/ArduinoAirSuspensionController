@@ -1,4 +1,4 @@
-package com.example.airsuspension;
+package com.example.airsuspension.utils;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -9,6 +9,8 @@ import android.widget.Toast;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
+import com.example.airsuspension.MainActivity;
 
 
 public class PermissionHelper {
@@ -21,7 +23,7 @@ public class PermissionHelper {
     };
 
 
-    protected PermissionHelper(MainActivity mainActivity)
+    public PermissionHelper(MainActivity mainActivity)
     {
         this.mainActivity = mainActivity;
     }

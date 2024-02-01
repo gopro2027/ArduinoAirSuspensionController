@@ -18,7 +18,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AirSuspension">
         <receiver
-            android:name=".ControllerWidget"
+            android:name=".widget.ControllerWidget"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -30,7 +30,7 @@
         </receiver>
 
         <receiver
-            android:name=".PressureWidget"
+            android:name=".widget.PressureWidget"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

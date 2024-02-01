@@ -2,7 +2,6 @@ package com.example.airsuspension;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -10,7 +9,6 @@ import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.util.Log;
-import android.view.View;
 
 import androidx.navigation.NavController;
 import androidx.navigation.NavDestination;
@@ -19,6 +17,7 @@ import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
 import com.example.airsuspension.databinding.ActivityMainBinding;
+import com.example.airsuspension.utils.PermissionHelper;
 
 import android.view.Menu;
 import android.view.MenuItem;

@@ -1,9 +1,11 @@
-package com.example.airsuspension;
+package com.example.airsuspension.utils;
 
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.util.Log;
+
+import com.example.airsuspension.AirSuspensionController;
 
 import java.io.IOException;
 import java.io.InputStream;
