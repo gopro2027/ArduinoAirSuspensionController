@@ -1,26 +1,22 @@
 package com.example.airsuspension;
 
-import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 
 import android.os.Handler;
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.util.DisplayMetrics;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.widget.EditText;
 import android.widget.NumberPicker;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
-import androidx.navigation.fragment.NavHostFragment;
 
 import com.example.airsuspension.databinding.FragmentMainBinding;
+import com.example.airsuspension.utils.PressureUnit;
 
 import java.lang.reflect.Field;
 
@@ -128,8 +124,8 @@ public class MainFragment extends Fragment {
         NumberPicker.Formatter formatter = new NumberPicker.Formatter() {
             @Override
             public String format(int value) {
-                int temp = value * numberPickerIncrement;
-                return "" + temp;
+                int psi = value * numberPickerIncrement;
+                return PressureUnit.convertValueFromBaseUnitToDisplay(psi+"",((MainActivity)requireActivity()).preferredUnit);
             }
         };
         binding.numberpickerSetfrontpressureD.setFormatter(formatter);
@@ -140,19 +136,19 @@ public class MainFragment extends Fragment {
 
 
         binding.buttonSetfrontpressureD.setOnClickListener((v) -> {
-            getAirSuspensionController().setFrontPressureD(binding.numberpickerSetfrontpressureD.getValue()*numberPickerIncrement);
+            getAirSuspensionController().setFrontPressureD(PressureUnit.ofPreferredUnit(((MainActivity) requireActivity()), binding.numberpickerSetfrontpressureD.getValue()*numberPickerIncrement));
         });
 
         binding.buttonSetfrontpressureP.setOnClickListener((v) -> {
-            getAirSuspensionController().setFrontPressureP(binding.numberpickerSetfrontpressureP.getValue()*numberPickerIncrement);
+            getAirSuspensionController().setFrontPressureP(PressureUnit.ofPreferredUnit(((MainActivity) requireActivity()), binding.numberpickerSetfrontpressureP.getValue()*numberPickerIncrement));
         });
 
         binding.buttonSetrearpressureD.setOnClickListener((v) -> {
-            getAirSuspensionController().setRearPressureD(binding.numberpickerSetrearpressureD.getValue()*numberPickerIncrement);
+            getAirSuspensionController().setRearPressureD(PressureUnit.ofPreferredUnit(((MainActivity) requireActivity()), binding.numberpickerSetrearpressureD.getValue()*numberPickerIncrement));
         });
 
         binding.buttonSetrearpressureP.setOnClickListener((v) -> {
-            getAirSuspensionController().setRearPressureP(binding.numberpickerSetrearpressureP.getValue()*numberPickerIncrement);
+            getAirSuspensionController().setRearPressureP(PressureUnit.ofPreferredUnit(((MainActivity) requireActivity()), binding.numberpickerSetrearpressureP.getValue()*numberPickerIncrement));
         });
 
         binding.buttonSetProfile1.setOnClickListener((v) -> {
@@ -199,6 +195,7 @@ public class MainFragment extends Fragment {
             }
         });
 
+        // This will always be received in PSI as only the frontend values will be updated to what the user sees
         getAirSuspensionController().setUpdatePressureProfile((fp, rp, fd, rd, tank) -> {
             if (binding != null) {
                 try {
@@ -214,9 +211,14 @@ public class MainFragment extends Fragment {
                     fixNumberPicker(binding.numberpickerSetrearpressureP);
                     fixNumberPicker(binding.numberpickerSetfrontpressureD);
                     fixNumberPicker(binding.numberpickerSetrearpressureD);
-                } catch (Exception e){getAirSuspensionController().toast("Could not update values! Inproper data received");}
+                } catch (Exception e){getAirSuspensionController().toast("Could not update values! Improper data received");}
             }
         });
+
+        fixNumberPicker(binding.numberpickerSetfrontpressureP);
+        fixNumberPicker(binding.numberpickerSetrearpressureP);
+        fixNumberPicker(binding.numberpickerSetfrontpressureD);
+        fixNumberPicker(binding.numberpickerSetrearpressureD);
     }
 
     // Used to fix a bug where when you set a number pickers value and it hasn't visually loaded yet it won't show anything. With a default value of 25, this will occur when setting anything 45 and above
@@ -244,7 +246,8 @@ public class MainFragment extends Fragment {
     }
 
     public AirSuspensionController getAirSuspensionController() {
-        return MainActivity.getAirSuspensionController(getActivity());
+        return MainActivity.getAirSuspensionController((MainActivity)getActivity());
     }
+
 
 }

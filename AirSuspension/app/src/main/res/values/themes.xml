@@ -1,7 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Theme.AirSuspension" parent="Theme.MaterialComponents.Light">
-
         <item name="android:colorBackground">@color/dark_theme_bg</item>
         <item name="android:textColor">@color/dark_theme_text</item>
 
@@ -15,7 +14,9 @@
         <item name="colorOnSecondary">@color/dark_theme_bg</item>
         <!-- Status bar color. -->
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+        <!-- Background of kebab menu -->
+        <item name="android:itemBackground">@color/dark_theme_bg</item>
+        <item name="android:actionMenuTextColor">@color/dark_theme_bg</item>
     </style>
 
     <style name="Theme.AirSuspension.NoActionBar">
@@ -44,4 +45,7 @@
         <!-- Apply padding to avoid the content of the widget colliding with the rounded corners -->
         <item name="appWidgetPadding">16dp</item>
     </style>
+
+
+
 </resources>

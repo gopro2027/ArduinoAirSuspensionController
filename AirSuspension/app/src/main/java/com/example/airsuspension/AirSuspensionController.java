@@ -24,6 +24,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.airsuspension.utils.ConnectedThread;
+import com.example.airsuspension.utils.PressureUnit;
 import com.example.airsuspension.widget.PressureWidget;
 
 import java.io.IOException;
@@ -53,7 +54,7 @@ public class AirSuspensionController {
     public TextView mReadBuffer;
     public TextView mLogBuffer;
 
-    Activity activity;
+    MainActivity activity;
 
     void close() {
         try {
@@ -85,7 +86,7 @@ public class AirSuspensionController {
         this.updatePressureProfile = updatePressure;
     }
 
-    AirSuspensionController(Activity activity) {
+    AirSuspensionController(MainActivity activity) {
         this.activity = activity;
 
         // Ask for location permission if not already allowed
@@ -135,13 +136,19 @@ public class AirSuspensionController {
                                 message = message.substring("PROF".length());
                                 String[] arr = message.split("\\|");
                                 if (arr.length == 4) {
-                                    String fp = arr[0];
-                                    String rp = arr[1];
-                                    String fd = arr[2];
-                                    String rd = arr[3];
 
-                                    if (updatePressureProfile != null)
-                                        updatePressureProfile.updatePressure(fp, rp, fd, rd, null);// no tank pressure
+                                    try {
+                                        String fp = arr[0];
+                                        String rp = arr[1];
+                                        String fd = arr[2];
+                                        String rd = arr[3];
+
+                                        // This function accepts values in psi so no need to convert them to the base unit!
+                                        if (updatePressureProfile != null)
+                                            updatePressureProfile.updatePressure(fp, rp, fd, rd, null);// no tank pressure
+                                    } catch (Exception e) {
+                                        //integer.parse probably failed due to a bad packet
+                                    }
                                 }
 
                             } else if (message.startsWith("PRES")) {
@@ -156,13 +163,13 @@ public class AirSuspensionController {
                                         onConnectedCmd = null;
                                     }
 
-                                    String fp = arr[0];
-                                    String rp = arr[1];
-                                    String fd = arr[2];
-                                    String rd = arr[3];
-                                    String tank = arr[4];
-
                                     try {
+
+                                        String fp = PressureUnit.convertValueFromBaseUnitToDisplay(arr[0], activity.preferredUnit);
+                                        String rp = PressureUnit.convertValueFromBaseUnitToDisplay(arr[1], activity.preferredUnit);
+                                        String fd = PressureUnit.convertValueFromBaseUnitToDisplay(arr[2], activity.preferredUnit);
+                                        String rd = PressureUnit.convertValueFromBaseUnitToDisplay(arr[3], activity.preferredUnit);
+                                        String tank = PressureUnit.convertValueFromBaseUnitToDisplay(arr[4], activity.preferredUnit);
 
                                         AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(activity);
                                         RemoteViews remoteViews = new RemoteViews(((Context) activity).getPackageName(), R.layout.pressure_widget);
@@ -215,7 +222,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIRSM" + psi + "\n");
-                toast("Adding this much pressure: " + psi);
+                toast("Adding this much pressure (PSI): " + psi);
             }
         });
     }
@@ -247,37 +254,37 @@ public class AirSuspensionController {
         });
     }
 
-    public void setFrontPressureD(int pressure) {
+    public void setFrontPressureD(PressureUnit pressure) {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
-                mConnectedThread.write("AIRHEIGHTC" + pressure + "\n");
+                mConnectedThread.write("AIRHEIGHTC" + pressure.forArduino() + "\n");
                 toast("Set front driver pressure");
             }
         });
     }
 
-    public void setFrontPressureP(int pressure) {
+    public void setFrontPressureP(PressureUnit pressure) {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
-                mConnectedThread.write("AIRHEIGHTA" + pressure + "\n");
+                mConnectedThread.write("AIRHEIGHTA" + pressure.forArduino() + "\n");
                 toast("Set front passenger pressure");
             }
         });
     }
 
-    public void setRearPressureD(int pressure) {
+    public void setRearPressureD(PressureUnit pressure) {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
-                mConnectedThread.write("AIRHEIGHTD" + pressure + "\n");
+                mConnectedThread.write("AIRHEIGHTD" + pressure.forArduino() + "\n");
                 toast("Set rear driver pressure");
             }
         });
     }
 
-    public void setRearPressureP(int pressure) {
+    public void setRearPressureP(PressureUnit pressure) {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
-                mConnectedThread.write("AIRHEIGHTB" + pressure + "\n");
+                mConnectedThread.write("AIRHEIGHTB" + pressure.forArduino() + "\n");
                 toast("Set rear passenger pressure");
             }
         });
@@ -318,7 +325,7 @@ public class AirSuspensionController {
     public void forceReconnectLoop() {
         if (System.currentTimeMillis() - heartbeat > 10000) {
             if (!btConnectTryingRunning) {
-                toast("Loop detected timeout! Reconnecting.");
+                appendToLog("Loop detected timeout! Reconnecting...");
                 bluetoothOn();
             }
         }
