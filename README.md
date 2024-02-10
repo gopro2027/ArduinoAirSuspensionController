@@ -1,12 +1,14 @@
 # ArduinoAirSuspensionController
 Air Suspension Controller
 
-**Important Info:** We are wokring on a new board that will use a more powerful esp32. It will use roughly the same components but with an esp32 instead of an arduino nano. If you plan to build this project, you may want to consult with us personally and wait until the esp32 version is out. Although the nano version does work fine, it is at it's limit of functionality without sacrificing features, so we decided it is best to switch to an esp32.
+**Important Info To Potential Creators:** <br>
+We are working on a new board that will use the more powerful esp32. It will use roughly the same components but with an esp32 instead of an arduino nano. If you plan to build this project, you may want to consult with us personally and wait until the esp32 version is out. Although the nano version does work fine, it is at it's limit of functionality without sacrificing features, so we decided it is best to switch to an esp32. I also hope to create an instructional build video for when the esp32 is ready.<br>
+Possible new features that are waiting for the esp32 include but are not limited to: security lockdown mode, more advanced pressure calculations, faster processing speed, better bluetooth connectivity/reliability (add error detection), height sensor mode rather than pressure sensor, the list can go on
 
-**Overview:**
+**Overview:** <br>
 This is intended as a DIY replacement for products such as Airlift 3P ($1500) or Airtek Stage 2+ ($1000) with a build cost of roughly $500. Combined with the customizability of open sourced code, I hope this is a tempting option for some DIY-ers out there. This github repo includes an android app and arduino code along with some 3d printable files and a PCB. The PCB is pre-made and ready for upload in JLCPCB to order and should hopefully make the electrinics/soldering learning curve a lot smaller for the average diy-er, as compared to having to solder every wire by scratch according to a diagram. This was designed as an upgrade from airtekk stage 1, which is just bags, tank, compressor, tubing and fittings, guages and manual paddle switches. So that is what you would need already prior to creating this, similarly to what you would need for one of the on-the-shelf manifolds listed above.
 
-**Parts list (screenshots in images folder):**
+**Parts list (screenshots in images folder):** <br>
 Generic ebay manifold - $100 version wires only https://www.ebay.com/itm/324238773355<br>
 Arduino nano (offbrand old bootloader works fine, many places to obtain)<br>
 HC-06 Bluetooth https://www.amazon.com/gp/product/B074J5WMH1<br>
@@ -28,7 +30,7 @@ Relay for turning the manifold on and off<br>
 3D printer for hat and base<br>
 Android device to control arduino<br>
 
-**Loose steps:**
+**Loose steps:** <br>
 1. Order parts, order circuit board on JLPCB website, 3d print parts
 2. Solder parts to circuit board, flip all switches to off
     1. For the manifold connector, wire the white wires (abcdefgh) in alphabetical order on the board, so 1 is a, 2 is b, and so on. The 9th wire goes to the spot right above the rest of the wires.
@@ -42,7 +44,7 @@ Android device to control arduino<br>
 
 Please feel free to reach out to me for help, I'd love to assist someone else in building it. The best way to contact me is to join my discord server https://discord.gg/N8uvR9PSuw and then send me a direct message gopro_2027#4805 , or shoot you shot and just send me a message directly without the server but I might not see it
 
-**Optional but recommended:**
+**Optional but recommended:** <br>
 If you have 2 arduino's I highly recommend you update the bootloader from the old bootloader to optiboot by following these instructions: https://www.youtube.com/watch?v=1TM-ADHb5Dk&ab_channel=DesignBuildDestroy
 Currently, pin 13 is utilized and on the old bootloader this will cause the rear driver side air bag to briefly air out on startup. With the new bootloader, this issue is resolved.
 
