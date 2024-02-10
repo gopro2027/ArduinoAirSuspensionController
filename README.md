@@ -13,7 +13,7 @@ HC-06 Bluetooth https://www.amazon.com/gp/product/B074J5WMH1<br>
 i2c display https://www.amazon.com/gp/product/B09JWLDK9F/<br>
 12v to 5v converter https://www.ebay.com/itm/234840680851<br>
 5 300psi pressure sensors (links vary... make sure to check reviews some suck. 200psi also works just modify code)<br>
-8 FQP30N06 Mosfet https://www.ebay.com/itm/153938539967<br>
+8 FQP30N06L Mosfet https://www.ebay.com/itm/153938539967<br>
 8 Fuses https://www.ebay.com/itm/273505548256<br>
 8 1N4007 Diode https://www.ebay.com/itm/393973959592?var=662531753553<br>
 8 10k ohm resistors https://www.ebay.com/itm/324683051749?var=513694032962<br>
