@@ -1,5 +1,5 @@
-# ArduinoAirSuspensionController
-Air Suspension Controller
+# Open Air Suspension Management (OAS-Man)
+Open Source Air Suspension Management Controller
 
 **Important Info To Potential Creators:** <br>
 We are working on a new board that will use the more powerful esp32. It will use roughly the same components but with an esp32 instead of an arduino nano. If you plan to build this project, you may want to consult with us personally and wait until the esp32 version is out. Although the nano version does work fine, it is at it's limit of functionality without sacrificing features, so we decided it is best to switch to an esp32. I also hope to create an instructional build video for when the esp32 is ready.<br>
