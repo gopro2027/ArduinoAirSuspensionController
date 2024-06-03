@@ -2,7 +2,8 @@
 Air Suspension Controller
 
 **Important Info To Potential Creators:** <br>
-THIS IS THE NANO VERSION. An ESP32 version will be released eventually on the main branch. The nano version works fine but if you are able to wait for the esp32 version it would be recommended.
+THIS IS THE NANO VERSION. All future nano based code (arduino and possibly android code) will be put here and the main branch will contain the code for the esp32. The nano version works fine but if you are able to wait for the esp32 version it would be recommended.
+Future updates to the android app will be maintained on the main branch and may or may not work with the nano, but guarenteed the app on this branch will work on the nano.
 
 **Overview:** <br>
 This is intended as a DIY replacement for products such as Airlift 3P ($1500) or Airtek Stage 2+ ($1000) with a build cost of roughly $500. Combined with the customizability of open sourced code, I hope this is a tempting option for some DIY-ers out there. This github repo includes an android app and arduino code along with some 3d printable files and a PCB. The PCB is pre-made and ready for upload in JLCPCB to order and should hopefully make the electrinics/soldering learning curve a lot smaller for the average diy-er, as compared to having to solder every wire by scratch according to a diagram. This was designed as an upgrade from airtekk stage 1, which is just bags, tank, compressor, tubing and fittings, guages and manual paddle switches. So that is what you would need already prior to creating this, similarly to what you would need for one of the on-the-shelf manifolds listed above.
