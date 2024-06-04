@@ -13,15 +13,19 @@ import androidx.core.content.ContextCompat;
 import com.example.airsuspension.MainActivity;
 
 
+/**
+ * Permission setup for version before api 31, which includes android 10 devices
+ */
 public class PermissionHelper {
     MainActivity mainActivity;
     private int curCode = -1;
     private final String[] perms = new String[] {
+            //Next 4 are for the large "Allow Air Suspension to access this device's approximate location?" check (galaxy s23)
             Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.BLUETOOTH,
             Manifest.permission.BLUETOOTH_ADMIN
     };
-
 
     public PermissionHelper(MainActivity mainActivity)
     {
@@ -32,6 +36,9 @@ public class PermissionHelper {
         curCode--;
     }
     public void start() {
+
+        mainActivity.logWithToastQuick( "inside permissions helper start!");
+
         nextPermission();
     }
     public String currentPermissionCheck() {
@@ -44,10 +51,10 @@ public class PermissionHelper {
     public void nextPermission() {
         if (curCode < perms.length-1) {//my code is stupid
             curCode++;
-            Log.i("MYINFO","checking next permission ");
+            mainActivity.logWithToastQuick("checking next permission ");
             checkPermission(perms[curCode], curCode+100);
         } else {
-            Log.i("MYINFO","finished Permissions ");
+            mainActivity.logWithToastQuick("finished Permissions ");
         }
     }
 
@@ -55,12 +62,12 @@ public class PermissionHelper {
     public void checkPermission(String permission, int requestCode)
     {
         if (ContextCompat.checkSelfPermission(mainActivity, permission) == PackageManager.PERMISSION_GRANTED) {
-            Log.i("MYINFO","Granted "+permission);
+            mainActivity.logWithToastQuick("Granted "+permission);
             nextPermission();
         } else {
 
             // Requesting the permission
-            Log.i("MYINFO","Requesting "+permission);
+            mainActivity.logWithToastQuick("Requesting "+permission);
             ActivityCompat.requestPermissions(mainActivity, new String[] { permission }, requestCode);
         }
 

@@ -2,11 +2,21 @@ package com.example.airsuspension;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.util.Log;
@@ -20,12 +30,17 @@ import androidx.navigation.ui.NavigationUI;
 import com.example.airsuspension.databinding.ActivityMainBinding;
 import com.example.airsuspension.utils.PermissionHelper;
 import com.example.airsuspension.utils.PressureUnit;
+import com.example.airsuspension.utils.SmplBTDevice;
 
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
 import java.lang.reflect.ParameterizedType;
+import java.util.Arrays;
+import java.util.Map;
+
+import android.Manifest;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,11 +52,110 @@ public class MainActivity extends AppCompatActivity {
     private PermissionHelper permissionHelper;
     public PressureUnit.Unit preferredUnit = PressureUnit.Unit.PSI;
 
+
+    // References for bluetooth
+    // https://stackoverflow.com/questions/67722950/android-12-new-bluetooth-permissions
+    // https://stackoverflow.com/questions/74647915/issue-with-need-android-permission-bluetooth-scan-permission-for-attributionsour
+    AirSuspensionController.BluetoothCommand btrunUponEnable = null;
+    ActivityResultLauncher<Intent> requestBluetooth = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+//        if (result.getResultCode() == Activity.RESULT_OK) {
+//            Log.v("LOGIN OK", "OK Result for Login");
+//            if (btrunUponEnable != null) {
+//                btrunUponEnable.command();
+//                btrunUponEnable = null;
+//            }
+//        }
+    });
+
+    ActivityResultLauncher<String[]> requestMultiplePermissions = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), permissions -> {
+        boolean val = true;
+        for (Map.Entry<String, Boolean> perm : permissions.entrySet()) {
+            Log.d("bluetooth permissions: ", perm.getKey() + " = " + perm.getValue());
+            val = val && perm.getValue();
+        }
+        if (val) {
+            if (btrunUponEnable != null) {
+                btrunUponEnable.command();
+                btrunUponEnable = null;
+            }
+        } else {
+            enableBT(btrunUponEnable);
+        }
+    });
+
+    // Bluetooth Permissions crap
+    public void enableBT(AirSuspensionController.BluetoothCommand runUponEnable) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            btrunUponEnable = runUponEnable;
+            // This is required for the newer devices!
+            requestMultiplePermissions.launch(new String[]{
+                    //First 2 are necessary bt permssions for bt, "Allow Air Suspension to find, connect to, and determine the relative position of nearby devices?" (tested on galaxy s23)
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    //Next 4 are for the large "Allow Air Suspension to access this device's approximate location?" check (tested on galaxy s23)
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.ACCESS_FINE_LOCATION, // apparently my s23 wants this permission in order to search for available bt devices
+                    Manifest.permission.BLUETOOTH,
+                    Manifest.permission.BLUETOOTH_ADMIN});
+        } else {
+            //android 10, ect, other lower versions
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            requestBluetooth.launch(enableBtIntent);
+            runUponEnable.command();// the 2 lines above don't actually seem to act correctly, so just calling it down here instead of on successfull callback
+        }
+    }
+
+    interface OnReveivedBluetoothDevice {
+        void receive(SmplBTDevice device);
+    }
+
+    public static OnReveivedBluetoothDevice onReveivedBluetoothDevice = null;
+
+    // Bluetooth discovery
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+
+            if (BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(action)) {
+                //discovery starts, we can show progress dialog or perform other tasks
+                Log.i("BT EVENT", "Started");
+            } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
+                //discovery finishes, dismiss progress dialog
+                Log.i("BT EVENT", "Finished");
+            } else if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+                //bluetooth device found
+                BluetoothDevice device = (BluetoothDevice) intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                SmplBTDevice smplDevice = new SmplBTDevice(device.getAddress(), device.getName());
+                Log.i("BT EVENT", smplDevice.toString());
+                if (onReveivedBluetoothDevice != null) {
+                    onReveivedBluetoothDevice.receive(smplDevice);
+                }
+
+                String deviceName = device.getName();
+                String macAddress = device.getAddress();
+                logWithToastQuick("found device: " + deviceName + " at " + macAddress);
+
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        IntentFilter filter = new IntentFilter();
+
+        filter.addAction(BluetoothDevice.ACTION_FOUND);
+        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
+        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+
+        registerReceiver(mReceiver, filter);
+
+
+        enableBT(() -> {});
+
         preferredUnit = getSavedPressureUnit();
+        AirSuspensionController.BT_DEVICE = getBT();
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -54,6 +168,12 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
         appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(mReceiver);
     }
 
     public static AirSuspensionController getAirSuspensionController(MainActivity activity) {
@@ -101,8 +221,8 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("MissingSuperCall")
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent Data){
-        getAirSuspensionController(this).onActivityResult(requestCode,resultCode,Data);
+    protected void onActivityResult(int requestCode, int resultCode, Intent Data) {
+        getAirSuspensionController(this).onActivityResult(requestCode, resultCode, Data);
     }
 
     @Override
@@ -121,10 +241,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void logWithToastQuick(String text) {
+        Log.i("MYINFO",text);
+        //Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show(); // RE-ENABLE THIS WHEN CODING ON SOMETHING THAT DOES NOT HAVE LOGCAT
+    }
+
     public boolean getPreferenceBool(String name) {
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
         return settings.getBoolean(name, false);
     }
+
     public void setPreferenceBool(String name, boolean value) {
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
         SharedPreferences.Editor editor = settings.edit();
@@ -132,10 +258,12 @@ public class MainActivity extends AppCompatActivity {
         editor.apply();
     }
 
-    private int getPreferenceInt(String name) {
+    private int getPreferenceInt(String name, int defValue) {
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-        return settings.getInt(name, -1);
+        return settings.getInt(name, defValue);
     }
+    private int getPreferenceInt(String name) {return getPreferenceInt(name, -1);}
+
     private void setPreferenceInt(String name, int value) {
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
         SharedPreferences.Editor editor = settings.edit();
@@ -143,15 +271,47 @@ public class MainActivity extends AppCompatActivity {
         editor.apply();
     }
 
+    private String getPreferenceString(String name, String defValue) {
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        return settings.getString(name, defValue);
+    }
+    private String getPreferenceString(String name) {return getPreferenceString(name, "");}
+
+    private void setPreferenceString(String name, String value) {
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putString(name, value);
+        editor.apply();
+    }
+
     public void savePressureUnit(PressureUnit.Unit unit) {
         this.preferredUnit = unit;
-        setPreferenceInt("unit",unit.getId());
+        setPreferenceInt("unit", unit.getId());
     }
+
     public PressureUnit.Unit getSavedPressureUnit() {
         try {
             return PressureUnit.Unit.fromId(getPreferenceInt("unit"));
         } catch (Exception e) {
             return PressureUnit.Unit.PSI;
         }
+    }
+
+    public void saveBT(SmplBTDevice device) {
+        AirSuspensionController.BT_DEVICE = device;
+        setPreferenceString("btmac", device.getMac());
+        setPreferenceString("btname", device.getName());
+    }
+
+    public SmplBTDevice getBT() {
+        return new SmplBTDevice(getPreferenceString("btmac"),getPreferenceString("btname"));//""00:14:03:05:59:F6"
+    }
+
+    public void saveBTPassword(String password) {
+        setPreferenceString("btpassword", password);
+    }
+
+    public String getBTPassword() {
+        return getPreferenceString("btpassword", "12345678"); // PASSWORD on arduino
     }
 }

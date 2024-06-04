@@ -81,7 +81,7 @@ public class PressureUnit {
     }
 
     public static String convertValueFromBaseUnitToDisplay(String received, Unit unitToDisplay) {
-        DecimalFormat df = new DecimalFormat("#.###");
+        DecimalFormat df = new DecimalFormat("#.#");
         //df.setRoundingMode(RoundingMode.);
         return df.format(new PressureUnit(PressureUnit.Unit.PSI, Integer.parseInt(received)).toUnit(unitToDisplay).getVal());
     }
