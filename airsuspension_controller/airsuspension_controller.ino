@@ -62,6 +62,8 @@
 #define TEST_MODE false
 #define SCREEN_MOODE true
 
+#define PASSWORD     "12345678"
+
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 // The pins for I2C are defined by the Wire-library. 
 // On an arduino UNO:       A4(SDA), A5(SCL)
@@ -634,10 +636,8 @@ void drawairtekklogo(void) {
 }
 #endif
 
-#define PASSWORD     "35264978"
-#define PASSWORDSEND "56347893"
 void sendHeartbeat() {
-  bt.print(F(PASSWORDSEND));
+  bt.print(F(PASSWORD));
   bt.print(F("PRES"));
   bt.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getPressure()));//getPressureAverage()
   bt.print(F("|"));
@@ -655,7 +655,7 @@ void sendHeartbeat() {
 }
 
 void sendCurrentProfileData() {
-  bt.print(F(PASSWORDSEND));
+  bt.print(F(PASSWORD));
   bt.print(F("PROF"));
   bt.print(int(currentProfile[WHEEL_FRONT_PASSENGER]));
   bt.print(F("|"));
@@ -677,7 +677,7 @@ void bt_cmd() {
   if (millis() - lastHeartbeat > 500) {
 
     if (strlen(outString) > 0) {
-      bt.print(F(PASSWORDSEND));
+      bt.print(F(PASSWORD));
       bt.print(F("NOTIF"));
       bt.print(outString);
       bt.print(F("\n"));
