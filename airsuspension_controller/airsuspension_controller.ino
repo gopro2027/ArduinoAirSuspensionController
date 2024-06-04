@@ -46,16 +46,14 @@
  //solenoid rear (driver) out to D13
  
 
-#include <SPI.h>
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 #include <EEPROM.h>
 
-#include <SoftwareSerial.h> // use the software uart
+#include "BluetoothSerial.h"
 
 #include "solenoid.h"
 #include "wheel.h"
+
+#define PASSWORD     "12345678"
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -68,6 +66,10 @@
 // On an arduino MEGA 2560: 20(SDA), 21(SCL)
 // On an arduino LEONARDO:   2(SDA),  3(SCL), ...
 #if SCREEN_MOODE == true
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -81,25 +83,27 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define MAX_PROFILE_COUNT 4
 
 //Digital pins
-SoftwareSerial bt(3, 2); // RX, TX
+BluetoothSerial bt;
 const int buttonRisePin = 4;
 const int buttonFallPin = 5;
-#define solenoidFrontPassengerInPin 6
-#define solenoidFrontPassengerOutPin 8
-#define solenoidRearPassengerInPin 7
-#define solenoidRearPassengerOutPin 10
-#define solenoidFrontDriverInPin 9
-#define solenoidFrontDriverOutPin 12
-#define solenoidRearDriverInPin 11
-#define solenoidRearDriverOutPin 13
+#define solenoidFrontPassengerInPin 23
+#define solenoidFrontPassengerOutPin 25
+#define solenoidRearPassengerInPin 26
+#define solenoidRearPassengerOutPin 27
+#define solenoidFrontDriverInPin 13
+#define solenoidFrontDriverOutPin 14
+#define solenoidRearDriverInPin 18
+#define solenoidRearDriverOutPin 19
+
+#define compressorRelayPin 33
 
 //Analog pins
-const int pressureInputFrontPassenger = A0; //select the analog input pin for the pressure transducer FRONT
-const int pressureInputRearPassenger = A1; //select the analog input pin for the pressure transducer REAR
-const int pressureInputFrontDriver = A2; //select the analog input pin for the pressure transducer FRONT
-const int pressureInputRearDriver = A3; //select the analog input pin for the pressure transducer REAR
-//A4 and A5 are the screen
-const int pressureInputTank = A6; //select the analog input pin for the pressure transducer TANK
+const int pressureInputFrontPassenger = A0; // 36 select the analog input pin for the pressure transducer FRONT
+const int pressureInputRearPassenger = A3; // 39 select the analog input pin for the pressure transducer REAR
+const int pressureInputFrontDriver = A6; // 34 select the analog input pin for the pressure transducer FRONT
+const int pressureInputRearDriver = A7; // 35 select the analog input pin for the pressure transducer REAR
+//A4 (sda) and A5 (sdl) are the screen
+const int pressureInputTank = A4; //select the analog input pin for the pressure transducer TANK
 
 //https://www.dcode.fr/binary-image
 
@@ -413,9 +417,9 @@ Wheel *getWheel(int i) {
 
 void setup() {
   setupSolenoidPins();
-  Serial.begin(9600);
+  Serial.begin(115200);
 
-  bt.begin(9600); // start the bluetooth uart at 9600 which is its default
+  bt.begin("OASMan"); // start the bluetooth uart at 9600 which is its default
   delay(200); // wait for voltage stabilize
 
   //delay(1000);
@@ -634,10 +638,8 @@ void drawairtekklogo(void) {
 }
 #endif
 
-#define PASSWORD     "35264978"
-#define PASSWORDSEND "56347893"
 void sendHeartbeat() {
-  bt.print(F(PASSWORDSEND));
+  bt.print(F(PASSWORD));
   bt.print(F("PRES"));
   bt.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getPressure()));//getPressureAverage()
   bt.print(F("|"));
@@ -655,7 +657,7 @@ void sendHeartbeat() {
 }
 
 void sendCurrentProfileData() {
-  bt.print(F(PASSWORDSEND));
+  bt.print(F(PASSWORD));
   bt.print(F("PROF"));
   bt.print(int(currentProfile[WHEEL_FRONT_PASSENGER]));
   bt.print(F("|"));
@@ -677,7 +679,7 @@ void bt_cmd() {
   if (millis() - lastHeartbeat > 500) {
 
     if (strlen(outString) > 0) {
-      bt.print(F(PASSWORDSEND));
+      bt.print(F(PASSWORD));
       bt.print(F("NOTIF"));
       bt.print(outString);
       bt.print(F("\n"));

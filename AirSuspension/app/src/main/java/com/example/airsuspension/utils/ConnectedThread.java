@@ -17,10 +17,12 @@ public class ConnectedThread extends Thread {
     private final InputStream mmInStream;
     private final OutputStream mmOutStream;
     private final Handler mHandler;
+    private final String btPassword;
 
-    public ConnectedThread(BluetoothSocket socket, Handler handler) {
+    public ConnectedThread(BluetoothSocket socket, Handler handler, String btPassword) {
         mmSocket = socket;
         mHandler = handler;
+        this.btPassword = btPassword;
         InputStream tmpIn = null;
         OutputStream tmpOut = null;
 
@@ -64,7 +66,8 @@ public class ConnectedThread extends Thread {
 
     /* Call this from the main activity to send data to the remote device */
     public void write(String input) {
-        input = "35264978" + input; // PASSWORD on arduino
+        input = btPassword + input;
+        //input = "35264978" + input; // PASSWORD on arduino
         byte[] bytes = input.getBytes();           //converts entered String into bytes
         try {
             mmOutStream.write(bytes);

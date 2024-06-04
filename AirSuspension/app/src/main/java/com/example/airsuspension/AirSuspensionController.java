@@ -11,6 +11,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -19,13 +20,16 @@ import android.widget.RemoteViews;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.airsuspension.utils.ConnectedThread;
 import com.example.airsuspension.utils.PressureUnit;
+import com.example.airsuspension.utils.SmplBTDevice;
 import com.example.airsuspension.widget.PressureWidget;
+import com.google.android.material.snackbar.Snackbar;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -35,9 +39,9 @@ import java.util.UUID;
 
 public class AirSuspensionController {
 
+    public static SmplBTDevice BT_DEVICE;
     public String TAG = "AirSuspensionController";
     private static final UUID BT_MODULE_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); // "random" unique identifier
-    private static final String BT_MAC = "00:14:03:05:59:F6";
 
     private final static int REQUEST_ENABLE_BT = 1; // used to identify adding bluetooth names
     public final static int MESSAGE_READ = 2; // used in bluetooth handler to identify message update
@@ -115,7 +119,8 @@ public class AirSuspensionController {
 
                     for (String message : messages) {
 
-                        String recv_password = "56347893"; // PASSWORDSEND on arduino
+                        String recv_password = activity.getBTPassword();
+                        //String recv_password = "56347893"; // PASSWORDSEND on arduino
 
                         if (message.startsWith(recv_password)) {
 
@@ -231,7 +236,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("SPROF" + profileNum + "\n");
-                toast("Saved to profile " + (profileNum+1));
+                toast("Saved to profile " + (profileNum + 1));
             }
         });
     }
@@ -240,7 +245,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("PROFR" + profileNum + "\n");
-                toast("Loaded profile " + (profileNum+1));
+                toast("Loaded profile " + (profileNum + 1));
             }
         });
     }
@@ -249,7 +254,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AUQ" + profileNum + "\n");
-                toast("Airing up on profile " + (profileNum+1));
+                toast("Airing up on profile " + (profileNum + 1));
             }
         });
     }
@@ -340,8 +345,7 @@ public class AirSuspensionController {
             if (!mBTAdapter.isEnabled() && activity.getIntent() != null) {
                 appendToLog("bt adapter not enabled... sending intent");
                 if (activity != null) {
-                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                    activity.startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+                    activity.enableBT(()->{});// TODO: May be able to remove this from here completely idk, I don't think it ever is called though probably cuz no intent. I bet it's old code
                 } else {
                     //no activity
                     return;//this would be the widget if it's null idk
@@ -349,7 +353,7 @@ public class AirSuspensionController {
             }
         }
 
-        btStartThread(BT_MAC);
+        btStartThread(BT_DEVICE.getMac()); // TODO: Figure out of this needs to go into activity.enableBT or not...
     }
 
     private Toast previousToast;
@@ -358,7 +362,7 @@ public class AirSuspensionController {
     public void appendToLog(String text) {
         toastLog.append(text+"\n");
         if (mLogBuffer != null) {
-            mLogBuffer.setText(toastLog.toString());
+            //mLogBuffer.setText(toastLog.toString());// this causes a screen issue I am unsure how to fix! screen goes black and semi-unresponsive (dropdowns stop working)
         }
         if (toastLog.toString().length() > 1000) {
             toastLog = new StringBuffer();//gross it's sooo long
@@ -428,22 +432,24 @@ public class AirSuspensionController {
                 @SuppressLint("MissingPermission")
                 @Override
                 public void run() {
-                    btConnectTryingRunning = true;
-                    boolean fail = false;
-
-                    //if it's open already... close it
                     try {
-                        mBTSocket.close();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                        btConnectTryingRunning = true;
+                        boolean fail = false;
 
-                    BluetoothDevice device = mBTAdapter.getRemoteDevice(address);
-                    appendToLog("device created");
+                        //if it's open already... close it
+                        try {
+                            mBTSocket.close();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
+                        BluetoothDevice device = mBTAdapter.getRemoteDevice(address);
+
+                        appendToLog("device created");
 
                         try {
-                                mBTSocket = createBluetoothSocket(device);
-                                appendToLog("socket connected ");
+                            mBTSocket = createBluetoothSocket(device);
+                            appendToLog("socket connected ");
                             mBTSocket.connect();
 
 
@@ -460,16 +466,19 @@ public class AirSuspensionController {
                                 toast("Error connecting socket");
                             }
                         }
-                    if (!fail) {
-                        mConnectedThread = new ConnectedThread(mBTSocket, mHandler);
-                        mConnectedThread.start();
-                        mHandler.obtainMessage(CONNECTING_STATUS, 1, -1, "Specified MAC")
-                                .sendToTarget();
-                        heartbeat = System.currentTimeMillis() - 4000;//make it 6 seconds wait time I guess lmao idk :( I wish it didn't think it was connected when it wasn't because then I could just set this to the current time and it would be great 100% of the time
-                    } else {
-                        appendToLog("Definitely failed connection");
+                        if (!fail) {
+                            mConnectedThread = new ConnectedThread(mBTSocket, mHandler, activity.getBTPassword());
+                            mConnectedThread.start();
+                            mHandler.obtainMessage(CONNECTING_STATUS, 1, -1, "Specified MAC")
+                                    .sendToTarget();
+                            heartbeat = System.currentTimeMillis() - 4000;//make it 6 seconds wait time I guess lmao idk :( I wish it didn't think it was connected when it wasn't because then I could just set this to the current time and it would be great 100% of the time
+                        } else {
+                            appendToLog("Definitely failed connection");
+                        }
+                        btConnectTryingRunning = false;
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-                    btConnectTryingRunning = false;
                 }
             }.start();
         } else {
