@@ -1,7 +1,6 @@
-package com.example.airsuspension;
+package com.vividaesthetic.airsuspension;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
@@ -10,11 +9,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
@@ -27,17 +24,15 @@ import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
-import com.example.airsuspension.databinding.ActivityMainBinding;
-import com.example.airsuspension.utils.PermissionHelper;
-import com.example.airsuspension.utils.PressureUnit;
-import com.example.airsuspension.utils.SmplBTDevice;
+import com.vividaesthetic.airsuspension.databinding.ActivityMainBinding;
+import com.vividaesthetic.airsuspension.utils.PermissionHelper;
+import com.vividaesthetic.airsuspension.utils.PressureUnit;
+import com.vividaesthetic.airsuspension.utils.SmplBTDevice;
 
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
-import java.lang.reflect.ParameterizedType;
-import java.util.Arrays;
 import java.util.Map;
 
 import android.Manifest;

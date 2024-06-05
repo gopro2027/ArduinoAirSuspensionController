@@ -1,15 +1,11 @@
-package com.example.airsuspension.widget;
+package com.vividaesthetic.airsuspension.widget;
 
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
-import android.util.ArrayMap;
-import android.util.SizeF;
 import android.widget.RemoteViews;
 
-import com.example.airsuspension.R;
-
-import java.util.Map;
+import com.vividaesthetic.airsuspension.R;
 
 /**
  * Implementation of App Widget functionality.

@@ -1,8 +1,7 @@
-package com.example.airsuspension.utils;
+package com.vividaesthetic.airsuspension.utils;
 
-import com.example.airsuspension.MainActivity;
+import com.vividaesthetic.airsuspension.MainActivity;
 
-import java.math.RoundingMode;
 import java.text.DecimalFormat;
 
 public class PressureUnit {

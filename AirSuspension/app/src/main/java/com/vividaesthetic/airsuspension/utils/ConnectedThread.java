@@ -1,16 +1,14 @@
-package com.example.airsuspension.utils;
+package com.vividaesthetic.airsuspension.utils;
 
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 import android.os.SystemClock;
-import android.util.Log;
 
-import com.example.airsuspension.AirSuspensionController;
+import com.vividaesthetic.airsuspension.AirSuspensionController;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 
 public class ConnectedThread extends Thread {
     private final BluetoothSocket mmSocket;

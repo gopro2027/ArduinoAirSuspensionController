@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.airsuspension'
+    namespace 'com.vividaesthetic.airsuspension'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.airsuspension"
+        applicationId "com.vividaesthetic.airsuspension"
         minSdk 25
         targetSdk 34
         versionCode 1

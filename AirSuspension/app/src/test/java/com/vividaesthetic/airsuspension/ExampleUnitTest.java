@@ -1,4 +1,4 @@
-package com.example.airsuspension;
+package com.vividaesthetic.airsuspension;
 
 import org.junit.Test;
 

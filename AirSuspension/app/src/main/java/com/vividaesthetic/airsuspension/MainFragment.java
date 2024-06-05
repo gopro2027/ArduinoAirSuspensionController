@@ -1,4 +1,4 @@
-package com.example.airsuspension;
+package com.vividaesthetic.airsuspension;
 
 import android.app.AlertDialog;
 
@@ -15,8 +15,8 @@ import android.widget.NumberPicker;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
-import com.example.airsuspension.databinding.FragmentMainBinding;
-import com.example.airsuspension.utils.PressureUnit;
+import com.vividaesthetic.airsuspension.databinding.FragmentMainBinding;
+import com.vividaesthetic.airsuspension.utils.PressureUnit;
 
 import java.lang.reflect.Field;
 

@@ -1,4 +1,4 @@
-package com.example.airsuspension.utils;
+package com.vividaesthetic.airsuspension.utils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;

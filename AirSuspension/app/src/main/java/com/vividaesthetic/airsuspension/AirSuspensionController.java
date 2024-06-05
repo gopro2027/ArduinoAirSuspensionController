@@ -1,4 +1,4 @@
-package com.example.airsuspension;
+package com.vividaesthetic.airsuspension;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -11,7 +11,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -20,16 +19,14 @@ import android.widget.RemoteViews;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.example.airsuspension.utils.ConnectedThread;
-import com.example.airsuspension.utils.PressureUnit;
-import com.example.airsuspension.utils.SmplBTDevice;
-import com.example.airsuspension.widget.PressureWidget;
-import com.google.android.material.snackbar.Snackbar;
+import com.vividaesthetic.airsuspension.utils.ConnectedThread;
+import com.vividaesthetic.airsuspension.utils.PressureUnit;
+import com.vividaesthetic.airsuspension.utils.SmplBTDevice;
+import com.vividaesthetic.airsuspension.widget.PressureWidget;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

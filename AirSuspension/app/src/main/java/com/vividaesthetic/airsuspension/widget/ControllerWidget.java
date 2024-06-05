@@ -1,4 +1,4 @@
-package com.example.airsuspension.widget;
+package com.vividaesthetic.airsuspension.widget;
 
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
@@ -8,8 +8,8 @@ import android.content.Intent;
 import android.util.Log;
 import android.widget.RemoteViews;
 
-import com.example.airsuspension.MainActivity;
-import com.example.airsuspension.R;
+import com.vividaesthetic.airsuspension.MainActivity;
+import com.vividaesthetic.airsuspension.R;
 
 /**
  * Implementation of App Widget functionality.

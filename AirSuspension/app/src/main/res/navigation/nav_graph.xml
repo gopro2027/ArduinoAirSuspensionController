@@ -11,7 +11,7 @@
 
     <fragment
         android:id="@+id/MainFragment"
-        android:name="com.example.airsuspension.MainFragment"
+        android:name="com.vividaesthetic.airsuspension.MainFragment"
         android:label="@string/first_fragment_label"
         tools:layout="@layout/fragment_main">
 
@@ -21,7 +21,7 @@
     </fragment>
     <fragment
         android:id="@+id/BluetoothFragment"
-        android:name="com.example.airsuspension.BluetoothFragment"
+        android:name="com.vividaesthetic.airsuspension.BluetoothFragment"
         android:label="@string/second_fragment_label"
         tools:layout="@layout/fragment_bluetooth">
 
