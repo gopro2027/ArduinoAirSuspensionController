@@ -65,8 +65,6 @@ public class BluetoothFragment extends Fragment {
         };
 
         getAirSuspensionController().mReadBuffer = (TextView) getActivity().findViewById(R.id.read_buffer);
-        getAirSuspensionController().mLogBuffer = (TextView) getActivity().findViewById(R.id.log_buffer);
-        getAirSuspensionController().mLogBuffer.setMovementMethod(new ScrollingMovementMethod());
         binding.findBTDevicesBtn.setOnClickListener(view1 -> {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || ActivityCompat.checkSelfPermission(requireContext(), android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
                 Snackbar.make(view, "Adding devices to dropdown device list!", Snackbar.LENGTH_LONG).show();
@@ -130,7 +128,7 @@ public class BluetoothFragment extends Fragment {
                 for (BluetoothDevice d : pairedDevices) {
                     String deviceName = d.getName();
                     String macAddress = d.getAddress();
-                    ((MainActivity) requireActivity()).logWithToastQuick("paired device: " + deviceName + " at " + macAddress);
+                    ((MainActivity) requireActivity()).log("paired device: " + deviceName + " at " + macAddress);
                     addBTDevice(new SmplBTDevice(macAddress, deviceName));
                 }
             }
@@ -155,6 +153,11 @@ public class BluetoothFragment extends Fragment {
 
 
 
+        });
+
+        binding.debugLogSwitch.setChecked(((MainActivity) requireActivity()).isLogVisible());
+        binding.debugLogSwitch.setOnCheckedChangeListener((v,isChecked ) -> {
+            ((MainActivity) requireActivity()).setLogVisible(isChecked);
         });
     }
 

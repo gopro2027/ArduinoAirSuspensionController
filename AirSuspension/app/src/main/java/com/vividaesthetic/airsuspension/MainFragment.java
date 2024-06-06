@@ -35,7 +35,6 @@ public class MainFragment extends Fragment {
                         int height = binding.getRoot().getHeight();
                         int width = binding.getRoot().getWidth();
                         int padding = width / 8;
-                        Log.i("MainFragment", padding + " padding");
                         binding.corvetteImg.getLayoutParams().height = height;
                         binding.corvetteImg.setImageResource(R.drawable.corvette_gray_untrimmed); // height doesn't update until I set the drawable
                         setLeftPadding(binding.pressureFd, padding);
@@ -211,7 +210,7 @@ public class MainFragment extends Fragment {
                     fixNumberPicker(binding.numberpickerSetrearpressureP);
                     fixNumberPicker(binding.numberpickerSetfrontpressureD);
                     fixNumberPicker(binding.numberpickerSetrearpressureD);
-                } catch (Exception e){getAirSuspensionController().toast("Could not update values! Improper data received");}
+                } catch (Exception e){((MainActivity)requireActivity()).log("Could not update values! Improper data received");}
             }
         });
 

@@ -33,7 +33,7 @@ public class PermissionHelper {
     }
     public void start() {
 
-        mainActivity.logWithToastQuick( "inside permissions helper start!");
+        mainActivity.log( "inside permissions helper start!");
 
         nextPermission();
     }
@@ -47,10 +47,10 @@ public class PermissionHelper {
     public void nextPermission() {
         if (curCode < perms.length-1) {//my code is stupid
             curCode++;
-            mainActivity.logWithToastQuick("checking next permission ");
+            mainActivity.log("checking next permission ");
             checkPermission(perms[curCode], curCode+100);
         } else {
-            mainActivity.logWithToastQuick("finished Permissions ");
+            mainActivity.log("finished Permissions ");
         }
     }
 
@@ -58,12 +58,12 @@ public class PermissionHelper {
     public void checkPermission(String permission, int requestCode)
     {
         if (ContextCompat.checkSelfPermission(mainActivity, permission) == PackageManager.PERMISSION_GRANTED) {
-            mainActivity.logWithToastQuick("Granted "+permission);
+            mainActivity.log("Granted "+permission);
             nextPermission();
         } else {
 
             // Requesting the permission
-            mainActivity.logWithToastQuick("Requesting "+permission);
+            mainActivity.log("Requesting "+permission);
             ActivityCompat.requestPermissions(mainActivity, new String[] { permission }, requestCode);
         }
 

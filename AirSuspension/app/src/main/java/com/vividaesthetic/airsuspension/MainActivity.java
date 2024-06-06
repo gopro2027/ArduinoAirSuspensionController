@@ -31,8 +31,12 @@ import com.vividaesthetic.airsuspension.utils.SmplBTDevice;
 
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import android.Manifest;
@@ -48,13 +52,17 @@ public class MainActivity extends AppCompatActivity {
     public PressureUnit.Unit preferredUnit = PressureUnit.Unit.PSI;
 
 
+    private final List<String> errorLog = new ArrayList<>();
+    private static final int MAX_ERROR_LINES = 70;
+    private TextView logTextView;
+
+
     // References for bluetooth
     // https://stackoverflow.com/questions/67722950/android-12-new-bluetooth-permissions
     // https://stackoverflow.com/questions/74647915/issue-with-need-android-permission-bluetooth-scan-permission-for-attributionsour
     AirSuspensionController.BluetoothCommand btrunUponEnable = null;
     ActivityResultLauncher<Intent> requestBluetooth = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
 //        if (result.getResultCode() == Activity.RESULT_OK) {
-//            Log.v("LOGIN OK", "OK Result for Login");
 //            if (btrunUponEnable != null) {
 //                btrunUponEnable.command();
 //                btrunUponEnable = null;
@@ -65,7 +73,6 @@ public class MainActivity extends AppCompatActivity {
     ActivityResultLauncher<String[]> requestMultiplePermissions = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), permissions -> {
         boolean val = true;
         for (Map.Entry<String, Boolean> perm : permissions.entrySet()) {
-            Log.d("bluetooth permissions: ", perm.getKey() + " = " + perm.getValue());
             val = val && perm.getValue();
         }
         if (val) {
@@ -113,22 +120,22 @@ public class MainActivity extends AppCompatActivity {
 
             if (BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(action)) {
                 //discovery starts, we can show progress dialog or perform other tasks
-                Log.i("BT EVENT", "Started");
+                log("BT EVENT Started");
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
                 //discovery finishes, dismiss progress dialog
-                Log.i("BT EVENT", "Finished");
+                log("BT EVENT Finished");
             } else if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 //bluetooth device found
                 BluetoothDevice device = (BluetoothDevice) intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 SmplBTDevice smplDevice = new SmplBTDevice(device.getAddress(), device.getName());
-                Log.i("BT EVENT", smplDevice.toString());
+                log("BT EVENT " + smplDevice.toString());
                 if (onReveivedBluetoothDevice != null) {
                     onReveivedBluetoothDevice.receive(smplDevice);
                 }
 
                 String deviceName = device.getName();
                 String macAddress = device.getAddress();
-                logWithToastQuick("found device: " + deviceName + " at " + macAddress);
+                log("found device: " + deviceName + " at " + macAddress);
 
             }
         }
@@ -154,6 +161,7 @@ public class MainActivity extends AppCompatActivity {
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        logTextView = findViewById(R.id.debug_log_overlay);
 
         permissionHelper = new PermissionHelper(this);
         permissionHelper.start();
@@ -164,6 +172,8 @@ public class MainActivity extends AppCompatActivity {
         appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
     }
+
+
 
     @Override
     protected void onDestroy() {
@@ -228,7 +238,7 @@ public class MainActivity extends AppCompatActivity {
             if (permissions[0].equalsIgnoreCase(permissionHelper.currentPermissionCheck())) {
                 if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
                     permissionHelper.retryLastPermission();
-                    Log.i("MYINFO", "Denied gonna retry " + permissions[0]);
+                    log("Denied gonna retry " + permissions[0]);
                     Toast.makeText(this, "Denied " + permissions[0], Toast.LENGTH_SHORT).show();
                 }
                 permissionHelper.nextPermission();
@@ -236,9 +246,48 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void logWithToastQuick(String text) {
-        Log.i("MYINFO",text);
-        //Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show(); // RE-ENABLE THIS WHEN CODING ON SOMETHING THAT DOES NOT HAVE LOGCAT
+    private void updateLog() {
+        String log = "";
+        for (String str : errorLog) {
+            log = str + "\n" + log;
+        }
+        if (logTextView != null) {
+            logTextView.setText(log);
+        }
+    }
+
+    public boolean isLogVisible() {
+        return logTextView.getVisibility() == View.VISIBLE;
+    }
+    public void setLogVisible(boolean enabled) {
+        if (logTextView != null) {
+            logTextView.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    public void log(String text) {
+        if (text.length() > 0) {
+            Log.i("OASMan",text);
+            errorLog.add(text) ;
+        }
+        // remove the first line if log is too large
+        if (errorLog.size() >= MAX_ERROR_LINES) {
+            errorLog.remove(0);
+        }
+        updateLog();
+    }
+
+    private Toast previousToast;
+
+    public void toast(String text) {
+        try {
+            log("Toast said: " + text);
+            if (previousToast != null) {
+                previousToast.cancel();
+            }
+            previousToast = Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT);
+            previousToast.show();
+        } catch (Exception e) {}
     }
 
     public boolean getPreferenceBool(String name) {

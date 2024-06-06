@@ -111,7 +111,28 @@
             android:layout_weight="0.1"
             android:ellipsize="end"
             android:maxLines="1"
-            android:text="RX:"
+            android:text="Show Debug Log:"
+            android:textStyle="bold" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/debug_log_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="BT RX:"
             android:textStyle="bold" />
 
         <TextView
@@ -125,15 +146,6 @@
 
 
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/log_buffer"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_weight="0.9"
-        android:maxLines="20"
-        android:scrollbars="vertical"
-        android:text="&lt;Log Buffer>" />
 
 
 </LinearLayout>
