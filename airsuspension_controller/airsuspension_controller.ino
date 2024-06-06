@@ -469,7 +469,9 @@ void bt_cmd() {
     if (c == '\n') {
       bool valid = runInput();//execute command
       if (valid == true) {
-        outString = "Received command";
+        outString = "SUCC";
+      } else {
+        outString = "ERRUNK";
       }
       memset(inBuffer, 0, sizeof(inBuffer));
       pause_exe = false;//unpause
@@ -536,17 +538,17 @@ bool runInput() {
     airUp();
     return true;
   }
-  if (comp(inBuffer,_AIROUT)) {
+  else if (comp(inBuffer,_AIROUT)) {
     airOut();
     return true;
   }
-  if (comp(inBuffer,_AIRSM)) {
+  else if (comp(inBuffer,_AIRSM)) {
     int value = trailingInt(_AIRSM);
     airUpRelativeToAverage(value);
     skipPerciseSet = true;//will be reset by any call to Wheel::initPressureGoal
     return true;
   }
-  if (comp(inBuffer,_SAVETOPROFILE)) {
+  else if (comp(inBuffer,_SAVETOPROFILE)) {
     unsigned long profileIndex = trailingInt(_SAVETOPROFILE);
     if (profileIndex > MAX_PROFILE_COUNT) {
       return false;
@@ -554,7 +556,7 @@ bool runInput() {
     writeProfile(profileIndex);
     return true;
   }
-  if (comp(inBuffer,_BASEPROFILE)) {
+  else if (comp(inBuffer,_BASEPROFILE)) {
     unsigned long profileIndex = trailingInt(_BASEPROFILE);
     if (profileIndex > MAX_PROFILE_COUNT) {
       return false;
@@ -562,7 +564,7 @@ bool runInput() {
     setBaseProfile(profileIndex);
     return true;
   }
-  if (comp(inBuffer,_READPROFILE)) {
+  else if (comp(inBuffer,_READPROFILE)) {
     unsigned long profileIndex = trailingInt(_READPROFILE);
     if (profileIndex > MAX_PROFILE_COUNT) {
       return false;
@@ -570,7 +572,7 @@ bool runInput() {
     readProfile(profileIndex);
     return true;
   }
-  if (comp(inBuffer,_AIRUPQUICK)) {
+  else if (comp(inBuffer,_AIRUPQUICK)) {
     unsigned long profileIndex = trailingInt(_AIRUPQUICK);
     if (profileIndex > MAX_PROFILE_COUNT) {
       return false;
@@ -581,27 +583,27 @@ bool runInput() {
     skipPerciseSet = true;//will be reset by any call to Wheel::initPressureGoal
     return true;
   }
-  if (comp(inBuffer,_AIRHEIGHTA)) {
+  else if (comp(inBuffer,_AIRHEIGHTA)) {
     unsigned long height = trailingInt(_AIRHEIGHTA);
     setRideHeightFrontPassenger(height);
     return true;
   }
-  if (comp(inBuffer,_AIRHEIGHTB)) {
+  else if (comp(inBuffer,_AIRHEIGHTB)) {
     unsigned long height = trailingInt(_AIRHEIGHTB);
     setRideHeightRearPassenger(height);
     return true;
   }
-  if (comp(inBuffer,_AIRHEIGHTC)) {
+  else if (comp(inBuffer,_AIRHEIGHTC)) {
     unsigned long height = trailingInt(_AIRHEIGHTC);
     setRideHeightFrontDriver(height);
     return true;
   }
-  if (comp(inBuffer,_AIRHEIGHTD)) {
+  else if (comp(inBuffer,_AIRHEIGHTD)) {
     unsigned long height = trailingInt(_AIRHEIGHTD);
     setRideHeightRearDriver(height);
     return true;
   }
-  if (comp(inBuffer,_RISEONSTART)) {
+  else if (comp(inBuffer,_RISEONSTART)) {
     unsigned long ros = trailingInt(_RISEONSTART);
     if (ros == 0) {
       setRiseOnStart(false);
@@ -610,7 +612,7 @@ bool runInput() {
     }
     return true;
   }
-  if (comp(inBuffer,_RAISEONPRESSURESET)) {
+  else if (comp(inBuffer,_RAISEONPRESSURESET)) {
     unsigned long rops = trailingInt(_RAISEONPRESSURESET);
     if (rops == 0) {
       setRaiseOnPressureSet(false);
@@ -620,7 +622,7 @@ bool runInput() {
     return true;
   }
   #if TEST_MODE == true
-    if (comp(inBuffer,_TESTSOL)) {
+    else if (comp(inBuffer,_TESTSOL)) {
       unsigned long pin = trailingInt(_TESTSOL);
       Serial.println(pin);
       if (pin >= 6 && pin <= 13) {

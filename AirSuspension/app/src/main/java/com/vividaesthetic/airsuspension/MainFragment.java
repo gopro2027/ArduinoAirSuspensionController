@@ -16,6 +16,7 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import com.vividaesthetic.airsuspension.databinding.FragmentMainBinding;
+import com.vividaesthetic.airsuspension.utils.FourPressure;
 import com.vividaesthetic.airsuspension.utils.PressureUnit;
 
 import java.lang.reflect.Field;
@@ -184,6 +185,14 @@ public class MainFragment extends Fragment {
             getAirSuspensionController().setRaiseOnPressureSet(false);
         });
 
+        binding.buttonMaintainpressureenabled.setOnClickListener(v -> {
+            getAirSuspensionController().setMaintainPressure(true);
+        });
+
+        binding.buttonMaintainpressuredisabled.setOnClickListener(v -> {
+            getAirSuspensionController().setMaintainPressure(false);
+        });
+
         getAirSuspensionController().setUpdatePressure((fp, rp, fd, rd, tank) -> {
             if (binding != null) {
                 binding.pressureFp.setText(fp);
@@ -198,14 +207,11 @@ public class MainFragment extends Fragment {
         getAirSuspensionController().setUpdatePressureProfile((fp, rp, fd, rd, tank) -> {
             if (binding != null) {
                 try {
-                    int _fp = Integer.parseInt(fp) / numberPickerIncrement;
-                    int _rp = Integer.parseInt(rp) / numberPickerIncrement;
-                    int _fd = Integer.parseInt(fd) / numberPickerIncrement;
-                    int _rd = Integer.parseInt(rd) / numberPickerIncrement;
-                    binding.numberpickerSetfrontpressureP.setValue(_fp);
-                    binding.numberpickerSetrearpressureP.setValue(_rp);
-                    binding.numberpickerSetfrontpressureD.setValue(_fd);
-                    binding.numberpickerSetrearpressureD.setValue(_rd);
+                    FourPressure press = new FourPressure(fp,rp,fd,rd);
+                    binding.numberpickerSetfrontpressureP.setValue(press.fp / numberPickerIncrement);
+                    binding.numberpickerSetrearpressureP.setValue(press.rp / numberPickerIncrement);
+                    binding.numberpickerSetfrontpressureD.setValue(press.fd / numberPickerIncrement);
+                    binding.numberpickerSetrearpressureD.setValue(press.rd / numberPickerIncrement);
                     fixNumberPicker(binding.numberpickerSetfrontpressureP);
                     fixNumberPicker(binding.numberpickerSetrearpressureP);
                     fixNumberPicker(binding.numberpickerSetfrontpressureD);

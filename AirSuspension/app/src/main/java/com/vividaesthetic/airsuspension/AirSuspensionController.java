@@ -17,19 +17,21 @@ import android.os.Message;
 import android.util.Log;
 import android.widget.RemoteViews;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.google.android.material.snackbar.Snackbar;
 import com.vividaesthetic.airsuspension.utils.ConnectedThread;
+import com.vividaesthetic.airsuspension.utils.FourPressure;
 import com.vividaesthetic.airsuspension.utils.PressureUnit;
 import com.vividaesthetic.airsuspension.utils.SmplBTDevice;
 import com.vividaesthetic.airsuspension.widget.PressureWidget;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.UUID;
 
 //TODO: use this https://github.com/bauerjj/Android-Simple-Bluetooth-Example
@@ -52,6 +54,50 @@ public class AirSuspensionController {
     public long heartbeat = 0;
 
     public TextView mReadBuffer;
+
+
+    // maintain pressure code works in PSI only!!!
+    private FourPressure maintainPressure = null;
+    private FourPressure receivedPressureAverage = null;
+    private FourPressure[] receivedPressureAverages = new FourPressure[20];
+    private int averagePressureCounter = 0;
+    private void handlePressureAverage(FourPressure newPressure) {
+        if (averagePressureCounter < receivedPressureAverages.length) {
+            receivedPressureAverages[averagePressureCounter] = newPressure;
+            averagePressureCounter++;
+        }
+
+        if (averagePressureCounter == receivedPressureAverages.length) {
+            double fp = Arrays.stream(receivedPressureAverages).mapToDouble(FourPressure::getFP).average().getAsDouble();
+            double rp = Arrays.stream(receivedPressureAverages).mapToDouble(FourPressure::getRP).average().getAsDouble();
+            double fd = Arrays.stream(receivedPressureAverages).mapToDouble(FourPressure::getFD).average().getAsDouble();
+            double rd = Arrays.stream(receivedPressureAverages).mapToDouble(FourPressure::getRD).average().getAsDouble();
+            receivedPressureAverage = new FourPressure((int) fp, (int) rp, (int) fd, (int) rd);
+            averagePressureCounter = 0;
+            ((MainActivity)activity).log("average pressure: "+receivedPressureAverage.toString());
+            checkMaintainPressure();
+        }
+    }
+    public void setMaintainPressure(boolean enable) {
+        if (enable) {
+            if (receivedPressureAverage != null) {
+                maintainPressure = receivedPressureAverage;
+                ((MainActivity) activity).snackbar("Will now call air up if pressure drops 10 psi below " + maintainPressure.toString(), Snackbar.LENGTH_LONG);
+            } else {
+                ((MainActivity) activity).snackbar("Please wait until we have calculated an average pressure", Snackbar.LENGTH_LONG);
+            }
+        } else {
+            ((MainActivity) activity).snackbar("Disabled");
+        }
+    }
+
+    private void checkMaintainPressure() {
+        if (maintainPressure != null && receivedPressureAverage != null) {
+            if (receivedPressureAverage.getFP() < maintainPressure.getFP() - 10 || receivedPressureAverage.getRP() < maintainPressure.getRP() - 10 || receivedPressureAverage.getFD() < maintainPressure.getFD() - 10 || receivedPressureAverage.getRD() < maintainPressure.getRD() - 10) {
+                airUp();
+            }
+        }
+    }
 
     MainActivity activity;
 
@@ -85,6 +131,11 @@ public class AirSuspensionController {
         this.updatePressureProfile = updatePressure;
     }
 
+    String messageToDisplayOnCommandSuccess = null;
+    void setMessageToDisplayOnCommandSuccess(String message) {
+        messageToDisplayOnCommandSuccess = message;
+    }
+
     AirSuspensionController(MainActivity activity) {
         this.activity = activity;
 
@@ -103,7 +154,7 @@ public class AirSuspensionController {
             public void handleMessage(Message msg) {
                 if (msg.what == CONNECTING_STATUS) {
                     if (msg.arg1 == 1) {
-                        activity.toast("Connection to: " + msg.obj);
+                        activity.snackbar("Connection to: " + msg.obj);
                     }
                 }
                 if (msg.what == MESSAGE_READ) {
@@ -130,7 +181,18 @@ public class AirSuspensionController {
 
                             if (message.startsWith("NOTIF")) {
                                 message = message.substring("NOTIF".length());
-                                activity.toast(message);
+                                if (message.equals("SUCC")) {
+                                    if (messageToDisplayOnCommandSuccess == null) {
+                                        messageToDisplayOnCommandSuccess = "Command successful";
+                                    }
+                                    activity.snackbar(messageToDisplayOnCommandSuccess);
+                                    messageToDisplayOnCommandSuccess = null;
+                                } else if (message.equals("ERRUNK")) {
+                                    activity.snackbar("LAST COMMAND FAILED PLEASE RETRY!");
+                                    // TODO: REPLAY COMMAND
+                                } else {
+                                    activity.snackbar("Message: " + message);
+                                }
                             } else if (message.startsWith("PROF")) {
                                 message = message.substring("PROF".length());
                                 String[] arr = message.split("\\|");
@@ -179,6 +241,8 @@ public class AirSuspensionController {
                                         remoteViews.setTextViewText(R.id.pressure_rd, rd);
                                         remoteViews.setTextViewText(R.id.pressure_tank, tank);
 
+                                        handlePressureAverage(new FourPressure(arr[0], arr[1], arr[2], arr[3]));
+
                                         if (updatePressure != null)
                                             updatePressure.updatePressure(fp, rp, fd, rd, tank);
 
@@ -186,6 +250,7 @@ public class AirSuspensionController {
 
 
                                     } catch (Exception e) {
+                                        e.printStackTrace();
                                         //swallow
                                     }
                                 }
@@ -203,7 +268,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIRUP\n");
-                activity.toast("Sent air up");
+                setMessageToDisplayOnCommandSuccess("Sent air up");
             }
         });
     }
@@ -212,7 +277,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIROUT\n");
-                activity.toast("Sent air out");
+                setMessageToDisplayOnCommandSuccess("Sent air out");
             }
         });
     }
@@ -221,7 +286,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIRSM" + psi + "\n");
-                activity.toast("Adding this much pressure (PSI): " + psi);
+                setMessageToDisplayOnCommandSuccess("Adding this much pressure (PSI): " + psi);
             }
         });
     }
@@ -230,7 +295,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("SPROF" + profileNum + "\n");
-                activity.toast("Saved to profile " + (profileNum + 1));
+                setMessageToDisplayOnCommandSuccess("Saved to profile " + (profileNum + 1));
             }
         });
     }
@@ -239,7 +304,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("PROFR" + profileNum + "\n");
-                activity.toast("Loaded profile " + (profileNum + 1));
+                setMessageToDisplayOnCommandSuccess("Loaded profile " + (profileNum + 1));
             }
         });
     }
@@ -248,7 +313,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AUQ" + profileNum + "\n");
-                activity.toast("Airing up on profile " + (profileNum + 1));
+                setMessageToDisplayOnCommandSuccess("Airing up on profile " + (profileNum + 1));
             }
         });
     }
@@ -257,7 +322,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIRHEIGHTC" + pressure.forArduino() + "\n");
-                activity.toast("Set front driver pressure");
+                setMessageToDisplayOnCommandSuccess("Set front driver pressure");
             }
         });
     }
@@ -266,7 +331,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIRHEIGHTA" + pressure.forArduino() + "\n");
-                activity.toast("Set front passenger pressure");
+                setMessageToDisplayOnCommandSuccess("Set front passenger pressure");
             }
         });
     }
@@ -275,7 +340,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIRHEIGHTD" + pressure.forArduino() + "\n");
-                activity.toast("Set rear driver pressure");
+                setMessageToDisplayOnCommandSuccess("Set rear driver pressure");
             }
         });
     }
@@ -284,7 +349,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("AIRHEIGHTB" + pressure.forArduino() + "\n");
-                activity.toast("Set rear passenger pressure");
+                setMessageToDisplayOnCommandSuccess("Set rear passenger pressure");
             }
         });
     }
@@ -293,7 +358,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("RISEONSTART" + (riseOnStart ? "1" : "0") + "\n");
-                activity.toast("Set rise on start " + riseOnStart);
+                setMessageToDisplayOnCommandSuccess("Set rise on start " + riseOnStart);
             }
         });
     }
@@ -302,7 +367,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("ROPS" + (raiseOnPressureSet ? "1" : "0") + "\n");
-                activity.toast("Set raise on pressure set " + raiseOnPressureSet);
+                setMessageToDisplayOnCommandSuccess("Set raise on pressure set " + raiseOnPressureSet);
             }
         });
     }
@@ -313,9 +378,9 @@ public class AirSuspensionController {
             if (mConnectedThread != null) { //First check to make sure thread created
                 if (pinNum >= 6 && pinNum <= 13) {
                     mConnectedThread.write("TESTSOL" + pinNum + "\n");
-                    activity.toast("Tested solenoid on pin " + pinNum);
+                    setMessageToDisplayOnCommandSuccess("Tested solenoid on pin " + pinNum);
                 } else {
-                    activity.toast("Please use a pin between 6 and 13");
+                    activity.snackbar("Please use a pin between 6 and 13");
                 }
             }
         });
@@ -360,9 +425,9 @@ public class AirSuspensionController {
                 // The user picked a contact.
                 // The Intent's data Uri identifies which contact was selected.
                 //mBTAdapter.enable();
-                activity.toast("status: Enabled");
+                activity.snackbar("status: Enabled");
             } else
-                activity.toast("status: Disabled");
+                activity.snackbar("status: Disabled");
         }
     }
 
@@ -429,7 +494,7 @@ public class AirSuspensionController {
                                 activity.log("ah shoot we failed both connections");
                             } catch (Exception e3) {
                                 //insert code to deal with this
-                                activity.toast("Error connecting socket");
+                                activity.snackbar("Error connecting socket");
                             }
                         }
                         if (!fail) {

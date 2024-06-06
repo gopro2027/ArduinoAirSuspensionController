@@ -24,6 +24,7 @@ import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
+import com.google.android.material.snackbar.Snackbar;
 import com.vividaesthetic.airsuspension.databinding.ActivityMainBinding;
 import com.vividaesthetic.airsuspension.utils.PermissionHelper;
 import com.vividaesthetic.airsuspension.utils.PressureUnit;
@@ -238,8 +239,7 @@ public class MainActivity extends AppCompatActivity {
             if (permissions[0].equalsIgnoreCase(permissionHelper.currentPermissionCheck())) {
                 if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
                     permissionHelper.retryLastPermission();
-                    log("Denied gonna retry " + permissions[0]);
-                    Toast.makeText(this, "Denied " + permissions[0], Toast.LENGTH_SHORT).show();
+                    snackbar("Denied " + permissions[0]);
                 }
                 permissionHelper.nextPermission();
             }
@@ -257,6 +257,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public boolean isLogVisible() {
+        if (logTextView == null) {
+            return false;
+        }
         return logTextView.getVisibility() == View.VISIBLE;
     }
     public void setLogVisible(boolean enabled) {
@@ -277,17 +280,23 @@ public class MainActivity extends AppCompatActivity {
         updateLog();
     }
 
-    private Toast previousToast;
+    private Snackbar previousSnackbar;
 
-    public void toast(String text) {
+    public void snackbar(String text, int length) {
         try {
-            log("Toast said: " + text);
-            if (previousToast != null) {
-                previousToast.cancel();
+            log("Snackbar said: " + text);
+            if (previousSnackbar != null) {
+                previousSnackbar.dismiss();
             }
-            previousToast = Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT);
-            previousToast.show();
+
+            previousSnackbar =  Snackbar.make(binding.getRoot(), text, length);
+            previousSnackbar.show();
+
         } catch (Exception e) {}
+    }
+
+    public void snackbar(String text) {
+        snackbar(text, Snackbar.LENGTH_SHORT);
     }
 
     public boolean getPreferenceBool(String name) {

@@ -47,10 +47,10 @@ public class PermissionHelper {
     public void nextPermission() {
         if (curCode < perms.length-1) {//my code is stupid
             curCode++;
-            mainActivity.log("checking next permission ");
+            //mainActivity.log("checking next permission ");
             checkPermission(perms[curCode], curCode+100);
         } else {
-            mainActivity.log("finished Permissions ");
+            //mainActivity.log("finished Permissions ");
         }
     }
 

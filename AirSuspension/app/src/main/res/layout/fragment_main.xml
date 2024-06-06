@@ -416,6 +416,27 @@
 
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/button_maintainpressureenabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/maintainpressureenabled" />
+
+        <Button
+            android:id="@+id/button_maintainpressuredisabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/maintainpressuredisabled" />
+
+    </LinearLayout>
+
     <!--
     <LinearLayout
         android:layout_width="match_parent"
