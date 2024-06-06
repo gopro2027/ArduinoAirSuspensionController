@@ -61,6 +61,8 @@ public class AirSuspensionController {
     private FourPressure receivedPressureAverage = null;
     private FourPressure[] receivedPressureAverages = new FourPressure[20];
     private int averagePressureCounter = 0;
+
+    // TODO: Actually move this maintain pressure code to the arduino lol it's kind of silly being on the app side.
     private void handlePressureAverage(FourPressure newPressure) {
         if (averagePressureCounter < receivedPressureAverages.length) {
             receivedPressureAverages[averagePressureCounter] = newPressure;
