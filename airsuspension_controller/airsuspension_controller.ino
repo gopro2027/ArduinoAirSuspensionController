@@ -14,7 +14,7 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define TEST_MODE false
-#define SCREEN_MOODE true
+#define SCREEN_MOODE false
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 // The pins for I2C are defined by the Wire-library. 
@@ -40,26 +40,24 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 //Digital pins
 BluetoothSerial bt;
-const int buttonRisePin = 4;
-const int buttonFallPin = 5;
-#define solenoidFrontPassengerInPin 23
+#define solenoidFrontPassengerInPin 33
 #define solenoidFrontPassengerOutPin 25
-#define solenoidRearPassengerInPin 26
-#define solenoidRearPassengerOutPin 27
-#define solenoidFrontDriverInPin 13
-#define solenoidFrontDriverOutPin 14
+#define solenoidRearPassengerInPin 23
+#define solenoidRearPassengerOutPin 19
+#define solenoidFrontDriverInPin 26
+#define solenoidFrontDriverOutPin 27
 #define solenoidRearDriverInPin 18
-#define solenoidRearDriverOutPin 19
-#define compressorRelayPin 33
-#define manifoldSafetyWire GPIO16
+#define solenoidRearDriverOutPin 17
+#define compressorRelayPin 13
+#define manifoldSafetyWire 16
 
 //Analog pins
-const int pressureInputFrontPassenger = A0; // 36 select the analog input pin for the pressure transducer FRONT
-const int pressureInputRearPassenger = A3; // 39 select the analog input pin for the pressure transducer REAR
-const int pressureInputFrontDriver = A6; // 34 select the analog input pin for the pressure transducer FRONT
-const int pressureInputRearDriver = A7; // 35 select the analog input pin for the pressure transducer REAR
+const int pressureInputFrontPassenger = 39; // 36 select the analog input pin for the pressure transducer FRONT
+const int pressureInputRearPassenger = 35; // 39 select the analog input pin for the pressure transducer REAR
+const int pressureInputFrontDriver = 34; // 34 select the analog input pin for the pressure transducer FRONT
+const int pressureInputRearDriver = 32; // 35 select the analog input pin for the pressure transducer REAR
 //A4 (sda) and A5 (sdl) are the screen
-const int pressureInputTank = A4; //select the analog input pin for the pressure transducer TANK
+const int pressureInputTank = 36; //select the analog input pin for the pressure transducer TANK
 
 #define riseOnStartAddr 0
 #define baseProfileAddr 1
