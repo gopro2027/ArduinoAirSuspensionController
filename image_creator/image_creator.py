@@ -1,0 +1,1 @@
+# create images for the boot sequence and car logo

@@ -20,4 +20,17 @@
 
     <include layout="@layout/content_main" />
 
+    <TextView
+        android:id="@+id/debug_log_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:shadowColor="#000000"
+        android:shadowDx="1.5"
+        android:shadowDy="1.3"
+        android:shadowRadius="1.6"
+        android:text="TEST TEST TEST"
+        android:textColor="@android:color/white"
+        android:translationZ="90dp"
+        android:visibility="gone" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
