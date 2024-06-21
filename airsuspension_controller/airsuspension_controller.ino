@@ -6,6 +6,7 @@
 
 #include "solenoid.h"
 #include "wheel.h"
+#include "compressor.h"
 #include "bitmaps.h"
 
 #define PASSWORD     "12345678"
@@ -49,8 +50,8 @@ const int buttonFallPin = 5;
 #define solenoidFrontDriverOutPin 14
 #define solenoidRearDriverInPin 18
 #define solenoidRearDriverOutPin 19
-
 #define compressorRelayPin 33
+#define manifoldSafetyWire GPIO16
 
 //Analog pins
 const int pressureInputFrontPassenger = A0; // 36 select the analog input pin for the pressure transducer FRONT
@@ -226,6 +227,7 @@ void airUpRelativeToAverage(int value) {
   getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getPressure() + value);
 }
 
+Compressor *compressor;
 Wheel *wheel[4];
 Wheel *getWheel(int i) {
   return wheel[i];
@@ -256,6 +258,8 @@ void setup() {
   wheel[WHEEL_REAR_PASSENGER] = new Wheel(solenoidRearPassengerInPin, solenoidRearPassengerOutPin, pressureInputRearPassenger, WHEEL_REAR_PASSENGER);
   wheel[WHEEL_FRONT_DRIVER] = new Wheel(solenoidFrontDriverInPin, solenoidFrontDriverOutPin, pressureInputFrontDriver, WHEEL_FRONT_DRIVER);
   wheel[WHEEL_REAR_DRIVER] = new Wheel(solenoidRearDriverInPin, solenoidRearDriverOutPin, pressureInputRearDriver, WHEEL_REAR_DRIVER);
+
+  compressor = new Compressor(compressorRelayPin, pressureInputTank);
 
   readProfile(getBaseProfile());
 
@@ -320,10 +324,20 @@ void readPressures() {
   }
 }
 
+void compressorLogic() {
+  if (isAnyWheelActive()) {
+    compressor->pause();
+  } else {
+    compressor->resume();
+  }
+  compressor->loop();
+}
+
 const int sensorreadDelay = 100; //constant integer to set the sensor read delay in milliseconds
 unsigned long lastPressureReadTime = 0;
 bool pause_exe = false;
 void loop() {
+  compressorLogic();
   bt_cmd();
   if (pause_exe == false) {
     if (millis() - lastPressureReadTime > sensorreadDelay) {
