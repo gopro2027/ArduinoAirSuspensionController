@@ -1,20 +1,20 @@
 #ifndef compressor_h
 #define compressor_h
 
+#include "input_type.h"
 #include "solenoid.h"
 #include <arduino.h>
 
 class Compressor {
 private:
-  int triggerPin;
-  int readPin;
+  InputType *readPin;
   int currentPressure;
   bool stateOnPause;
   bool isPaused;
   Solenoid s_trigger; // Not a solenoid, but works the same way
 public:
   Compressor();
-  Compressor(int triggerPin, int readPin);
+  Compressor(InputType *triggerPin, InputType *readPin);
   void loop();
   void pause(); // call pause and resume for thread blocking tasks
   void resume();
@@ -25,6 +25,6 @@ public:
 #define COMPRESSOR_ON_BELOW_PSI 160
 #define COMPRESSOR_MAX_PSI 200
 
-float readPinPressure(int pin); // this may need to be extern
+float readPinPressure(InputType *pin); // this may need to be extern
 
 #endif

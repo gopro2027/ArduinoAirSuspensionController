@@ -4,20 +4,19 @@
 
 Solenoid::Solenoid() {}
 
-Solenoid::Solenoid(int pin) {
-  pinMode(pin, OUTPUT);
+Solenoid::Solenoid(InputType *pin) {
   this->pin = pin;
   this->bopen = false;
 }
 void Solenoid::open() {
   if (this->bopen == false) {
-    digitalWrite(this->pin, HIGH);
+    this->pin->digitalWrite(HIGH);
     this->bopen = true;
   }
 }
 void Solenoid::close() {
   if (this->bopen == true) {
-    digitalWrite(this->pin, LOW);
+    this->pin->digitalWrite(LOW);
     this->bopen = false;
   }
 }

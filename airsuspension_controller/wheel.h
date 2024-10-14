@@ -1,15 +1,13 @@
 #ifndef wheel_h
 #define wheel_h
 
-
+#include "input_type.h"
 #include "solenoid.h"
 #include <arduino.h>
 
 class Wheel {
 private:
-  byte solenoidInPin;
-  byte solenoidOutPin;
-  byte pressurePin;
+  InputType *pressurePin;
   byte thisWheelNum;
 
   bool isInSafePressureRead;
@@ -25,7 +23,7 @@ private:
   
 public:
   Wheel();
-  Wheel(byte solenoidInPin, byte solenoidOutPin, byte pressurePin, byte thisWheelNum);
+  Wheel(InputType *solenoidInPin, InputType *solenoidOutPin, InputType *pressurePin, byte thisWheelNum);
   void initPressureGoal(int newPressure);
   void pressureGoalRoutine();
   void readPressure();
