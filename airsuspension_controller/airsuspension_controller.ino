@@ -143,8 +143,8 @@ bool getRaiseOnPressureSet() {
 }
 
 void setupPins() {
-  // Adafruit_ADS1115 ADS1115A(0x48); // low ads
-  // Adafruit_ADS1115 ADS1115B(0x49); // high ads
+  // Adafruit_ADS1115 ADS1115A; // low ads
+  // Adafruit_ADS1115 ADS1115B; // high ads
   // if (!ADS1115A.begin(0x48)) {
   //   Serial.println("Failed to initialize ADS Low");
   //   while (1);
