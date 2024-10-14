@@ -8,7 +8,7 @@ enum type {NORMAL, ADC};
 
 class InputType {
 private:
-  type input_type = NORMAL; // 0 is normal, 1 is adc
+  type input_type = NORMAL;
   Adafruit_ADS1115 *adc;
   int pin;
 public:

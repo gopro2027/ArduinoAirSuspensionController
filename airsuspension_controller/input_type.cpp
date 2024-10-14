@@ -11,6 +11,12 @@ int AnalogESP32ToADCValue(int espVal) {
     return (int)(espVal * (65536.0f/4096.0f));
 }
 
+InputType::InputType() {
+    this->input_type = NORMAL;
+    this->adc = nullptr;
+    this->pin = -1;
+}
+
 InputType::InputType(int pin, int pinModeInputOutput) {
     this->input_type = NORMAL;
     this->pin = pin;
