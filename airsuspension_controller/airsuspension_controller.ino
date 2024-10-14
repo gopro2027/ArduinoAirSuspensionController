@@ -142,17 +142,21 @@ bool getRaiseOnPressureSet() {
    return EEPROM.read(raiseOnPressureAddr);
 }
 
+Adafruit_ADS1115 ADS1115A; // low ads
+Adafruit_ADS1115 ADS1115B; // high ads
+void initializeADS() {
+  if (!ADS1115A.begin(0x48)) {
+    Serial.println("Failed to initialize ADS Low");
+    while (1);
+  }
+  if (!ADS1115B.begin(0x49)) {
+    Serial.println("Failed to initialize ADS High");
+    while (1);
+  }
+}
+
 void setupPins() {
-  // Adafruit_ADS1115 ADS1115A; // low ads
-  // Adafruit_ADS1115 ADS1115B; // high ads
-  // if (!ADS1115A.begin(0x48)) {
-  //   Serial.println("Failed to initialize ADS Low");
-  //   while (1);
-  // }
-  // if (!ADS1115B.begin(0x49)) {
-  //   Serial.println("Failed to initialize ADS High");
-  //   while (1);
-  // }
+  //initializeADS(); // UNCOMMENT THIS IF YOU ARE USING A NON STANDARD BOARD WITH ADS INPUTS
 
   //digital pins
   solenoidFrontPassengerInPin = new InputType(23, OUTPUT);
