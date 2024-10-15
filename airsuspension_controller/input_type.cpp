@@ -44,7 +44,7 @@ int InputType::analogRead() {
         return ::analogRead(this->pin);
     } else {
         if (this->adc == nullptr) {
-            Serial.println("Fatal error null ADC");
+            Serial.println(F("Fatal error null ADC"));
             return -1;
         }
         return AnalogADCToESP32Value(this->adc->readADC_SingleEnded(this->pin)); // this should be correct for analog

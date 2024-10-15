@@ -60,11 +60,6 @@ InputType *pressureInputRearDriver;
 //A4 (sda) and A5 (sdl) are the screen
 InputType *pressureInputTank; //select the analog input pin for the pressure transducer TANK
 
-#define riseOnStartAddr 0
-#define baseProfileAddr 1
-#define raiseOnPressureAddr 2
-#define profileStartAddress 3
-
 struct Profile {
   byte pressure[4];
 };
@@ -174,11 +169,11 @@ Adafruit_ADS1115 ADS1115A; // low ads
 Adafruit_ADS1115 ADS1115B; // high ads
 void initializeADS() {
   if (!ADS1115A.begin(0x48)) {
-    Serial.println("Failed to initialize ADS Low");
+    Serial.println(F("Failed to initialize ADS Low"));
     while (1);
   }
   if (!ADS1115B.begin(0x49)) {
-    Serial.println("Failed to initialize ADS High");
+    Serial.println(F("Failed to initialize ADS High"));
     while (1);
   }
 }
