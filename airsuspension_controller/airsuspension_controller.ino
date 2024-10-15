@@ -65,33 +65,85 @@ InputType *pressureInputTank; //select the analog input pin for the pressure tra
 #define raiseOnPressureAddr 2
 #define profileStartAddress 3
 
+struct Profile {
+  byte pressure[4];
+};
+
+struct EEPROM_DATA {
+  byte riseOnStart;
+  byte baseProfile;
+  byte raiseOnPressure;
+  Profile profile[MAX_PROFILE_COUNT];
+} EEPROM_DATA;
+#define EEPROM_SIZE sizeof(EEPROM_DATA)
+
+void saveEEPROM() {
+  EEPROM.put(0, EEPROM_DATA);
+  EEPROM.commit();
+}
+void beginEEPROM() {
+  EEPROM.begin(EEPROM_SIZE);
+  EEPROM.get(0, EEPROM_DATA);
+}
+
 byte currentProfile[4];
 
 bool sendProfileBT = false;
 
 void readProfile(byte profileIndex) {
-  byte base = profileStartAddress + (4 * profileIndex);
-  currentProfile[WHEEL_FRONT_PASSENGER] = EEPROM.read(base + WHEEL_FRONT_PASSENGER);
-  currentProfile[WHEEL_REAR_PASSENGER] = EEPROM.read(base + WHEEL_REAR_PASSENGER);
-  currentProfile[WHEEL_FRONT_DRIVER] = EEPROM.read(base + WHEEL_FRONT_DRIVER);
-  currentProfile[WHEEL_REAR_DRIVER] = EEPROM.read(base + WHEEL_REAR_DRIVER);
-
+  currentProfile[WHEEL_FRONT_PASSENGER] = EEPROM_DATA.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER];
+  currentProfile[WHEEL_REAR_PASSENGER] = EEPROM_DATA.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER];
+  currentProfile[WHEEL_FRONT_DRIVER] = EEPROM_DATA.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER];
+  currentProfile[WHEEL_REAR_DRIVER] = EEPROM_DATA.profile[profileIndex].pressure[WHEEL_REAR_DRIVER];
   sendProfileBT = true;
 }
 
-void writeWithCheck(byte addr, byte val) {
-  if (EEPROM.read(addr) != val) {
-    EEPROM.write(addr, val);
+void writeProfile(byte profileIndex) {
+
+  if (currentProfile[WHEEL_FRONT_PASSENGER] != EEPROM_DATA.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER] ||
+      currentProfile[WHEEL_REAR_PASSENGER] != EEPROM_DATA.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER] ||
+      currentProfile[WHEEL_FRONT_DRIVER] != EEPROM_DATA.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER] ||
+      currentProfile[WHEEL_REAR_DRIVER] != EEPROM_DATA.profile[profileIndex].pressure[WHEEL_REAR_DRIVER]) {
+
+    EEPROM_DATA.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER] = currentProfile[WHEEL_FRONT_PASSENGER];
+    EEPROM_DATA.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER] = currentProfile[WHEEL_REAR_PASSENGER];
+    EEPROM_DATA.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER] = currentProfile[WHEEL_FRONT_DRIVER];
+    EEPROM_DATA.profile[profileIndex].pressure[WHEEL_REAR_DRIVER] = currentProfile[WHEEL_REAR_DRIVER];
+    saveEEPROM();
   }
 }
 
-void writeProfile(byte profileIndex) {
-  byte base = profileStartAddress + (4 * profileIndex);
-  writeWithCheck(base + WHEEL_FRONT_PASSENGER, currentProfile[WHEEL_FRONT_PASSENGER]);
-  writeWithCheck(base + WHEEL_REAR_PASSENGER, currentProfile[WHEEL_REAR_PASSENGER]);
-  writeWithCheck(base + WHEEL_FRONT_DRIVER, currentProfile[WHEEL_FRONT_DRIVER]);
-  writeWithCheck(base + WHEEL_REAR_DRIVER, currentProfile[WHEEL_REAR_DRIVER]);
+void setRiseOnStart(bool value) {
+  if (getRiseOnStart() != value) {
+    EEPROM_DATA.riseOnStart = value;
+    saveEEPROM();
+  }
 }
+bool getRiseOnStart() {
+    return EEPROM_DATA.riseOnStart;
+}
+
+void setBaseProfile(byte value) {
+  if (getBaseProfile() != value) {
+    EEPROM_DATA.baseProfile = value;
+    saveEEPROM();
+  }
+}
+byte getBaseProfile() {
+    return EEPROM_DATA.baseProfile;
+}
+
+void setRaiseOnPressureSet(bool value) {
+  if (getRaiseOnPressureSet() != value) {
+    EEPROM_DATA.raiseOnPressure = value;
+    saveEEPROM();
+  }
+}
+bool getRaiseOnPressureSet() {
+    return EEPROM_DATA.raiseOnPressure;
+}
+
+
 
 void setRideHeightFrontPassenger(byte value) {
   currentProfile[WHEEL_FRONT_PASSENGER] = value;
@@ -116,30 +168,6 @@ void setRideHeightRearDriver(byte value) {
   if (getRaiseOnPressureSet()) {
     getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(value);
   }
-}
-
-void setRiseOnStart(bool value) {
-  if (getRiseOnStart() != value)
-   EEPROM.write(riseOnStartAddr, value);
-}
-bool getRiseOnStart() {
-   return EEPROM.read(riseOnStartAddr);
-}
-
-void setBaseProfile(byte value) {
-  if (getBaseProfile() != value)
-   EEPROM.write(baseProfileAddr, value);
-}
-byte getBaseProfile() {
-   return EEPROM.read(baseProfileAddr);
-}
-
-void setRaiseOnPressureSet(bool value) {
-  if (getRaiseOnPressureSet() != value)
-   EEPROM.write(raiseOnPressureAddr, value);
-}
-bool getRaiseOnPressureSet() {
-   return EEPROM.read(raiseOnPressureAddr);
 }
 
 Adafruit_ADS1115 ADS1115A; // low ads
@@ -259,6 +287,7 @@ Wheel *getWheel(int i) {
 
 void setup() {
   Serial.begin(115200);
+  beginEEPROM();
   bt.begin("OASMan");
 
   delay(200); // wait for voltage stabilize
