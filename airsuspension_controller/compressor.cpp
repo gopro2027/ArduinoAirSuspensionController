@@ -4,8 +4,7 @@
 
 Compressor::Compressor() {}
 
-Compressor::Compressor(int triggerPin, int readPin) {
-  this->triggerPin = triggerPin;
+Compressor::Compressor(InputType *triggerPin, InputType *readPin) {
   this->readPin = readPin;
   this->s_trigger = Solenoid(triggerPin);
   this->stateOnPause = false;

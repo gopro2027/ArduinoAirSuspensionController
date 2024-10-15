@@ -10,9 +10,7 @@ const int pressureAdjustment = -10;//my sensors are reading about -10 too high
 
 Wheel::Wheel() {}
 
-Wheel::Wheel(byte solenoidInPin, byte solenoidOutPin, byte pressurePin, byte thisWheelNum) {
-  this->solenoidInPin = solenoidInPin;
-  this->solenoidOutPin = solenoidOutPin;
+Wheel::Wheel(InputType *solenoidInPin, InputType *solenoidOutPin, InputType *pressurePin, byte thisWheelNum) {
   this->pressurePin = pressurePin;
   this->thisWheelNum = thisWheelNum;
   this->s_AirIn = Solenoid(solenoidInPin);
@@ -24,12 +22,12 @@ Wheel::Wheel(byte solenoidInPin, byte solenoidOutPin, byte pressurePin, byte thi
   this->isClosePaused = false;
 }
 
-#define pressureZero (float)102.4 //analog reading of pressure transducer at 0psi
-#define pressureMax (float)921.6 //analog reading of pressure transducer at max psi (300)
+#define pressureZero (float)409.6 //analog reading of pressure transducer at 0psi.         for nano: (0.5/5)*1024 = 102.4. for esp32: (0.5/5)*4096 = 409.6
+#define pressureMax (float)3686.4 //analog reading of pressure transducer at max psi (300). for nano: (4.5/5)*1024 = 921.6. for esp32: (4.5/5)*4096 = 3686.4
 #define pressuretransducermaxPSI 300 //psi value of transducer being used
 
-float readPinPressure(int pin) {
-  return float((float(analogRead(pin))-pressureZero)*pressuretransducermaxPSI)/(pressureMax-pressureZero) + pressureAdjustment; //conversion equation to convert analog reading to psi
+float readPinPressure(InputType *pin) {
+  return float((float(pin->analogRead())-pressureZero)*pressuretransducermaxPSI)/(pressureMax-pressureZero) + pressureAdjustment; //conversion equation to convert analog reading to psi
 }
 
 bool Wheel::prepareSafePressureRead() {
@@ -90,14 +88,17 @@ void Wheel::percisionGoToPressureQue(byte goalPressure) {
 }
 void Wheel::percisionGoToPressure() {
   int goalPressure = this->pressureGoal;
-  int wheelSolenoidMask = 0;
+
+  // TODO absolutely must refactor this code to access the solenoids properly
+  // DISABLED TEMPORARILY, MUST REENABLE IN THE FUTURE. 10/14/2024
+  /*int wheelSolenoidMask = 0;
   for (int i = 0; i < 8; i++) {
     bool val = digitalRead(i+6) == HIGH;// solenoidFrontPassengerInPin
     if (val) {
       wheelSolenoidMask = wheelSolenoidMask | (1 << i);
       digitalWrite(i+6, LOW);
     }
-  }
+  }*/
   
   unsigned long startTime = millis();
   delay(sleepTimeWait);
@@ -120,12 +121,12 @@ void Wheel::percisionGoToPressure() {
     delay(sleepTimeWait);
   }
 
-  for (int i = 0; i < 8; i++) {
+  /*for (int i = 0; i < 8; i++) {
     bool val = (wheelSolenoidMask & (1 << i)) > 0;
     if (val) {
       digitalWrite(i+6, HIGH);
     }
-  }
+  }*/
   
 }
 

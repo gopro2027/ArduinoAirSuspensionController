@@ -1,13 +1,15 @@
 #ifndef solenoid_h
 #define solenoid_h
 
+#include "input_type.h"
+
 class Solenoid {
 private:
-  int pin;
+  InputType *pin;
   bool bopen;
 public:
   Solenoid();
-  Solenoid(int pin);
+  Solenoid(InputType *pin);
   void open();
   void close();
   bool isOpen();
