@@ -1,0 +1,121 @@
+websites: digikey, amazon, ebay, aliexpress
+
+
+Pin Outputs & Partlist.
+
+Power in/Compressor relay out.
+1.+12v In.
+2.Gnd.
+3.Output to Compressor relay.
+4.Gnd.
+
+MINI-FIT JR, 2X2, 90 DEG, 39300040
+https://www.digikey.com/en/products/detail/molex/0039300040/930321
+````````````````````````````````````````````
+
+Valvetable Pinout.
+1.+12v Out
+2.Rear Right Up (D23)
+3.Rear Right Down (D19)
+4.Rear Left Up (D18)
+5.Rear Left Down (D17)
+6.Front Left Down (D27)
+7.Front Left Up (D26)
+8.Front Right Down (D25)
+9.Front Right Up (D33)
+10.Empty
+
+CON-MOLEX-MICRO-FIT-3_0_43045-1000
+https://www.digikey.com/en/products/detail/molex/0430451000/252530
+or
+https://www.amazon.com/0430451000-Connector-Header-Through-Position/dp/B0CLCFTHJG/
+
+````````````````````````````````````````````
+
+Pressure Sensors. FL, FR, RL, RR and Tank.
+1.+5v Output to sensor
+2.Signal
+3.Gnd.
+
+XH2.54-3P 3 Pin Curved.
+https://www.amazon.com/XH2-54-3P-Curved-Spacing-Connectors-Terminals/dp/B0CRKN1LPX
+or cheaper:
+https://www.amazon.com/Connector-Housing-Adapter-Terminal-Connectors/dp/B0BZDCGJ32/ (assortment, 3 and 4 pin) (added by gopro_2027)
+````````````````````````````````````````````
+
+Oled Screen output.
+1.3.3v
+2.Gnd.
+3.SCL
+4.SDA
+
+XH2.54 2.54mm 4P Straight Male.
+https://www.amazon.com/Straight-Housing-Terminal-Connector-Assortment/dp/B0CSTBM8GP
+or cheaper:
+https://www.amazon.com/Connector-Housing-Adapter-Terminal-Connectors/dp/B0BZDCGJ32/ (assortment, 3 and 4 pin) (added by gopro_2027)
+````````````````````````````````````````````
+
+Mosfets.
+9X FQP30N06L
+https://www.ebay.com/itm/171395648380 (added by gopro_2027)
+````````````````````````````````````````````
+
+5V Step Down Converter.
+CN3903 5V 3A Mini DC-DC Buck Step Down Converter.
+https://www.aliexpress.us/item/3256802647847616.html?gatewayAdapt=glo2usa4itemAdapt
+or
+https://www.amazon.com/DAOKAI-Module-Converter-Voltage-Regulator/dp/B0C69DP5RK (added by gopro_2027)
+````````````````````````````````````````````
+
+ESP32-WROOM 30Pin
+https://www.aliexpress.com/item/1005006336964908.html?spm=a2g0o.order_list.order_list_main.15.7c3f1802cRxb86
+or
+https://www.amazon.com/Teyleten-Robot-ESP-WROOM-32-Development-Microcontroller/dp/B08246MCL5/ (added by gopro_2027)
+````````````````````````````````````````````
+
+Oled.
+2.4" 2.42 inch 128x64 OLED LCD Display Module or 0.96 Inch OLED SSD1306 .
+https://www.aliexpress.com/item/1005005241315177.html?spm=a2g0o.order_list.order_list_main.147.7c3f1802cRxb86
+or
+https://www.amazon.com/gp/product/B09JWLDK9F/ (added by gopro_2027)
+````````````````````````````````````````````
+
+
+Diodes.
+10X 1N4007
+https://www.ebay.com/itm/235235061574 (added by gopro_2027)
+````````````````````````````````````````````
+
+Resistors.
+9X 150R
+9X 10K
+5X 1K
+5X 2K
+Just order an assorted set :)
+````````````````````````````````````````````
+
+
+ESP32-WROOM 30Pin.
+Pressure read (Analog input signal)
+GPIO36 ADC Tank Pressure
+GPIO39 ADC Front Right
+GPIO34 ADC Front Left
+GPIO35 ADC Rear Right
+GPIO32 ADC Rear Left
+
+Output Mosfets.(Valvetable)
+GPIO33 Front Right Up
+GPIO25 Front Right Down
+GPIO26 Front Left Up
+GPIO27 Front Left Down
+
+(Compressor Control)
+GPIO13 Compressor
+
+GPIO23 Rear Right Up
+GPIO22 i2c scl (Screen)
+GPIO21 i2c sda (Screen)
+GPIO19 Rear Right Down
+GPIO18 Rear Left Up
+GPIO17 Rear Left Down
+````````````````````````````````````````````
