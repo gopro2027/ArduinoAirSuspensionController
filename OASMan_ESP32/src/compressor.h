@@ -3,7 +3,7 @@
 
 #include "input_type.h"
 #include "solenoid.h"
-#include <arduino.h>
+#include <Arduino.h>
 
 class Compressor {
 private:
