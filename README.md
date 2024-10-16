@@ -54,7 +54,22 @@ Android device to control arduino<br>
 If you have 2 arduino's I highly recommend you update the bootloader from the old bootloader to optiboot by following these instructions: https://www.youtube.com/watch?v=1TM-ADHb5Dk&ab_channel=DesignBuildDestroy
 Currently, pin 13 is utilized and on the old bootloader this will cause the rear driver side air bag to briefly air out on startup. With the new bootloader, this issue is resolved.
 
-<!--**ESP32 Flashing Steps:** <br>
+**ESP32 Flashing Steps:** <br>
+1. Install visual studio code
+2. In visual studio code go to extensions (4 cubes icon on lefthand bar) and install "PlatformIO IDE"
+3. Open PlatformIO by clicking the alien icon on the lefthand bar and making sure it fully installs
+4. Open the project:
+	1. QUICK ACCESS -> PIO Home -> Open
+	2. You should now be on a 'home' page that says 'Welcome to PlatformIO'. Under quick access click 'Open Project'
+	3. Navigate to the 'OASMan_ESP32' folder and select 'Open "OASMan_ESP32"'
+5. Build the project and test for errors.
+	1. Wait for PlatformIO to finish downloading and installing all the required ESP32 libraries
+	2. look in the top right corner and you should see a checkmark that says 'Build' when you hover over it. Click that and verify for no errors.
+6. Install the project onto your esp32 by clicking the dropdown arrow next to the build button and choosing "Upload"
+
+	
+
+<!--**ESP32 Flashing/Environment Setup Steps:** <br>
 FUTURE SETUP FOR WHEN WE MOVE TO NATIVE ESP32 CODE
 Windows instructions:<br>
 text tutorial:<br>
