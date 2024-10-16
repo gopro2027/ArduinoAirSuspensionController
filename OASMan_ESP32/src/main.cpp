@@ -1,5 +1,6 @@
 // OASMan ESP32
 
+#include <Arduino.h>
 #include <EEPROM.h>
 
 #include "BluetoothSerial.h"
@@ -108,34 +109,34 @@ void writeProfile(byte profileIndex) {
   }
 }
 
+bool getRiseOnStart() {
+    return EEPROM_DATA.riseOnStart;
+}
 void setRiseOnStart(bool value) {
   if (getRiseOnStart() != value) {
     EEPROM_DATA.riseOnStart = value;
     saveEEPROM();
   }
 }
-bool getRiseOnStart() {
-    return EEPROM_DATA.riseOnStart;
-}
 
+byte getBaseProfile() {
+    return EEPROM_DATA.baseProfile;
+}
 void setBaseProfile(byte value) {
   if (getBaseProfile() != value) {
     EEPROM_DATA.baseProfile = value;
     saveEEPROM();
   }
 }
-byte getBaseProfile() {
-    return EEPROM_DATA.baseProfile;
-}
 
+bool getRaiseOnPressureSet() {
+    return EEPROM_DATA.raiseOnPressure;
+}
 void setRaiseOnPressureSet(bool value) {
   if (getRaiseOnPressureSet() != value) {
     EEPROM_DATA.raiseOnPressure = value;
     saveEEPROM();
   }
-}
-bool getRaiseOnPressureSet() {
-    return EEPROM_DATA.raiseOnPressure;
 }
 
 Compressor *compressor;
@@ -223,6 +224,7 @@ void setNotGoToPressureGoalPercise(byte wheelnum) {
 bool shouldDoPressureGoalOnWheel(byte wheelnum) {
   return (goToPerciseBitset >> wheelnum) & 1;
 }
+void readPressures();
 bool skipPerciseSet = false;
 void pressureGoalRoutine() {
   bool a = false;
@@ -277,7 +279,7 @@ void airUpRelativeToAverage(int value) {
   getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getPressure() + value);
 }
 
-
+void drawsplashscreen();
 void setup() {
   Serial.begin(115200);
   beginEEPROM();
@@ -380,6 +382,8 @@ void compressorLogic() {
 const int sensorreadDelay = 100; //constant integer to set the sensor read delay in milliseconds
 unsigned long lastPressureReadTime = 0;
 bool pause_exe = false;
+void bt_cmd();
+void drawPSIReadings();
 void loop() {
   compressorLogic();
   bt_cmd();
@@ -488,6 +492,7 @@ char *outString = "";
 //String inString = "";
 char inBuffer[30];
 unsigned long lastHeartbeat = 0;
+bool runInput();
 void bt_cmd() {
   if (millis() - lastHeartbeat > 500) {
 
