@@ -51,7 +51,7 @@ Android device to control arduino<br>
 5. Circuit board single switch off, on the double switch make the top one on and bottom one off (this will power the arduino by 5v from the buck converter. 12 is bottom switch if you want to use that instead but you can ignore it)
 
 **Optional but recommended:** <br>
-If you have 2 arduino's I highly recommend you update the bootloader from the old bootloader to optiboot by following these instructions: https://www.youtube.com/watch?v=1TM-ADHb5Dk&ab_channel=DesignBuildDestroy
+If you have 2 arduino's I highly recommend you update the bootloader from the old bootloader to optiboot by following these instructions: https://www.youtube.com/watch?v=1TM-ADHb5Dk&ab_channel=DesignBuildDestroy <br>
 Currently, pin 13 is utilized and on the old bootloader this will cause the rear driver side air bag to briefly air out on startup. With the new bootloader, this issue is resolved.
 
 **ESP32 Flashing Steps:** <br>
@@ -66,20 +66,6 @@ Currently, pin 13 is utilized and on the old bootloader this will cause the rear
 	1. Wait for PlatformIO to finish downloading and installing all the required ESP32 libraries
 	2. look in the top right corner and you should see a checkmark that says 'Build' when you hover over it. Click that and verify for no errors.
 6. Install the project onto your esp32 by clicking the dropdown arrow next to the build button and choosing "Upload"
-
-	
-
-<!--**ESP32 Flashing/Environment Setup Steps:** <br>
-FUTURE SETUP FOR WHEN WE MOVE TO NATIVE ESP32 CODE
-Windows instructions:<br>
-text tutorial:<br>
-Install ESP32-IDF https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/windows-setup.html <br>
-After install<br>
-video tutorial:<br>
-click the video below and follow step 1 but use OAS-Man folder in this project instead of the blink folder to build and flash onto the ESP32<br>
-For a full tutorial with visual studio setup please follow these two videos:<br>
-https://www.youtube.com/watch?v=5IuZ-E8Tmhg&ab_channel=YuriR<br>
-https://www.youtube.com/watch?v=oHHOCdmLiII&ab_channel=YuriR<br>-->
 
 
 ![app_airsuspension](https://user-images.githubusercontent.com/7937950/236578835-0e3a208d-48cf-48e8-a882-4479f1afe35c.png)
