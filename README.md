@@ -54,6 +54,18 @@ Android device to control arduino<br>
 If you have 2 arduino's I highly recommend you update the bootloader from the old bootloader to optiboot by following these instructions: https://www.youtube.com/watch?v=1TM-ADHb5Dk&ab_channel=DesignBuildDestroy
 Currently, pin 13 is utilized and on the old bootloader this will cause the rear driver side air bag to briefly air out on startup. With the new bootloader, this issue is resolved.
 
+<!--**ESP32 Flashing Steps:** <br>
+FUTURE SETUP FOR WHEN WE MOVE TO NATIVE ESP32 CODE
+Windows instructions:<br>
+text tutorial:<br>
+Install ESP32-IDF https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/windows-setup.html <br>
+After install<br>
+video tutorial:<br>
+click the video below and follow step 1 but use OAS-Man folder in this project instead of the blink folder to build and flash onto the ESP32<br>
+For a full tutorial with visual studio setup please follow these two videos:<br>
+https://www.youtube.com/watch?v=5IuZ-E8Tmhg&ab_channel=YuriR<br>
+https://www.youtube.com/watch?v=oHHOCdmLiII&ab_channel=YuriR<br>-->
+
 
 ![app_airsuspension](https://user-images.githubusercontent.com/7937950/236578835-0e3a208d-48cf-48e8-a882-4479f1afe35c.png)
 ![car_airsuspension](https://user-images.githubusercontent.com/7937950/236578918-bfa39ad6-a3b5-4d52-b36a-be34e8c608af.png)

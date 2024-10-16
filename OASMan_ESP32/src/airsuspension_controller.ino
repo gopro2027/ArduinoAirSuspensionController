@@ -138,7 +138,11 @@ bool getRaiseOnPressureSet() {
     return EEPROM_DATA.raiseOnPressure;
 }
 
-
+Compressor *compressor;
+Wheel *wheel[4];
+Wheel *getWheel(int i) {
+  return wheel[i];
+}
 
 void setRideHeightFrontPassenger(byte value) {
   currentProfile[WHEEL_FRONT_PASSENGER] = value;
@@ -271,12 +275,6 @@ void airUpRelativeToAverage(int value) {
   getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getPressure() + value);
   getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getPressure() + value);
   getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getPressure() + value);
-}
-
-Compressor *compressor;
-Wheel *wheel[4];
-Wheel *getWheel(int i) {
-  return wheel[i];
 }
 
 
