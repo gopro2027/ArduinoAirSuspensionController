@@ -38,8 +38,6 @@ public:
   void percisionGoToPressureQue(byte goalPressure);
 };
 
-#define MAX_PRESSURE_SAFETY 200
-
 extern void setGoToPressureGoalPercise(byte wheelnum);
 extern bool skipPerciseSet;
 

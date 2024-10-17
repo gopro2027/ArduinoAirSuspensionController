@@ -5,31 +5,19 @@
 
 #include "BluetoothSerial.h"
 
+#include "user_defines.h"
 #include "input_type.h"
 #include "solenoid.h"
+#include "manifold.h"
 #include "wheel.h"
 #include "compressor.h"
 #include "bitmaps.h"
 
-#define PASSWORD     "12345678"
-
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-#define TEST_MODE false
-#define SCREEN_MOODE true
-
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-// The pins for I2C are defined by the Wire-library. 
-// On an arduino UNO:       A4(SDA), A5(SCL)
-// On an arduino MEGA 2560: 20(SDA), 21(SCL)
-// On an arduino LEONARDO:   2(SDA),  3(SCL), ...
 #if SCREEN_MOODE == true
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-#define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #endif
 
@@ -38,28 +26,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define WHEEL_FRONT_DRIVER 2
 #define WHEEL_REAR_DRIVER 3
 
-#define MAX_PROFILE_COUNT 4
-
-//Digital pins
 BluetoothSerial bt;
-InputType *solenoidFrontPassengerInPin;
-InputType *solenoidFrontPassengerOutPin;
-InputType *solenoidRearPassengerInPin;
-InputType *solenoidRearPassengerOutPin;
-InputType *solenoidFrontDriverInPin;
-InputType *solenoidFrontDriverOutPin;
-InputType *solenoidRearDriverInPin;
-InputType *solenoidRearDriverOutPin;
-InputType *compressorRelayPin;
+Manifold *manifold;
 //InputType *manifoldSafetyWire;
-
-//Analog pins
-InputType *pressureInputFrontPassenger;
-InputType *pressureInputRearPassenger;
-InputType *pressureInputFrontDriver;
-InputType *pressureInputRearDriver;
-//A4 (sda) and A5 (sdl) are the screen
-InputType *pressureInputTank; //select the analog input pin for the pressure transducer TANK
 
 struct Profile {
   byte pressure[4];
@@ -170,40 +139,39 @@ void setRideHeightRearDriver(byte value) {
   }
 }
 
+#if USE_ADS == true
 Adafruit_ADS1115 ADS1115A; // low ads
+#if USE_2_ADS == true
 Adafruit_ADS1115 ADS1115B; // high ads
+#endif
 void initializeADS() {
-  if (!ADS1115A.begin(0x48)) {
-    Serial.println(F("Failed to initialize ADS Low"));
+  if (!ADS1115A.begin(ADS_A_ADDRESS)) {
+    Serial.println(F("Failed to initialize ADS A"));
     while (1);
   }
-  if (!ADS1115B.begin(0x49)) {
-    Serial.println(F("Failed to initialize ADS High"));
+  #if USE_2_ADS == true
+  if (!ADS1115B.begin(ADS_B_ADDRESS)) {
+    Serial.println(F("Failed to initialize ADS B"));
     while (1);
   }
+  #endif
 }
+#endif
 
-void setupPins() {
-  //initializeADS(); // UNCOMMENT THIS IF YOU ARE USING A NON STANDARD BOARD WITH ADS INPUTS
-
-  //digital pins
-  solenoidFrontPassengerInPin = new InputType(23, OUTPUT);
-  solenoidFrontPassengerOutPin = new InputType(25, OUTPUT);
-  solenoidRearPassengerInPin = new InputType(26, OUTPUT);
-  solenoidRearPassengerOutPin = new InputType(27, OUTPUT);
-  solenoidFrontDriverInPin = new InputType(13, OUTPUT);
-  solenoidFrontDriverOutPin = new InputType(14, OUTPUT);
-  solenoidRearDriverInPin = new InputType(18, OUTPUT);
-  solenoidRearDriverOutPin = new InputType(19, OUTPUT);
-  compressorRelayPin = new InputType(33, OUTPUT);
-
-  //Analog pins
-  pressureInputFrontPassenger = new InputType(A0, INPUT); // 36 select the analog input pin for the pressure transducer FRONT
-  pressureInputRearPassenger = new InputType(A3, INPUT); // 39 select the analog input pin for the pressure transducer REAR
-  pressureInputFrontDriver = new InputType(A6, INPUT); // 34 select the analog input pin for the pressure transducer FRONT
-  pressureInputRearDriver = new InputType(A7, INPUT); // 35 select the analog input pin for the pressure transducer REAR
-  //A4 (sda) and A5 (sdl) are the screen
-  pressureInputTank = new InputType(A4, INPUT); //select the analog input pin for the pressure transducer TANK
+void setupManifold() {
+  #if USE_ADS == true
+    initializeADS();
+  #endif
+  
+  manifold = new Manifold(
+              solenoidFrontPassengerInPin,
+              solenoidFrontPassengerOutPin,
+              solenoidRearPassengerInPin,
+              solenoidRearPassengerOutPin,
+              solenoidFrontDriverInPin,
+              solenoidFrontDriverOutPin,
+              solenoidRearDriverInPin,
+              solenoidRearDriverOutPin);
 }
 
 bool isAnyWheelActive() {
@@ -281,15 +249,16 @@ void airUpRelativeToAverage(int value) {
 
 void drawsplashscreen();
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(SERIAL_BAUD_RATE);
   beginEEPROM();
-  bt.begin("OASMan");
+  bt.begin(BT_NAME);
 
   delay(200); // wait for voltage stabilize
 
   Serial.println(F("Startup!"));
 
-  setupPins();
+  setupManifold();
+
   #if SCREEN_MOODE == true
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
@@ -300,10 +269,10 @@ void setup() {
   
   delay(20);
 
-  wheel[WHEEL_FRONT_PASSENGER] = new Wheel(solenoidFrontPassengerInPin, solenoidFrontPassengerOutPin, pressureInputFrontPassenger, WHEEL_FRONT_PASSENGER);
-  wheel[WHEEL_REAR_PASSENGER] = new Wheel(solenoidRearPassengerInPin, solenoidRearPassengerOutPin, pressureInputRearPassenger, WHEEL_REAR_PASSENGER);
-  wheel[WHEEL_FRONT_DRIVER] = new Wheel(solenoidFrontDriverInPin, solenoidFrontDriverOutPin, pressureInputFrontDriver, WHEEL_FRONT_DRIVER);
-  wheel[WHEEL_REAR_DRIVER] = new Wheel(solenoidRearDriverInPin, solenoidRearDriverOutPin, pressureInputRearDriver, WHEEL_REAR_DRIVER);
+  wheel[WHEEL_FRONT_PASSENGER] = new Wheel(manifold->get(FRONT_PASSENGER_IN), manifold->get(FRONT_PASSENGER_OUT), pressureInputFrontPassenger, WHEEL_FRONT_PASSENGER);
+  wheel[WHEEL_REAR_PASSENGER] = new Wheel(manifold->get(REAR_PASSENGER_IN), manifold->get(REAR_PASSENGER_OUT), pressureInputRearPassenger, WHEEL_REAR_PASSENGER);
+  wheel[WHEEL_FRONT_DRIVER] = new Wheel(manifold->get(FRONT_DRIVER_IN), manifold->get(FRONT_DRIVER_OUT), pressureInputFrontDriver, WHEEL_FRONT_DRIVER);
+  wheel[WHEEL_REAR_DRIVER] = new Wheel(manifold->get(REAR_DRIVER_IN), manifold->get(REAR_DRIVER_OUT), pressureInputRearDriver, WHEEL_REAR_DRIVER);
 
   compressor = new Compressor(compressorRelayPin, pressureInputTank);
 
@@ -332,7 +301,7 @@ float readPinPressure(InputType *pin);
 const int time_solenoid_movement_delta = 500;//ms
 const int time_solenoid_open_time = 1;//ms
 void readPressures() {
-  pressureValueTank = readPinPressure(pressureInputTank);
+  pressureValueTank = compressor->readPressure();
 
   //check if any air up solenoids are open and if so, close them for reading
   bool safePressureReadAny = false;
@@ -546,12 +515,6 @@ void bt_cmd() {
   bt.read();
 
   }
-}
-
-
-//print to COM
-void println(String str) {
-  Serial.println(str);
 }
 
 int trailingInt(const char str[]) {

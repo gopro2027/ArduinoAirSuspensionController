@@ -1,4 +1,5 @@
 #include "wheel.h"
+#include "user_defines.h"
 #include <Wire.h>
 #include <SPI.h>
 
@@ -22,12 +23,8 @@ Wheel::Wheel(InputType *solenoidInPin, InputType *solenoidOutPin, InputType *pre
   this->isClosePaused = false;
 }
 
-#define pressureZero (float)409.6 //analog reading of pressure transducer at 0psi.         for nano: (0.5/5)*1024 = 102.4. for esp32: (0.5/5)*4096 = 409.6
-#define pressureMax (float)3686.4 //analog reading of pressure transducer at max psi (300). for nano: (4.5/5)*1024 = 921.6. for esp32: (4.5/5)*4096 = 3686.4
-#define pressuretransducermaxPSI 300 //psi value of transducer being used
-
 float readPinPressure(InputType *pin) {
-  return float((float(pin->analogRead())-pressureZero)*pressuretransducermaxPSI)/(pressureMax-pressureZero) + pressureAdjustment; //conversion equation to convert analog reading to psi
+  return float((float(pin->analogRead())-pressureZeroAnalogValue)*pressuretransducermaxPSI)/(pressureMaxAnalogValue-pressureZeroAnalogValue) + pressureAdjustment; //conversion equation to convert analog reading to psi
 }
 
 bool Wheel::prepareSafePressureRead() {
@@ -144,14 +141,11 @@ void Wheel::initPressureGoal(int newPressure) {
     this->routineStartTime = millis();
     this->pressureGoal = newPressure;
     if (pressureDif < 0) {
-      Serial.println("Airing out front!");
       this->s_AirOut.open();
     } else {
       if (getTankPressure() > newPressure) {
-        Serial.println("Airing in");
         this->s_AirIn.open();
       } else {
-        Serial.println("not enough tank pressure!");
         //don't even bother trying cuz there won't be enough pressure in the tank lol but i guess it won't hurt anything even if it did it just might act weird
       }
     }

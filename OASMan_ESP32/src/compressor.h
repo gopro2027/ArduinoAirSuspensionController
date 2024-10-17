@@ -18,12 +18,8 @@ public:
   void loop();
   void pause(); // call pause and resume for thread blocking tasks
   void resume();
+  float readPressure();
 };
-
-// These will not be exact depending on how accurate your pressure sensors are.
-// For example: Mine will read 220psi when the actual pressure is 180psi
-#define COMPRESSOR_ON_BELOW_PSI 160
-#define COMPRESSOR_MAX_PSI 200
 
 float readPinPressure(InputType *pin); // this may need to be extern
 

@@ -1,4 +1,5 @@
 #include "compressor.h"
+#include "user_defines.h"
 #include <Wire.h>
 #include <SPI.h>
 
@@ -30,11 +31,15 @@ void Compressor::resume() {
   }
 }
 
+float Compressor::readPressure() {
+  return readPinPressure(this->readPin);
+}
+
 void Compressor::loop() {
   if (this->isPaused && !this->s_trigger.isOpen()) { // first check if it is paused, and then go ahead and double check that it is closed, because if it is open (enabled) we still want to do the loop to close it if it reaches max pressure
     return;
   }
-  this->currentPressure = readPinPressure(this->readPin);
+  this->currentPressure = this->readPressure();
   if (!this->s_trigger.isOpen()) {
     if (this->currentPressure < COMPRESSOR_ON_BELOW_PSI) {
       this->s_trigger.open();

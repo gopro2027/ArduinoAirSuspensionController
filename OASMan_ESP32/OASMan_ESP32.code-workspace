@@ -5,5 +5,16 @@
 		}
 	],
 	"settings": {
+		"files.associations": {
+			"new": "cpp",
+			"array": "cpp",
+			"*.tcc": "cpp",
+			"memory": "cpp",
+			"istream": "cpp",
+			"functional": "cpp",
+			"tuple": "cpp",
+			"utility": "cpp",
+			"algorithm": "cpp"
+		}
 	}
 }
