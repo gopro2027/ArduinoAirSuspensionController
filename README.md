@@ -59,13 +59,15 @@ Currently, pin 13 is utilized and on the old bootloader this will cause the rear
 2. In visual studio code go to extensions (4 cubes icon on lefthand bar) and install "PlatformIO IDE"
 3. Open PlatformIO by clicking the alien icon on the lefthand bar and making sure it fully installs
 4. Open the project:
-	1. QUICK ACCESS -> PIO Home -> Open
+    1. Double click the file 'OASMan_ESP32.code-workspace' in ArduinoAirSuspensionController/OASMan_ESP32/ and wait for all of the project dependencies to download and install
+	<!--1. QUICK ACCESS -> PIO Home -> Open
 	2. You should now be on a 'home' page that says 'Welcome to PlatformIO'. Under quick access click 'Open Project'
-	3. Navigate to the 'OASMan_ESP32' folder and select 'Open "OASMan_ESP32"'
+	3. Navigate to the 'OASMan_ESP32' folder and select 'Open "OASMan_ESP32"'-->
 5. Build the project and test for errors.
-	1. Wait for PlatformIO to finish downloading and installing all the required ESP32 libraries
+	<!--1. Wait for PlatformIO to finish downloading and installing all the required ESP32 libraries-->
 	2. look in the top right corner and you should see a checkmark that says 'Build' when you hover over it. Click that and verify for no errors.
 6. Install the project onto your esp32 by clicking the dropdown arrow next to the build button and choosing "Upload"
+7. *optional* If you need to edit any configuration, please go into the file 'user_defines.h' and make necessary edits, then go back to step 5 and 6.
 
 
 ![app_airsuspension](https://user-images.githubusercontent.com/7937950/236578835-0e3a208d-48cf-48e8-a882-4479f1afe35c.png)
