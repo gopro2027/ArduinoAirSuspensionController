@@ -24,18 +24,18 @@
 #define MAX_PROFILE_COUNT 4
 
 /* These are the pin numbers used for our manifold solenoids */
-#define solenoidFrontPassengerInPin     new InputType(23, OUTPUT)
+#define solenoidFrontPassengerInPin     new InputType(33, OUTPUT)
 #define solenoidFrontPassengerOutPin    new InputType(25, OUTPUT)
-#define solenoidRearPassengerInPin      new InputType(26, OUTPUT)
-#define solenoidRearPassengerOutPin     new InputType(27, OUTPUT)
-#define solenoidFrontDriverInPin        new InputType(13, OUTPUT)
-#define solenoidFrontDriverOutPin       new InputType(14, OUTPUT)
+#define solenoidRearPassengerInPin      new InputType(23, OUTPUT)
+#define solenoidRearPassengerOutPin     new InputType(19, OUTPUT)
+#define solenoidFrontDriverInPin        new InputType(26, OUTPUT)
+#define solenoidFrontDriverOutPin       new InputType(27, OUTPUT)
 #define solenoidRearDriverInPin         new InputType(18, OUTPUT)
-#define solenoidRearDriverOutPin        new InputType(19, OUTPUT)
+#define solenoidRearDriverOutPin        new InputType(17, OUTPUT)
 
 /* Compressor/tank */
-#define compressorRelayPin new InputType(A5, OUTPUT) // 33, solenoid
-#define pressureInputTank new InputType(A4, INPUT) // 32, pressure sensor
+#define compressorRelayPin new InputType(13, OUTPUT) // D13, solenoid
+#define pressureInputTank new InputType(32, INPUT) // D32/A0, pressure sensor
 
 // These will not be exact depending on how accurate your pressure sensors are.
 // For example: Mine will read 220psi when the actual pressure is 180psi
@@ -43,10 +43,10 @@
 #define COMPRESSOR_MAX_PSI 180
 
 /* Pressure sensor pins */
-#define pressureInputFrontPassenger new InputType(A0, INPUT) // 36
-#define pressureInputRearPassenger  new InputType(A3, INPUT) // 39
-#define pressureInputFrontDriver    new InputType(A6, INPUT) // 34
-#define pressureInputRearDriver     new InputType(A7, INPUT) // 35
+#define pressureInputFrontPassenger new InputType(36, INPUT) // D36/VP/A4
+#define pressureInputRearPassenger  new InputType(35, INPUT) // D35/A3
+#define pressureInputFrontDriver    new InputType(34, INPUT) // D34/A2
+#define pressureInputRearDriver     new InputType(39, INPUT) // D39/VN/A7
 
 /* (Custom boards only) Set to true if in any of the InputType's above you use ADS (Adafruit_ADS1115) */
 #define USE_ADS false
