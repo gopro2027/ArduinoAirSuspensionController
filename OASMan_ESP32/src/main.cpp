@@ -140,9 +140,9 @@ void setRideHeightRearDriver(byte value) {
 }
 
 #if USE_ADS == true
-Adafruit_ADS1115 ADS1115A; // low ads
+Adafruit_ADS1115 ADS1115A;
 #if USE_2_ADS == true
-Adafruit_ADS1115 ADS1115B; // high ads
+Adafruit_ADS1115 ADS1115B;
 #endif
 void initializeADS() {
   if (!ADS1115A.begin(ADS_A_ADDRESS)) {

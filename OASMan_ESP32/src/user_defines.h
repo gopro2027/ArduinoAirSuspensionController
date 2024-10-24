@@ -43,15 +43,21 @@
 #define COMPRESSOR_MAX_PSI 180
 
 /* Pressure sensor pins */
-#define pressureInputFrontPassenger new InputType(36, INPUT) // D36/VP/A4
-#define pressureInputRearPassenger  new InputType(35, INPUT) // D35/A3
-#define pressureInputFrontDriver    new InputType(34, INPUT) // D34/A2
-#define pressureInputRearDriver     new InputType(39, INPUT) // D39/VN/A7
+#define pressureInputFrontPassenger new InputType(0, &ADS1115A) // ADSA/0   Previous: D36/VP/A4
+#define pressureInputRearPassenger  new InputType(3, &ADS1115A) // ADSA/3   Previous: D35/A3
+#define pressureInputFrontDriver    new InputType(2, &ADS1115A) // ADSA/2   Previous: D34/A2
+#define pressureInputRearDriver     new InputType(1, &ADS1115A) // ADSA/1   Previous: D39/VN/A7
 
-/* (Custom boards only) Set to true if in any of the InputType's above you use ADS (Adafruit_ADS1115) */
-#define USE_ADS false
-/* (Custom boards only) Set to true if you use 2 ads board (low and high) */
-#define USE_2_ADS false
+/* Level sensor pins */
+#define levelInputFrontPassenger new InputType(0, ADS1115B) // ADSB/0
+#define levelInputRearPassenger  new InputType(3, ADS1115B) // ADSB/3
+#define levelInputFrontDriver    new InputType(2, ADS1115B) // ADSB/2
+#define levelInputRearDriver     new InputType(1, ADS1115B) // ADSB/1
+
+/* Set to true if in any of the InputType's above you use ADS (Adafruit_ADS1115) */
+#define USE_ADS true
+/* Set to true if you use 2 ads board (low and high) */
+#define USE_2_ADS true
 #define ADS_A_ADDRESS 0x48 // 0x48 is address pin to low
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
 
