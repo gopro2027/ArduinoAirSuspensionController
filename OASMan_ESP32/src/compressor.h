@@ -1,6 +1,7 @@
 #ifndef compressor_h
 #define compressor_h
 
+#include "user_defines.h"
 #include "input_type.h"
 #include "solenoid.h"
 #include <Arduino.h>

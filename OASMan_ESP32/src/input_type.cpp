@@ -47,7 +47,11 @@ int InputType::analogRead() {
             Serial.println(F("Fatal error null ADC"));
             return -1;
         }
-        return AnalogADCToESP32Value(this->adc->readADC_SingleEnded(this->pin)); // this should be correct for analog
+        #if ADS_MOCK_BYPASS == false
+            return AnalogADCToESP32Value(this->adc->readADC_SingleEnded(this->pin)); // this should be correct for analog
+        #else
+            return 3686;// value of max psi on esp32 
+        #endif
     }
 }
 

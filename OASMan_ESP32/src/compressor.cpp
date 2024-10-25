@@ -1,5 +1,4 @@
 #include "compressor.h"
-#include "user_defines.h"
 #include <Wire.h>
 #include <SPI.h>
 

@@ -3,6 +3,7 @@
 
 #include <Wire.h>
 #include <Adafruit_ADS1X15.h>
+#include "user_defines.h"
 
 enum type {NORMAL, ADC};
 

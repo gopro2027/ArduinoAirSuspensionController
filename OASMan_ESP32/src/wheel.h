@@ -1,6 +1,7 @@
 #ifndef wheel_h
 #define wheel_h
 
+#include "user_defines.h"
 #include "input_type.h"
 #include "solenoid.h"
 #include <Arduino.h>

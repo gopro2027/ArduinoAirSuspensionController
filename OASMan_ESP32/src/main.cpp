@@ -147,12 +147,16 @@ Adafruit_ADS1115 ADS1115B;
 void initializeADS() {
   if (!ADS1115A.begin(ADS_A_ADDRESS)) {
     Serial.println(F("Failed to initialize ADS A"));
+    #if ADS_MOCK_BYPASS == false
     while (1);
+    #endif
   }
   #if USE_2_ADS == true
   if (!ADS1115B.begin(ADS_B_ADDRESS)) {
     Serial.println(F("Failed to initialize ADS B"));
+    #if ADS_MOCK_BYPASS == false
     while (1);
+    #endif
   }
   #endif
 }

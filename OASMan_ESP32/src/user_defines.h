@@ -58,6 +58,7 @@
 #define USE_ADS true
 /* Set to true if you use 2 ads board (low and high) */
 #define USE_2_ADS true
+#define ADS_MOCK_BYPASS true
 #define ADS_A_ADDRESS 0x48 // 0x48 is address pin to low
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
 
