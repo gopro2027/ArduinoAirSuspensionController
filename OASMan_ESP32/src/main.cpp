@@ -298,7 +298,11 @@ void setup() {
 
 float pressureValueTank = 0;
 int getTankPressure() {
+#if TANK_PRESSURE_MOCK == true
+  return 200;
+#else
   return pressureValueTank;
+#endif
 }
 
 float readPinPressure(InputType *pin);

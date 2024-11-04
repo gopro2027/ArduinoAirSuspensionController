@@ -58,9 +58,14 @@
 #define USE_ADS true
 /* Set to true if you use 2 ads board (low and high) */
 #define USE_2_ADS true
-#define ADS_MOCK_BYPASS true
 #define ADS_A_ADDRESS 0x48 // 0x48 is address pin to low
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
+
+/* For testing purposes: set to true to make all ads A values (ie under default settings, the 4 pressure sensors to the wheels) return the max psi... this one is useful for testing air down */
+#define ADS_A_MOCK_BYPASS false
+
+/* For testing purposes: mock tank pressure to 200psi */
+#define TANK_PRESSURE_MOCK true
 
 /* Values for pressure calculations */
 #define pressureZeroAnalogValue (float)409.6 //analog reading of pressure transducer at 0psi.          for nano: (0.5 volts / 5 volts) * 1024 = 102.4. for esp32: (0.5 volts / 5 volts) * 4096 = 409.6
