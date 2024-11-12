@@ -1,5 +1,12 @@
 # Wiring
-
+### PCB assembly
+The pcb assembly is relatively straightforward when following as marked on the board.<br>
+If you have any questions, please feel free to ask on the discord server.<br>
+If you are wondering which soldering iron to use, I personally recommend using a TS100 soldering iron and some led solder.<br>
+Here is a (long) video of me assembling my board, if you wish to follow along:<br>
+<br>
+... insert youtube video here when uploaded ...
+<br>
 
 ### Manifold Wiring Harness Assembly (Valvetable)
 The wiring was designed to be as easy as possible. The 3 top wires go in the same order on a 3 pin jst connector, and the 6 bottom wires go in the same order on a 6 pin jst connector. The only catch it to make sure it doesn't connect to the board upside down (aka reverse order) or you will have to cut the pins off and flip the connector over and insert them in the reverse order.<br>Simple?<br>Alright, lets get into the details...<br><br>
@@ -29,3 +36,6 @@ And here is my annotated documentation that may also be of use for a double chec
 <br>
 ![manifold documentation annotated](/photos/esp32/ValvetableAndManifold/ebay_manifold_diagram.png)<br>
 <br>
+The final result will look something like this:<br>
+<br>
+![wiring harness final result](/photos/esp32/ValvetableAndManifold/manifold_final_wiring.jpg)<br>
