@@ -8,6 +8,12 @@ Here is a (long) video of me assembling my board, if you wish to follow along:<b
 ... insert youtube video here when uploaded ...
 <br>
 
+### Pressure and Height Sensor Wiring
+Both the pressure and height sensors use 3 wires each. GND, 5V, and Data.<br>
+Please attach 3 pin JST connectors to each so that they align with the same wires on the PCB.<br>
+Obviously the height sensors are totally optional.<br>
+<br>
+
 ### Manifold Wiring Harness Assembly (Valvetable)
 The wiring was designed to be as easy as possible. The 3 top wires go in the same order on a 3 pin jst connector, and the 6 bottom wires go in the same order on a 6 pin jst connector. The only catch it to make sure it doesn't connect to the board upside down (aka reverse order) or you will have to cut the pins off and flip the connector over and insert them in the reverse order.<br>Simple?<br>Alright, lets get into the details...<br><br>
 So the wiring harness is split up into 2 parts, because it's a 2x6 connector but 3 of the pins are not used.<br>
@@ -39,3 +45,5 @@ And here is my annotated documentation that may also be of use for a double chec
 The final result will look something like this:<br>
 <br>
 ![wiring harness final result](/photos/esp32/ValvetableAndManifold/manifold_final_wiring.jpg)<br>
+<br>
+### Congratulations on assembling the wiring!
