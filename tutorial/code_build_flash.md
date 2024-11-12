@@ -3,7 +3,7 @@
 ### ESP32 Flashing Steps
 # Cloning the project code
 1. Use git to clone the project normally. It is recommended you clone it and not download it, so that you can get future updates easily.
-2. Here is what I recommend if you would like to easily clone the project:
+2. Here is what I recommend if you would like to easily clone the project, and what I will reference in the rest of this documentation:
     1. Dowload and install [github desktop](https://desktop.github.com/download/)
     2. Sign in to your github account
     3. Click clone project and clone `https://github.com/gopro2027/ArduinoAirSuspensionController.git`
