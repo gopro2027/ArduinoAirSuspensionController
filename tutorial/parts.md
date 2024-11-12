@@ -1,5 +1,7 @@
 # Parts list
 
+Here are the parts required to build the manifold. Obviously with an open source and customizable system, there is room for changes. This is also not intended to include other air suspension components necessary to build the rest of the system, and some may overlap between the manifold and rest of the system and be a bit outside the scope of this project (eg. the connectors you attach to the manifold could vary greatly), so use your best judgement.
+
 ### PCB Parts
 
 | Part Name  | qty | image | Link | info |
