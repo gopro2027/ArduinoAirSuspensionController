@@ -28,6 +28,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 BluetoothSerial bt;
 Manifold *manifold;
+Manifold *getManifold() {
+  return manifold;
+}
 //InputType *manifoldSafetyWire;
 
 struct Profile {
@@ -197,7 +200,7 @@ bool shouldDoPressureGoalOnWheel(byte wheelnum) {
   return (goToPerciseBitset >> wheelnum) & 1;
 }
 void readPressures();
-bool skipPerciseSet = false;
+bool skipPerciseSet = false; // this is like a global flag to tell it to not do percise pressure set only from the main pressure goal routine
 void pressureGoalRoutine() {
   bool a = false;
   if (isAnyWheelActive()) {

@@ -85,16 +85,7 @@ void Wheel::percisionGoToPressureQue(byte goalPressure) {
 void Wheel::percisionGoToPressure() {
   int goalPressure = this->pressureGoal;
 
-  // TODO absolutely must refactor this code to access the solenoids properly
-  // DISABLED TEMPORARILY, MUST REENABLE IN THE FUTURE. 10/14/2024
-  /*int wheelSolenoidMask = 0;
-  for (int i = 0; i < 8; i++) {
-    bool val = digitalRead(i+6) == HIGH;// solenoidFrontPassengerInPin
-    if (val) {
-      wheelSolenoidMask = wheelSolenoidMask | (1 << i);
-      digitalWrite(i+6, LOW);
-    }
-  }*/
+  getManifold()->pauseValvesForBlockingTask();
   
   unsigned long startTime = millis();
   delay(sleepTimeWait);
@@ -117,12 +108,7 @@ void Wheel::percisionGoToPressure() {
     delay(sleepTimeWait);
   }
 
-  /*for (int i = 0; i < 8; i++) {
-    bool val = (wheelSolenoidMask & (1 << i)) > 0;
-    if (val) {
-      digitalWrite(i+6, HIGH);
-    }
-  }*/
+  getManifold()->unpauseValvesForBlockingTaskCompleted();
   
 }
 

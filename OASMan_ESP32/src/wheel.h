@@ -4,6 +4,7 @@
 #include "user_defines.h"
 #include "input_type.h"
 #include "solenoid.h"
+#include "Manifold.h"
 #include <Arduino.h>
 
 class Wheel {
@@ -39,6 +40,7 @@ public:
   void percisionGoToPressureQue(byte goalPressure);
 };
 
+extern Manifold *getManifold();
 extern void setGoToPressureGoalPercise(byte wheelnum);
 extern bool skipPerciseSet;
 

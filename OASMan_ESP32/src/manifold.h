@@ -9,6 +9,7 @@ enum SOLENOID_INDEX {FRONT_PASSENGER_IN, FRONT_PASSENGER_OUT, REAR_PASSENGER_IN,
 class Manifold {
 private:
   InputType *solenoidList[SOLENOID_COUNT];
+  int wheelSolenoidMask = 0;
 public:
   Manifold();
   Manifold(InputType * fpi,
@@ -21,6 +22,8 @@ public:
             InputType * rdo);
     InputType *get(SOLENOID_INDEX solenoid);
     InputType **getAll();
+    void pauseValvesForBlockingTask();
+    void unpauseValvesForBlockingTaskCompleted();
 };
 
 #endif

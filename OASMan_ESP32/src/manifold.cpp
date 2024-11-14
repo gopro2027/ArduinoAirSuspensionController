@@ -18,6 +18,7 @@ Manifold::Manifold(InputType * fpi,
     this->solenoidList[FRONT_DRIVER_OUT] = fdo;
     this->solenoidList[REAR_DRIVER_IN] = rdi;
     this->solenoidList[REAR_DRIVER_OUT] = rdo;
+    this->wheelSolenoidMask = 0;
 }
 
 InputType *Manifold::get(SOLENOID_INDEX solenoid) {
@@ -26,4 +27,22 @@ InputType *Manifold::get(SOLENOID_INDEX solenoid) {
 
 InputType **Manifold::getAll() {
     return this->solenoidList;
+}
+
+void Manifold::pauseValvesForBlockingTask() {
+    this->wheelSolenoidMask = 0;
+    for (int i = 0; i < 8; i++) {
+        bool val = this->solenoidList[i]->digitalRead() == HIGH; //valve is open
+        if (val) {
+            this->wheelSolenoidMask = this->wheelSolenoidMask | (1 << i);
+            this->solenoidList[i]->digitalWrite(LOW);
+        }
+    }
+}
+void Manifold::unpauseValvesForBlockingTaskCompleted() {
+    for (int i = 0; i < 8; i++) {
+        if ((this->wheelSolenoidMask & (1 << i)) > 0) {
+            this->solenoidList[i]->digitalWrite(HIGH);
+        }
+    }
 }
