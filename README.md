@@ -1,43 +1,43 @@
 # Open Air Suspension Management (OAS-Man)
-Open Source Air Suspension Management Controller
+![image](https://github.com/user-attachments/assets/2990d62f-51a5-47d8-a54a-e71efa27a2cd)
+<!---![image](https://github.com/user-attachments/assets/ea535981-4f51-4782-8f93-9eb1126dc81b)-->
 
-Please click this image to join the discord server!!!<br>
-<a href="https://discord.gg/pUf7FmHKpg"><img src="https://seeklogo.com/images/D/discord-logo-134E148657-seeklogo.com.png" alt="DiscordLogo" width="100" height="100"></a> 
+<a href="https://discord.gg/pUf7FmHKpg">
+Please click here to join the discord server!!!<br>
+<img src="https://seeklogo.com/images/D/discord-logo-134E148657-seeklogo.com.png" alt="DiscordLogo" width="100" height="100">
+</a> 
 
+<br>
+<br>
 
-**Important Info To Potential Creators:** <br>
-We are working on a new board that will use the more powerful esp32. It will use roughly the same components but with an esp32 instead of an arduino nano. If you plan to build this project, you may want to consult with us personally and wait until the esp32 version is out. Although the nano version does work fine, it is at it's limit of functionality without sacrificing features, so we decided it is best to switch to an esp32. I also hope to create an instructional build video for when the esp32 is ready.<br>
-Possible new features that are waiting for the esp32 include but are not limited to: security lockdown mode, more advanced pressure calculations, faster processing speed, better bluetooth connectivity/reliability (add error detection), height sensor mode rather than pressure sensor, the list can go on
+### Important Info To Potential Creators:
+We are in the process of making the new ESP32 version, aka V2! Please do not make the nano version at this moment. Please join the discord for more information.<br>
 
-**main branch = ESP32** (unfinished/in progress)<br>
-**nano-v1 branch = Arduino Nano** (maintained but not updating with new features)<br>
+### Overview:
+This is intended as a DIY replacement for products such as Airlift 3P(3H*) ($1500) or Airtek Stage 2+ ($1000) with a build cost of less than $500. Combined with the customizability of open sourced code, I hope this is a tempting option for some DIY-ers out there.<br>
+Out goal with this project is to provide the car community with a modern fully customizable well documented air suspension system with a budget build cost in mind, all not bound by the limitations of a single company. The rest of your car is custom to you, why not your air suspension too?<br>
+- You want your car in the background? You got it.<br>
+- You want to put your logo on the manifold? You got it.<br>
+- You want your controller to look like a gameboy? Sure why not! **<br>
+- Proprietary software broke and there's no update? Not an issue here.<br>
+- Sensor broke in your proprietary manifold and you have to buy a whole new one for $1000? Not an issue here, just replace the sensor for $10.<br>
+- Want to use bespoke heavy duty valves but also have a nice user interface? Look no further than OAS-Man!<br>
+- Restomodding an old air suspension system? OAS-Man may be the solution!<br>
+<br>
+This github repo includes an android app and arduino code along with some 3d printable files and a PCB. The PCB is pre-made and ready for upload in JLCPCB to order. You will still need to supply the rest of your system which is not covered in this project, such as struts/bags, tank, compressor, tubing and fittings, ect. So that is what you would need in addition to this, similarly to what you would need for one of the on-the-shelf manifolds. If you are unsure what to purchase, I suggest getting the `Airtekk Stage 1 Kit` as that will just about cover everything you need.<br>
+<sub>* height sensors not yet supported in software. ** physical controller not yet designed</sub><br>
+
+### Branch Information:
+**main branch = ESP32** (in progress)<br>
+**ESP32_prep = ESP32** (temporary bleeding edge updates at the time of writing this)<br>
+**nano-v1 branch = Arduino Nano** (outdated, maintained but not updating with new features)<br>
+<br>
 Additionally, the android app code does not have as strict designation and will be kept updated on the main branch however will likely work on the nano (with the exception of new bluetooth commands not supported on the nano) until otherwise stated.
 
-**Overview:** <br>
-This is intended as a DIY replacement for products such as Airlift 3P ($1500) or Airtek Stage 2+ ($1000) with a build cost of roughly $500 or less. Combined with the customizability of open sourced code, I hope this is a tempting option for some DIY-ers out there. This github repo includes an android app and arduino code along with some 3d printable files and a PCB. The PCB is pre-made and ready for upload in JLCPCB to order and should hopefully make the electrinics/soldering learning curve a lot smaller for the average diy-er, as compared to having to solder every wire by scratch according to a diagram. This was designed as an upgrade from airtekk stage 1, which is just bags, tank, compressor, tubing and fittings, guages and manual paddle switches. So that is what you would need already prior to creating this, similarly to what you would need for one of the on-the-shelf manifolds listed above.
+### Please [click here to view the comprehensive tutorial](/tutorial/README.md) documentation!<br>
+<br>
 
-**Parts list (screenshots in images folder):** <br>
-Generic ebay manifold - $100 version wires only https://www.ebay.com/itm/324238773355<br>
-Arduino nano (offbrand old bootloader works fine, many places to obtain)<br>
-HC-06 Bluetooth https://www.amazon.com/gp/product/B074J5WMH1<br>
-5v to 3v board https://www.amazon.com/gp/product/B07CP4P5XJ/<br>
-i2c display https://www.amazon.com/gp/product/B09JWLDK9F/<br>
-12v to 5v converter https://www.ebay.com/itm/234840680851<br>
-5 300psi pressure sensors (links vary... make sure to check reviews some suck. 200psi also works just modify code)<br>
-8 FQP30N06L Mosfet https://www.ebay.com/itm/153938539967<br>
-8 Fuses https://www.ebay.com/itm/273505548256<br>
-8 1N4007 Diode https://www.ebay.com/itm/393973959592?var=662531753553<br>
-8 10k ohm resistors https://www.ebay.com/itm/324683051749?var=513694032962<br>
-8 150 ohm resistors https://www.ebay.com/itm/324683051749?var=513694032918<br>
-Also probably want a 12v voltage stabalizer<br>
-Also need loosely:<br>
-Some pin headers to make the arduino easily replacable in case it gets fried accidentally<br>
-Various wires<br>
-Various pipes and connectrs<br>
-Relay for turning the manifold on and off<br>
-3D printer for hat and base<br>
-Android device to control arduino<br>
-
+<!---
 **Loose steps:** <br>
 1. Order parts, order circuit board on JLPCB website, 3d print parts
 2. Solder parts to circuit board, flip all switches to off
@@ -49,25 +49,7 @@ Android device to control arduino<br>
     3. (Optional) Update the passwords in the app and arduino code if you want
     4. Write code to arduino
 5. Circuit board single switch off, on the double switch make the top one on and bottom one off (this will power the arduino by 5v from the buck converter. 12 is bottom switch if you want to use that instead but you can ignore it)
-
-**Optional but recommended:** <br>
-If you have 2 arduino's I highly recommend you update the bootloader from the old bootloader to optiboot by following these instructions: https://www.youtube.com/watch?v=1TM-ADHb5Dk&ab_channel=DesignBuildDestroy <br>
-Currently, pin 13 is utilized and on the old bootloader this will cause the rear driver side air bag to briefly air out on startup. With the new bootloader, this issue is resolved.
-
-**ESP32 Flashing Steps:** <br>
-1. Install visual studio code
-2. In visual studio code go to extensions (4 cubes icon on lefthand bar) and install "PlatformIO IDE"
-3. Open PlatformIO by clicking the alien icon on the lefthand bar and making sure it fully installs
-4. Open the project:
-    1. Double click the file 'OASMan_ESP32.code-workspace' in ArduinoAirSuspensionController/OASMan_ESP32/ and wait for all of the project dependencies to download and install
-	<!--1. QUICK ACCESS -> PIO Home -> Open
-	2. You should now be on a 'home' page that says 'Welcome to PlatformIO'. Under quick access click 'Open Project'
-	3. Navigate to the 'OASMan_ESP32' folder and select 'Open "OASMan_ESP32"'-->
-5. Build the project and test for errors.
-	<!--1. Wait for PlatformIO to finish downloading and installing all the required ESP32 libraries-->
-	2. look in the top right corner and you should see a checkmark that says 'Build' when you hover over it. Click that and verify for no errors.
-6. Install the project onto your esp32 by clicking the dropdown arrow next to the build button and choosing "Upload"
-7. *optional* If you need to edit any configuration, please go into the file 'user_defines.h' and make necessary edits, then go back to step 5 and 6.
+-->
 
 
 ![app_airsuspension](https://user-images.githubusercontent.com/7937950/236578835-0e3a208d-48cf-48e8-a882-4479f1afe35c.png)
