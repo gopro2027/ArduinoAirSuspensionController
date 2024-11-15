@@ -29,8 +29,8 @@ This github repo includes an android app and arduino code along with some 3d pri
 
 ### Branch Information:
 **main branch = ESP32** (in progress)<br>
-**ESP32_prep = ESP32** (temporary bleeding edge updates at the time of writing this)<br>
 **nano-v1 branch = Arduino Nano** (outdated, maintained but not updating with new features)<br>
+**Other branches = current dev work** (Other dev work which you can ignore)<br>
 <br>
 Additionally, the android app code does not have as strict designation and will be kept updated on the main branch however will likely work on the nano (with the exception of new bluetooth commands not supported on the nano) until otherwise stated.
 
