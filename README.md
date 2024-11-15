@@ -11,7 +11,7 @@ Please click here to join the discord server!!!<br>
 <br>
 
 ### Important Info To Potential Creators:
-We are in the process of making the new ESP32 version, aka V2! Please do not make the nano version at this moment. Please join the discord for more information.<br>
+We are in the process of making the new ESP32 version, aka V2! Please join the discord for more information before you start your build.<br>
 
 ### Overview:
 This is intended as a DIY replacement for products such as Airlift 3P(3H*) ($1500) or Airtek Stage 2+ ($1000) with a build cost of less than $500. Combined with the customizability of open sourced code, I hope this is a tempting option for some DIY-ers out there.<br>
