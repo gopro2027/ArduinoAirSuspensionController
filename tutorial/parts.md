@@ -26,7 +26,7 @@ Here are the parts required to build the manifold. Obviously with an open source
 | 200PSI pressure sensor | 5 | ![image](https://github.com/user-attachments/assets/a231e73f-f6e8-48e3-80ee-d0554a466072) | [amazon](https://www.amazon.com/dp/B0BYHW1R2Z) | This is a kit, we will not be using the screen, but it is cheaper than buying individually and more reliable than purchasing the sensors from a random supplier, as they often end up being duds. This kit also includes plenty of wiring, eliminating the need to purchase more wiring for the pressure sensors |
 | Various 1/8 NPT PTC connectors | 0-12 | - | - | Depending on your setup you may configure the ports differently. Easiest route is using all PTC and 1/4" hoses to everything |
 | 3D printed manifold base hat and lid | 1 | - | - | You are going to want to 3d print the files for assembling the manifold and pcb together in a nice package. If you don't own a 3d printer, you will want to order these files printed online or from one of the discord members |
-| Main PCB | 1 | - | - | Order the pcb from jlcpcb (or whatever you prefer) in the minimum quantity of 5 (about $30) or purchase one from a discord member. More info on the other tutorial pages. |
+| Main PCB | 1 | ![image](https://github.com/user-attachments/assets/05903a94-f99a-4bc5-8a4f-212cf436e3cb) | [files](/PCB/ESP32_30PIN_PCB/V2) | Order the pcb from jlcpcb (or whatever you prefer) in the minimum quantity of 5 (about $30) or purchase one from a discord member. More info on the other tutorial pages. |
 
 ### Additional Parts
 
