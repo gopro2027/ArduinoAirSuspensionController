@@ -5,8 +5,9 @@ If you have any questions, please feel free to ask on the discord server.<br>
 If you are wondering which soldering iron to use, I personally recommend using a TS100 soldering iron and some led solder.<br>
 Here is a video of me assembling my board, if you wish to follow along:<br>
 <br>
-[OAS-Man (Open Air Suspension Management) PCB Assembly<br>![OAS-Man (Open Air Suspension Management) PCB Assembly](https://img.youtube.com/vi/XGFra2Tvlkg/0.jpg)](https://www.youtube.com/watch?v=XGFra2Tvlkg&ab_channel=gopro_2027)
+[OAS-Man (Open Air Suspension Management) PCB Assembly<br>![OAS-Man (Open Air Suspension Management) PCB Assembly](https://github.com/user-attachments/assets/1cabc97b-822e-4c43-a45e-32a945192d54)](https://www.youtube.com/watch?v=XGFra2Tvlkg&ab_channel=gopro_2027)
 <br>
+
 
 ### Pressure and Height Sensor Wiring
 Both the pressure and height sensors use 3 wires each. GND, 5V, and Data.<br>
