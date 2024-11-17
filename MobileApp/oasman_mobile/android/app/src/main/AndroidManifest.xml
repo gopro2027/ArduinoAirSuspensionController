@@ -1,4 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="android.hardware.bluetooth"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" /> <!--this was required before bluetooth_connect would show up now. May suggest adding android:maxSdkVersion="30" to this and fine location as suggested in https://medium.com/@jdissanayaka11/flutter-bluetooth-communication-3f697ceda3b2 -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.BLUETOOTH"  />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+
+
     <application
         android:label="oasman_mobile"
         android:name="${applicationName}"
