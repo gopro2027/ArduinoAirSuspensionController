@@ -14,7 +14,7 @@
 #define TEST_MODE false
 
 /* LCD screen definitions */
-#define SCREEN_MOODE true
+#define SCREEN_MOODE false
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
@@ -62,7 +62,10 @@
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
 
 /* For testing purposes: set to true to make all ads A values (ie under default settings, the 4 pressure sensors to the wheels) return the max psi... this one is useful for testing air down */
-#define ADS_A_MOCK_BYPASS false
+#define ADS_A_MOCK_BYPASS true
+
+/* Disable the hang if ads fails to load */
+#define ADS_MOCK_BYPASS true
 
 /* For testing purposes: mock tank pressure to 200psi */
 #define TANK_PRESSURE_MOCK true
@@ -81,3 +84,13 @@
 #define WHEEL_REAR_DRIVER 3
 
 #endif
+
+/* 
+Note: if you want to test esp32 without being on the assembled pcb turn these values:
+ADS_MOCK_BYPASS true
+ADS_A_MOCK_BYPASS true
+TANK_PRESSURE_MOCK true
+SCREEN_MOODE false
+
+For prod use you should turn any mock or test features off
+ */
