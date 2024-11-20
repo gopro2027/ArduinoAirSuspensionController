@@ -1,6 +1,8 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:get/get.dart';
 import 'package:oasman_mobile/bluetooth.dart';
 
 class HomePage extends StatefulWidget {
@@ -23,38 +25,66 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    TextStyle? textStyle = Theme.of(context).textTheme.headlineMedium;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
       ),
-      body: Center(
-        child: Column(
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            TextButton(
-              style: ButtonStyle(
-                foregroundColor: MaterialStateProperty.all<Color>(Colors.blue),
+      body: GetBuilder<BluetoothController>(
+          init: BluetoothController(),
+          builder: (controller) {
+            controller.initializeBluetooth();
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  const Text(
+                    'You have pushed the button this many times:',
+                  ),
+                  Text(
+                    '$_counter',
+                    style: textStyle,
+                  ),
+                  TextButton(
+                    style: ButtonStyle(
+                      foregroundColor:
+                          MaterialStateProperty.all<Color>(Colors.blue),
+                    ),
+                    onPressed: () {
+                      controller.scanDevices((scanResults) {});
+                    },
+                    child: Text('Test Bluetooth Scan'),
+                  ),
+                  const SizedBox(height: 20),
+                  StreamBuilder<List<ScanResult>>(
+                      stream: controller.scanResults,
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData) {
+                          log("has data!");
+                          return ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: snapshot.data!.length,
+                              itemBuilder: (context, index) {
+                                final data = snapshot.data![index];
+                                log(data.device.name);
+                                return Card(
+                                    elevation: 2,
+                                    child: ListTile(
+                                        title: Text(data.device.name),
+                                        subtitle: Text(data.device.id.id),
+                                        trailing: Text(data.rssi.toString())));
+                              });
+                        } else {
+                          return const Center(
+                            child: Text("No devices found"),
+                          );
+                        }
+                      })
+                ],
               ),
-              onPressed: () {
-                startBluetoothScan();
-              },
-              child: Text('Test Bluetooth Scan'),
-            ),
-          ],
-        ),
-      ),
+            );
+          }),
       floatingActionButton: FloatingActionButton(
         onPressed: _incrementCounter,
         tooltip: 'Increment',
