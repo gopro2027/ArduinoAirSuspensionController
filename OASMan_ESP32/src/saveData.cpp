@@ -1,6 +1,8 @@
 #include "saveData.h"
 
 EEPROM_DATA_ EEPROM_DATA;
+byte currentProfile[4];
+bool sendProfileBT = false;
 
 void saveEEPROM() {
   EEPROM.put(0, EEPROM_DATA);
@@ -10,9 +12,6 @@ void beginEEPROM() {
   EEPROM.begin(EEPROM_SIZE);
   EEPROM.get(0, EEPROM_DATA);
 }
-
-byte currentProfile[4];
-bool sendProfileBT = false;
 
 void readProfile(byte profileIndex) {
   currentProfile[WHEEL_FRONT_PASSENGER] = EEPROM_DATA.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER];

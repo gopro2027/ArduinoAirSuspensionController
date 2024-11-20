@@ -1,5 +1,7 @@
 #include "bt.h"
 
+BluetoothSerial bt;
+
 
 void sendHeartbeat() {
   bt.print(F(PASSWORD));
@@ -39,7 +41,6 @@ char *outString = "";
 //String inString = "";
 char inBuffer[30];
 unsigned long lastHeartbeat = 0;
-bool runInput();
 void bt_cmd() {
   if (millis() - lastHeartbeat > 500) {
 

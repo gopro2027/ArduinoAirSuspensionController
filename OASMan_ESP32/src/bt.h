@@ -5,27 +5,21 @@
 #include "Wheel.h"
 #include "BluetoothSerial.h"
 
+#include "airSuspensionUtil.h"
+
 //values
 extern BluetoothSerial bt;
-extern byte currentProfile[4];
-extern bool sendProfileBT;
 extern bool pause_exe;
-extern bool skipPerciseSet;
+
 
 //functions
-extern int getTankPressure();
-extern Wheel *getWheel(int i);
-extern void airUp();
-extern void airOut();
-extern void airUpRelativeToAverage(int value);
-extern void writeProfile(byte profileIndex);
-extern void setBaseProfile(byte value);
-extern void readProfile(byte profileIndex);
-extern void setRideHeightFrontPassenger(byte value);
-extern void setRideHeightRearPassenger(byte value);
-extern void setRideHeightFrontDriver(byte value);
-extern void setRideHeightRearDriver(byte value);
-extern void setRiseOnStart(bool value);
-extern void setRaiseOnPressureSet(bool value);
+void sendHeartbeat();
+void sendCurrentProfileData();
+void bt_cmd();
+bool runInput();
+int trailingInt(const char str[]);
+bool comp(char *str1, const char str2[]);
+bool runInput();
+
 
 #endif

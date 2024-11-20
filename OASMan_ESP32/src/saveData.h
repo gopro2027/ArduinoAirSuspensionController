@@ -1,4 +1,3 @@
-#pragma once
 #ifndef saveData_h
 #define saveData_h
 
@@ -18,6 +17,10 @@ struct EEPROM_DATA_ {
   Profile profile[MAX_PROFILE_COUNT];
 };
 #define EEPROM_SIZE sizeof(EEPROM_DATA_)
+
+extern EEPROM_DATA_ EEPROM_DATA;
+extern byte currentProfile[4];
+extern bool sendProfileBT;
 
 void saveEEPROM();
 void beginEEPROM();

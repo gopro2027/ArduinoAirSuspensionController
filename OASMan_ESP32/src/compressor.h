@@ -5,6 +5,7 @@
 #include "input_type.h"
 #include "solenoid.h"
 #include <Arduino.h>
+#include "wheel.h"
 
 class Compressor {
 private:
@@ -22,6 +23,5 @@ public:
   float readPressure();
 };
 
-float readPinPressure(InputType *pin); // this may need to be extern
 
 #endif

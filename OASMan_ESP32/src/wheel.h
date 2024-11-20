@@ -1,11 +1,11 @@
 #ifndef wheel_h
 #define wheel_h
 
+#include <Arduino.h>
 #include "user_defines.h"
 #include "input_type.h"
 #include "solenoid.h"
 #include "Manifold.h"
-#include <Arduino.h>
 
 class Wheel {
 private:
@@ -40,6 +40,10 @@ public:
   void percisionGoToPressureQue(byte goalPressure);
 };
 
+float readPinPressure(InputType *pin);
+
+
+//janky fix because i can't import airSuspensionUtil.h due to circular import I think
 extern Manifold *getManifold();
 extern void setGoToPressureGoalPercise(byte wheelnum);
 extern bool skipPerciseSet;

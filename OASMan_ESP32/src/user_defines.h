@@ -14,7 +14,7 @@
 #define TEST_MODE false
 
 /* LCD screen definitions */
-#define SCREEN_MOODE false
+#define SCREEN_ENABLED true
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
@@ -90,7 +90,7 @@ Note: if you want to test esp32 without being on the assembled pcb turn these va
 ADS_MOCK_BYPASS true
 ADS_A_MOCK_BYPASS true
 TANK_PRESSURE_MOCK true
-SCREEN_MOODE false
+SCREEN_ENABLED false
 
 For prod use you should turn any mock or test features off
  */
