@@ -12,57 +12,56 @@
 #include "airSuspensionUtil.h"
 #include "tasks/tasks.h"
 
+void setup()
+{
+    Serial.begin(SERIAL_BAUD_RATE);
+    beginEEPROM();
+    bt.begin(BT_NAME);
 
-void setup() {
-  Serial.begin(SERIAL_BAUD_RATE);
-  beginEEPROM();
-  bt.begin(BT_NAME);
+    delay(200); // wait for voltage stabilize
 
-  delay(200); // wait for voltage stabilize
+    Serial.println(F("Startup!"));
 
-  Serial.println(F("Startup!"));
+    setupManifold();
 
-  setupManifold();
+#if SCREEN_ENABLED == true
 
-  #if SCREEN_ENABLED == true
-  
-  #endif
-  
-  delay(20);
+#endif
 
-  wheel[WHEEL_FRONT_PASSENGER] = new Wheel(manifold->get(FRONT_PASSENGER_IN), manifold->get(FRONT_PASSENGER_OUT), pressureInputFrontPassenger, WHEEL_FRONT_PASSENGER);
-  wheel[WHEEL_REAR_PASSENGER] = new Wheel(manifold->get(REAR_PASSENGER_IN), manifold->get(REAR_PASSENGER_OUT), pressureInputRearPassenger, WHEEL_REAR_PASSENGER);
-  wheel[WHEEL_FRONT_DRIVER] = new Wheel(manifold->get(FRONT_DRIVER_IN), manifold->get(FRONT_DRIVER_OUT), pressureInputFrontDriver, WHEEL_FRONT_DRIVER);
-  wheel[WHEEL_REAR_DRIVER] = new Wheel(manifold->get(REAR_DRIVER_IN), manifold->get(REAR_DRIVER_OUT), pressureInputRearDriver, WHEEL_REAR_DRIVER);
+    delay(20);
 
-  compressor = new Compressor(compressorRelayPin, pressureInputTank);
+    wheel[WHEEL_FRONT_PASSENGER] = new Wheel(manifold->get(FRONT_PASSENGER_IN), manifold->get(FRONT_PASSENGER_OUT), pressureInputFrontPassenger, WHEEL_FRONT_PASSENGER);
+    wheel[WHEEL_REAR_PASSENGER] = new Wheel(manifold->get(REAR_PASSENGER_IN), manifold->get(REAR_PASSENGER_OUT), pressureInputRearPassenger, WHEEL_REAR_PASSENGER);
+    wheel[WHEEL_FRONT_DRIVER] = new Wheel(manifold->get(FRONT_DRIVER_IN), manifold->get(FRONT_DRIVER_OUT), pressureInputFrontDriver, WHEEL_FRONT_DRIVER);
+    wheel[WHEEL_REAR_DRIVER] = new Wheel(manifold->get(REAR_DRIVER_IN), manifold->get(REAR_DRIVER_OUT), pressureInputRearDriver, WHEEL_REAR_DRIVER);
 
-  readProfile(getBaseProfile());
+    compressor = new Compressor(compressorRelayPin, pressureInputTank);
 
-  readPressures();
+    readProfile(getBaseProfile());
 
-  setup_tasks();
+    readPressures();
 
+    setup_tasks();
 
-  #if TEST_MODE == false
-    if (getRiseOnStart() == true) {
-      airUp();
+#if TEST_MODE == false
+    if (getRiseOnStart() == true)
+    {
+        airUp();
     }
-  #endif
+#endif
 
-  Serial.println(F("Startup Complete"));
+    Serial.println(F("Startup Complete"));
 }
-
 
 bool pause_exe = false;
-void loop() {
-  if (pause_exe == false) {
-    pressureGoalRoutine();
-  }
-  
-  delay(1);
+void loop()
+{
+    if (pause_exe == false)
+    {
+        pressureGoalRoutine();
+    }
+
+    saveEEPROMLoop();
+
+    delay(1);
 }
-
-
-
-

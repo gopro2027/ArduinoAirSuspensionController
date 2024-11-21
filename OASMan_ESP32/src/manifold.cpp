@@ -2,14 +2,15 @@
 
 Manifold::Manifold() {}
 
-Manifold::Manifold(InputType * fpi,
-                    InputType * fpo,
-                    InputType * rpi,
-                    InputType * rpo,
-                    InputType * fdi,
-                    InputType * fdo,
-                    InputType * rdi,
-                    InputType * rdo) {
+Manifold::Manifold(InputType *fpi,
+                   InputType *fpo,
+                   InputType *rpi,
+                   InputType *rpo,
+                   InputType *fdi,
+                   InputType *fdo,
+                   InputType *rdi,
+                   InputType *rdo)
+{
     this->solenoidList[FRONT_PASSENGER_IN] = fpi;
     this->solenoidList[FRONT_PASSENGER_OUT] = fpo;
     this->solenoidList[REAR_PASSENGER_IN] = rpi;
@@ -21,27 +22,35 @@ Manifold::Manifold(InputType * fpi,
     this->wheelSolenoidMask = 0;
 }
 
-InputType *Manifold::get(SOLENOID_INDEX solenoid) {
+InputType *Manifold::get(SOLENOID_INDEX solenoid)
+{
     return this->solenoidList[solenoid];
 }
 
-InputType **Manifold::getAll() {
+InputType **Manifold::getAll()
+{
     return this->solenoidList;
 }
 
-void Manifold::pauseValvesForBlockingTask() {
+void Manifold::pauseValvesForBlockingTask()
+{
     this->wheelSolenoidMask = 0;
-    for (int i = 0; i < 8; i++) {
-        bool val = this->solenoidList[i]->digitalRead() == HIGH; //valve is open
-        if (val) {
+    for (int i = 0; i < 8; i++)
+    {
+        bool val = this->solenoidList[i]->digitalRead() == HIGH; // valve is open
+        if (val)
+        {
             this->wheelSolenoidMask = this->wheelSolenoidMask | (1 << i);
             this->solenoidList[i]->digitalWrite(LOW);
         }
     }
 }
-void Manifold::unpauseValvesForBlockingTaskCompleted() {
-    for (int i = 0; i < 8; i++) {
-        if ((this->wheelSolenoidMask & (1 << i)) > 0) {
+void Manifold::unpauseValvesForBlockingTaskCompleted()
+{
+    for (int i = 0; i < 8; i++)
+    {
+        if ((this->wheelSolenoidMask & (1 << i)) > 0)
+        {
             this->solenoidList[i]->digitalWrite(HIGH);
         }
     }

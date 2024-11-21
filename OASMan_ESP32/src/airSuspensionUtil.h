@@ -19,7 +19,6 @@ extern Adafruit_ADS1115 ADS1115B;
 #endif
 #endif
 
-
 Manifold *getManifold();
 Wheel *getWheel(int i);
 void setRideHeightFrontPassenger(byte value);
@@ -39,6 +38,5 @@ void airUpRelativeToAverage(int value);
 int getTankPressure();
 void readPressures();
 void compressorLogic();
-
 
 #endif

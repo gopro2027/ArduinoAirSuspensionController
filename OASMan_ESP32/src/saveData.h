@@ -6,15 +6,17 @@
 
 #include "user_defines.h"
 
-struct Profile {
-  byte pressure[4];
+struct Profile
+{
+    byte pressure[4];
 };
 
-struct EEPROM_DATA_ {
-  byte riseOnStart;
-  byte baseProfile;
-  byte raiseOnPressure;
-  Profile profile[MAX_PROFILE_COUNT];
+struct EEPROM_DATA_
+{
+    byte riseOnStart;
+    byte baseProfile;
+    byte raiseOnPressure;
+    Profile profile[MAX_PROFILE_COUNT];
 };
 #define EEPROM_SIZE sizeof(EEPROM_DATA_)
 
@@ -23,6 +25,7 @@ extern byte currentProfile[4];
 extern bool sendProfileBT;
 
 void saveEEPROM();
+void saveEEPROMLoop();
 void beginEEPROM();
 void readProfile(byte profileIndex);
 void writeProfile(byte profileIndex);

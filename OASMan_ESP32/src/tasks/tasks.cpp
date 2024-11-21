@@ -1,87 +1,95 @@
 #include "tasks.h"
 
-void task_bluetooth(void *parameters) {
-  for (;;) {
-    bt_cmd();
-    task_sleep(10);
-  }
+void task_bluetooth(void *parameters)
+{
+    for (;;)
+    {
+        bt_cmd();
+        task_sleep(10);
+    }
 }
 
 #if SCREEN_ENABLED == true
-void task_screen(void *parameters) {
+void task_screen(void *parameters)
+{
     // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-    if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-        for(;;) {
+    if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
+    {
+        for (;;)
+        {
             Serial.println(F("SSD1306 allocation failed, screen not connected!"));
             task_sleep(100);
         }
     }
     drawsplashscreen();
-    for (;;) {
-      drawPSIReadings();
-      task_sleep(100); // 10fps should be plenty
+    for (;;)
+    {
+        drawPSIReadings();
+        task_sleep(100); // 10fps should be plenty
     }
 }
 
 #endif
 
-void task_readPressures(void *parameters) {
-  for (;;) {
-    if (!isAnyWheelActive()) {
-        readPressures();
+void task_readPressures(void *parameters)
+{
+    for (;;)
+    {
+        if (!isAnyWheelActive())
+        {
+            readPressures();
+        }
+        task_sleep(100);
     }
-    task_sleep(100);
-  }
 }
 
-void task_compressor(void *parameters) {
-  for (;;) {
-    compressorLogic();
-    task_sleep(100);
-  }
+void task_compressor(void *parameters)
+{
+    for (;;)
+    {
+        compressorLogic();
+        task_sleep(100);
+    }
 }
 
-void setup_tasks() {
-  // Bluetooth Task
+void setup_tasks()
+{
+
+    // Bluetooth Task
     xTaskCreate(
         task_bluetooth,
         "Bluetooth",
         1024,
         NULL,
-        1000, 
-        NULL
-    );
+        1000,
+        NULL);
 
 #if SCREEN_ENABLED == true
-// Manifold OLED Task
+    // Manifold OLED Task
     xTaskCreate(
         task_screen,
         "OLED",
         1024,
         NULL,
-        1000, 
-        NULL
-    );
-    #endif
+        1000,
+        NULL);
+#endif
 
-      // Read Pressures Task
+    // Read Pressures Task
     xTaskCreate(
         task_readPressures,
         "Read Pressures",
         1024,
         NULL,
-        1000, 
-        NULL
-    );
+        1000,
+        NULL);
 
-      // Compressor Control Task
+    // Compressor Control Task
     xTaskCreate(
         task_compressor,
         "Compressor Control",
-        1024,
+        512 * 3,
         NULL,
-        1000, 
-        NULL
-    );
-
+        1000,
+        NULL);
 }
