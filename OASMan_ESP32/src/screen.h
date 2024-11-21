@@ -9,10 +9,10 @@
 #include "bitmaps.h"
 #include "user_defines.h"
 #include "airSuspensionUtil.h"
+#include "tasks/taskUtil.h"
 
 extern Adafruit_SSD1306 display;
 
-//#if SCREEN_ENABLED == true
 void drawPSIReadings();
 void drawsplashscreen();
 

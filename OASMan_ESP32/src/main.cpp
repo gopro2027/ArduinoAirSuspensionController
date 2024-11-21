@@ -10,7 +10,7 @@
 #include "bt.h"
 #include "saveData.h"
 #include "airSuspensionUtil.h"
-#include "screen.h"
+#include "tasks/tasks.h"
 
 
 void setup() {
@@ -25,11 +25,7 @@ void setup() {
   setupManifold();
 
   #if SCREEN_ENABLED == true
-  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
-  }
+  
   #endif
   
   delay(20);
@@ -45,9 +41,8 @@ void setup() {
 
   readPressures();
 
-  #if SCREEN_ENABLED == true
-  drawsplashscreen();
-  #endif
+  setup_tasks();
+
 
   #if TEST_MODE == false
     if (getRiseOnStart() == true) {
@@ -59,28 +54,15 @@ void setup() {
 }
 
 
-
-const int sensorreadDelay = 100; //constant integer to set the sensor read delay in milliseconds
-unsigned long lastPressureReadTime = 0;
 bool pause_exe = false;
 void loop() {
-  compressorLogic();
-  bt_cmd();
   if (pause_exe == false) {
-    if (millis() - lastPressureReadTime > sensorreadDelay) {
-      if (!isAnyWheelActive()) {
-        readPressures();
-      }
-      lastPressureReadTime = millis();
-    }
-#if SCREEN_ENABLED == true
-    drawPSIReadings();
-#endif
-
     pressureGoalRoutine();
-  
   }
   
-  delay(10);
+  delay(1);
 }
+
+
+
 

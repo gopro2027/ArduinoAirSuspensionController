@@ -14,7 +14,7 @@
 #define TEST_MODE false
 
 /* LCD screen definitions */
-#define SCREEN_ENABLED true
+#define SCREEN_ENABLED false
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
