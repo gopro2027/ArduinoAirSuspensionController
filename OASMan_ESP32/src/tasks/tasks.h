@@ -4,9 +4,9 @@
 #include <Arduino.h>
 
 #include "user_defines.h"
-#include "screen.h"
+#include "components/screen.h"
 #include "taskUtil.h"
-#include "bt.h"
+#include "bluetooth/bt.h"
 
 void setup_tasks();
 

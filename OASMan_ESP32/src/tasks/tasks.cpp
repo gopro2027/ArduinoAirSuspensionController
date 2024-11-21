@@ -2,6 +2,8 @@
 
 void task_bluetooth(void *parameters)
 {
+    bt.begin(BT_NAME);
+    task_sleep(200); // just wait a second
     for (;;)
     {
         bt_cmd();
@@ -17,7 +19,7 @@ void task_screen(void *parameters)
     {
         for (;;)
         {
-            Serial.println(F("SSD1306 allocation failed, screen not connected!"));
+            Serial.println(F("SSD1306 allocation failed!"));
             task_sleep(100);
         }
     }
@@ -59,7 +61,7 @@ void setup_tasks()
     xTaskCreate(
         task_bluetooth,
         "Bluetooth",
-        1024,
+        512 * 4,
         NULL,
         1000,
         NULL);
@@ -69,7 +71,7 @@ void setup_tasks()
     xTaskCreate(
         task_screen,
         "OLED",
-        1024,
+        512 * 2,
         NULL,
         1000,
         NULL);
@@ -79,7 +81,7 @@ void setup_tasks()
     xTaskCreate(
         task_readPressures,
         "Read Pressures",
-        1024,
+        512 * 2,
         NULL,
         1000,
         NULL);

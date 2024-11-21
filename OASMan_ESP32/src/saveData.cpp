@@ -17,9 +17,7 @@ void saveEEPROMLoop()
         // portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
         // taskENTER_CRITICAL(&myMutex);
         EEPROM.put(0, EEPROM_DATA);
-        Serial.println("put data");
-        EEPROM.commit(); // crashes for some reason unfortunately
-        Serial.println("commit data");
+        EEPROM.commit(); // this will crash if called from a task and not the main loop
         // taskEXIT_CRITICAL(&myMutex);
     }
 }
@@ -87,11 +85,9 @@ bool getRaiseOnPressureSet()
 }
 void setRaiseOnPressureSet(bool value)
 {
-    Serial.println("ROPS ");
     if (getRaiseOnPressureSet() != value)
     {
         EEPROM_DATA.raiseOnPressure = value;
-        Serial.println("Saving eeprom ");
         saveEEPROM();
     }
 }

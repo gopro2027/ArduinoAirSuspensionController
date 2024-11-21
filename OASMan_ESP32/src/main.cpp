@@ -2,12 +2,9 @@
 
 #include "user_defines.h"
 #include "input_type.h"
-#include "solenoid.h"
-#include "manifold.h"
-#include "wheel.h"
-#include "compressor.h"
+#include "components/wheel.h"
+#include "components/compressor.h"
 #include "bitmaps.h"
-#include "bt.h"
 #include "saveData.h"
 #include "airSuspensionUtil.h"
 #include "tasks/tasks.h"
@@ -16,7 +13,6 @@ void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
     beginEEPROM();
-    bt.begin(BT_NAME);
 
     delay(200); // wait for voltage stabilize
 
@@ -61,7 +57,7 @@ void loop()
         pressureGoalRoutine();
     }
 
-    saveEEPROMLoop();
+    saveEEPROMLoop(); // eeprom cannot be saved from inside a task very easily. Easy enough just to tell it to save here in the main loop
 
     delay(1);
 }

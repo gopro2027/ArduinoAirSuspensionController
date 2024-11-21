@@ -2,9 +2,9 @@
 #define airSuspensionUtil_h
 
 #include "user_defines.h"
-#include "manifold.h"
-#include "compressor.h"
-#include "wheel.h"
+#include "components/manifold.h"
+#include "components/compressor.h"
+#include "components/wheel.h"
 #include "saveData.h"
 
 extern Manifold *manifold;
