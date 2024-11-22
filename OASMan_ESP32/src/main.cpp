@@ -35,8 +35,6 @@ void setup()
 
     readProfile(getBaseProfile());
 
-    readPressures();
-
     setup_tasks();
 
 #if TEST_MODE == false
@@ -49,15 +47,10 @@ void setup()
     Serial.println(F("Startup Complete"));
 }
 
-bool pause_exe = false;
 void loop()
 {
-    if (pause_exe == false)
-    {
-        pressureGoalRoutine();
-    }
 
     saveEEPROMLoop(); // eeprom cannot be saved from inside a task very easily. Easy enough just to tell it to save here in the main loop
 
-    delay(1);
+    delay(1000); // lmao we only have an eeprom so i guess just save every second roughly
 }

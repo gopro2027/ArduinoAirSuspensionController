@@ -10,7 +10,6 @@
 extern Manifold *manifold;
 extern Compressor *compressor;
 extern Wheel *wheel[4];
-extern bool skipPerciseSet;
 
 #if USE_ADS == true
 extern Adafruit_ADS1115 ADS1115A;
@@ -28,15 +27,10 @@ void setRideHeightRearDriver(byte value);
 void initializeADS();
 void setupManifold();
 bool isAnyWheelActive();
-void setGoToPressureGoalPercise(byte wheelnum);
-void setNotGoToPressureGoalPercise(byte wheelnum);
-bool shouldDoPressureGoalOnWheel(byte wheelnum);
-void pressureGoalRoutine();
-void airUp();
+void airUp(bool quick = false);
 void airOut();
 void airUpRelativeToAverage(int value);
 int getTankPressure();
-void readPressures();
 void compressorLogic();
 
 #endif

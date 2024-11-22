@@ -2,6 +2,8 @@
 
 BluetoothSerial bt;
 
+bool runInput();
+
 void sendHeartbeat()
 {
     bt.print(F(PASSWORD));
@@ -38,6 +40,7 @@ char *outString = "";
 // String inString = "";
 char inBuffer[30];
 unsigned long lastHeartbeat = 0;
+bool currentlyWaitingForBTSerialDataToEnd = false;
 void bt_cmd()
 {
     if (millis() - lastHeartbeat > 500)
@@ -67,7 +70,7 @@ void bt_cmd()
     {
 
         // Get input as string
-        if (pause_exe == false)
+        if (currentlyWaitingForBTSerialDataToEnd == false)
         {
             if (bt.available())
             {
@@ -75,8 +78,8 @@ void bt_cmd()
                 {
                     Serial.read();
                 }
-                delay(200);
-                pause_exe = true;
+                task_sleep(200); // add a little pause so bt has a chance to load in the rest of the command first... not sure if it is required but it's legacy code and i don't want to test it bc we are scrapping it soon for BLE
+                currentlyWaitingForBTSerialDataToEnd = true;
                 return;
             }
         }
@@ -97,8 +100,8 @@ void bt_cmd()
                     outString = "ERRUNK";
                 }
                 memset(inBuffer, 0, sizeof(inBuffer));
-                pause_exe = false; // unpause
-                continue;          // just to skip writing out the original \n, could also be break but whatever
+                currentlyWaitingForBTSerialDataToEnd = false; // unpause
+                continue;                                     // just to skip writing out the original \n, could also be break but whatever
             }
             inBuffer[strlen(inBuffer)] = c;
             Serial.print(c);
@@ -125,9 +128,6 @@ const char _AIRHEIGHTC[] PROGMEM = PASSWORD "AIRHEIGHTC\0";
 const char _AIRHEIGHTD[] PROGMEM = PASSWORD "AIRHEIGHTD\0";
 const char _RISEONSTART[] PROGMEM = PASSWORD "RISEONSTART\0";
 const char _RAISEONPRESSURESET[] PROGMEM = PASSWORD "ROPS\0";
-#if TEST_MODE == true
-const char _TESTSOL[] PROGMEM = PASSWORD "TESTSOL\0";
-#endif
 
 bool comp(char *str1, const char str2[])
 {
@@ -169,7 +169,6 @@ bool runInput()
     {
         int value = trailingInt(_AIRSM);
         airUpRelativeToAverage(value);
-        skipPerciseSet = true; // will be reset by any call to Wheel::initPressureGoal
         return true;
     }
     else if (comp(inBuffer, _SAVETOPROFILE))
@@ -211,8 +210,7 @@ bool runInput()
         }
         // load profile then air up
         readProfile(profileIndex);
-        airUp();
-        skipPerciseSet = true; // will be reset by any call to Wheel::initPressureGoal
+        airUp(true);
         return true;
     }
     else if (comp(inBuffer, _AIRHEIGHTA))
@@ -265,19 +263,5 @@ bool runInput()
         }
         return true;
     }
-#if TEST_MODE == true
-    else if (comp(inBuffer, _TESTSOL))
-    {
-        unsigned long pin = trailingInt(_TESTSOL);
-        Serial.println(pin);
-        if (pin >= 6 && pin <= 13)
-        {
-            digitalWrite(pin, HIGH);
-            delay(1000); // sleep 100ms
-            digitalWrite(pin, LOW);
-        }
-        return true;
-    }
-#endif
     return false;
 }

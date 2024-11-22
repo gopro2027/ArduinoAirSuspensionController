@@ -81,6 +81,9 @@
 #define WHEEL_FRONT_DRIVER 2
 #define WHEEL_REAR_DRIVER 3
 
+/* The amount of time the pressure routine will try to reach the goal pressure before 'giving up' (usually due to lower pressure in tank or something) Default is 10 seconds. */
+#define ROUTINE_TIMEOUT_MS 10 * 1000
+
 #endif
 
 /*
