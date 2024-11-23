@@ -2,40 +2,44 @@
 #include <Wire.h>
 #include <SPI.h>
 
-int getTankPressure(); // from main
-
 struct PressureGoalValveTiming
 {
     int pressureDelta;          // the pressure percision that we are trying to achieve
     int valveTimingUntilWithin; // the amount of time we will leave the valve open until we get within the range of goalPressure +- pressureDelta
+    bool isPerciseMeasurement;  // when using air up quick type functions, will not take into account ones that are set to true here
 };
 
 // Must put in sorted order of largest to smallest
 PressureGoalValveTiming valveTiming[] = {
-    {10, 500}, // if current psi outside range of goalPressure +- 10psi, open valves for 500ms until +- 10psi achieved
-    {5, 100},  // if current psi outside range of goalPressure +- 6psi, open valves for 100ms until +- 6psi achieved
-    {1, 10},   // if current psi outside range of goalPressure +- 1psi, open valves for 100ms until +- 1psi achieved
+    {10, 500, false}, // if current psi outside range of goalPressure +- 10psi, open valves for 500ms until +- 10psi achieved
+    {5, 100, false},  // if current psi outside range of goalPressure +- 6psi, open valves for 100ms until +- 6psi achieved
+    {0, 10, true},    // if current psi outside range of goalPressure +- 0psi (aka psi is not yet exactly goalPressure), open valves for 10ms until exact goal pressure is achieved. Will not be used in quick mode
 };
-#define VALVE_TIMING_LIST_COUNT 3 // the number of valve timing you have defined above
-int getMinValveOpenPSI()
-{
-    return valveTiming[VALVE_TIMING_LIST_COUNT - 1].pressureDelta;
-}
+#define VALVE_TIMING_LIST_COUNT (sizeof(valveTiming) / sizeof(PressureGoalValveTiming))
 
 // This function can be updated in the future to use some better algorithm to decide how long to open the valves for to reach the desigred pressure
-int Wheel::calculateValveOpenTimeMS(int pressureDifferenceAbsolute)
+int calculateValveOpenTimeMS(int pressureDifferenceAbsolute, bool quickMode)
 {
+    int lastTime = valveTiming[0].valveTimingUntilWithin;
     for (int i = 0; i < VALVE_TIMING_LIST_COUNT; i++)
     {
+        if (quickMode && valveTiming[i].isPerciseMeasurement)
+        {
+            return lastTime;
+        }
         if (pressureDifferenceAbsolute > valveTiming[i].pressureDelta)
         {
             return valveTiming[i].valveTimingUntilWithin;
         }
+        lastTime = valveTiming[i].valveTimingUntilWithin;
     }
-    return 0;
+    return lastTime; // should never get to this case but if it does it returns the smallest time
 }
 
-const int pressureAdjustment = 0; // static adjustment
+int getMinValveOpenPSI(bool quickMode)
+{
+    return calculateValveOpenTimeMS(0, quickMode);
+}
 
 Wheel::Wheel() {}
 
@@ -47,8 +51,12 @@ Wheel::Wheel(InputType *solenoidInPin, InputType *solenoidOutPin, InputType *pre
     this->s_AirOut = Solenoid(solenoidOutPin);
     this->pressureValue = 0;
     this->pressureGoal = 0;
+    this->routineStartTime = 0;
     this->flagStartPressureGoalRoutine = false;
+    this->quickMode = false;
 }
+
+const int pressureAdjustment = 0; // static adjustment
 
 float readPinPressure(InputType *pin)
 {
@@ -80,19 +88,20 @@ bool Wheel::isActive()
 
 void Wheel::initPressureGoal(int newPressure, bool quick)
 {
-    // TODO: Implement the quick part
     if (newPressure > MAX_PRESSURE_SAFETY)
     {
-        // hardcode not to go above 150PSI
+        // hardcode not to go above set psi
         return;
     }
     int pressureDif = newPressure - this->getPressure(); // negative if airing out, positive if airing up
-    if (abs(pressureDif) > getMinValveOpenPSI())
+    if (abs(pressureDif) > getMinValveOpenPSI(quick))
     {
-        // okay we need to set the values
-        if (pressureDif < 0 || getTankPressure() > newPressure)
+        // okay we need to set the values, but only if we are airing out or if the tank has more pressure than what is currently in the bags
+        if (pressureDif < 0 || getTankPressure() > this->getPressure())
         {
             this->pressureGoal = newPressure;
+            this->quickMode = quick;
+            this->routineStartTime = millis();
             this->flagStartPressureGoalRoutine = true;
         }
     }
@@ -105,11 +114,10 @@ void Wheel::loop()
     if (this->flagStartPressureGoalRoutine)
     {
         this->flagStartPressureGoalRoutine = false;
-        unsigned long routineStartTime = millis();
         for (;;)
         {
             // 10 second timeout in case tank doesn't have a whole lot of air or something
-            if (millis() > routineStartTime + ROUTINE_TIMEOUT_MS)
+            if (millis() > this->routineStartTime + ROUTINE_TIMEOUT_MS)
             {
                 break;
             }
@@ -119,7 +127,7 @@ void Wheel::loop()
             int pressureDif = this->pressureGoal - this->getPressure();
             int pressureDifABS = abs(pressureDif);
 
-            if (pressureDifABS > getMinValveOpenPSI())
+            if (pressureDifABS > getMinValveOpenPSI(this->quickMode))
             {
                 // Decide which valve to use
                 Solenoid *valve;
@@ -133,7 +141,7 @@ void Wheel::loop()
                 }
 
                 // Choose time to open for
-                int valveTime = this->calculateValveOpenTimeMS(pressureDifABS);
+                int valveTime = calculateValveOpenTimeMS(pressureDifABS, this->quickMode);
 
                 // Open valve for calculated time
                 valve->open();

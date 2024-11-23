@@ -15,15 +15,14 @@ private:
     byte thisWheelNum;
 
     byte pressureGoal;
-    bool flagStartPressureGoalRoutine;
+    unsigned long routineStartTime;
+    bool flagStartPressureGoalRoutine; // flag to tell it to start routine to pressureGoal
+    bool quickMode;                    // flag to skip extra percise measurements
 
     float pressureValue;
 
     Solenoid s_AirIn;
     Solenoid s_AirOut;
-
-    int calculateValveOpenTimeMS(int pressureDifferenceAbsolute);
-    void safetyCheckRelease();
 
 public:
     Wheel();
@@ -33,12 +32,12 @@ public:
     void readPressure();
     float getPressure();
     bool isActive();
-    void calcAvg();
 };
 
 float readPinPressure(InputType *pin);
 
 // janky fix because i can't import airSuspensionUtil.h due to circular import I think
 extern Manifold *getManifold();
+extern int getTankPressure();
 
 #endif
