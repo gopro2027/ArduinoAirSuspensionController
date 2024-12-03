@@ -4,7 +4,9 @@ import 'package:oasman_mobile/pages/home.dart';
 
 void main() {
   FlutterBluePlus.setLogLevel(LogLevel.verbose, color: true);
-  runApp(const MyApp());
+  runApp(MaterialApp(
+    home: const MyApp(),
+  ));
 }
 
 class MyApp extends StatelessWidget {
