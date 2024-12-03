@@ -7,17 +7,7 @@
 
 #include "airSuspensionUtil.h"
 
-// values
 extern BluetoothSerial bt;
-extern bool pause_exe;
-
-// functions
-void sendHeartbeat();
-void sendCurrentProfileData();
 void bt_cmd();
-bool runInput();
-int trailingInt(const char str[]);
-bool comp(char *str1, const char str2[]);
-bool runInput();
 
 #endif

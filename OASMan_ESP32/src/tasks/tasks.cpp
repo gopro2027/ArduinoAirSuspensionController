@@ -33,23 +33,21 @@ void task_screen(void *parameters)
 
 #endif
 
-void task_readPressures(void *parameters)
-{
-    for (;;)
-    {
-        if (!isAnyWheelActive())
-        {
-            readPressures();
-        }
-        task_sleep(100);
-    }
-}
-
 void task_compressor(void *parameters)
 {
     for (;;)
     {
         compressorLogic();
+        task_sleep(100);
+    }
+}
+
+// NOTICE: Parameters is supposed to be an array, but idc im just gonna make it the Wheel * because I can. No need to actually create an array to pass it in.
+void task_wheel(void *parameters)
+{
+    for (;;)
+    {
+        ((Wheel *)parameters)->loop();
         task_sleep(100);
     }
 }
@@ -77,15 +75,6 @@ void setup_tasks()
         NULL);
 #endif
 
-    // Read Pressures Task
-    xTaskCreate(
-        task_readPressures,
-        "Read Pressures",
-        512 * 2,
-        NULL,
-        1000,
-        NULL);
-
     // Compressor Control Task
     xTaskCreate(
         task_compressor,
@@ -94,4 +83,16 @@ void setup_tasks()
         NULL,
         1000,
         NULL);
+
+    // Wheel Tasks
+    for (int i = 0; i < 4; i++)
+    {
+        xTaskCreate(
+            task_wheel,
+            "Wheel Task",
+            512 * 2,
+            getWheel(i),
+            1000,
+            NULL);
+    }
 }
