@@ -9,6 +9,8 @@ https://github.com/Dlloydev/QuickPID
 https://github.com/Dlloydev/sTune
  */
 
+#if pressure_math_remove_this_line
+
 #include <iostream>
 #include <cmath>
 
@@ -92,6 +94,8 @@ int main()
 
     return 0;
 }
+
+#endif
 
 // ```
 

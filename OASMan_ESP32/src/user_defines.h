@@ -7,6 +7,8 @@
 
 #define MAX_PRESSURE_SAFETY 200
 
+#define ENABLE_PS3_CONTROLLER_SUPPORT true
+
 /* This is the private passcode you need to access your system from the app. Set the same value in the app settings after launching the app. */
 #define PASSWORD "12345678"
 
