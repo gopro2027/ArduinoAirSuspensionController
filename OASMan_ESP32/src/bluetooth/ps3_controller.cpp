@@ -221,18 +221,18 @@ void onConnect()
     Serial.println("Connected.");
 }
 
-void ps3_setup()
+void ps3_controller_setup()
 {
     Serial.begin(115200);
 
     Ps3.attach(notify);
     Ps3.attachOnConnect(onConnect);
-    Ps3.begin("01:02:03:04:05:06");
+    Ps3.begin(PS3_CONTROLLER_MAC);
 
     Serial.println("Ready.");
 }
 
-void ps3_loop()
+void ps3_controller_loop()
 {
     if (!Ps3.isConnected())
         return;

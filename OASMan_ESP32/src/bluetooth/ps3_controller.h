@@ -7,6 +7,9 @@
 
 #include <Ps3Controller.h>
 
+void ps3_controller_setup();
+void ps3_controller_loop();
+
 #endif
 
 #endif
