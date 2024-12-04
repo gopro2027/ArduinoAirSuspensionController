@@ -1,5 +1,7 @@
 #include "saveData.h"
 
+// TODO: Replace eeprom with preferences library
+
 EEPROM_DATA_ EEPROM_DATA;
 byte currentProfile[4];
 bool sendProfileBT = false;
@@ -23,6 +25,7 @@ void saveEEPROMLoop()
 }
 void beginEEPROM()
 {
+    Serial.println(EEPROM_SIZE);
     EEPROM.begin(EEPROM_SIZE);
     EEPROM.get(0, EEPROM_DATA);
 }
@@ -88,6 +91,19 @@ void setRaiseOnPressureSet(bool value)
     if (getRaiseOnPressureSet() != value)
     {
         EEPROM_DATA.raiseOnPressure = value;
+        saveEEPROM();
+    }
+}
+
+bool getPS3ControllerMode()
+{
+    return EEPROM_DATA.ps3Mode;
+}
+void setPS3ControllerMode(bool value)
+{
+    if (getPS3ControllerMode() != value)
+    {
+        EEPROM_DATA.ps3Mode = value;
         saveEEPROM();
     }
 }
