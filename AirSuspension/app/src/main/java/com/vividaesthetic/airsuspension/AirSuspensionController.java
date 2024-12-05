@@ -374,6 +374,15 @@ public class AirSuspensionController {
         });
     }
 
+    public void setPS3Mode() {
+        queBluetoothCommand(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("PS3C\n");
+                setMessageToDisplayOnCommandSuccess("Booting into PS3 Mode");
+            }
+        });
+    }
+
     // Only usable when TEST_MODE is enabled on the arduino
     public void testSolenoid(int pinNum) {
         queBluetoothCommand(() -> {

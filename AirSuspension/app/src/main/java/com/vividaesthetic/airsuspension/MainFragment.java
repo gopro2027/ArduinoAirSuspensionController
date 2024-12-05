@@ -193,6 +193,25 @@ public class MainFragment extends Fragment {
             getAirSuspensionController().setMaintainPressure(false);
         });
 
+        binding.buttonPs3controller.setOnClickListener(v -> {
+            DialogInterface.OnClickListener dialogClickListener = (dialog, which) -> {
+                switch (which){
+                    case DialogInterface.BUTTON_POSITIVE:
+                        //Yes button clicked
+                        getAirSuspensionController().setPS3Mode();
+                        break;
+
+                    case DialogInterface.BUTTON_NEGATIVE:
+                        //No button clicked
+                        break;
+                }
+            };
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setMessage("Are you sure you want to reboot into PS3 controller mode? The next boot after will boot back into normal mode. Or you can press 'start + select' to boot back into normal mode. Use SixaxisPairTool to set your controller to 00:00:00:00:00:00 to be able to connect. More info on the OASMan github!").setPositiveButton("Yes", dialogClickListener)
+                    .setNegativeButton("No", dialogClickListener).show();
+        });
+
         getAirSuspensionController().setUpdatePressure((fp, rp, fd, rd, tank) -> {
             if (binding != null) {
                 binding.pressureFp.setText(fp);

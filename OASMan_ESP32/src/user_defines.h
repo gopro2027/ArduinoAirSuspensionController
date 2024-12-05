@@ -7,6 +7,13 @@
 
 #define MAX_PRESSURE_SAFETY 200
 
+/* Bags generally do not like to sit at exactly 0psi. Please choose which pressure is desired for air out */
+#define AIR_OUT_PRESSURE_PSI 30
+
+/* Set to false if you don't plan to ever use the PS3 controller. MAC address can be left alone. Instructions for controller at https://github.com/gopro2027/ArduinoAirSuspensionController/tree/main/PS3_Controller_Tool */
+#define ENABLE_PS3_CONTROLLER_SUPPORT true
+#define DEBUG_ALWAYS_BOOT_PS3_CONTROLLER_MODE false
+
 /* This is the private passcode you need to access your system from the app. Set the same value in the app settings after launching the app. */
 #define PASSWORD "12345678"
 

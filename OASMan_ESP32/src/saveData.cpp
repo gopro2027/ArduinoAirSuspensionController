@@ -1,5 +1,7 @@
 #include "saveData.h"
 
+// TODO: Replace eeprom with preferences library
+
 EEPROM_DATA_ EEPROM_DATA;
 byte currentProfile[4];
 bool sendProfileBT = false;
@@ -19,6 +21,12 @@ void saveEEPROMLoop()
         EEPROM.put(0, EEPROM_DATA);
         EEPROM.commit(); // this will crash if called from a task and not the main loop
         // taskEXIT_CRITICAL(&myMutex);
+
+        if (EEPROM_DATA.ps3Mode)
+        {
+            // ps3 mode enabled, reboot
+            ESP.restart();
+        }
     }
 }
 void beginEEPROM()
@@ -88,6 +96,19 @@ void setRaiseOnPressureSet(bool value)
     if (getRaiseOnPressureSet() != value)
     {
         EEPROM_DATA.raiseOnPressure = value;
+        saveEEPROM();
+    }
+}
+
+bool getPS3ControllerMode()
+{
+    return EEPROM_DATA.ps3Mode;
+}
+void setPS3ControllerMode(bool value)
+{
+    if (getPS3ControllerMode() != value)
+    {
+        EEPROM_DATA.ps3Mode = value;
         saveEEPROM();
     }
 }

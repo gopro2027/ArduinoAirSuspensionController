@@ -132,10 +132,10 @@ void airUp(bool quick)
 
 void airOut()
 {
-    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(30);
-    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(30);
-    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(30);
-    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(30);
+    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
+    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
+    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
+    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
 }
 
 void airUpRelativeToAverage(int value)

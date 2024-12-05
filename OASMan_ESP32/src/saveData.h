@@ -16,6 +16,8 @@ struct EEPROM_DATA_
     byte riseOnStart;
     byte baseProfile;
     byte raiseOnPressure;
+    byte ps3Mode;
+    byte padding[80]; // decrement as neccessary to maintain EEPROM_DATA_ when adding info
     Profile profile[MAX_PROFILE_COUNT];
 };
 #define EEPROM_SIZE sizeof(EEPROM_DATA_)
@@ -35,5 +37,7 @@ byte getBaseProfile();
 void setBaseProfile(byte value);
 bool getRaiseOnPressureSet();
 void setRaiseOnPressureSet(bool value);
+bool getPS3ControllerMode();
+void setPS3ControllerMode(bool value);
 
 #endif

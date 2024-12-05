@@ -8,6 +8,10 @@
 #include "taskUtil.h"
 #include "bluetooth/bt.h"
 
+#if ENABLE_PS3_CONTROLLER_SUPPORT
+#include "bluetooth/ps3_controller.h"
+#endif
+
 void setup_tasks();
 
 #endif
