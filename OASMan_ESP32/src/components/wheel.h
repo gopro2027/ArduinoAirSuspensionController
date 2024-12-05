@@ -32,6 +32,8 @@ public:
     void readPressure();
     float getPressure();
     bool isActive();
+    Solenoid *getInSolenoid();
+    Solenoid *getOutSolenoid();
 };
 
 float readPinPressure(InputType *pin);

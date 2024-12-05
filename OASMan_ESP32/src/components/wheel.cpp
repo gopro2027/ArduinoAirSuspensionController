@@ -56,6 +56,16 @@ Wheel::Wheel(InputType *solenoidInPin, InputType *solenoidOutPin, InputType *pre
     this->quickMode = false;
 }
 
+Solenoid *Wheel::getInSolenoid()
+{
+    return &this->s_AirIn;
+}
+
+Solenoid *Wheel::getOutSolenoid()
+{
+    return &this->s_AirOut;
+}
+
 const int pressureAdjustment = 0; // static adjustment
 
 float readPinPressure(InputType *pin)

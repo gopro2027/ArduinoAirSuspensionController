@@ -40,7 +40,7 @@ void task_ps3_controller(void *parameters)
     for (;;)
     {
         ps3_controller_loop();
-        task_sleep(100);
+        task_sleep(500);
     }
 }
 #endif
@@ -67,10 +67,12 @@ void task_wheel(void *parameters)
 void setup_tasks()
 {
 
-    // hard code ps3Mode to false when not enabled
 #if ENABLE_PS3_CONTROLLER_SUPPORT
     bool ps3Mode = getPS3ControllerMode();
     setPS3ControllerMode(false); // tell it to turn off for the next boot.
+#if DEBUG_ALWAYS_BOOT_PS3_CONTROLLER_MODE
+    ps3Mode = true;
+#endif
 #else
     bool ps3Mode = false;
 #endif
