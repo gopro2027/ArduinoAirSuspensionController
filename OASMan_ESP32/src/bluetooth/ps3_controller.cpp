@@ -87,6 +87,18 @@ bool circlePressed = false;
 bool upPressed = false;
 bool downPressed = false;
 
+// This function is really conveluted, but it seems to fix the issue with sometimes the rumble getting cut off in some way by other updates
+bool skipNextPlayerUpate = false;
+void feedback()
+{
+    skipNextPlayerUpate = true;
+    delay(50); // this line is impportant bc if we send vibrate too close to a previous cmd it won't work
+    Ps3.setRumble(100.0, 100);
+    skipNextPlayerUpate = true;
+    delay(50);
+    skipNextPlayerUpate = true;
+}
+
 void notify()
 {
 
@@ -100,6 +112,7 @@ void notify()
         {
             Serial.println("[Dpad Up] Air up");
             airUp();
+            feedback();
         }
     }
 
@@ -111,6 +124,7 @@ void notify()
         {
             Serial.println("[Dpad Down] Air out");
             airOut();
+            feedback();
         }
     }
 
@@ -122,6 +136,7 @@ void notify()
         {
             Serial.println("[X] Profile 1");
             loadProfileAirUpQuick(0);
+            feedback();
         }
     }
 
@@ -133,6 +148,7 @@ void notify()
         {
             Serial.println("[Square] Profile 2");
             loadProfileAirUpQuick(1);
+            feedback();
         }
     }
 
@@ -144,6 +160,7 @@ void notify()
         {
             Serial.println("[Triangle] Profile 3");
             loadProfileAirUpQuick(2);
+            feedback();
         }
     }
 
@@ -155,6 +172,7 @@ void notify()
         {
             Serial.println("[Circle] Profile 4");
             loadProfileAirUpQuick(3);
+            feedback();
         }
     }
 
@@ -546,8 +564,6 @@ void setBatteryInLED()
         Ps3.setPlayer(4);
     else if (battery == ps3_status_battery_shutdown)
         Ps3.setPlayer(0); // idk what shutdown means lol i guess it's coming soon
-    else
-        Serial.println("UNDEFINED");
 }
 
 void onConnect()
@@ -569,7 +585,13 @@ void ps3_controller_loop()
     if (!Ps3.isConnected())
         return;
 
-    setBatteryInLED();
+    // cheeky fix for the rumble. sometimes calling the led function will shorten the rumble. Just bypass it once.
+    if (skipNextPlayerUpate == false)
+    {
+        setBatteryInLED();
+    }
+
+    skipNextPlayerUpate = false;
 
     //------ Digital cross/square/triangle/circle buttons ------
     // if (Ps3.data.button.cross && Ps3.data.button.down)

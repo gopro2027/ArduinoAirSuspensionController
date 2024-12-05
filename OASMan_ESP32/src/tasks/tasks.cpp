@@ -3,11 +3,11 @@
 void task_bluetooth(void *parameters)
 {
     bt.begin(BT_NAME);
-    task_sleep(200); // just wait a second
+    delay(200); // just wait a second
     for (;;)
     {
         bt_cmd();
-        task_sleep(10);
+        delay(10);
     }
 }
 
@@ -20,14 +20,14 @@ void task_screen(void *parameters)
         for (;;)
         {
             Serial.println(F("SSD1306 allocation failed!"));
-            task_sleep(100);
+            delay(100);
         }
     }
     drawsplashscreen();
     for (;;)
     {
         drawPSIReadings();
-        task_sleep(100); // 10fps should be plenty
+        delay(100); // 10fps should be plenty
     }
 }
 
@@ -40,7 +40,7 @@ void task_ps3_controller(void *parameters)
     for (;;)
     {
         ps3_controller_loop();
-        task_sleep(500);
+        delay(500);
     }
 }
 #endif
@@ -50,7 +50,7 @@ void task_compressor(void *parameters)
     for (;;)
     {
         compressorLogic();
-        task_sleep(100);
+        delay(100);
     }
 }
 
@@ -60,7 +60,7 @@ void task_wheel(void *parameters)
     for (;;)
     {
         ((Wheel *)parameters)->loop();
-        task_sleep(100);
+        delay(100);
     }
 }
 

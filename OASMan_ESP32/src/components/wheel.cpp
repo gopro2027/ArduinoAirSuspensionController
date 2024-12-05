@@ -155,11 +155,11 @@ void Wheel::loop()
 
                 // Open valve for calculated time
                 valve->open();
-                task_sleep(valveTime);
+                delay(valveTime);
                 valve->close();
 
                 // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
-                task_sleep(150);
+                delay(150);
             }
             else
             {

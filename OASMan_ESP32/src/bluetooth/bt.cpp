@@ -78,7 +78,7 @@ void bt_cmd()
                 {
                     Serial.read();
                 }
-                task_sleep(200); // add a little pause so bt has a chance to load in the rest of the command first... not sure if it is required but it's legacy code and i don't want to test it bc we are scrapping it soon for BLE
+                delay(200); // add a little pause so bt has a chance to load in the rest of the command first... not sure if it is required but it's legacy code and i don't want to test it bc we are scrapping it soon for BLE
                 currentlyWaitingForBTSerialDataToEnd = true;
                 return;
             }
