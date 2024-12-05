@@ -18,6 +18,7 @@
     <string name="setraiseonpressuresetdisabled">Raise On Pressure Set [Off]</string>
     <string name="maintainpressureenabled">Maintain Pressure [On]</string>
     <string name="maintainpressuredisabled">Maintain Pressure [Off]</string>
+    <string name="ps3mode">Boot Into PS3 Mode</string>
     <string name="connect">Connect</string>
     <string name="app_widget_description">Quick Control Ride Height</string>
     <string name="app_widget_description_2">View Airbag Pressure</string>

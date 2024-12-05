@@ -21,6 +21,12 @@ void saveEEPROMLoop()
         EEPROM.put(0, EEPROM_DATA);
         EEPROM.commit(); // this will crash if called from a task and not the main loop
         // taskEXIT_CRITICAL(&myMutex);
+
+        if (EEPROM_DATA.ps3Mode)
+        {
+            // ps3 mode enabled, reboot
+            ESP.restart();
+        }
     }
 }
 void beginEEPROM()

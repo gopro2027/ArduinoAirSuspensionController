@@ -9,7 +9,6 @@
 
 /* Set to false if you don't plan to ever use the PS3 controller. MAC address can be left alone. Instructions for controller at https://github.com/gopro2027/ArduinoAirSuspensionController/tree/main/PS3_Controller_Tool */
 #define ENABLE_PS3_CONTROLLER_SUPPORT true
-#define PS3_CONTROLLER_MAC "00:00:00:00:00:00"
 
 /* This is the private passcode you need to access your system from the app. Set the same value in the app settings after launching the app. */
 #define PASSWORD "12345678"

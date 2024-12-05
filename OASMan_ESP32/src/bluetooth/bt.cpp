@@ -268,9 +268,7 @@ bool runInput()
     {
         setPS3ControllerMode(true);
         Serial.println(F("Rebooting into PS3 Mode..."));
-        sleep(1000);
-        ESP.restart();
-        return true; // never going to be called
+        return true;
     }
     return false;
 }
