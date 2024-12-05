@@ -67,14 +67,25 @@ void task_wheel(void *parameters)
 void setup_tasks()
 {
 
-    // Bluetooth Task
-    // xTaskCreate(
-    //     task_bluetooth,
-    //     "Bluetooth",
-    //     512 * 4,
-    //     NULL,
-    //     1000,
-    //     NULL);
+    // hard code ps3Mode to false when not enabled
+#if ENABLE_PS3_CONTROLLER_SUPPORT
+    bool ps3Mode = getPS3ControllerMode();
+    setPS3ControllerMode(false); // tell it to turn off for the next boot.
+#else
+    bool ps3Mode = false;
+#endif
+
+    if (ps3Mode == false)
+    {
+        // Bluetooth Task
+        xTaskCreate(
+            task_bluetooth,
+            "Bluetooth",
+            512 * 4,
+            NULL,
+            1000,
+            NULL);
+    }
 
 #if SCREEN_ENABLED == true
     // Manifold OLED Task
@@ -109,13 +120,16 @@ void setup_tasks()
     }
 
 #if ENABLE_PS3_CONTROLLER_SUPPORT
-    // PS3 Controller Task
-    xTaskCreate(
-        task_ps3_controller,
-        "PS3 Controller",
-        512 * 5,
-        NULL,
-        1000,
-        NULL);
+    if (ps3Mode)
+    {
+        // PS3 Controller Task
+        xTaskCreate(
+            task_ps3_controller,
+            "PS3 Controller",
+            512 * 5,
+            NULL,
+            1000,
+            NULL);
+    }
 #endif
 }

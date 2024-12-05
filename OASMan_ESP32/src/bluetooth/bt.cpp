@@ -128,6 +128,7 @@ const char _AIRHEIGHTC[] PROGMEM = PASSWORD "AIRHEIGHTC\0";
 const char _AIRHEIGHTD[] PROGMEM = PASSWORD "AIRHEIGHTD\0";
 const char _RISEONSTART[] PROGMEM = PASSWORD "RISEONSTART\0";
 const char _RAISEONPRESSURESET[] PROGMEM = PASSWORD "ROPS\0";
+const char _PS3C[] PROGMEM = PASSWORD "PS3C\0";
 
 bool comp(char *str1, const char str2[])
 {
@@ -262,6 +263,14 @@ bool runInput()
             setRaiseOnPressureSet(true);
         }
         return true;
+    }
+    else if (comp(inBuffer, _PS3C))
+    {
+        setPS3ControllerMode(true);
+        Serial.println(F("Rebooting into PS3 Mode..."));
+        sleep(1000);
+        ESP.restart();
+        return true; // never going to be called
     }
     return false;
 }
