@@ -208,7 +208,7 @@ public class MainFragment extends Fragment {
             };
 
             AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-            builder.setMessage("Are you sure you want to reboot into PS3 controller mode? The next boot after will boot back into normal mode. Or you can press 'start + select' to boot back into normal mode. Use SixaxisPairTool to set your controller to 00:00:00:00:00:00 to be able to connect").setPositiveButton("Yes", dialogClickListener)
+            builder.setMessage("Are you sure you want to reboot into PS3 controller mode? The next boot after will boot back into normal mode. Or you can press 'start + select' to boot back into normal mode. Use SixaxisPairTool to set your controller to 00:00:00:00:00:00 to be able to connect. More info on the OASMan github!").setPositiveButton("Yes", dialogClickListener)
                     .setNegativeButton("No", dialogClickListener).show();
         });
 

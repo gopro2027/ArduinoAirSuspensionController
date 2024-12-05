@@ -31,7 +31,6 @@ void saveEEPROMLoop()
 }
 void beginEEPROM()
 {
-    Serial.println(EEPROM_SIZE);
     EEPROM.begin(EEPROM_SIZE);
     EEPROM.get(0, EEPROM_DATA);
 }

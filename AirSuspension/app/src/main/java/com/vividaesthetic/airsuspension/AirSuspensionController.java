@@ -378,7 +378,7 @@ public class AirSuspensionController {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
                 mConnectedThread.write("PS3C\n");
-                setMessageToDisplayOnCommandSuccess("Booting into PS3 Mode"); // will not show because esp32 is set to reboot before responding
+                setMessageToDisplayOnCommandSuccess("Booting into PS3 Mode");
             }
         });
     }
