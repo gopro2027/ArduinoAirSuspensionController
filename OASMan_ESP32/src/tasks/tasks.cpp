@@ -6,12 +6,14 @@ void task_bluetooth(void *parameters)
 {
     delay(200); // just wait a moment i guess this is legacy
 
+#if ENABLE_PS3_CONTROLLER_SUPPORT
     // wait for ps3 controller service to boot
     while (ps3ServiceStarted == false)
     {
         delay(1);
     }
     delay(50);
+#endif
 
     Serial.println(F("Bluetooth Rest Service Beginning"));
 
@@ -88,16 +90,6 @@ void task_adc_read(void *parameters)
 
 void setup_tasks()
 {
-
-#if ENABLE_PS3_CONTROLLER_SUPPORT
-    bool ps3Mode = getPS3ControllerMode();
-    setPS3ControllerMode(false); // tell it to turn off for the next boot.
-#if DEBUG_ALWAYS_BOOT_PS3_CONTROLLER_MODE
-    ps3Mode = true;
-#endif
-#else
-    bool ps3Mode = false;
-#endif
     //  Bluetooth Task
     xTaskCreate(
         task_bluetooth,
@@ -151,7 +143,7 @@ void setup_tasks()
     }
 
 #if ENABLE_PS3_CONTROLLER_SUPPORT
-    //   PS3 Controller Task
+    // PS3 Controller Task
     xTaskCreate(
         task_ps3_controller,
         "PS3 Controller",
@@ -159,7 +151,5 @@ void setup_tasks()
         NULL,
         1000,
         NULL);
-#else
-    ps3ServiceStarted = true; // immediately say the service is completed so the normal bluetooth can begin
 #endif
 }

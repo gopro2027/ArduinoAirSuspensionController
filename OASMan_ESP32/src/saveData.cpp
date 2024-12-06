@@ -22,9 +22,8 @@ void saveEEPROMLoop()
         EEPROM.commit(); // this will crash if called from a task and not the main loop
         // taskEXIT_CRITICAL(&myMutex);
 
-        if (EEPROM_DATA.ps3Mode)
+        if (EEPROM_DATA.internalReboot)
         {
-            // ps3 mode enabled, reboot
             ESP.restart();
         }
     }
@@ -100,15 +99,15 @@ void setRaiseOnPressureSet(bool value)
     }
 }
 
-bool getPS3ControllerMode()
+bool getReboot()
 {
-    return EEPROM_DATA.ps3Mode;
+    return EEPROM_DATA.internalReboot;
 }
-void setPS3ControllerMode(bool value)
+void setReboot(bool value)
 {
-    if (getPS3ControllerMode() != value)
+    if (getReboot() != value)
     {
-        EEPROM_DATA.ps3Mode = value;
+        EEPROM_DATA.internalReboot = value;
         saveEEPROM();
     }
 }

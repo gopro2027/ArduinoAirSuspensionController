@@ -38,11 +38,17 @@ void setup()
     setup_tasks();
 
 #if TEST_MODE == false
-    if (getRiseOnStart() == true)
+    // only want to rise on start if it was a full boot and not a quick reboot
+    if (getReboot() == false)
     {
-        airUp();
+        if (getRiseOnStart() == true)
+        {
+            airUp();
+        }
     }
 #endif
+
+    setReboot(false);
 
     Serial.println(F("Startup Complete"));
 }

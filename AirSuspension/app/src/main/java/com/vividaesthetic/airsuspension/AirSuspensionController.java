@@ -374,11 +374,11 @@ public class AirSuspensionController {
         });
     }
 
-    public void setPS3Mode() {
+    public void reboot() {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
-                mConnectedThread.write("PS3C\n");
-                setMessageToDisplayOnCommandSuccess("Booting into PS3 Mode");
+                mConnectedThread.write("REBOOT\n");
+                setMessageToDisplayOnCommandSuccess("Rebooting...");
             }
         });
     }

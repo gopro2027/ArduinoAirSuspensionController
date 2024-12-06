@@ -436,11 +436,11 @@
             android:text="@string/maintainpressuredisabled" />
 
         <Button
-            android:id="@+id/button_ps3controller"
+            android:id="@+id/button_reboot"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/ps3mode" />
+            android:text="@string/reboot" />
 
         <Button
             android:id="@+id/button_calibrate"

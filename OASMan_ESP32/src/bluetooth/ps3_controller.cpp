@@ -615,10 +615,10 @@ void ps3_controller_loop()
         ESP.restart();
     }
 
-    printJoystick(leftMode);
-    Serial.print("\t");
-    printJoystick(rightMode);
-    Serial.println();
+    // printJoystick(leftMode);
+    // Serial.print("\t");
+    // printJoystick(rightMode);
+    // Serial.println();
 }
 
 #endif
