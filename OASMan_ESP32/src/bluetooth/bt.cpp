@@ -37,10 +37,9 @@ void sendCurrentProfileData()
 // https://www.seeedstudio.com/blog/2020/01/02/how-to-control-arduino-with-bluetooth-module-and-shields-to-get-started/
 
 char *outString = "";
-// String inString = "";
-char inBuffer[30];
+#define inBufferSize 30
+char inBuffer[inBufferSize];
 unsigned long lastHeartbeat = 0;
-bool currentlyWaitingForBTSerialDataToEnd = false;
 void bt_cmd()
 {
     if (millis() - lastHeartbeat > 500)
@@ -69,21 +68,6 @@ void bt_cmd()
     else
     {
 
-        // Get input as string
-        if (currentlyWaitingForBTSerialDataToEnd == false)
-        {
-            if (bt.available())
-            {
-                while (Serial.available() > 0)
-                {
-                    Serial.read();
-                }
-                delay(200); // add a little pause so bt has a chance to load in the rest of the command first... not sure if it is required but it's legacy code and i don't want to test it bc we are scrapping it soon for BLE
-                currentlyWaitingForBTSerialDataToEnd = true;
-                return;
-            }
-        }
-
         while (bt.available())
         {
             char c = bt.read();
@@ -100,13 +84,17 @@ void bt_cmd()
                     outString = "ERRUNK";
                 }
                 memset(inBuffer, 0, sizeof(inBuffer));
-                currentlyWaitingForBTSerialDataToEnd = false; // unpause
-                continue;                                     // just to skip writing out the original \n, could also be break but whatever
+                continue; // just to skip writing out the original \n, could also be break but whatever
             }
-            inBuffer[strlen(inBuffer)] = c;
-            Serial.print(c);
+
+            int index = strlen(inBuffer);
+            if (index < inBufferSize)
+            {
+                inBuffer[index] = c;
+            }
+
+            delay(10); // add delay in case it gets stuck in loop
         }
-        bt.read();
     }
 }
 
