@@ -120,6 +120,7 @@ void Wheel::initPressureGoal(int newPressure, bool quick)
 // logic https://www.figma.com/board/YOKnd1caeojOlEjpdfY5NF/Untitled?node-id=0-1&node-type=canvas&t=p1SyY3R7azjm1PKs-0
 void Wheel::loop()
 {
+    // Serial.println("WheelP: ");
     this->readPressure();
     if (this->flagStartPressureGoalRoutine)
     {

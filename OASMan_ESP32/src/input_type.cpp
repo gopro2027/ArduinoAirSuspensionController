@@ -52,6 +52,7 @@ int InputType::analogRead()
 {
     if (this->input_type == NORMAL)
     {
+        // Serial.println(::analogRead(this->pin), DEC);
         return ::analogRead(this->pin);
     }
     else
@@ -62,7 +63,20 @@ int InputType::analogRead()
             return -1;
         }
 #if ADS_MOCK_BYPASS == false
-        return AnalogADCToESP32Value(this->adc->readADC_SingleEnded(this->pin)); // this should be correct for analog
+
+        Ads_Request request;
+        queueADSRead(&request, this->adc, this->pin);
+        while (!request.completed)
+        {
+            delay(1);
+        }
+        // int16_t val = request.resultValue;
+        // Serial.print("Pin ");
+        // Serial.print(this->pin, DEC);
+        // Serial.print(": ");
+        // Serial.println(val, DEC);
+        return AnalogADCToESP32Value(request.resultValue);
+        // return AnalogADCToESP32Value(this->adc->readADC_SingleEnded(this->pin)); // this should be correct for analog
 #else
         return 3686; // value of max psi on esp32
 #endif
@@ -90,5 +104,59 @@ void InputType::analogWrite(int value)
     else
     {
         // not implemented
+    }
+}
+
+#define ADS_QUEUE_SIZE 10
+Ads_Request *adsQueue[ADS_QUEUE_SIZE];
+
+int getADSQueNextOpenSlot()
+{
+    for (int i = 0; i < ADS_QUEUE_SIZE; i++)
+    {
+        if (adsQueue[i] == 0)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+bool adsQueLock = false;
+void queueADSRead(Ads_Request *request, Adafruit_ADS1115 *adc, int pin)
+{
+    while (adsQueLock)
+    {
+        delay(1);
+    }
+    adsQueLock = true;
+
+    int i = getADSQueNextOpenSlot();
+    while (i == -1)
+    {
+        delay(1);
+        i = getADSQueNextOpenSlot();
+    }
+
+    request->adc = adc;
+    request->pin = pin;
+    request->completed = false;
+    request->resultValue = -1;
+
+    adsQueue[i] = request;
+
+    adsQueLock = false;
+}
+
+void ADSLoop()
+{
+    for (int i = 0; i < ADS_QUEUE_SIZE; i++)
+    {
+        if (adsQueue[i] != 0)
+        {
+            Ads_Request *adsRequest = adsQueue[i];
+            adsRequest->resultValue = adsRequest->adc->readADC_SingleEnded(adsRequest->pin);
+            adsRequest->completed = true;
+            adsQueue[i] = 0;
+        }
     }
 }

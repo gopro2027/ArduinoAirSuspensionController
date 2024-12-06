@@ -68,19 +68,16 @@
 #define ADS_A_ADDRESS 0x48 // 0x48 is address pin to low
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
 
-/* For testing purposes: set to true to make all ads A values (ie under default settings, the 4 pressure sensors to the wheels) return the max psi... this one is useful for testing air down */
-#define ADS_A_MOCK_BYPASS true
-
 /* Disable the hang if ads fails to load */
-#define ADS_MOCK_BYPASS true
+#define ADS_MOCK_BYPASS false
 
 /* For testing purposes: mock tank pressure to 200psi */
-#define TANK_PRESSURE_MOCK true
+#define TANK_PRESSURE_MOCK false
 
 /* Values for pressure calculations */
 #define pressureZeroAnalogValue (float)409.6 // analog reading of pressure transducer at 0psi.          for nano: (0.5 volts / 5 volts) * 1024 = 102.4. for esp32: (0.5 volts / 5 volts) * 4096 = 409.6
 #define pressureMaxAnalogValue (float)3686.4 // analog reading of pressure transducer at max psi.       for nano: (4.5 volts / 5 volts) * 1024 = 921.6. for esp32: (4.5 volts / 5 volts) * 4096 = 3686.4
-#define pressuretransducermaxPSI 300         // psi value of transducer being used.
+#define pressuretransducermaxPSI 200         // psi value of transducer being used.
 
 /* DO NOT CHANGE ANY PAST THIS LINE */
 #define WHEEL_FRONT_PASSENGER 0
@@ -96,7 +93,6 @@
 /*
 Note: if you want to test esp32 without being on the assembled pcb turn these values:
 ADS_MOCK_BYPASS true
-ADS_A_MOCK_BYPASS true
 TANK_PRESSURE_MOCK true
 SCREEN_ENABLED false
 
