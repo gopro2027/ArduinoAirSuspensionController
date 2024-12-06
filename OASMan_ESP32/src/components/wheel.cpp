@@ -78,6 +78,15 @@ float analogToPressure(int nativeAnalogValue)
     float normalized = floored / totalRange;                             // 0 to 1 where 0 is 0psi and 1 is max psi
     float psi = normalized * pressuretransducermaxPSI;                   // multiply out 0 to 1 by our max psi
 
+    // Serial.print("atp: ");
+    // Serial.print(nativeAnalogValue);
+    // Serial.print("\t");
+    // Serial.print(floored);
+    // Serial.print("\t");
+    // Serial.print(normalized);
+    // Serial.print("\t");
+    // Serial.println(psi);
+
     return psi;
 }
 

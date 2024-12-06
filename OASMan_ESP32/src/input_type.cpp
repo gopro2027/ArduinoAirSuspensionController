@@ -19,8 +19,8 @@ float adc5vToExpected5v(float in)
     float realAtZeroPSI = 339.00;
     if (getCalibration()->hasCalibrated)
     {
-        Serial.print("ADC: ");
-        Serial.println(getCalibration()->adcCalibration);
+        // Serial.print("ADC: ");
+        // Serial.println(getCalibration()->adcCalibration);
         realAtZeroPSI = getCalibration()->adcCalibration;
     }
     return in * (pressureZeroAnalogValue / realAtZeroPSI);
@@ -31,10 +31,20 @@ float voltageDivider5vToExpected5v(float in)
     float realAtZeroPSI = 307.20;
     if (getCalibration()->hasCalibrated)
     {
-        Serial.print("VD: ");
-        Serial.println(getCalibration()->voltageDividerCalibration);
+        // Serial.print("VD: ");
+        // Serial.println(getCalibration()->voltageDividerCalibration);
         realAtZeroPSI = getCalibration()->voltageDividerCalibration;
     }
+    // realAtZeroPSI = 240;
+    // Serial.print("vd5te5: ");
+    // Serial.print(realAtZeroPSI);
+    // Serial.print("\t");
+    // Serial.print(in);
+    // Serial.print("\t");
+    // Serial.print(pressureZeroAnalogValue / realAtZeroPSI);
+    // Serial.print("\t");
+    // Serial.print(in * (pressureZeroAnalogValue / realAtZeroPSI));
+    // Serial.print("\t");
     return in * (pressureZeroAnalogValue / realAtZeroPSI);
 }
 

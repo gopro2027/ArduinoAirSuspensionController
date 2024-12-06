@@ -194,6 +194,12 @@ void calibratePressureValues()
 
     delay(20 * 1000); // sleep litteral 20 seconds so tanks dump all the air
 
+    // close all valves
+    for (int i = 0; i < SOLENOID_COUNT; i++)
+    {
+        manifold->get(i)->digitalWrite(LOW);
+    }
+
     // step 2: read valves at 0psi
 
     const int sampleSize = 25;
@@ -204,10 +210,10 @@ void calibratePressureValues()
     {
         int v_vd = compressor->getReadPin()->analogRead(true);
         int v_adc = getWheel(WHEEL_FRONT_PASSENGER)->getPressurePin()->analogRead(true);
-        Serial.print("v: ");
-        Serial.print(v_vd);
-        Serial.print("\t");
-        Serial.println(v_adc);
+        // Serial.print("v: ");
+        // Serial.print(v_vd);
+        // Serial.print("\t");
+        // Serial.println(v_adc);
         totalVoltageDivider += v_vd; // read tank pressure analog value at 0psi (voltage divider)
         totalADC += v_adc;           // read first bag pressure at 0psi (adc)
         delay(250);                  // should take a total of 6.25 seconds for this loop to complete
@@ -220,12 +226,6 @@ void calibratePressureValues()
     calibration->adcCalibration = totalADC / sampleSize;
     calibration->hasCalibrated = true;
     setCalibration();
-
-    // close all valves
-    for (int i = 0; i < SOLENOID_COUNT; i++)
-    {
-        manifold->get(i)->digitalWrite(LOW);
-    }
 
     compressor->resume();
 }
