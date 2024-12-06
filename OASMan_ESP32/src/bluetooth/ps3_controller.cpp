@@ -575,7 +575,7 @@ void ps3_controller_setup()
 {
     Ps3.attach(notify);
     Ps3.attachOnConnect(onConnect);
-    Ps3.begin("00:00:00:00:00:00");
+    Ps3.begin();
 
     Serial.println("PS3 Ready.");
 }

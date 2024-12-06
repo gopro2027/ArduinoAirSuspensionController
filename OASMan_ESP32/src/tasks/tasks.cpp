@@ -1,9 +1,21 @@
 #include "tasks.h"
 
+bool ps3ServiceStarted = false;
+
 void task_bluetooth(void *parameters)
 {
+    delay(200); // just wait a moment i guess this is legacy
+
+    // wait for ps3 controller service to boot
+    while (ps3ServiceStarted == false)
+    {
+        delay(1);
+    }
+    delay(50);
+
+    Serial.println(F("Bluetooth Rest Service Beginning"));
+
     bt.begin(BT_NAME);
-    delay(200); // just wait a second
     for (;;)
     {
         bt_cmd();
@@ -37,6 +49,7 @@ void task_screen(void *parameters)
 void task_ps3_controller(void *parameters)
 {
     ps3_controller_setup();
+    ps3ServiceStarted = true;
     for (;;)
     {
         ps3_controller_loop();
@@ -85,18 +98,14 @@ void setup_tasks()
 #else
     bool ps3Mode = false;
 #endif
-
-    if (ps3Mode == false)
-    {
-        // Bluetooth Task
-        xTaskCreate(
-            task_bluetooth,
-            "Bluetooth",
-            512 * 4,
-            NULL,
-            1000,
-            NULL);
-    }
+    //  Bluetooth Task
+    xTaskCreate(
+        task_bluetooth,
+        "Bluetooth",
+        512 * 4,
+        NULL,
+        1000,
+        NULL);
 
 #if SCREEN_ENABLED == true
     // Manifold OLED Task
@@ -142,16 +151,15 @@ void setup_tasks()
     }
 
 #if ENABLE_PS3_CONTROLLER_SUPPORT
-    if (ps3Mode)
-    {
-        // PS3 Controller Task
-        xTaskCreate(
-            task_ps3_controller,
-            "PS3 Controller",
-            512 * 5,
-            NULL,
-            1000,
-            NULL);
-    }
+    //   PS3 Controller Task
+    xTaskCreate(
+        task_ps3_controller,
+        "PS3 Controller",
+        512 * 5,
+        NULL,
+        1000,
+        NULL);
+#else
+    ps3ServiceStarted = true; // immediately say the service is completed so the normal bluetooth can begin
 #endif
 }
