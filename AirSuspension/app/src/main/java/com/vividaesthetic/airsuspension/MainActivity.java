@@ -250,6 +250,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             String log = "";
             for (String str : errorLog) {
+                log = str + "\n" + log;
             }
             if (logTextView != null) {
                 logTextView.setText(log);
