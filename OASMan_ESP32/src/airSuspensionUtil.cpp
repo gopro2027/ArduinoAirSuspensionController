@@ -150,19 +150,19 @@ void airUpRelativeToAverage(int value)
 
 #pragma region tank_comp_functions
 
-float pressureValueTank = 0;
 int getTankPressure()
 {
 #if TANK_PRESSURE_MOCK == true
     return 200;
 #else
-    return pressureValueTank;
+    return compressor->getTankPressure();
 #endif
 }
 
 void compressorLogic()
 {
     // TODO: check, This resume and pause logic may be able to be removed!!! It says it is used for thread blocking tasks which is no longer an issue
+    // I guess we may still want to keep it  for the case that if a valve is open the tanks pressure is not accurate??? Could probably be removed tbh
     if (isAnyWheelActive())
     {
         compressor->pause();
@@ -172,10 +172,6 @@ void compressorLogic()
         compressor->resume();
     }
 
-    if (!isAnyWheelActive())
-    {
-        pressureValueTank = compressor->readPressure(); // only read pressure when we don't have a valve open
-    }
     compressor->loop();
 }
 

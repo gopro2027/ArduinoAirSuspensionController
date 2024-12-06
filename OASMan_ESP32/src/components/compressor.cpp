@@ -42,6 +42,11 @@ float Compressor::readPressure()
     return readPinPressure(this->readPin);
 }
 
+float Compressor::getTankPressure()
+{
+    return this->currentPressure;
+}
+
 void Compressor::loop()
 {
     if (this->isPaused && !this->s_trigger.isOpen())
@@ -57,7 +62,6 @@ void Compressor::loop()
         }
     }
 
-    // This should be in an else statement, but I am putting it all alone for safety, in case some 'state' gets wonky, don't want it overfilling!
     if (this->currentPressure >= COMPRESSOR_MAX_PSI)
     {
         this->s_trigger.close();
