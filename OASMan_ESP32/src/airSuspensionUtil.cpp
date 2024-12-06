@@ -172,7 +172,7 @@ void compressorLogic()
         compressor->resume();
     }
 
-    if (isAnyWheelActive())
+    if (!isAnyWheelActive())
     {
         pressureValueTank = compressor->readPressure(); // only read pressure when we don't have a valve open
     }
