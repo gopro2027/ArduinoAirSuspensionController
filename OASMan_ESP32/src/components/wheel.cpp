@@ -66,11 +66,24 @@ Solenoid *Wheel::getOutSolenoid()
     return &this->s_AirOut;
 }
 
-const int pressureAdjustment = 0; // static adjustment
+InputType *Wheel::getPressurePin()
+{
+    return this->pressurePin;
+}
+
+float analogToPressure(int nativeAnalogValue)
+{
+    float floored = float(nativeAnalogValue) - pressureZeroAnalogValue;  // chop off the 0 value
+    float totalRange = pressureMaxAnalogValue - pressureZeroAnalogValue; // get the total analog voltage difference between min and max
+    float normalized = floored / totalRange;                             // 0 to 1 where 0 is 0psi and 1 is max psi
+    float psi = normalized * pressuretransducermaxPSI;                   // multiply out 0 to 1 by our max psi
+
+    return psi;
+}
 
 float readPinPressure(InputType *pin)
 {
-    return float((float(pin->analogRead()) - pressureZeroAnalogValue) * pressuretransducermaxPSI) / (pressureMaxAnalogValue - pressureZeroAnalogValue) + pressureAdjustment; // conversion equation to convert analog reading to psi
+    return analogToPressure(pin->analogRead());
 }
 
 void Wheel::readPressure()

@@ -77,7 +77,7 @@
 /* Values for pressure calculations */
 #define pressureZeroAnalogValue (float)409.6 // analog reading of pressure transducer at 0psi.          for nano: (0.5 volts / 5 volts) * 1024 = 102.4. for esp32: (0.5 volts / 5 volts) * 4096 = 409.6
 #define pressureMaxAnalogValue (float)3686.4 // analog reading of pressure transducer at max psi.       for nano: (4.5 volts / 5 volts) * 1024 = 921.6. for esp32: (4.5 volts / 5 volts) * 4096 = 3686.4
-#define pressuretransducermaxPSI 200         // psi value of transducer being used.
+#define pressuretransducermaxPSI 232         // psi value of transducer being used. (1.6MPA)
 
 /* DO NOT CHANGE ANY PAST THIS LINE */
 #define WHEEL_FRONT_PASSENGER 0

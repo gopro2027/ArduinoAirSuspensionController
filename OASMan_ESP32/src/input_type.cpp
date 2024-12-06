@@ -5,12 +5,37 @@
 
 int AnalogADCToESP32Value(int adcVal)
 {
-    return (int)(adcVal * (4096.0f / 65536.0f));
+    return (int)(adcVal * (4096.0f / 32768.0f));
 }
 
 int AnalogESP32ToADCValue(int espVal)
 {
-    return (int)(espVal * (65536.0f / 4096.0f));
+    return (int)(espVal * (32768.0f / 4096.0f));
+}
+
+float adc5vToExpected5v(float in)
+{
+    // although 5v is supposed to be 32768, in my testing 5v averaged out to 24954. Tested by unplugging one of the pressure sensors and sticking a wire between data and 5v and uncommenting the code below that references this function name
+    float realAtZeroPSI = 339.00;
+    if (getCalibration()->hasCalibrated)
+    {
+        Serial.print("ADC: ");
+        Serial.println(getCalibration()->adcCalibration);
+        realAtZeroPSI = getCalibration()->adcCalibration;
+    }
+    return in * (pressureZeroAnalogValue / realAtZeroPSI);
+}
+
+float voltageDivider5vToExpected5v(float in)
+{
+    float realAtZeroPSI = 307.20;
+    if (getCalibration()->hasCalibrated)
+    {
+        Serial.print("VD: ");
+        Serial.println(getCalibration()->voltageDividerCalibration);
+        realAtZeroPSI = getCalibration()->voltageDividerCalibration;
+    }
+    return in * (pressureZeroAnalogValue / realAtZeroPSI);
 }
 
 InputType::InputType()
@@ -48,12 +73,18 @@ int InputType::digitalRead()
     }
 }
 
-int InputType::analogRead()
+int InputType::analogRead(bool skipVoltageAdjustment)
 {
     if (this->input_type == NORMAL)
     {
         // Serial.println(::analogRead(this->pin), DEC);
-        return ::analogRead(this->pin);
+        // So this is read over the voltage divider! 5v = 4000
+        // Should likely put in some
+        if (skipVoltageAdjustment)
+        {
+            return ::analogRead(this->pin);
+        }
+        return voltageDivider5vToExpected5v(::analogRead(this->pin));
     }
     else
     {
@@ -64,19 +95,19 @@ int InputType::analogRead()
         }
 #if ADS_MOCK_BYPASS == false
 
+        // ads request special code, ads must be called from the other thread
         Ads_Request request;
         queueADSRead(&request, this->adc, this->pin);
         while (!request.completed)
         {
             delay(1);
         }
-        // int16_t val = request.resultValue;
-        // Serial.print("Pin ");
-        // Serial.print(this->pin, DEC);
-        // Serial.print(": ");
-        // Serial.println(val, DEC);
-        return AnalogADCToESP32Value(request.resultValue);
-        // return AnalogADCToESP32Value(this->adc->readADC_SingleEnded(this->pin)); // this should be correct for analog
+
+        if (skipVoltageAdjustment)
+        {
+            return AnalogADCToESP32Value(request.resultValue);
+        }
+        return AnalogADCToESP32Value(adc5vToExpected5v(request.resultValue));
 #else
         return 3686; // value of max psi on esp32
 #endif

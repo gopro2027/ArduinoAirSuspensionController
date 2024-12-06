@@ -33,6 +33,7 @@ public:
     bool isActive();
     Solenoid *getInSolenoid();
     Solenoid *getOutSolenoid();
+    InputType *getPressurePin();
 };
 
 float readPinPressure(InputType *pin);

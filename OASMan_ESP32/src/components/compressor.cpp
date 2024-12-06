@@ -12,6 +12,11 @@ Compressor::Compressor(InputType *triggerPin, InputType *readPin)
     this->isPaused = false;
 }
 
+InputType *Compressor::getReadPin()
+{
+    return this->readPin;
+}
+
 void Compressor::pause()
 {
     if (!this->isPaused)

@@ -442,6 +442,13 @@
             android:layout_weight="1"
             android:text="@string/ps3mode" />
 
+        <Button
+            android:id="@+id/button_calibrate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/calibrate" />
+
     </LinearLayout>
 
     <!--

@@ -11,12 +11,20 @@ struct Profile
     byte pressure[4];
 };
 
+struct Calibration
+{
+    bool hasCalibrated;
+    float voltageDividerCalibration; // voltage divider read value for 0psi
+    float adcCalibration;            // adc read value for 0psi
+};
+
 struct EEPROM_DATA_
 {
     byte riseOnStart;
     byte baseProfile;
     byte raiseOnPressure;
     byte ps3Mode;
+    Calibration calibration;
     byte padding[80]; // decrement as neccessary to maintain EEPROM_DATA_ when adding info
     Profile profile[MAX_PROFILE_COUNT];
 };
@@ -39,5 +47,7 @@ bool getRaiseOnPressureSet();
 void setRaiseOnPressureSet(bool value);
 bool getPS3ControllerMode();
 void setPS3ControllerMode(bool value);
+Calibration *getCalibration();
+void setCalibration();
 
 #endif

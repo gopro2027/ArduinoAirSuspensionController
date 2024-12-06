@@ -4,6 +4,7 @@
 #include <Wire.h>
 #include <Adafruit_ADS1X15.h>
 #include "user_defines.h"
+#include "saveData.h"
 
 struct Ads_Request
 {
@@ -31,7 +32,7 @@ public:
     InputType(int pin, int pinModeInputOutput);
     InputType(int pin, Adafruit_ADS1115 *adc);
     int digitalRead();
-    int analogRead();
+    int analogRead(bool skipVoltageAdjustment = false);
     void digitalWrite(int value);
     void analogWrite(int value);
 };

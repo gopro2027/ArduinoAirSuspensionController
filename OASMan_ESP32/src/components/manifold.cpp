@@ -22,7 +22,7 @@ Manifold::Manifold(InputType *fpi,
     this->wheelSolenoidMask = 0;
 }
 
-InputType *Manifold::get(SOLENOID_INDEX solenoid)
+InputType *Manifold::get(int solenoid)
 {
     return this->solenoidList[solenoid];
 }

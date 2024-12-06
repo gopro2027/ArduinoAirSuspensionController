@@ -112,3 +112,13 @@ void setPS3ControllerMode(bool value)
         saveEEPROM();
     }
 }
+
+Calibration *getCalibration()
+{
+    return &EEPROM_DATA.calibration;
+}
+// assumed you keep the pointer from getCalibration and modify that
+void setCalibration()
+{
+    saveEEPROM();
+}

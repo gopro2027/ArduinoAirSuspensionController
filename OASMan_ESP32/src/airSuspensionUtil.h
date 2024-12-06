@@ -32,5 +32,6 @@ void airOut();
 void airUpRelativeToAverage(int value);
 int getTankPressure();
 void compressorLogic();
+void calibratePressureValues();
 
 #endif

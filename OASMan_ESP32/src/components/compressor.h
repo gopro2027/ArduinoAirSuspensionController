@@ -23,6 +23,7 @@ public:
     void resume();
     float readPressure();
     float getTankPressure();
+    InputType *getReadPin();
 };
 
 #endif

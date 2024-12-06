@@ -383,6 +383,15 @@ public class AirSuspensionController {
         });
     }
 
+    public void calibrate() {
+        queBluetoothCommand(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("CALIBRATE\n");
+                setMessageToDisplayOnCommandSuccess("Doing calibration routine");
+            }
+        });
+    }
+
     // Only usable when TEST_MODE is enabled on the arduino
     public void testSolenoid(int pinNum) {
         queBluetoothCommand(() -> {

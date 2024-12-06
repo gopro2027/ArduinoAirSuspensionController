@@ -212,6 +212,25 @@ public class MainFragment extends Fragment {
                     .setNegativeButton("No", dialogClickListener).show();
         });
 
+        binding.buttonCalibrate.setOnClickListener(v -> {
+            DialogInterface.OnClickListener dialogClickListener = (dialog, which) -> {
+                switch (which){
+                    case DialogInterface.BUTTON_POSITIVE:
+                        //Yes button clicked
+                        getAirSuspensionController().calibrate();
+                        break;
+
+                    case DialogInterface.BUTTON_NEGATIVE:
+                        //No button clicked
+                        break;
+                }
+            };
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setMessage("**WARNING**\nPlease make sure no other processes are happening at the moment and car is parked and not moving! This will dump all air out of the tank and bags! Process will take 30 seconds to complete.").setPositiveButton("Yes", dialogClickListener)
+                    .setNegativeButton("No", dialogClickListener).show();
+        });
+
         getAirSuspensionController().setUpdatePressure((fp, rp, fd, rd, tank) -> {
             if (binding != null) {
                 binding.pressureFp.setText(fp);

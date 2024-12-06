@@ -129,6 +129,7 @@ const char _AIRHEIGHTD[] PROGMEM = PASSWORD "AIRHEIGHTD\0";
 const char _RISEONSTART[] PROGMEM = PASSWORD "RISEONSTART\0";
 const char _RAISEONPRESSURESET[] PROGMEM = PASSWORD "ROPS\0";
 const char _PS3C[] PROGMEM = PASSWORD "PS3C\0";
+const char _CALIBRATE[] PROGMEM = PASSWORD "CALIBRATE\0";
 
 bool comp(char *str1, const char str2[])
 {
@@ -268,6 +269,12 @@ bool runInput()
     {
         setPS3ControllerMode(true);
         Serial.println(F("Rebooting into PS3 Mode..."));
+        return true;
+    }
+    else if (comp(inBuffer, _CALIBRATE))
+    {
+        Serial.println(F("Running calibration routine..."));
+        calibratePressureValues();
         return true;
     }
     return false;
