@@ -2,7 +2,7 @@
 #ifndef bt_h
 #define bt_h
 #include "user_defines.h"
-#include "components/Wheel.h"
+#include "components/wheel.h"
 #include "BluetoothSerial.h"
 #include "saveData.h"
 #include "airSuspensionUtil.h"
