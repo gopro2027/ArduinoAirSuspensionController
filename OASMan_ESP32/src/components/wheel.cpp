@@ -11,9 +11,10 @@ struct PressureGoalValveTiming
 
 // Must put in sorted order of largest to smallest
 PressureGoalValveTiming valveTiming[] = {
-    {10, 500, false}, // if current psi outside range of goalPressure +- 10psi, open valves for 500ms until +- 10psi achieved
-    {5, 100, false},  // if current psi outside range of goalPressure +- 6psi, open valves for 100ms until +- 6psi achieved
-    {0, 10, true},    // if current psi outside range of goalPressure +- 0psi (aka psi is not yet exactly goalPressure), open valves for 10ms until exact goal pressure is achieved. Will not be used in quick mode
+    {100, 500, false},
+    {10, 75, false}, // if current psi outside range of goalPressure +- 10psi, open valves for 75ms until +- 10psi achieved
+    {5, 20, false},  // if current psi outside range of goalPressure +- 5psi, open valves for 20ms until +- 6psi achieved
+    {0, 5, true},    // if current psi outside range of goalPressure +- 0psi (aka psi is not yet exactly goalPressure), open valves for 5ms until exact goal pressure is achieved. Will not be used in quick mode
 };
 #define VALVE_TIMING_LIST_COUNT (sizeof(valveTiming) / sizeof(PressureGoalValveTiming))
 
