@@ -12,16 +12,18 @@ struct PressureGoalValveTiming
 // Must put in sorted order of largest to smallest
 PressureGoalValveTiming valveTiming[] = {
     {100, 500, false},
-    {10, 75, false}, // if current psi outside range of goalPressure +- 10psi, open valves for 75ms until +- 10psi achieved
+    {50, 250, false},
+    {25, 125, false},
+    {10, 50, false}, // if current psi outside range of goalPressure +- 10psi, open valves for 75ms until +- 10psi achieved
     {5, 20, false},  // if current psi outside range of goalPressure +- 5psi, open valves for 20ms until +- 6psi achieved
     {0, 5, true},    // if current psi outside range of goalPressure +- 0psi (aka psi is not yet exactly goalPressure), open valves for 5ms until exact goal pressure is achieved. Will not be used in quick mode
 };
 #define VALVE_TIMING_LIST_COUNT (sizeof(valveTiming) / sizeof(PressureGoalValveTiming))
 
 // This function can be updated in the future to use some better algorithm to decide how long to open the valves for to reach the desigred pressure
-int calculateValveOpenTimeMS(int pressureDifferenceAbsolute, bool quickMode)
+PressureGoalValveTiming *getValveTiming(int pressureDifferenceAbsolute, bool quickMode)
 {
-    int lastTime = valveTiming[0].valveTimingUntilWithin;
+    PressureGoalValveTiming *lastTime = &valveTiming[0];
     for (int i = 0; i < VALVE_TIMING_LIST_COUNT; i++)
     {
         if (quickMode && valveTiming[i].isPerciseMeasurement)
@@ -30,16 +32,21 @@ int calculateValveOpenTimeMS(int pressureDifferenceAbsolute, bool quickMode)
         }
         if (pressureDifferenceAbsolute > valveTiming[i].pressureDelta)
         {
-            return valveTiming[i].valveTimingUntilWithin;
+            return &valveTiming[i];
         }
-        lastTime = valveTiming[i].valveTimingUntilWithin;
+        lastTime = &valveTiming[i];
     }
     return lastTime; // should never get to this case but if it does it returns the smallest time
 }
 
 int getMinValveOpenPSI(bool quickMode)
 {
-    return calculateValveOpenTimeMS(0, quickMode);
+    return getValveTiming(0, quickMode)->pressureDelta;
+}
+
+int calculateValveOpenTimeMS(int pressureDifferenceAbsolute, bool quickMode)
+{
+    return getValveTiming(pressureDifferenceAbsolute, quickMode)->valveTimingUntilWithin;
 }
 
 Wheel::Wheel() {}
