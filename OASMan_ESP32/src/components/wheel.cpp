@@ -110,7 +110,14 @@ void Wheel::readPressure()
 
 float Wheel::getPressure()
 {
-    return this->pressureValue;
+    if (this->pressureValue < 0)
+    {
+        return 0;
+    }
+    else
+    {
+        return this->pressureValue;
+    }
 }
 
 bool Wheel::isActive()
