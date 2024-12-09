@@ -193,6 +193,44 @@ public class MainFragment extends Fragment {
             getAirSuspensionController().setMaintainPressure(false);
         });
 
+        binding.buttonReboot.setOnClickListener(v -> {
+            DialogInterface.OnClickListener dialogClickListener = (dialog, which) -> {
+                switch (which){
+                    case DialogInterface.BUTTON_POSITIVE:
+                        //Yes button clicked
+                        getAirSuspensionController().reboot();
+                        break;
+
+                    case DialogInterface.BUTTON_NEGATIVE:
+                        //No button clicked
+                        break;
+                }
+            };
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setMessage("Are you sure you want to reboot? Tip: Now is a good time to turn on your ps3 controller for it to successfully connect! More info on the OASMan github.").setPositiveButton("Yes", dialogClickListener)
+                    .setNegativeButton("No", dialogClickListener).show();
+        });
+
+        binding.buttonCalibrate.setOnClickListener(v -> {
+            DialogInterface.OnClickListener dialogClickListener = (dialog, which) -> {
+                switch (which){
+                    case DialogInterface.BUTTON_POSITIVE:
+                        //Yes button clicked
+                        getAirSuspensionController().calibrate();
+                        break;
+
+                    case DialogInterface.BUTTON_NEGATIVE:
+                        //No button clicked
+                        break;
+                }
+            };
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setMessage("**WARNING**\nPlease make sure no other processes are happening at the moment and car is parked and not moving! This will dump all air out of the tank and bags! Process will take 30 seconds to complete.").setPositiveButton("Yes", dialogClickListener)
+                    .setNegativeButton("No", dialogClickListener).show();
+        });
+
         getAirSuspensionController().setUpdatePressure((fp, rp, fd, rd, tank) -> {
             if (binding != null) {
                 binding.pressureFp.setText(fp);
