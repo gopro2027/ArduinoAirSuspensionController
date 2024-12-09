@@ -49,7 +49,14 @@ float Compressor::readPressure()
 
 float Compressor::getTankPressure()
 {
-    return this->currentPressure;
+    if (this->currentPressure < 0)
+    {
+        return 0;
+    }
+    else
+    {
+        return this->currentPressure;
+    }
 }
 
 void Compressor::loop()
