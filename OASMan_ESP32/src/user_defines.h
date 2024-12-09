@@ -74,9 +74,13 @@
 #define TANK_PRESSURE_MOCK false
 
 /* Values for pressure calculations */
-#define pressureZeroAnalogValue (float)409.6 // analog reading of pressure transducer at 0psi.          for nano: (0.5 volts / 5 volts) * 1024 = 102.4. for esp32: (0.5 volts / 5 volts) * 4096 = 409.6
-#define pressureMaxAnalogValue (float)3686.4 // analog reading of pressure transducer at max psi.       for nano: (4.5 volts / 5 volts) * 1024 = 921.6. for esp32: (4.5 volts / 5 volts) * 4096 = 3686.4
-#define pressuretransducermaxPSI 232         // psi value of transducer being used. (1.6MPA)
+#define pressuretransducerRunningVoltage 5.0f                                                                                                    // most pressure sensors run on 5v
+#define pressuretransducerVoltageZeroPSI 0.45f                                                                                                   // most say 0.5v but may differ  (I was reading 0.295f for 0psi on base esp32)
+#define pressuretransducerVoltageMaxPSI 4.5f                                                                                                     // most say 4.5v but may differ
+#define pressuretransducermaxPSI 232                                                                                                             // psi value of transducer being used. (1.6MPA = 232PSI)
+#define microcontrollerMaxAnalogReading 4095                                                                                                     // esp32 built in adc goes to 4095
+#define pressureZeroAnalogValue (float)((pressuretransducerVoltageZeroPSI / pressuretransducerRunningVoltage) * microcontrollerMaxAnalogReading) // analog reading of pressure transducer at 0psi.
+#define pressureMaxAnalogValue (float)((pressuretransducerVoltageMaxPSI / pressuretransducerRunningVoltage) * microcontrollerMaxAnalogReading)   // analog reading of pressure transducer at max psi.
 
 /* DO NOT CHANGE ANY PAST THIS LINE */
 #define WHEEL_FRONT_PASSENGER 0
