@@ -4,6 +4,7 @@ Air Suspension Controller
 # THIS BRANCH IS DEPRECATED
 Please do not make this version, the esp32 version on the main branch is much better. This branch will no longer be updated or maintained.<br>
 I have put a final build of the android apk for this version of oasman, oasman-nano-v1.apk, which will connect to the nano when compiled with the code in this branch.<br>
+oasman-nano-v1-arduino-build.zip contains the final binary build for the arduino nano.<br>
 Please consider creating the ESP32 version on the main branch instead. It is much better and has much better instructions. This branch is only kept here for legacy support.<br>
 Thank you! <3 <br>
 
