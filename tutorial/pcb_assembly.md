@@ -36,15 +36,20 @@ If attached as shown in the video, they should connect to the board with the oth
 All of the JST connectors on the board, with the exception of the oled screen JST which is sideways, will be installed in this orientation with the clip side pointing 'up' in respect to having the board placed as so the text is right side up and readable.<br>
 <br>
 Here is the full pinout of wiring harness that comes with the manifold for a full cross reference:<br>
+<sub>* Note that this is looking into the connector from the female side, with the holes</sub><br>
 <br>
 ![manifold connector wiring cross reference](/photos/esp32/ValvetableAndManifold/pcb_valvetable_pinout.png)<br>
 <br>
 And here is my annotated documentation that may also be of use for a double check:<br>
+<sub>* Note that this is looking into the connector from the male side, with the wires</sub><br>
 <br>
 ![manifold documentation annotated](/photos/esp32/ValvetableAndManifold/ebay_manifold_diagram.png)<br>
 <br>
 The final result will look something like this:<br>
 <br>
 ![wiring harness final result](/photos/esp32/ValvetableAndManifold/manifold_final_wiring.jpg)<br>
+<br>
+After completing all the jst connectors, I put hot glue on the ends of them to keep the wires from being stressed too much when moved around and assembled:<br>
+![20241210_125036](https://github.com/user-attachments/assets/10d32557-2c95-4b84-b409-b76db983f35b)<br>
 <br>
 ### Congratulations on assembling the wiring!
