@@ -30,7 +30,7 @@ This github repo includes an android app and arduino code along with some 3d pri
 
 ### Branch Information:
 **main branch = ESP32** (Current full version of OASMan)<br>
-**nano-v1 branch = Arduino Nano** (outdated, no longer maintained)<br>
+**nano-v1 branch = Arduino Nano** (outdated, no longer maintained, only exists for legacy purposes)<br>
 **Other branches = current dev work** (Other dev work which you can ignore)<br>
 <br>
 
