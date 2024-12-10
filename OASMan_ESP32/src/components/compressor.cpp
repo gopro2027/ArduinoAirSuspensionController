@@ -10,6 +10,7 @@ Compressor::Compressor(InputType *triggerPin, InputType *readPin)
     this->s_trigger = Solenoid(triggerPin);
     this->stateOnPause = false;
     this->isPaused = false;
+    this->currentPressure = 0;
 }
 
 InputType *Compressor::getReadPin()
