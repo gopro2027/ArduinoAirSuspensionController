@@ -24,3 +24,5 @@ Loosely snug down the screen to the manifold, emphasis on loosely! Just barely s
 Once the screen is positioned, put some dabs of super blue on the inside nuts to hold it in place.<br>
 
 ![lcd screen](https://github.com/user-attachments/assets/3112dd67-7735-4416-a94f-17ceded052f8)
+![final build](https://github.com/user-attachments/assets/3c4304e9-fc82-4eab-ac79-86b6b12efc2b)
+
