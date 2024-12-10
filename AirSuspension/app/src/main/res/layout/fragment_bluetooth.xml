@@ -75,7 +75,7 @@
             android:layout_weight="1"
             android:ellipsize="end"
             android:maxLines="1"
-            android:text="BT Password:"
+            android:text="Password:"
             android:textStyle="bold" />
 
         <EditText
@@ -99,6 +99,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 
+
+    <Button
+        android:text="Firmware Update..."
+        android:id="@+id/openFirmwareUpdateWebpage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
 
     <LinearLayout
         android:layout_width="match_parent"

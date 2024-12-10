@@ -8,6 +8,7 @@
 #include "airSuspensionUtil.h"
 
 extern BluetoothSerial bt;
+extern bool startOTAServiceRequest;
 void bt_cmd();
 
 #endif

@@ -1,6 +1,7 @@
 #include "bt.h"
 
 BluetoothSerial bt;
+bool startOTAServiceRequest = false;
 
 bool runInput();
 
@@ -118,6 +119,7 @@ const char _RISEONSTART[] PROGMEM = PASSWORD "RISEONSTART\0";
 const char _RAISEONPRESSURESET[] PROGMEM = PASSWORD "ROPS\0";
 const char _REBOOT[] PROGMEM = PASSWORD "REBOOT\0";
 const char _CALIBRATE[] PROGMEM = PASSWORD "CALIBRATE\0";
+const char _STARTWEB[] PROGMEM = PASSWORD "STARTWEB\0";
 
 bool comp(char *str1, const char str2[])
 {
@@ -263,6 +265,12 @@ bool runInput()
     {
         Serial.println(F("Running calibration routine..."));
         calibratePressureValues();
+        return true;
+    }
+    else if (comp(inBuffer, _STARTWEB))
+    {
+        Serial.println(F("Starting OTA..."));
+        startOTAServiceRequest = true;
         return true;
     }
     return false;
