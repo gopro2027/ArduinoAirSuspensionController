@@ -28,8 +28,8 @@ This github repo includes an android app and arduino code along with some 3d pri
 <sub>* height sensors not yet supported in software. ** physical controller not yet designed</sub><br>
 
 ### Branch Information:
-**main branch = ESP32** (in progress)<br>
-**nano-v1 branch = Arduino Nano** (outdated, maintained but not updating with new features)<br>
+**main branch = ESP32** (Current full version of OASMan)<br>
+**nano-v1 branch = Arduino Nano** (outdated, no longer maintained)<br>
 **Other branches = current dev work** (Other dev work which you can ignore)<br>
 <br>
 Additionally, the android app code does not have as strict designation and will be kept updated on the main branch however will likely work on the nano (with the exception of new bluetooth commands not supported on the nano) until otherwise stated.
