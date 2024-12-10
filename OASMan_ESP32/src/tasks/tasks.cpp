@@ -99,6 +99,10 @@ void task_adc_read(void *parameters)
 void task_ota(void *parameters)
 {
     delay(150);
+    while (startOTAServiceRequest == false)
+    {
+        delay(500);
+    }
     ota_setup();
     delay(150);
     for (;;)

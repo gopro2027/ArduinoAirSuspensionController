@@ -383,6 +383,15 @@ public class AirSuspensionController {
         });
     }
 
+    public void startWebService() {
+        queBluetoothCommand(() -> {
+            if (mConnectedThread != null) { //First check to make sure thread created
+                mConnectedThread.write("STARTWEB\n");
+                setMessageToDisplayOnCommandSuccess("Starting web service");
+            }
+        });
+    }
+
     public void calibrate() {
         queBluetoothCommand(() -> {
             if (mConnectedThread != null) { //First check to make sure thread created
