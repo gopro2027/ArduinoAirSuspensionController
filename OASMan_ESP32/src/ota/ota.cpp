@@ -1,5 +1,7 @@
 #include "ota.h"
 
+// Taken from here https://github.com/espressif/arduino-esp32/blob/master/libraries/Update/examples/OTAWebUpdater/OTAWebUpdater.ino
+
 #define SSID_FORMAT "OASMAN-%06lX" // 12 chars total
 
 WebServer server(80);
