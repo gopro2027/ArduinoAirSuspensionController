@@ -1,123 +1,175 @@
 #include "saveData.h"
 
-// TODO: Replace eeprom with preferences library
+#define SAVEDATA_NAMESPACE "savedata"
 
-EEPROM_DATA_ EEPROM_DATA;
+Preferences preferences;
+
+void openNamespace(char *ns, bool ro)
+{
+    preferences.begin(ns, ro);
+}
+
+void endNamespace()
+{
+    preferences.end();
+}
+
+void Preferencable::load(char *name, int defaultValue)
+{
+    strncpy(this->name, name, sizeof(this->name));
+    openNamespace(SAVEDATA_NAMESPACE, true);
+    if (preferences.isKey(name) == false)
+    {
+        endNamespace();
+        openNamespace(SAVEDATA_NAMESPACE, false); // reopen as read write
+        preferences.putInt(this->name, defaultValue);
+        this->value.i = defaultValue;
+    }
+    else
+    {
+        this->value.i = preferences.getInt(name, defaultValue);
+    }
+    endNamespace();
+}
+
+void Preferencable::set(int val)
+{
+    if (this->value.i != val)
+    {
+        this->value.i = val;
+        openNamespace(SAVEDATA_NAMESPACE, false);
+        preferences.putInt(this->name, val);
+        endNamespace();
+    }
+}
+
+void Preferencable::loadFloat(char *name, float defaultValue)
+{
+    strncpy(this->name, name, sizeof(this->name));
+    openNamespace(SAVEDATA_NAMESPACE, true);
+    if (preferences.isKey(name) == false)
+    {
+        endNamespace();
+        openNamespace(SAVEDATA_NAMESPACE, false); // reopen as read write
+        preferences.putFloat(this->name, defaultValue);
+        this->value.f = defaultValue;
+    }
+    else
+    {
+        this->value.f = preferences.getFloat(name, defaultValue);
+    }
+    endNamespace();
+}
+
+void Preferencable::setFloat(float val)
+{
+    if (this->value.f != val)
+    {
+        this->value.f = val;
+        openNamespace(SAVEDATA_NAMESPACE, false);
+        preferences.putFloat(this->name, val);
+        endNamespace();
+    }
+}
+
+SaveData _SaveData;
 byte currentProfile[4];
 bool sendProfileBT = false;
 
-bool doEEPROMSave = false;
-void saveEEPROM()
+void beginSaveData()
 {
-    doEEPROMSave = true;
-}
-void saveEEPROMLoop()
-{
-    if (doEEPROMSave)
+    _SaveData.riseOnStart.load("riseOnStart", false);
+    _SaveData.baseProfile.load("baseProfile", 0);
+    _SaveData.raiseOnPressure.load("raiseOnPressure", false);
+    _SaveData.internalReboot.load("internalReboot", false);
+    _SaveData.calibration.hasCalibrated.load("hasCalibrated", false);
+    _SaveData.calibration.voltageDividerCalibration.loadFloat("voltDividerCal", 0.0);
+    _SaveData.calibration.adcCalibration.loadFloat("adcCalibration", 0.0);
+    for (int i = 0; i < MAX_PROFILE_COUNT; i++)
     {
-        doEEPROMSave = false;
-        // portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
-        // taskENTER_CRITICAL(&myMutex);
-        EEPROM.put(0, EEPROM_DATA);
-        EEPROM.commit(); // this will crash if called from a task and not the main loop
-        // taskEXIT_CRITICAL(&myMutex);
-
-        if (EEPROM_DATA.internalReboot)
+        for (int j = 0; j < 4; j++)
         {
-            ESP.restart();
+            // first create a custom name for it. This would probably be better off done as different namespaces or something but idc
+            snprintf(_SaveData.profile[i].pressure[j].name, sizeof(_SaveData.profile[i].pressure[j].name), "profile%i|%i", i, j);
+            _SaveData.profile[i].pressure[j].load(_SaveData.profile[i].pressure[j].name, 50);
         }
     }
-}
-void beginEEPROM()
-{
-    EEPROM.begin(EEPROM_SIZE);
-    EEPROM.get(0, EEPROM_DATA);
 }
 
 void readProfile(byte profileIndex)
 {
-    currentProfile[WHEEL_FRONT_PASSENGER] = EEPROM_DATA.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER];
-    currentProfile[WHEEL_REAR_PASSENGER] = EEPROM_DATA.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER];
-    currentProfile[WHEEL_FRONT_DRIVER] = EEPROM_DATA.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER];
-    currentProfile[WHEEL_REAR_DRIVER] = EEPROM_DATA.profile[profileIndex].pressure[WHEEL_REAR_DRIVER];
+    currentProfile[WHEEL_FRONT_PASSENGER] = _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER].get().i;
+    currentProfile[WHEEL_REAR_PASSENGER] = _SaveData.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER].get().i;
+    currentProfile[WHEEL_FRONT_DRIVER] = _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER].get().i;
+    currentProfile[WHEEL_REAR_DRIVER] = _SaveData.profile[profileIndex].pressure[WHEEL_REAR_DRIVER].get().i;
     sendProfileBT = true;
 }
 
 void writeProfile(byte profileIndex)
 {
 
-    if (currentProfile[WHEEL_FRONT_PASSENGER] != EEPROM_DATA.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER] ||
-        currentProfile[WHEEL_REAR_PASSENGER] != EEPROM_DATA.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER] ||
-        currentProfile[WHEEL_FRONT_DRIVER] != EEPROM_DATA.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER] ||
-        currentProfile[WHEEL_REAR_DRIVER] != EEPROM_DATA.profile[profileIndex].pressure[WHEEL_REAR_DRIVER])
+    if (currentProfile[WHEEL_FRONT_PASSENGER] != _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER].get().i ||
+        currentProfile[WHEEL_REAR_PASSENGER] != _SaveData.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER].get().i ||
+        currentProfile[WHEEL_FRONT_DRIVER] != _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER].get().i ||
+        currentProfile[WHEEL_REAR_DRIVER] != _SaveData.profile[profileIndex].pressure[WHEEL_REAR_DRIVER].get().i)
     {
 
-        EEPROM_DATA.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER] = currentProfile[WHEEL_FRONT_PASSENGER];
-        EEPROM_DATA.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER] = currentProfile[WHEEL_REAR_PASSENGER];
-        EEPROM_DATA.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER] = currentProfile[WHEEL_FRONT_DRIVER];
-        EEPROM_DATA.profile[profileIndex].pressure[WHEEL_REAR_DRIVER] = currentProfile[WHEEL_REAR_DRIVER];
-        saveEEPROM();
+        _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER].set(currentProfile[WHEEL_FRONT_PASSENGER]);
+        _SaveData.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER].set(currentProfile[WHEEL_REAR_PASSENGER]);
+        _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER].set(currentProfile[WHEEL_FRONT_DRIVER]);
+        _SaveData.profile[profileIndex].pressure[WHEEL_REAR_DRIVER].set(currentProfile[WHEEL_REAR_DRIVER]);
     }
 }
 
 bool getRiseOnStart()
 {
-    return EEPROM_DATA.riseOnStart;
+    return _SaveData.riseOnStart.get().i;
 }
 void setRiseOnStart(bool value)
 {
     if (getRiseOnStart() != value)
     {
-        EEPROM_DATA.riseOnStart = value;
-        saveEEPROM();
+        _SaveData.riseOnStart.set(value);
     }
 }
 
 byte getBaseProfile()
 {
-    return EEPROM_DATA.baseProfile;
+    return _SaveData.baseProfile.get().i;
 }
 void setBaseProfile(byte value)
 {
     if (getBaseProfile() != value)
     {
-        EEPROM_DATA.baseProfile = value;
-        saveEEPROM();
+        _SaveData.baseProfile.set(value);
     }
 }
 
 bool getRaiseOnPressureSet()
 {
-    return EEPROM_DATA.raiseOnPressure;
+    return _SaveData.raiseOnPressure.get().i;
 }
 void setRaiseOnPressureSet(bool value)
 {
     if (getRaiseOnPressureSet() != value)
     {
-        EEPROM_DATA.raiseOnPressure = value;
-        saveEEPROM();
+        _SaveData.raiseOnPressure.set(value);
     }
 }
 
 bool getReboot()
 {
-    return EEPROM_DATA.internalReboot;
+    return _SaveData.internalReboot.get().i;
 }
 void setReboot(bool value)
 {
     if (getReboot() != value)
     {
-        EEPROM_DATA.internalReboot = value;
-        saveEEPROM();
+        _SaveData.internalReboot.set(value);
     }
 }
 
 Calibration *getCalibration()
 {
-    return &EEPROM_DATA.calibration;
-}
-// assumed you keep the pointer from getCalibration and modify that
-void setCalibration()
-{
-    saveEEPROM();
+    return &_SaveData.calibration;
 }
