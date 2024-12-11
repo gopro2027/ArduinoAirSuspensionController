@@ -11,7 +11,7 @@ Please click here to join the discord server!!!<br>
 <br>
 
 ### Important Info To Potential Creators:
-We are in the process of making the new ESP32 version, aka V2! Please join the discord for more information before you start your build.<br>
+V2 (ESP32 version) is almost ready. Some testing has been done, and my car has successfully driven some miles on it. Tweaks and software changes to come. It is more-or-less ready to build, please join the discord for more information.<br>
 
 ### Overview:
 This is intended as a DIY replacement for products such as Airlift 3P(3H*) ($1500) or Airtek Stage 2+ ($1000) with a build cost of less than $500. Combined with the customizability of open sourced code, I hope this is a tempting option for some DIY-ers out there.<br>
@@ -22,17 +22,17 @@ Out goal with this project is to provide the car community with a modern fully c
 - Proprietary software broke and there's no update? Not an issue here.<br>
 - Sensor broke in your proprietary manifold and you have to buy a whole new one for $1000? Not an issue here, just replace the sensor for $10.<br>
 - Want to use bespoke heavy duty valves but also have a nice user interface? Look no further than OAS-Man!<br>
+- Control your system with a PS3 controller? Yep we have that<br>
 - Restomodding an old air suspension system? OAS-Man may be the solution!<br>
 
 This github repo includes an android app and arduino code along with some 3d printable files and a PCB. The PCB is pre-made and ready for upload in JLCPCB to order. You will still need to supply the rest of your system which is not covered in this project, such as struts/bags, tank, compressor, tubing and fittings, ect. So that is what you would need in addition to this, similarly to what you would need for one of the on-the-shelf manifolds. If you are unsure what to purchase, I suggest getting the `Airtekk Stage 1 Kit` as that will just about cover everything you need.<br>
 <sub>* height sensors not yet supported in software. ** physical controller not yet designed</sub><br>
 
 ### Branch Information:
-**main branch = ESP32** (in progress)<br>
-**nano-v1 branch = Arduino Nano** (outdated, maintained but not updating with new features)<br>
+**main branch = ESP32** (Current full version of OASMan)<br>
+**nano-v1 branch = Arduino Nano** (outdated, no longer maintained, only exists for legacy purposes)<br>
 **Other branches = current dev work** (Other dev work which you can ignore)<br>
 <br>
-Additionally, the android app code does not have as strict designation and will be kept updated on the main branch however will likely work on the nano (with the exception of new bluetooth commands not supported on the nano) until otherwise stated.
 
 ### Please [click here to view the comprehensive tutorial](/tutorial/README.md) documentation!<br>
 <br>
@@ -51,6 +51,8 @@ Additionally, the android app code does not have as strict designation and will 
 5. Circuit board single switch off, on the double switch make the top one on and bottom one off (this will power the arduino by 5v from the buck converter. 12 is bottom switch if you want to use that instead but you can ignore it)
 -->
 
-
+![manifold](https://github.com/user-attachments/assets/d93784e5-7e5e-4bb0-891a-8a2a8e4d4da0)
 ![app_airsuspension](https://user-images.githubusercontent.com/7937950/236578835-0e3a208d-48cf-48e8-a882-4479f1afe35c.png)
-![car_airsuspension](https://user-images.githubusercontent.com/7937950/236578918-bfa39ad6-a3b5-4d52-b36a-be34e8c608af.png)
+<!--![car_airsuspension](https://user-images.githubusercontent.com/7937950/236578918-bfa39ad6-a3b5-4d52-b36a-be34e8c608af.png)-->
+![oasman mascot car](https://github.com/user-attachments/assets/aef9e896-0be0-4203-92d2-81836c27fd5d)
+

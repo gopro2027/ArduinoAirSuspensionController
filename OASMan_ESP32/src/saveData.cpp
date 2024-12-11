@@ -1,5 +1,7 @@
 #include "saveData.h"
 
+// TODO: Replace eeprom with preferences library
+
 EEPROM_DATA_ EEPROM_DATA;
 byte currentProfile[4];
 bool sendProfileBT = false;
@@ -19,6 +21,11 @@ void saveEEPROMLoop()
         EEPROM.put(0, EEPROM_DATA);
         EEPROM.commit(); // this will crash if called from a task and not the main loop
         // taskEXIT_CRITICAL(&myMutex);
+
+        if (EEPROM_DATA.internalReboot)
+        {
+            ESP.restart();
+        }
     }
 }
 void beginEEPROM()
@@ -90,4 +97,27 @@ void setRaiseOnPressureSet(bool value)
         EEPROM_DATA.raiseOnPressure = value;
         saveEEPROM();
     }
+}
+
+bool getReboot()
+{
+    return EEPROM_DATA.internalReboot;
+}
+void setReboot(bool value)
+{
+    if (getReboot() != value)
+    {
+        EEPROM_DATA.internalReboot = value;
+        saveEEPROM();
+    }
+}
+
+Calibration *getCalibration()
+{
+    return &EEPROM_DATA.calibration;
+}
+// assumed you keep the pointer from getCalibration and modify that
+void setCalibration()
+{
+    saveEEPROM();
 }

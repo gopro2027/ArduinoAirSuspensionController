@@ -32,7 +32,7 @@ public:
              InputType *fdo,
              InputType *rdi,
              InputType *rdo);
-    InputType *get(SOLENOID_INDEX solenoid);
+    InputType *get(int solenoid);
     InputType **getAll();
     void pauseValvesForBlockingTask();
     void unpauseValvesForBlockingTaskCompleted();

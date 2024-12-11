@@ -2,22 +2,13 @@
 #ifndef bt_h
 #define bt_h
 #include "user_defines.h"
-#include "components/Wheel.h"
+#include "components/wheel.h"
 #include "BluetoothSerial.h"
-
+#include "saveData.h"
 #include "airSuspensionUtil.h"
 
-// values
 extern BluetoothSerial bt;
-extern bool pause_exe;
-
-// functions
-void sendHeartbeat();
-void sendCurrentProfileData();
+extern bool startOTAServiceRequest;
 void bt_cmd();
-bool runInput();
-int trailingInt(const char str[]);
-bool comp(char *str1, const char str2[]);
-bool runInput();
 
 #endif

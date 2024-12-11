@@ -22,7 +22,7 @@ Manifold::Manifold(InputType *fpi,
     this->wheelSolenoidMask = 0;
 }
 
-InputType *Manifold::get(SOLENOID_INDEX solenoid)
+InputType *Manifold::get(int solenoid)
 {
     return this->solenoidList[solenoid];
 }
@@ -32,6 +32,7 @@ InputType **Manifold::getAll()
     return this->solenoidList;
 }
 
+// these are depricated/unused. Pause/unpause all valves
 void Manifold::pauseValvesForBlockingTask()
 {
     this->wheelSolenoidMask = 0;
@@ -54,4 +55,5 @@ void Manifold::unpauseValvesForBlockingTaskCompleted()
             this->solenoidList[i]->digitalWrite(HIGH);
         }
     }
+    this->wheelSolenoidMask = 0; // reset bitset
 }

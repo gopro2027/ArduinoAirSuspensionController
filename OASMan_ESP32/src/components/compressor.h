@@ -11,7 +11,7 @@ class Compressor
 {
 private:
     InputType *readPin;
-    int currentPressure;
+    float currentPressure;
     bool stateOnPause;
     bool isPaused;
     Solenoid s_trigger; // Not a solenoid, but works the same way
@@ -22,6 +22,8 @@ public:
     void pause(); // call pause and resume for thread blocking tasks
     void resume();
     float readPressure();
+    float getTankPressure();
+    InputType *getReadPin();
 };
 
 #endif

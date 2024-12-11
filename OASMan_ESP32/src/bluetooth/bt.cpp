@@ -1,6 +1,9 @@
 #include "bt.h"
 
 BluetoothSerial bt;
+bool startOTAServiceRequest = false;
+
+bool runInput();
 
 void sendHeartbeat()
 {
@@ -35,8 +38,8 @@ void sendCurrentProfileData()
 // https://www.seeedstudio.com/blog/2020/01/02/how-to-control-arduino-with-bluetooth-module-and-shields-to-get-started/
 
 char *outString = "";
-// String inString = "";
-char inBuffer[30];
+#define inBufferSize 30
+char inBuffer[inBufferSize];
 unsigned long lastHeartbeat = 0;
 void bt_cmd()
 {
@@ -66,21 +69,6 @@ void bt_cmd()
     else
     {
 
-        // Get input as string
-        if (pause_exe == false)
-        {
-            if (bt.available())
-            {
-                while (Serial.available() > 0)
-                {
-                    Serial.read();
-                }
-                delay(200);
-                pause_exe = true;
-                return;
-            }
-        }
-
         while (bt.available())
         {
             char c = bt.read();
@@ -97,13 +85,17 @@ void bt_cmd()
                     outString = "ERRUNK";
                 }
                 memset(inBuffer, 0, sizeof(inBuffer));
-                pause_exe = false; // unpause
-                continue;          // just to skip writing out the original \n, could also be break but whatever
+                continue; // just to skip writing out the original \n, could also be break but whatever
             }
-            inBuffer[strlen(inBuffer)] = c;
-            Serial.print(c);
+
+            int index = strlen(inBuffer);
+            if (index < inBufferSize)
+            {
+                inBuffer[index] = c;
+            }
+
+            delay(10); // add delay in case it gets stuck in loop
         }
-        bt.read();
     }
 }
 
@@ -125,9 +117,9 @@ const char _AIRHEIGHTC[] PROGMEM = PASSWORD "AIRHEIGHTC\0";
 const char _AIRHEIGHTD[] PROGMEM = PASSWORD "AIRHEIGHTD\0";
 const char _RISEONSTART[] PROGMEM = PASSWORD "RISEONSTART\0";
 const char _RAISEONPRESSURESET[] PROGMEM = PASSWORD "ROPS\0";
-#if TEST_MODE == true
-const char _TESTSOL[] PROGMEM = PASSWORD "TESTSOL\0";
-#endif
+const char _REBOOT[] PROGMEM = PASSWORD "REBOOT\0";
+const char _CALIBRATE[] PROGMEM = PASSWORD "CALIBRATE\0";
+const char _STARTWEB[] PROGMEM = PASSWORD "STARTWEB\0";
 
 bool comp(char *str1, const char str2[])
 {
@@ -169,7 +161,6 @@ bool runInput()
     {
         int value = trailingInt(_AIRSM);
         airUpRelativeToAverage(value);
-        skipPerciseSet = true; // will be reset by any call to Wheel::initPressureGoal
         return true;
     }
     else if (comp(inBuffer, _SAVETOPROFILE))
@@ -211,8 +202,7 @@ bool runInput()
         }
         // load profile then air up
         readProfile(profileIndex);
-        airUp();
-        skipPerciseSet = true; // will be reset by any call to Wheel::initPressureGoal
+        airUp(true);
         return true;
     }
     else if (comp(inBuffer, _AIRHEIGHTA))
@@ -265,19 +255,23 @@ bool runInput()
         }
         return true;
     }
-#if TEST_MODE == true
-    else if (comp(inBuffer, _TESTSOL))
+    else if (comp(inBuffer, _REBOOT))
     {
-        unsigned long pin = trailingInt(_TESTSOL);
-        Serial.println(pin);
-        if (pin >= 6 && pin <= 13)
-        {
-            digitalWrite(pin, HIGH);
-            delay(1000); // sleep 100ms
-            digitalWrite(pin, LOW);
-        }
+        setReboot(true);
+        Serial.println(F("Rebooting..."));
         return true;
     }
-#endif
+    else if (comp(inBuffer, _CALIBRATE))
+    {
+        Serial.println(F("Running calibration routine..."));
+        calibratePressureValues();
+        return true;
+    }
+    else if (comp(inBuffer, _STARTWEB))
+    {
+        Serial.println(F("Starting OTA..."));
+        startOTAServiceRequest = true;
+        return true;
+    }
     return false;
 }

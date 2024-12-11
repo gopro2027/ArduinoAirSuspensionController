@@ -7,6 +7,12 @@
 
 #define MAX_PRESSURE_SAFETY 200
 
+/* Bags generally do not like to sit at exactly 0psi. Please choose which pressure is desired for air out */
+#define AIR_OUT_PRESSURE_PSI 30
+
+/* Set to false if you don't plan to ever use the PS3 controller. MAC address can be left alone. Instructions for controller at https://github.com/gopro2027/ArduinoAirSuspensionController/tree/main/PS3_Controller_Tool */
+#define ENABLE_PS3_CONTROLLER_SUPPORT true
+
 /* This is the private passcode you need to access your system from the app. Set the same value in the app settings after launching the app. */
 #define PASSWORD "12345678"
 
@@ -61,19 +67,20 @@
 #define ADS_A_ADDRESS 0x48 // 0x48 is address pin to low
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
 
-/* For testing purposes: set to true to make all ads A values (ie under default settings, the 4 pressure sensors to the wheels) return the max psi... this one is useful for testing air down */
-#define ADS_A_MOCK_BYPASS true
-
 /* Disable the hang if ads fails to load */
-#define ADS_MOCK_BYPASS true
+#define ADS_MOCK_BYPASS false
 
 /* For testing purposes: mock tank pressure to 200psi */
-#define TANK_PRESSURE_MOCK true
+#define TANK_PRESSURE_MOCK false
 
 /* Values for pressure calculations */
-#define pressureZeroAnalogValue (float)409.6 // analog reading of pressure transducer at 0psi.          for nano: (0.5 volts / 5 volts) * 1024 = 102.4. for esp32: (0.5 volts / 5 volts) * 4096 = 409.6
-#define pressureMaxAnalogValue (float)3686.4 // analog reading of pressure transducer at max psi.       for nano: (4.5 volts / 5 volts) * 1024 = 921.6. for esp32: (4.5 volts / 5 volts) * 4096 = 3686.4
-#define pressuretransducermaxPSI 300         // psi value of transducer being used.
+#define pressuretransducerRunningVoltage 5.0f                                                                                                    // most pressure sensors run on 5v
+#define pressuretransducerVoltageZeroPSI 0.45f                                                                                                   // most say 0.5v but may differ  (I was reading 0.295f for 0psi on base esp32)
+#define pressuretransducerVoltageMaxPSI 4.5f                                                                                                     // most say 4.5v but may differ
+#define pressuretransducermaxPSI 232                                                                                                             // psi value of transducer being used. (1.6MPA = 232PSI)
+#define microcontrollerMaxAnalogReading 4095                                                                                                     // esp32 built in adc goes to 4095
+#define pressureZeroAnalogValue (float)((pressuretransducerVoltageZeroPSI / pressuretransducerRunningVoltage) * microcontrollerMaxAnalogReading) // analog reading of pressure transducer at 0psi.
+#define pressureMaxAnalogValue (float)((pressuretransducerVoltageMaxPSI / pressuretransducerRunningVoltage) * microcontrollerMaxAnalogReading)   // analog reading of pressure transducer at max psi.
 
 /* DO NOT CHANGE ANY PAST THIS LINE */
 #define WHEEL_FRONT_PASSENGER 0
@@ -81,12 +88,14 @@
 #define WHEEL_FRONT_DRIVER 2
 #define WHEEL_REAR_DRIVER 3
 
+/* The amount of time the pressure routine will try to reach the goal pressure before 'giving up' (usually due to lower pressure in tank or something) Default is 10 seconds. */
+#define ROUTINE_TIMEOUT_MS 10 * 1000
+
 #endif
 
 /*
 Note: if you want to test esp32 without being on the assembled pcb turn these values:
 ADS_MOCK_BYPASS true
-ADS_A_MOCK_BYPASS true
 TANK_PRESSURE_MOCK true
 SCREEN_ENABLED false
 

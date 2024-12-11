@@ -5,7 +5,7 @@
 #include "user_defines.h"
 #include "input_type.h"
 #include "solenoid.h"
-#include "Manifold.h"
+#include "manifold.h"
 
 class Wheel
 {
@@ -13,39 +13,33 @@ private:
     InputType *pressurePin;
     byte thisWheelNum;
 
-    bool isInSafePressureRead;
-    bool isClosePaused;
-
     byte pressureGoal;
-
     unsigned long routineStartTime;
+    bool flagStartPressureGoalRoutine; // flag to tell it to start routine to pressureGoal
+    bool quickMode;                    // flag to skip extra percise measurements
+
     float pressureValue;
 
     Solenoid s_AirIn;
     Solenoid s_AirOut;
 
-public: 
+public:
     Wheel();
     Wheel(InputType *solenoidInPin, InputType *solenoidOutPin, InputType *pressurePin, byte thisWheelNum);
-    void initPressureGoal(int newPressure);
-    void pressureGoalRoutine();
+    void initPressureGoal(int newPressure, bool quick = false);
+    void loop();
     void readPressure();
     float getPressure();
     bool isActive();
-    bool prepareSafePressureRead();
-    void safePressureClose();
-    void safePressureReadPauseClose();
-    void safePressureReadResumeClose();
-    void calcAvg();
-    void percisionGoToPressure();
-    void percisionGoToPressureQue(byte goalPressure);
+    Solenoid *getInSolenoid();
+    Solenoid *getOutSolenoid();
+    InputType *getPressurePin();
 };
 
 float readPinPressure(InputType *pin);
 
 // janky fix because i can't import airSuspensionUtil.h due to circular import I think
 extern Manifold *getManifold();
-extern void setGoToPressureGoalPercise(byte wheelnum);
-extern bool skipPerciseSet;
+extern int getTankPressure();
 
 #endif

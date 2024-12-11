@@ -247,13 +247,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateLog() {
-        String log = "";
-        for (String str : errorLog) {
-            log = str + "\n" + log;
-        }
-        if (logTextView != null) {
-            logTextView.setText(log);
-        }
+        try {
+            String log = "";
+            for (String str : errorLog) {
+                log = str + "\n" + log;
+            }
+            if (logTextView != null) {
+                logTextView.setText(log);
+            }
+        } catch (Exception e){}// concurrent modification exception it seems
     }
 
     public boolean isLogVisible() {

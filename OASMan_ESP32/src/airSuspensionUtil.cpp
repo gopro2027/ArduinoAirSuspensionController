@@ -1,6 +1,8 @@
 #include "airSuspensionUtil.h"
 #include "saveData.h"
 
+#pragma region variables
+
 Manifold *manifold;
 Compressor *compressor;
 Wheel *wheel[4];
@@ -23,6 +25,9 @@ Wheel *getWheel(int i)
     return wheel[i];
 }
 
+#pragma endregion
+
+#pragma region setting_current_profile
 void setRideHeightFrontPassenger(byte value)
 {
     currentProfile[WHEEL_FRONT_PASSENGER] = value;
@@ -55,6 +60,9 @@ void setRideHeightRearDriver(byte value)
         getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(value);
     }
 }
+#pragma endregion
+
+#pragma region initialization
 
 #if USE_ADS == true
 void initializeADS()
@@ -97,6 +105,10 @@ void setupManifold()
         solenoidRearDriverOutPin);
 }
 
+#pragma endregion
+
+#pragma region wheel_functions
+
 bool isAnyWheelActive()
 {
     for (int i = 0; i < 4; i++)
@@ -108,153 +120,114 @@ bool isAnyWheelActive()
     }
     return false;
 }
-byte goToPerciseBitset = 0;
-void setGoToPressureGoalPercise(byte wheelnum)
-{
-    goToPerciseBitset = goToPerciseBitset | (1 << wheelnum);
-}
-void setNotGoToPressureGoalPercise(byte wheelnum)
-{
-    goToPerciseBitset = goToPerciseBitset & ~(1 << wheelnum);
-}
-bool shouldDoPressureGoalOnWheel(byte wheelnum)
-{
-    return (goToPerciseBitset >> wheelnum) & 1;
-}
-bool skipPerciseSet = false; // this is like a global flag to tell it to not do percise pressure set only from the main pressure goal routine
-void pressureGoalRoutine()
-{
-    bool a = false;
-    if (isAnyWheelActive())
-    {
-        readPressures();
-        a = true;
-    }
-    for (int i = 0; i < 4; i++)
-    {
-        getWheel(i)->pressureGoalRoutine();
-    }
-    if (a == false)
-    {
-        if (goToPerciseBitset != 0)
-        {
-            // Uncomment this to make it run twice for more precision
-            for (byte i = 0; i < 4; i++)
-            {
-                if (shouldDoPressureGoalOnWheel(i))
-                {
-                    if (skipPerciseSet == false)
-                        getWheel(i)->percisionGoToPressure();
-                }
-            }
-            // run a second time :P and also set it to not run again
-            for (byte i = 0; i < 4; i++)
-            {
-                if (shouldDoPressureGoalOnWheel(i))
-                {
-                    if (skipPerciseSet == false)
-                        getWheel(i)->percisionGoToPressure();
-                    setNotGoToPressureGoalPercise(i);
-                }
-            }
-        }
-    }
-}
 
-void airUp()
+void airUp(bool quick)
 {
-    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(currentProfile[WHEEL_FRONT_PASSENGER]);
-    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(currentProfile[WHEEL_REAR_PASSENGER]);
-    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(currentProfile[WHEEL_FRONT_DRIVER]);
-    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(currentProfile[WHEEL_REAR_DRIVER]);
+    // TODO: if quick, skip high percision
+    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(currentProfile[WHEEL_FRONT_PASSENGER], quick);
+    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(currentProfile[WHEEL_REAR_PASSENGER], quick);
+    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(currentProfile[WHEEL_FRONT_DRIVER], quick);
+    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(currentProfile[WHEEL_REAR_DRIVER], quick);
 }
 
 void airOut()
 {
-    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(30);
-    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(30);
-    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(30);
-    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(30);
+    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
+    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
+    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
+    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
 }
 
 void airUpRelativeToAverage(int value)
 {
-    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getWheel(WHEEL_FRONT_PASSENGER)->getPressure() + value);
-    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getPressure() + value);
-    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getPressure() + value);
-    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getPressure() + value);
+    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getWheel(WHEEL_FRONT_PASSENGER)->getPressure() + value, true);
+    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getPressure() + value, true);
+    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getPressure() + value, true);
+    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getPressure() + value, true);
 }
 
-float pressureValueTank = 0;
+#pragma endregion
+
+#pragma region tank_comp_functions
+
 int getTankPressure()
 {
 #if TANK_PRESSURE_MOCK == true
     return 200;
 #else
-    return pressureValueTank;
+    return compressor->getTankPressure();
 #endif
-}
-
-float readPinPressure(InputType *pin);
-const int time_solenoid_movement_delta = 500; // ms
-const int time_solenoid_open_time = 1;        // ms
-void readPressures()
-{
-    pressureValueTank = compressor->readPressure();
-
-    // check if any air up solenoids are open and if so, close them for reading
-    bool safePressureReadAny = false;
-    for (int i = 0; i < 4; i++)
-    {
-        if (getWheel(i)->prepareSafePressureRead())
-        {
-            safePressureReadAny = true;
-        }
-    }
-
-    // wait a bit of time for the solenoids to physically close
-    if (safePressureReadAny)
-    {
-        for (int i = 0; i < 4; i++)
-        {
-            getWheel(i)->safePressureReadPauseClose();
-        }
-        delay(time_solenoid_movement_delta);
-    }
-
-    // read the pressures
-    for (int i = 0; i < 4; i++)
-    {
-        getWheel(i)->readPressure();
-    }
-
-    // re-open solenoids if necessary
-    for (int i = 0; i < 4; i++)
-    {
-        getWheel(i)->safePressureClose();
-    }
-
-    // give them a brief pause to stay open (not super necessary)
-    if (safePressureReadAny)
-    {
-        delay(time_solenoid_open_time);
-        // resume wheels after delay
-        for (int i = 0; i < 4; i++)
-        {
-            getWheel(i)->safePressureReadResumeClose();
-        }
-    }
 }
 
 void compressorLogic()
 {
-    if (isAnyWheelActive())
-    {
-        compressor->pause();
-    }
-    else
-    {
-        compressor->resume();
-    }
+    // TODO: check, This resume and pause logic may be able to be removed!!! It says it is used for thread blocking tasks which is no longer an issue
+    // I guess we may still want to keep it  for the case that if a valve is open the tanks pressure is not accurate??? Could probably be removed tbh
+    // if (isAnyWheelActive())
+    // {
+    //     compressor->pause();
+    // }
+    // else
+    // {
+    //     compressor->resume();
+    // }
+
     compressor->loop();
 }
+
+#pragma endregion
+
+#pragma region calibration
+
+// this function is used to grab the realistic values because 5v is not perfect
+// Make sure to add warning for ensure all other functions and not running ect ect
+// This is also very specific to the main designed oasman board, assuming tank is on voltage divider and other values are on adc
+void calibratePressureValues()
+{
+    compressor->pause();
+
+    // step 1: dump all valves
+    for (int i = 0; i < SOLENOID_COUNT; i++)
+    {
+        manifold->get(i)->digitalWrite(HIGH);
+    }
+
+    delay(20 * 1000); // sleep litteral 20 seconds so tanks dump all the air
+
+    // close all valves
+    for (int i = 0; i < SOLENOID_COUNT; i++)
+    {
+        manifold->get(i)->digitalWrite(LOW);
+    }
+
+    // step 2: read valves at 0psi
+
+    const int sampleSize = 25;
+    double totalVoltageDivider = 0;
+    double totalADC = 0;
+
+    for (int i = 0; i < sampleSize; i++)
+    {
+        int v_vd = compressor->getReadPin()->analogRead(true);
+        int v_adc = getWheel(WHEEL_FRONT_PASSENGER)->getPressurePin()->analogRead(true);
+        // Serial.print("v: ");
+        // Serial.print(v_vd);
+        // Serial.print("\t");
+        // Serial.println(v_adc);
+        totalVoltageDivider += v_vd; // read tank pressure analog value at 0psi (voltage divider)
+        totalADC += v_adc;           // read first bag pressure at 0psi (adc)
+        delay(250);                  // should take a total of 6.25 seconds for this loop to complete
+    }
+
+    // step 3: save these values for use in input_type
+
+    Calibration *calibration = getCalibration();
+    calibration->voltageDividerCalibration = totalVoltageDivider / sampleSize;
+    calibration->adcCalibration = totalADC / sampleSize;
+    calibration->hasCalibrated = true;
+    setCalibration();
+
+    compressor->resume();
+}
+
+#pragma endregion
