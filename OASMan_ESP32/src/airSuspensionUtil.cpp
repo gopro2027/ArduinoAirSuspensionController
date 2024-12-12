@@ -222,10 +222,9 @@ void calibratePressureValues()
     // step 3: save these values for use in input_type
 
     Calibration *calibration = getCalibration();
-    calibration->voltageDividerCalibration = totalVoltageDivider / sampleSize;
-    calibration->adcCalibration = totalADC / sampleSize;
-    calibration->hasCalibrated = true;
-    setCalibration();
+    calibration->voltageDividerCalibration.setFloat(totalVoltageDivider / sampleSize);
+    calibration->adcCalibration.setFloat(totalADC / sampleSize);
+    calibration->hasCalibrated.set(true);
 
     compressor->resume();
 }
