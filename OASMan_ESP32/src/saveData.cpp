@@ -1,5 +1,7 @@
 #include "saveData.h"
 
+// Tutorial with preferences code https://randomnerdtutorials.com/esp32-save-data-permanently-preferences/
+
 #define SAVEDATA_NAMESPACE "savedata"
 
 Preferences preferences;
