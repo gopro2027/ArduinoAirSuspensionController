@@ -55,5 +55,9 @@ void setup()
 
 void loop()
 {
-    delay(1000);
+    if (getReboot() == true)
+    {
+        ESP.restart();
+    }
+    delay(250);
 }
