@@ -98,6 +98,13 @@ float analogToPressure(int nativeAnalogValue)
     return psi;
 }
 
+// Testing function, convert pressure value back to analog value, exact reverse of analogToPressure
+float pressureToAnalog(float psi)
+{
+    float totalRange = pressureMaxAnalogValue - pressureZeroAnalogValue; // get the total analog voltage difference between min and max
+    return (psi / pressuretransducermaxPSI) * totalRange + pressureZeroAnalogValue;
+}
+
 float readPinPressure(InputType *pin)
 {
     return analogToPressure(pin->analogRead());
