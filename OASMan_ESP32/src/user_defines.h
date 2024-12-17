@@ -75,7 +75,7 @@
 
 /* Values for pressure calculations */
 #define pressuretransducerRunningVoltage 5.0f                                                                                                    // most pressure sensors run on 5v
-#define pressuretransducerVoltageZeroPSI 0.45f                                                                                                   // most say 0.5v but may differ  (I was reading 0.295f for 0psi on base esp32)
+#define pressuretransducerVoltageZeroPSI 0.5f                                                                                                    // most say 0.5v but may differ  (I was reading 0.295f for 0psi on base esp32) (on multimeter tested and readings were consistent with 0.5v... .501, .503, .499, .502)
 #define pressuretransducerVoltageMaxPSI 4.5f                                                                                                     // most say 4.5v but may differ
 #define pressuretransducermaxPSI 232                                                                                                             // psi value of transducer being used. (1.6MPA = 232PSI)
 #define microcontrollerMaxAnalogReading 4095                                                                                                     // esp32 built in adc goes to 4095
