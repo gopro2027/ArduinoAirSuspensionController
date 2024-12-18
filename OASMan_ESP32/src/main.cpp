@@ -12,7 +12,7 @@
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
-    beginEEPROM();
+    beginSaveData();
 
     delay(200); // wait for voltage stabilize
 
@@ -55,8 +55,9 @@ void setup()
 
 void loop()
 {
-
-    saveEEPROMLoop(); // eeprom cannot be saved from inside a task very easily. Easy enough just to tell it to save here in the main loop
-
-    delay(1000); // lmao we only have an eeprom so i guess just save every second roughly
+    if (getReboot() == true)
+    {
+        ESP.restart();
+    }
+    delay(250);
 }

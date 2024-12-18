@@ -27,6 +27,7 @@ Here are the parts required to build the manifold. Obviously with an open source
 | Various 1/8 NPT PTC connectors | 0-12 | - | - | Depending on your setup you may configure the ports differently. Easiest route is using all PTC and 1/4" hoses to everything |
 | 3D printed manifold base hat and lid | 1 | - | - | You are going to want to 3d print the files for assembling the manifold and pcb together in a nice package. If you don't own a 3d printer, you will want to order these files printed online or from one of the discord members |
 | Main PCB | 1 | ![image](https://github.com/user-attachments/assets/05903a94-f99a-4bc5-8a4f-212cf436e3cb) | [files](/PCB/ESP32_30PIN_PCB/V2) | Order the pcb from jlcpcb (or whatever you prefer) in the minimum quantity of 5 (about $30) or purchase one from a discord member. More info on the other tutorial pages. |
+| 12V Stabilizer | 1 | ![20241205_131439](https://github.com/user-attachments/assets/77595e2d-b98f-428d-9c74-689fca6c2d4f) | [amazon](https://www.amazon.com/YABOANG-9-40V-12V3A-Transformer-Instruments/dp/B0CZ8GYJC5?th=1) | Car electronics are not a perfect 12v, would be a good idea to run one of these on the 12v input to stabilize the voltage and help prevent possible issues |
 
 ### Additional Parts
 

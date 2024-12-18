@@ -23,6 +23,14 @@ void task_bluetooth(void *parameters)
         bt_cmd();
         delay(10);
     }
+
+    // ble_setup();
+    // delay(100);
+    // for (;;)
+    // {
+    //     ble_loop();
+    //     delay(10);
+    // }
 }
 
 #if SCREEN_ENABLED == true
@@ -88,6 +96,22 @@ void task_adc_read(void *parameters)
     }
 }
 
+void task_ota(void *parameters)
+{
+    delay(150);
+    while (startOTAServiceRequest == false)
+    {
+        delay(500);
+    }
+    ota_setup();
+    delay(150);
+    for (;;)
+    {
+        ota_loop();
+        delay(150);
+    }
+}
+
 void setup_tasks()
 {
     //  Bluetooth Task
@@ -104,7 +128,7 @@ void setup_tasks()
     xTaskCreate(
         task_screen,
         "OLED",
-        512 * 2,
+        512 * 3,
         NULL,
         1000,
         NULL);
@@ -120,7 +144,6 @@ void setup_tasks()
         1000,
         NULL);
 #endif
-
     // Compressor Control Task
     xTaskCreate(
         task_compressor,
@@ -152,4 +175,13 @@ void setup_tasks()
         1000,
         NULL);
 #endif
+
+    // OTA Task
+    xTaskCreate(
+        task_ota,
+        "OTA",
+        512 * 5,
+        NULL,
+        1000,
+        NULL);
 }

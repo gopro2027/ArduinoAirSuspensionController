@@ -2,41 +2,62 @@
 #define saveData_h
 
 #include <Arduino.h>
-#include <EEPROM.h>
+#include <Preferences.h>
 
 #include "user_defines.h"
 
-struct Profile
+union PreferencableValue
 {
-    byte pressure[4];
+    int i;
+    float f;
 };
 
-struct Calibration
+class Preferencable
 {
-    bool hasCalibrated;
-    float voltageDividerCalibration; // voltage divider read value for 0psi
-    float adcCalibration;            // adc read value for 0psi
+
+public:
+    char name[15]; // 15 is max len. Note for future devs: I didn't add any code to make sure it is 0 terminated so be careful how you choose a name i guess
+    PreferencableValue value;
+    void load(char *name, int defaultValue);
+    void set(int val);
+    void loadFloat(char *name, float defaultValue);
+    void setFloat(float val);
+    PreferencableValue get()
+    {
+        return value;
+    }
 };
 
-struct EEPROM_DATA_
+class Profile
 {
-    byte riseOnStart;
-    byte baseProfile;
-    byte raiseOnPressure;
-    byte internalReboot;
+public:
+    Preferencable pressure[4]; // byte
+};
+
+class Calibration
+{
+public:
+    Preferencable hasCalibrated;             // bool
+    Preferencable voltageDividerCalibration; // float voltage divider read value for 0psi
+    Preferencable adcCalibration;            // float adc read value for 0psi
+};
+
+class SaveData
+{
+public:
+    Preferencable riseOnStart;     // byte
+    Preferencable baseProfile;     // byte
+    Preferencable raiseOnPressure; // byte
+    Preferencable internalReboot;  // byte
     Calibration calibration;
-    byte padding[80]; // decrement as neccessary to maintain EEPROM_DATA_ when adding info
     Profile profile[MAX_PROFILE_COUNT];
 };
-#define EEPROM_SIZE sizeof(EEPROM_DATA_)
 
-extern EEPROM_DATA_ EEPROM_DATA;
+extern SaveData _SaveData;
 extern byte currentProfile[4];
 extern bool sendProfileBT;
 
-void saveEEPROM();
-void saveEEPROMLoop();
-void beginEEPROM();
+void beginSaveData();
 void readProfile(byte profileIndex);
 void writeProfile(byte profileIndex);
 bool getRiseOnStart();
@@ -48,6 +69,5 @@ void setRaiseOnPressureSet(bool value);
 bool getReboot();
 void setReboot(bool value);
 Calibration *getCalibration();
-void setCalibration();
 
 #endif

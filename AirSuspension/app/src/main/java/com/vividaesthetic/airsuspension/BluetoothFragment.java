@@ -1,8 +1,12 @@
 package com.vividaesthetic.airsuspension;
 
+import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
@@ -159,6 +163,50 @@ public class BluetoothFragment extends Fragment {
         binding.debugLogSwitch.setOnCheckedChangeListener((v,isChecked ) -> {
             ((MainActivity) requireActivity()).setLogVisible(isChecked);
         });
+
+        binding.openFirmwareUpdateWebpage.setOnClickListener((v) -> {
+
+            DialogInterface.OnClickListener dialogClickListener1 = (dialog, which) -> {
+                switch (which){
+                    case DialogInterface.BUTTON_POSITIVE:
+                        //Yes button clicked
+                        openUpdateWebBrowser();
+                        break;
+
+                    case DialogInterface.BUTTON_NEGATIVE:
+                        //No button clicked
+                        break;
+                }
+            };
+
+
+            DialogInterface.OnClickListener dialogClickListener = (dialog, which) -> {
+                switch (which){
+                    case DialogInterface.BUTTON_POSITIVE:
+                        //Yes button clicked
+                        getAirSuspensionController().startWebService();
+                        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+                        builder.setMessage("Network starting, please connect to the OASMAN-XXXXX wifi network now using the password `"+((MainActivity) requireActivity()).getBTPassword()+"`. Then click yes to proceed to the web page to upload the update file.").setPositiveButton("Yes", dialogClickListener1)
+                                .setNegativeButton("No", dialogClickListener1).show();
+                        break;
+
+                    case DialogInterface.BUTTON_NEGATIVE:
+                        //No button clicked
+                        break;
+                }
+            };
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setMessage("Do you want to start the update web service?").setPositiveButton("Yes", dialogClickListener)
+                    .setNegativeButton("No", dialogClickListener).show();
+        });
+    }
+
+    public void openUpdateWebBrowser() {
+        String url = "http://oasman.local";
+        Intent i = new Intent(Intent.ACTION_VIEW);
+        i.setData(Uri.parse(url));
+        startActivity(i);
     }
 
 
