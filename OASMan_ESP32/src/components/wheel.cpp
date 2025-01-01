@@ -142,7 +142,7 @@ void Wheel::initPressureGoal(int newPressure, bool quick)
     if (abs(pressureDif) > getMinValveOpenPSI(quick))
     {
         // okay we need to set the values, but only if we are airing out or if the tank has more pressure than what is currently in the bags
-        if (pressureDif < 0 || getTankPressure() > this->getPressure())
+        if (pressureDif < 0 || getCompressor()->getTankPressure() > this->getPressure())
         {
             this->pressureGoal = newPressure;
             this->quickMode = quick;

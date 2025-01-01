@@ -38,4 +38,6 @@ public:
     void unpauseValvesForBlockingTaskCompleted();
 };
 
+extern Manifold *getManifold(); // defined in airSuspensionUtil.h
+
 #endif

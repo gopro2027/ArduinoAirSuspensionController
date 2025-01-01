@@ -6,6 +6,7 @@
 #include "input_type.h"
 #include "solenoid.h"
 #include "manifold.h"
+#include "compressor.h"
 
 class Wheel
 {
@@ -37,9 +38,4 @@ public:
 };
 
 float readPinPressure(InputType *pin);
-
-// janky fix because i can't import airSuspensionUtil.h due to circular import I think
-extern Manifold *getManifold();
-extern int getTankPressure();
-
 #endif
