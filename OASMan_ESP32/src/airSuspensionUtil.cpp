@@ -18,6 +18,10 @@ Manifold *getManifold()
 {
     return manifold;
 }
+Compressor *getCompressor()
+{
+    return compressor;
+}
 // InputType *manifoldSafetyWire;
 
 Wheel *getWheel(int i)
@@ -150,29 +154,20 @@ void airUpRelativeToAverage(int value)
 
 #pragma region tank_comp_functions
 
-int getTankPressure()
-{
-#if TANK_PRESSURE_MOCK == true
-    return 200;
-#else
-    return compressor->getTankPressure();
-#endif
-}
-
 void compressorLogic()
 {
     // TODO: check, This resume and pause logic may be able to be removed!!! It says it is used for thread blocking tasks which is no longer an issue
     // I guess we may still want to keep it  for the case that if a valve is open the tanks pressure is not accurate??? Could probably be removed tbh
     // if (isAnyWheelActive())
     // {
-    //     compressor->pause();
+    //     getCompressor()->pause();
     // }
     // else
     // {
-    //     compressor->resume();
+    //     getCompressor()->resume();
     // }
 
-    compressor->loop();
+    getCompressor()->loop();
 }
 
 #pragma endregion
@@ -184,7 +179,7 @@ void compressorLogic()
 // This is also very specific to the main designed oasman board, assuming tank is on voltage divider and other values are on adc
 void calibratePressureValues()
 {
-    compressor->pause();
+    getCompressor()->pause();
 
     // step 1: dump all valves
     for (int i = 0; i < SOLENOID_COUNT; i++)
@@ -208,7 +203,7 @@ void calibratePressureValues()
 
     for (int i = 0; i < sampleSize; i++)
     {
-        int v_vd = compressor->getReadPin()->analogRead(true);
+        int v_vd = getCompressor()->getReadPin()->analogRead(true);
         int v_adc = getWheel(WHEEL_FRONT_PASSENGER)->getPressurePin()->analogRead(true);
         // Serial.print("v: ");
         // Serial.print(v_vd);
@@ -226,7 +221,7 @@ void calibratePressureValues()
     calibration->adcCalibration.setFloat(totalADC / sampleSize);
     calibration->hasCalibrated.set(true);
 
-    compressor->resume();
+    getCompressor()->resume();
 }
 
 #pragma endregion

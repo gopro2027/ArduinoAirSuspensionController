@@ -16,7 +16,7 @@ void drawPSIReadings()
 
     display.setCursor(0, 5 * textHeightPx + 5);
     display.print(F("Tank: "));
-    display.print(int(getTankPressure()));
+    display.print(int(getCompressor()->getTankPressure()));
 
     // Front
 
