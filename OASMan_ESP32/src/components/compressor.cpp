@@ -48,8 +48,17 @@ float Compressor::readPressure()
     return readPinPressure(this->readPin);
 }
 
+float mockTankPressure = 0;
 float Compressor::getTankPressure()
 {
+#if TANK_PRESSURE_MOCK == true
+    mockTankPressure++;
+    if (mockTankPressure > 300)
+    {
+        mockTankPressure = 0;
+    }
+    return mockTankPressure;
+#else
     if (this->currentPressure < 0)
     {
         return 0;
@@ -58,6 +67,7 @@ float Compressor::getTankPressure()
     {
         return this->currentPressure;
     }
+#endif
 }
 
 void Compressor::loop()
@@ -69,13 +79,13 @@ void Compressor::loop()
     this->currentPressure = this->readPressure();
     if (!this->s_trigger.isOpen())
     {
-        if (this->currentPressure < COMPRESSOR_ON_BELOW_PSI)
+        if (this->getTankPressure() < COMPRESSOR_ON_BELOW_PSI)
         {
             this->s_trigger.open();
         }
     }
 
-    if (this->currentPressure >= COMPRESSOR_MAX_PSI)
+    if (this->getTankPressure() >= COMPRESSOR_MAX_PSI)
     {
         this->s_trigger.close();
     }

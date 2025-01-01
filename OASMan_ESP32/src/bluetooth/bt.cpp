@@ -17,7 +17,7 @@ void sendHeartbeat()
     bt.print(F("|"));
     bt.print(int(getWheel(WHEEL_REAR_DRIVER)->getPressure()));
     bt.print(F("|"));
-    bt.print(int(getTankPressure()));
+    bt.print(int(getCompressor()->getTankPressure()));
     bt.print(F("\n"));
 }
 

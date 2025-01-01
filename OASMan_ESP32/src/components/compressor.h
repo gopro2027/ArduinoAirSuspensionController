@@ -5,7 +5,6 @@
 #include "input_type.h"
 #include "solenoid.h"
 #include <Arduino.h>
-#include "wheel.h"
 
 class Compressor
 {
@@ -25,5 +24,6 @@ public:
     float getTankPressure();
     InputType *getReadPin();
 };
-
+extern Compressor *getCompressor();           // defined in airSuspensionUtil.h
+extern float readPinPressure(InputType *pin); // defined in Wheel.h
 #endif
