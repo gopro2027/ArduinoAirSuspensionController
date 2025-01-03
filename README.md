@@ -22,7 +22,7 @@ Our goal with this project is to provide the car community with a modern fully c
 - Proprietary software broke and there's no update? Not an issue here.<br>
 - Sensor broke in your proprietary manifold and you have to buy a whole new one for $1000? Not an issue here, just replace the sensor for $10.<br>
 - Want to use bespoke heavy duty valves but also have a nice user interface? Look no further than OAS-Man!<br>
-- Control your system with a PS3 controller? Yep we have that<br>
+- Control your system with a PS3 controller? Yep, [we have that](https://www.youtube.com/shorts/fbXJVwzc6P0)<br>
 - Restomodding an old air suspension system? OAS-Man may be the solution!<br>
 
 This github repo includes an android app and arduino code along with some 3d printable files and a PCB. The PCB is pre-made and ready for upload in JLCPCB to order. You will still need to supply the rest of your system which is not covered in this project, such as struts/bags, tank, compressor, tubing and fittings, ect. So that is what you would need in addition to this, similarly to what you would need for one of the on-the-shelf manifolds. If you are unsure what to purchase, I suggest getting the `Airtekk Stage 1 Kit` as that will just about cover everything you need.<br>
