@@ -2,11 +2,12 @@
 ![image](https://github.com/user-attachments/assets/2990d62f-51a5-47d8-a54a-e71efa27a2cd)
 <!---![image](https://github.com/user-attachments/assets/ea535981-4f51-4782-8f93-9eb1126dc81b)-->
 
+
 <a href="https://discord.gg/pUf7FmHKpg">
 Please click here to join the discord server!!!<br>
-<img src="https://seeklogo.com/images/D/discord-logo-134E148657-seeklogo.com.png" alt="DiscordLogo" width="100" height="100">
+    
+![discord-logo-1](https://github.com/user-attachments/assets/30a534ca-611c-4ea8-afde-941e5e2d78f3) 
 </a> 
-
 <br>
 <br>
 
@@ -15,7 +16,7 @@ V2 (ESP32 version) is almost ready. Some testing has been done, and my car has s
 
 ### Overview:
 This is intended as a DIY replacement for products such as Airlift 3P(3H*) ($1500) or Airtek Stage 2+ ($1000) with a build cost of less than $500. Combined with the customizability of open sourced code, I hope this is a tempting option for some DIY-ers out there.<br>
-Out goal with this project is to provide the car community with a modern fully customizable well documented air suspension system with a budget build cost in mind, all not bound by the limitations of a single company. The rest of your car is custom to you, why not your air suspension too?<br>
+Our goal with this project is to provide the car community with a modern fully customizable well documented air suspension system with a budget build cost in mind, all not bound by the limitations of a single company. The rest of your car is custom to you, why not your air suspension too?<br>
 - You want your car in the background? You got it.<br>
 - You want to put your logo on the manifold? You got it.<br>
 - You want your controller to look like a gameboy? Sure why not! **<br>
