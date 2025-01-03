@@ -5,8 +5,7 @@
 
 <a href="https://discord.gg/pUf7FmHKpg">
 Please click here to join the discord server!!!<br>
-    
-![discord-logo-1](https://github.com/user-attachments/assets/30a534ca-611c-4ea8-afde-941e5e2d78f3) 
+<img src="https://github.com/user-attachments/assets/30a534ca-611c-4ea8-afde-941e5e2d78f3" alt="DiscordLogo" >
 </a> 
 <br>
 <br>
