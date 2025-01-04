@@ -17,20 +17,20 @@ void task_bluetooth(void *parameters)
 
     Serial.println(F("Bluetooth Rest Service Beginning"));
 
-    bt.begin(BT_NAME);
-    for (;;)
-    {
-        bt_cmd();
-        delay(10);
-    }
-
-    // ble_setup();
-    // delay(100);
+    // bt.begin(BT_NAME);
     // for (;;)
     // {
-    //     ble_loop();
+    //     bt_cmd();
     //     delay(10);
     // }
+
+    ble_setup();
+    delay(100);
+    for (;;)
+    {
+        ble_loop();
+        delay(10);
+    }
 }
 
 #if SCREEN_ENABLED == true

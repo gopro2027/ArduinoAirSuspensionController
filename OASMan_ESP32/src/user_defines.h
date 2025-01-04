@@ -68,10 +68,10 @@
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
 
 /* Disable the hang if ads fails to load */
-#define ADS_MOCK_BYPASS false
+#define ADS_MOCK_BYPASS true
 
 /* For testing purposes: mock tank pressure to 200psi */
-#define TANK_PRESSURE_MOCK false
+#define TANK_PRESSURE_MOCK true
 
 /* Values for pressure calculations */
 #define pressuretransducerRunningVoltage 5.0f                                                                                                    // most pressure sensors run on 5v
