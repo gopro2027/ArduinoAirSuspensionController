@@ -152,26 +152,6 @@ void airUpRelativeToAverage(int value)
 
 #pragma endregion
 
-#pragma region tank_comp_functions
-
-void compressorLogic()
-{
-    // TODO: check, This resume and pause logic may be able to be removed!!! It says it is used for thread blocking tasks which is no longer an issue
-    // I guess we may still want to keep it  for the case that if a valve is open the tanks pressure is not accurate??? Could probably be removed tbh
-    // if (isAnyWheelActive())
-    // {
-    //     getCompressor()->pause();
-    // }
-    // else
-    // {
-    //     getCompressor()->resume();
-    // }
-
-    getCompressor()->loop();
-}
-
-#pragma endregion
-
 #pragma region calibration
 
 // this function is used to grab the realistic values because 5v is not perfect
@@ -179,7 +159,9 @@ void compressorLogic()
 // This is also very specific to the main designed oasman board, assuming tank is on voltage divider and other values are on adc
 void calibratePressureValues()
 {
-    getCompressor()->pause();
+    return;
+    // TODO: Definitely want to fix the compressor code if we decide to re-use this. Could likely use the new pause compressor until time code and not use this stateful code
+    // getCompressor()->pause();
 
     // step 1: dump all valves
     for (int i = 0; i < SOLENOID_COUNT; i++)
@@ -221,7 +203,7 @@ void calibratePressureValues()
     calibration->adcCalibration.setFloat(totalADC / sampleSize);
     calibration->hasCalibrated.set(true);
 
-    getCompressor()->resume();
+    // getCompressor()->resume();
 }
 
 #pragma endregion
@@ -249,31 +231,9 @@ void accessoryWireSetup()
 const int accessoryWireSampleSize = 5;
 bool vehicleOnHistory[accessoryWireSampleSize];
 int vehicleOnCounter = 0;
-// although it is unlikely we would have any real issues without this code, i think it is good to take multiple samples like this especially for such a high priority event
-void updateVehicleOnFromAccWire()
-{
-    // take average of last 5 reads (500ms based on main loop timer)
-    vehicleOnHistory[vehicleOnCounter] = accessoryWire->digitalRead() == LOW; // reads low when wire is on due to n channel mosfet with a pullup resistor
-    vehicleOnCounter++;
-    if (vehicleOnCounter >= accessoryWireSampleSize)
-    {
-        vehicleOn = false; // default to false because this is the 'weak case'
-        for (int i = 0; i < accessoryWireSampleSize; i++)
-        {
-            // if any of the readings within the last 500ms say vehicle is on, then set vehicle to on.
-            // aka we are only saying vehicle is off if we are sure of it.
-            if (vehicleOnHistory[i])
-            {
-                vehicleOn = true;
-            }
-        }
-
-        vehicleOnCounter = 0;
-    }
-}
 void accessoryWireLoop()
 {
-    updateVehicleOnFromAccWire();
+    sampleReading(vehicleOn, accessoryWire->digitalRead() == LOW, vehicleOnHistory, vehicleOnCounter, accessoryWireSampleSize);
     if (isVehicleOn())
     {
         // accessory wire is supplying 12v (car on)
