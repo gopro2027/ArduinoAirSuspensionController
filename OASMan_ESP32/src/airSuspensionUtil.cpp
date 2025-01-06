@@ -228,6 +228,25 @@ void calibratePressureValues()
 
 #pragma region accessory_wire
 
+template <typename T>
+void sampleReading(T &result, T reading, T *arr, int &counter, const int arrSize)
+{
+    arr[counter] = reading;
+    counter++;
+    if (counter >= arrSize)
+    {
+        double total = 0; // choosing double because max we read is float and integers we can also fit into doubles then convert back to integers
+        for (int i = 0; i < arrSize; i++)
+        {
+            total += (double)arr[i];
+        }
+
+        total = total / arrSize;
+        result = (T)total;
+        counter = 0;
+    }
+}
+
 bool vehicleOn = false;
 bool isVehicleOn()
 {
@@ -249,31 +268,9 @@ void accessoryWireSetup()
 const int accessoryWireSampleSize = 5;
 bool vehicleOnHistory[accessoryWireSampleSize];
 int vehicleOnCounter = 0;
-// although it is unlikely we would have any real issues without this code, i think it is good to take multiple samples like this especially for such a high priority event
-void updateVehicleOnFromAccWire()
-{
-    // take average of last 5 reads (500ms based on main loop timer)
-    vehicleOnHistory[vehicleOnCounter] = accessoryWire->digitalRead() == LOW; // reads low when wire is on due to n channel mosfet with a pullup resistor
-    vehicleOnCounter++;
-    if (vehicleOnCounter >= accessoryWireSampleSize)
-    {
-        vehicleOn = false; // default to false because this is the 'weak case'
-        for (int i = 0; i < accessoryWireSampleSize; i++)
-        {
-            // if any of the readings within the last 500ms say vehicle is on, then set vehicle to on.
-            // aka we are only saying vehicle is off if we are sure of it.
-            if (vehicleOnHistory[i])
-            {
-                vehicleOn = true;
-            }
-        }
-
-        vehicleOnCounter = 0;
-    }
-}
 void accessoryWireLoop()
 {
-    updateVehicleOnFromAccWire();
+    sampleReading(vehicleOn, accessoryWire->digitalRead() == LOW, vehicleOnHistory, vehicleOnCounter, accessoryWireSampleSize);
     if (isVehicleOn())
     {
         // accessory wire is supplying 12v (car on)
