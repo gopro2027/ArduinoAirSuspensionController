@@ -152,15 +152,6 @@ void airUpRelativeToAverage(int value)
 
 #pragma endregion
 
-#pragma region tank_comp_functions
-
-void compressorLogic()
-{
-    getCompressor()->loop();
-}
-
-#pragma endregion
-
 #pragma region calibration
 
 // this function is used to grab the realistic values because 5v is not perfect

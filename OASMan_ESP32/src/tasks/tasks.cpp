@@ -72,7 +72,7 @@ void task_compressor(void *parameters)
 {
     for (;;)
     {
-        compressorLogic();
+        getCompressor()->loop();
         delay(100);
     }
 }
