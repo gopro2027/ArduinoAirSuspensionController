@@ -33,6 +33,8 @@ void setup()
 
     compressor = new Compressor(compressorRelayPin, pressureInputTank);
 
+    accessoryWireSetup();
+
     readProfile(getBaseProfile());
 
     setup_tasks();
@@ -55,9 +57,10 @@ void setup()
 
 void loop()
 {
+    accessoryWireLoop();
     if (getReboot() == true)
     {
         ESP.restart();
     }
-    delay(250);
+    delay(100);
 }

@@ -33,5 +33,9 @@ void airOut();
 void airUpRelativeToAverage(int value);
 void compressorLogic();
 void calibratePressureValues();
+void accessoryWireSetup();
+void accessoryWireLoop();
+void notifyKeepAlive();
+bool isVehicleOn();
 
 #endif
