@@ -6,6 +6,7 @@
 #include "components/compressor.h"
 #include "components/wheel.h"
 #include "saveData.h"
+#include "sampleReading.tcc"
 
 extern Manifold *manifold;
 extern Compressor *compressor;

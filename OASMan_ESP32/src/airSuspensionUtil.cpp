@@ -156,17 +156,6 @@ void airUpRelativeToAverage(int value)
 
 void compressorLogic()
 {
-    // TODO: check, This resume and pause logic may be able to be removed!!! It says it is used for thread blocking tasks which is no longer an issue
-    // I guess we may still want to keep it  for the case that if a valve is open the tanks pressure is not accurate??? Could probably be removed tbh
-    // if (isAnyWheelActive())
-    // {
-    //     getCompressor()->pause();
-    // }
-    // else
-    // {
-    //     getCompressor()->resume();
-    // }
-
     getCompressor()->loop();
 }
 
@@ -179,7 +168,9 @@ void compressorLogic()
 // This is also very specific to the main designed oasman board, assuming tank is on voltage divider and other values are on adc
 void calibratePressureValues()
 {
-    getCompressor()->pause();
+    return;
+    // TODO: Definitely want to fix the compressor code if we decide to re-use this. Could likely use the new pause compressor until time code and not use this stateful code
+    // getCompressor()->pause();
 
     // step 1: dump all valves
     for (int i = 0; i < SOLENOID_COUNT; i++)
@@ -221,31 +212,12 @@ void calibratePressureValues()
     calibration->adcCalibration.setFloat(totalADC / sampleSize);
     calibration->hasCalibrated.set(true);
 
-    getCompressor()->resume();
+    // getCompressor()->resume();
 }
 
 #pragma endregion
 
 #pragma region accessory_wire
-
-template <typename T>
-void sampleReading(T &result, T reading, T *arr, int &counter, const int arrSize)
-{
-    arr[counter] = reading;
-    counter++;
-    if (counter >= arrSize)
-    {
-        double total = 0; // choosing double because max we read is float and integers we can also fit into doubles then convert back to integers
-        for (int i = 0; i < arrSize; i++)
-        {
-            total += (double)arr[i];
-        }
-
-        total = total / arrSize;
-        result = (T)total;
-        counter = 0;
-    }
-}
 
 bool vehicleOn = false;
 bool isVehicleOn()
