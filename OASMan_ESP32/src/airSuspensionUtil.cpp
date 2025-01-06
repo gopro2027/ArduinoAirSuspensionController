@@ -225,3 +225,86 @@ void calibratePressureValues()
 }
 
 #pragma endregion
+
+#pragma region accessory_wire
+
+bool vehicleOn = false;
+bool isVehicleOn()
+{
+    return vehicleOn;
+}
+
+#if ENABLE_ACCESSORY_WIRE_FUNCTIONALITY == true
+
+InputType *accessoryWire;
+InputType *outputKeepESPAlive;
+unsigned long lastTimeLive = 0;
+void accessoryWireSetup()
+{
+    accessoryWire = accessoryInput;
+    outputKeepESPAlive = outputKeepAlivePin;
+    outputKeepESPAlive->digitalWrite(HIGH);
+    lastTimeLive = millis();
+}
+const int accessoryWireSampleSize = 5;
+bool vehicleOnHistory[accessoryWireSampleSize];
+int vehicleOnCounter = 0;
+// although it is unlikely we would have any real issues without this code, i think it is good to take multiple samples like this especially for such a high priority event
+void updateVehicleOnFromAccWire()
+{
+    // take average of last 5 reads (500ms based on main loop timer)
+    vehicleOnHistory[vehicleOnCounter] = accessoryWire->digitalRead() == LOW; // reads low when wire is on due to n channel mosfet with a pullup resistor
+    vehicleOnCounter++;
+    if (vehicleOnCounter >= accessoryWireSampleSize)
+    {
+        vehicleOn = false; // default to false because this is the 'weak case'
+        for (int i = 0; i < accessoryWireSampleSize; i++)
+        {
+            // if any of the readings within the last 500ms say vehicle is on, then set vehicle to on.
+            // aka we are only saying vehicle is off if we are sure of it.
+            if (vehicleOnHistory[i])
+            {
+                vehicleOn = true;
+            }
+        }
+
+        vehicleOnCounter = 0;
+    }
+}
+void accessoryWireLoop()
+{
+    updateVehicleOnFromAccWire();
+    if (isVehicleOn())
+    {
+        // accessory wire is supplying 12v (car on)
+        notifyKeepAlive();
+    }
+    if (millis() > (lastTimeLive + SYSTEM_SHUTOFF_TIME_MS))
+    {
+        outputKeepESPAlive->digitalWrite(LOW); // acc wire has been off for some time, shut down system
+    }
+    else
+    {
+        outputKeepESPAlive->digitalWrite(HIGH);
+    }
+}
+
+// in the future we can call this from bluetooth functions to keep the device alive longer if actively using bluetooth while the vehicle is off
+void notifyKeepAlive()
+{
+    lastTimeLive = millis();
+}
+
+#else
+void accessoryWireSetup()
+{
+    vehicleOn = true;
+}
+void accessoryWireLoop()
+{
+    vehicleOn = true;
+}
+void notifyKeepAlive() {}
+#endif
+
+#pragma endregion

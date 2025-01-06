@@ -43,6 +43,12 @@
 #define compressorRelayPin new InputType(13, OUTPUT) // D13, solenoid
 #define pressureInputTank new InputType(32, INPUT)   // D32/A0, pressure sensor
 
+/* Accessory Wire */
+#define ENABLE_ACCESSORY_WIRE_FUNCTIONALITY false
+#define outputKeepAlivePin new InputType(12, OUTPUT) // D12, output high while accessory input is low to keep input on. Should always output high while accessory is on. Output low when accessory is low to turn off system.
+#define accessoryInput new InputType(14, INPUT)      // D14, digital in high or low. 0 = acc on, 1 = acc off (it's on a pullup resistor)
+#define SYSTEM_SHUTOFF_TIME_MS 15 * 60 * 1000        // 15 minutes
+
 // These will not be exact depending on how accurate your pressure sensors are.
 // For example: Mine will read 220psi when the actual pressure is 180psi
 #define COMPRESSOR_ON_BELOW_PSI 140

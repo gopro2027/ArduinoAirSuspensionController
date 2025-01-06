@@ -77,6 +77,11 @@ void Compressor::loop()
         return;
     }
     this->currentPressure = this->readPressure();
+    if (!isVehicleOn())
+    {
+        this->s_trigger.close();
+        return;
+    }
     if (!this->s_trigger.isOpen())
     {
         if (this->getTankPressure() < COMPRESSOR_ON_BELOW_PSI)
