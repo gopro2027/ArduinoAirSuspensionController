@@ -181,6 +181,7 @@ void queueADSRead(Ads_Request *request, Adafruit_ADS1115 *adc, int pin)
     int i = getADSQueNextOpenSlot();
     while (i == -1)
     {
+        Serial.println("ADS: Full, waiting");
         delay(1);
         i = getADSQueNextOpenSlot();
     }
@@ -202,7 +203,11 @@ void ADSLoop()
         if (adsQueue[i] != 0)
         {
             Ads_Request *adsRequest = adsQueue[i];
+            Serial.print("Reading ADC: ");
+            Serial.println(adsRequest->pin);
             adsRequest->resultValue = adsRequest->adc->readADC_SingleEnded(adsRequest->pin);
+            Serial.print("Read ADC: ");
+            Serial.println(adsRequest->resultValue);
             adsRequest->completed = true;
             adsQueue[i] = 0;
         }
