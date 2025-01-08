@@ -4,6 +4,13 @@
 
 // when using simple high and low addressing, 0x48 is low and 0x49 is high
 
+static SemaphoreHandle_t adcReadMutex;
+
+void setupADCReadMutex()
+{
+    adcReadMutex = xSemaphoreCreateMutex();
+}
+
 int voltageToESP32AnalogValue5v(float voltage)
 {
     return voltage / 5.0f * 4096.0f;
@@ -113,18 +120,28 @@ int InputType::analogRead(bool skipVoltageAdjustment)
 #if ADS_MOCK_BYPASS == false
 
         // ads request special code, ads must be called from the other thread
-        Ads_Request request;
-        queueADSRead(&request, this->adc, this->pin);
-        while (!request.completed)
+        // Ads_Request request;
+        // queueADSRead(&request, this->adc, this->pin);
+        // while (!request.completed)
+        // {
+        //     delay(1);
+        // }
+
+        // if (skipVoltageAdjustment)
+        // {
+        // }
+
+        // return AnalogADCToESP32Value(this->adc, request.resultValue);
+
+        int value = -1;
+        while (xSemaphoreTake(adcReadMutex, 1) != pdTRUE)
         {
             delay(1);
         }
+        value = AnalogADCToESP32Value(this->adc, this->adc->readADC_SingleEnded(this->pin));
+        xSemaphoreGive(adcReadMutex);
 
-        if (skipVoltageAdjustment)
-        {
-        }
-
-        return AnalogADCToESP32Value(this->adc, request.resultValue);
+        return value;
 #else
         return 3686; // value of max psi on esp32
 #endif
@@ -155,61 +172,61 @@ void InputType::analogWrite(int value)
     }
 }
 
-#define ADS_QUEUE_SIZE 10
-Ads_Request *adsQueue[ADS_QUEUE_SIZE];
+// #define ADS_QUEUE_SIZE 10
+// Ads_Request *adsQueue[ADS_QUEUE_SIZE];
 
-int getADSQueNextOpenSlot()
-{
-    for (int i = 0; i < ADS_QUEUE_SIZE; i++)
-    {
-        if (adsQueue[i] == 0)
-        {
-            return i;
-        }
-    }
-    return -1;
-}
-bool adsQueLock = false;
-void queueADSRead(Ads_Request *request, Adafruit_ADS1115 *adc, int pin)
-{
-    while (adsQueLock)
-    {
-        delay(1);
-    }
-    adsQueLock = true;
+// int getADSQueNextOpenSlot()
+// {
+//     for (int i = 0; i < ADS_QUEUE_SIZE; i++)
+//     {
+//         if (adsQueue[i] == 0)
+//         {
+//             return i;
+//         }
+//     }
+//     return -1;
+// }
+// bool adsQueLock = false;
+// void queueADSRead(Ads_Request *request, Adafruit_ADS1115 *adc, int pin)
+// {
+//     while (adsQueLock)
+//     {
+//         delay(1);
+//     }
+//     adsQueLock = true;
 
-    int i = getADSQueNextOpenSlot();
-    while (i == -1)
-    {
-        Serial.println("ADS: Full, waiting");
-        delay(1);
-        i = getADSQueNextOpenSlot();
-    }
+//     int i = getADSQueNextOpenSlot();
+//     while (i == -1)
+//     {
+//         Serial.println("ADS: Full, waiting");
+//         delay(1);
+//         i = getADSQueNextOpenSlot();
+//     }
 
-    request->adc = adc;
-    request->pin = pin;
-    request->completed = false;
-    request->resultValue = -1;
+//     request->adc = adc;
+//     request->pin = pin;
+//     request->completed = false;
+//     request->resultValue = -1;
 
-    adsQueue[i] = request;
+//     adsQueue[i] = request;
 
-    adsQueLock = false;
-}
+//     adsQueLock = false;
+// }
 
-void ADSLoop()
-{
-    for (int i = 0; i < ADS_QUEUE_SIZE; i++)
-    {
-        if (adsQueue[i] != 0)
-        {
-            Ads_Request *adsRequest = adsQueue[i];
-            Serial.print("Reading ADC: ");
-            Serial.println(adsRequest->pin);
-            adsRequest->resultValue = adsRequest->adc->readADC_SingleEnded(adsRequest->pin);
-            Serial.print("Read ADC: ");
-            Serial.println(adsRequest->resultValue);
-            adsRequest->completed = true;
-            adsQueue[i] = 0;
-        }
-    }
-}
+// void ADSLoop()
+// {
+//     for (int i = 0; i < ADS_QUEUE_SIZE; i++)
+//     {
+//         if (adsQueue[i] != 0)
+//         {
+//             Ads_Request *adsRequest = adsQueue[i];
+//             Serial.print("Reading ADC: ");
+//             Serial.println(adsRequest->pin);
+//             adsRequest->resultValue = adsRequest->adc->readADC_SingleEnded(adsRequest->pin);
+//             Serial.print("Read ADC: ");
+//             Serial.println(adsRequest->resultValue);
+//             adsRequest->completed = true;
+//             adsQueue[i] = 0;
+//         }
+//     }
+// }

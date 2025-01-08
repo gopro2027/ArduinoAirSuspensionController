@@ -16,6 +16,8 @@ void setup()
 
     delay(200); // wait for voltage stabilize
 
+    setupADCReadMutex();
+
     Serial.println(F("Startup!"));
 
     setupManifold();
