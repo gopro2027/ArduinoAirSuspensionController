@@ -1,0 +1,8 @@
+LCSC parts:
+PTF-77: https://www.lcsc.com/product-detail/Fuseholders_XFCN-PTF-77_C717030.html
+Fuse: https://www.lcsc.com/product-detail/Disposable-fuses_Reomax-STC1300_C5381727.html
+10K: https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-10K-1-ST52_C2903232.html
+150R: https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-150-1-ST52_C2903242.html
+2K: https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-2K-1-ST52_C2903278.html
+1K: https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-1K-1-ST52_C2903245.html
+1N4007 Diode: https://www.lcsc.com/product-detail/Diodes-General-Purpose_Yangzhou-Yangjie-Elec-Tech-1N4007_C2986225.html
