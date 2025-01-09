@@ -46,13 +46,13 @@ void drawsplashscreen()
     {
         display.clearDisplay();
 
-        display.drawBitmap(0, i, logo_bmp_airtekk, 128, 64, 1);
+        display.drawBitmap(0, i, logo_bmp_bootimg, 128, 64, 1);
         display.display();
         delay(1); // 1 ms
     }
     display.clearDisplay();
 
-    display.drawBitmap(0, 0, logo_bmp_airtekk, 128, 64, 1);
+    display.drawBitmap(0, 0, logo_bmp_bootimg, 128, 64, 1);
     display.display();
     delay(2000); // 2 seconds
 }
