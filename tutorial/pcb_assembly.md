@@ -52,4 +52,11 @@ The final result will look something like this:<br>
 After completing all the jst connectors, I put hot glue on the ends of them to keep the wires from being stressed too much when moved around and assembled:<br>
 ![20241210_125036](https://github.com/user-attachments/assets/10d32557-2c95-4b84-b409-b76db983f35b)<br>
 <br>
+Assuming your compressor relay, acc wire, and main 12v and gnd are in the same location this is the ideal set up:<br>
+For the power wires and compressor wires you will want to use a 4 wire bundled wire as listed in the parts<br>
+Attach all 3 wires from the power connector, one to constant 12v battery, one to ground, and one to the accessory wire which turns on with the key, then ONLY CONNECT THE NEGATVIVE WIRE THE ON 2 PIN COMPRESSOR OUTPUT<br>
+The negative wire is the signal wire that turns on/off. The positive wire to the compressor relay can be shared with the constant +12v/vcc wire of the power connector or come from a constant 12v from somewhere else in the system.<br>
+So your end result will be a 2 pin connector for the compressor with only one of the 2 pins connected for the negative side. The 3 pin main power connector will have all 3.<br>
+If you do wish to use both the positive and negative wires on the compressor output (eg: maybe the compressor relay is in a completely different location) you totally can do that too though!<br>
+<br>
 ### Congratulations on assembling the wiring!
