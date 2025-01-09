@@ -119,20 +119,6 @@ int InputType::analogRead(bool skipVoltageAdjustment)
         }
 #if ADS_MOCK_BYPASS == false
 
-        // ads request special code, ads must be called from the other thread
-        // Ads_Request request;
-        // queueADSRead(&request, this->adc, this->pin);
-        // while (!request.completed)
-        // {
-        //     delay(1);
-        // }
-
-        // if (skipVoltageAdjustment)
-        // {
-        // }
-
-        // return AnalogADCToESP32Value(this->adc, request.resultValue);
-
         int value = -1;
         while (xSemaphoreTake(adcReadMutex, 1) != pdTRUE)
         {
@@ -171,62 +157,3 @@ void InputType::analogWrite(int value)
         // not implemented
     }
 }
-
-// #define ADS_QUEUE_SIZE 10
-// Ads_Request *adsQueue[ADS_QUEUE_SIZE];
-
-// int getADSQueNextOpenSlot()
-// {
-//     for (int i = 0; i < ADS_QUEUE_SIZE; i++)
-//     {
-//         if (adsQueue[i] == 0)
-//         {
-//             return i;
-//         }
-//     }
-//     return -1;
-// }
-// bool adsQueLock = false;
-// void queueADSRead(Ads_Request *request, Adafruit_ADS1115 *adc, int pin)
-// {
-//     while (adsQueLock)
-//     {
-//         delay(1);
-//     }
-//     adsQueLock = true;
-
-//     int i = getADSQueNextOpenSlot();
-//     while (i == -1)
-//     {
-//         Serial.println("ADS: Full, waiting");
-//         delay(1);
-//         i = getADSQueNextOpenSlot();
-//     }
-
-//     request->adc = adc;
-//     request->pin = pin;
-//     request->completed = false;
-//     request->resultValue = -1;
-
-//     adsQueue[i] = request;
-
-//     adsQueLock = false;
-// }
-
-// void ADSLoop()
-// {
-//     for (int i = 0; i < ADS_QUEUE_SIZE; i++)
-//     {
-//         if (adsQueue[i] != 0)
-//         {
-//             Ads_Request *adsRequest = adsQueue[i];
-//             Serial.print("Reading ADC: ");
-//             Serial.println(adsRequest->pin);
-//             adsRequest->resultValue = adsRequest->adc->readADC_SingleEnded(adsRequest->pin);
-//             Serial.print("Read ADC: ");
-//             Serial.println(adsRequest->resultValue);
-//             adsRequest->completed = true;
-//             adsQueue[i] = 0;
-//         }
-//     }
-// }

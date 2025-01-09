@@ -38,7 +38,5 @@ public:
 };
 
 void setupADCReadMutex();
-// void ADSLoop();
-// void queueADSRead(Ads_Request *request, Adafruit_ADS1115 *adc, int pin);
 
 #endif

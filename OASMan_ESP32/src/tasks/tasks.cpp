@@ -87,15 +87,6 @@ void task_wheel(void *parameters)
     }
 }
 
-// void task_adc_read(void *parameters)
-// {
-//     for (;;)
-//     {
-//         ADSLoop();
-//         delay(1);
-//     }
-// }
-
 void task_ota(void *parameters)
 {
     delay(150);
@@ -134,16 +125,6 @@ void setup_tasks()
         NULL);
 #endif
 
-    // #if USE_ADS
-    //     // ADS Queue Task
-    //     xTaskCreate(
-    //         task_adc_read,
-    //         "ADS Queue",
-    //         512 * 3,
-    //         NULL,
-    //         1000,
-    //         NULL);
-    // #endif
     // Compressor Control Task
     xTaskCreate(
         task_compressor,
