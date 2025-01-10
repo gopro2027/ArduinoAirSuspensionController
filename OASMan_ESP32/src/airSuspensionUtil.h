@@ -32,7 +32,6 @@ bool isAnyWheelActive();
 void airUp(bool quick = false);
 void airOut();
 void airUpRelativeToAverage(int value);
-void calibratePressureValues();
 void accessoryWireSetup();
 void accessoryWireLoop();
 void notifyKeepAlive();

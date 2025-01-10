@@ -152,62 +152,6 @@ void airUpRelativeToAverage(int value)
 
 #pragma endregion
 
-#pragma region calibration
-
-// this function is used to grab the realistic values because 5v is not perfect
-// Make sure to add warning for ensure all other functions and not running ect ect
-// This is also very specific to the main designed oasman board, assuming tank is on voltage divider and other values are on adc
-void calibratePressureValues()
-{
-    return;
-    // TODO: Definitely want to fix the compressor code if we decide to re-use this. Could likely use the new pause compressor until time code and not use this stateful code
-    // getCompressor()->pause();
-
-    // step 1: dump all valves
-    for (int i = 0; i < SOLENOID_COUNT; i++)
-    {
-        manifold->get(i)->digitalWrite(HIGH);
-    }
-
-    delay(20 * 1000); // sleep litteral 20 seconds so tanks dump all the air
-
-    // close all valves
-    for (int i = 0; i < SOLENOID_COUNT; i++)
-    {
-        manifold->get(i)->digitalWrite(LOW);
-    }
-
-    // step 2: read valves at 0psi
-
-    const int sampleSize = 25;
-    double totalVoltageDivider = 0;
-    double totalADC = 0;
-
-    for (int i = 0; i < sampleSize; i++)
-    {
-        int v_vd = getCompressor()->getReadPin()->analogRead(true);
-        int v_adc = getWheel(WHEEL_FRONT_PASSENGER)->getPressurePin()->analogRead(true);
-        // Serial.print("v: ");
-        // Serial.print(v_vd);
-        // Serial.print("\t");
-        // Serial.println(v_adc);
-        totalVoltageDivider += v_vd; // read tank pressure analog value at 0psi (voltage divider)
-        totalADC += v_adc;           // read first bag pressure at 0psi (adc)
-        delay(250);                  // should take a total of 6.25 seconds for this loop to complete
-    }
-
-    // step 3: save these values for use in input_type
-
-    Calibration *calibration = getCalibration();
-    calibration->voltageDividerCalibration.setFloat(totalVoltageDivider / sampleSize);
-    calibration->adcCalibration.setFloat(totalADC / sampleSize);
-    calibration->hasCalibrated.set(true);
-
-    // getCompressor()->resume();
-}
-
-#pragma endregion
-
 #pragma region accessory_wire
 
 bool vehicleOn = false;
