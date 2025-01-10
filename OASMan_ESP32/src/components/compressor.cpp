@@ -74,14 +74,14 @@ void Compressor::loop()
     }
 
     // if compressor is on, check if it is frozen by checking every 15 seconds or so the value, and if the change is less than 3psi then tell the compressor to pause for a bit. if compressor is not running, continually update last read time and pressure.
-    if (this->s_trigger.isOpen())
+    if (this->s_trigger.isOpen() && !isAnyWheelActive())
     {
         if (this->lastFreezeTime + FREEZE_TIME_CHECK_MS < curTime)
         {
 
-            int changeOverLastTimeframe = abs(this->currentPressure - this->freezeTimerLastReadValue);
+            float changeOverLastTimeframe = this->currentPressure - this->freezeTimerLastReadValue;
 
-            if (changeOverLastTimeframe < 3)
+            if (changeOverLastTimeframe < 1.75f && changeOverLastTimeframe >= 0)
             {
                 // compressor is deemed frozen, tell it to pause execution until set time in the future
                 this->pauseExecutionUntilTime = curTime + FREEZE_TIME_PAUSE_MS;
@@ -93,7 +93,7 @@ void Compressor::loop()
     }
     else
     {
-        // compressor is not on, just set values to current
+        // compressor is not on OR one of the wheels is active (we don't want to bother trying to figure out if it's frozen if it's actively moving around pressures), update value just right now then.
         this->lastFreezeTime = curTime;
         this->freezeTimerLastReadValue = this->currentPressure;
     }

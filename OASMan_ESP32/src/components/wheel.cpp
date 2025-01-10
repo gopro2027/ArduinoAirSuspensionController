@@ -120,15 +120,7 @@ float Wheel::getPressure()
 
 bool Wheel::isActive()
 {
-    if (this->s_AirIn.isOpen())
-    {
-        return true;
-    }
-    if (this->s_AirOut.isOpen())
-    {
-        return true;
-    }
-    return false;
+    return this->s_AirIn.isOpen() || this->s_AirOut.isOpen();
 }
 
 void Wheel::initPressureGoal(int newPressure, bool quick)
