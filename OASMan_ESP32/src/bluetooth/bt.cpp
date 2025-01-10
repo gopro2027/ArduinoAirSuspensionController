@@ -118,7 +118,6 @@ const char _AIRHEIGHTD[] PROGMEM = PASSWORD "AIRHEIGHTD\0";
 const char _RISEONSTART[] PROGMEM = PASSWORD "RISEONSTART\0";
 const char _RAISEONPRESSURESET[] PROGMEM = PASSWORD "ROPS\0";
 const char _REBOOT[] PROGMEM = PASSWORD "REBOOT\0";
-const char _CALIBRATE[] PROGMEM = PASSWORD "CALIBRATE\0";
 const char _STARTWEB[] PROGMEM = PASSWORD "STARTWEB\0";
 
 bool comp(char *str1, const char str2[])
@@ -259,12 +258,6 @@ bool runInput()
     {
         setReboot(true);
         Serial.println(F("Rebooting..."));
-        return true;
-    }
-    else if (comp(inBuffer, _CALIBRATE))
-    {
-        Serial.println(F("Running calibration routine..."));
-        calibratePressureValues();
         return true;
     }
     else if (comp(inBuffer, _STARTWEB))

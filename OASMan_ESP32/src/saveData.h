@@ -34,14 +34,6 @@ public:
     Preferencable pressure[4]; // byte
 };
 
-class Calibration
-{
-public:
-    Preferencable hasCalibrated;             // bool
-    Preferencable voltageDividerCalibration; // float voltage divider read value for 0psi
-    Preferencable adcCalibration;            // float adc read value for 0psi
-};
-
 class SaveData
 {
 public:
@@ -49,7 +41,6 @@ public:
     Preferencable baseProfile;     // byte
     Preferencable raiseOnPressure; // byte
     Preferencable internalReboot;  // byte
-    Calibration calibration;
     Profile profile[MAX_PROFILE_COUNT];
 };
 
@@ -68,6 +59,5 @@ bool getRaiseOnPressureSet();
 void setRaiseOnPressureSet(bool value);
 bool getReboot();
 void setReboot(bool value);
-Calibration *getCalibration();
 
 #endif

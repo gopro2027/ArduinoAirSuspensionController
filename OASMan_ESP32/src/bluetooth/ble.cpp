@@ -129,7 +129,6 @@ void ble_loop()
             setRiseOnStart(false);
             setRaiseOnPressureSet(false);
             setReboot(true);
-            calibratePressureValues();
         }
     }
     // The code below keeps the connection status uptodate:

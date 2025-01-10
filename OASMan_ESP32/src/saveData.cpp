@@ -84,9 +84,6 @@ void beginSaveData()
     _SaveData.baseProfile.load("baseProfile", 0);
     _SaveData.raiseOnPressure.load("raiseOnPressure", false);
     _SaveData.internalReboot.load("internalReboot", false);
-    _SaveData.calibration.hasCalibrated.load("hasCalibrated", false);
-    _SaveData.calibration.voltageDividerCalibration.loadFloat("voltDividerCal", 0.0);
-    _SaveData.calibration.adcCalibration.loadFloat("adcCalibration", 0.0);
     for (int i = 0; i < MAX_PROFILE_COUNT; i++)
     {
         for (int j = 0; j < 4; j++)
@@ -169,9 +166,4 @@ void setReboot(bool value)
     {
         _SaveData.internalReboot.set(value);
     }
-}
-
-Calibration *getCalibration()
-{
-    return &_SaveData.calibration;
 }
