@@ -33,5 +33,6 @@ public:
 };
 extern Compressor *getCompressor();           // defined in airSuspensionUtil.h
 extern bool isVehicleOn();                    // defined in airSuspensionUtil.h
+extern bool isAnyWheelActive();               // defined in airSuspensionUtil.h
 extern float readPinPressure(InputType *pin); // defined in Wheel.h
 #endif
