@@ -16,6 +16,7 @@
 #include <BLE2902.h>
 
 #include "airSuspensionUtil.h"
+#include "BTOas.h"
 
 void ble_setup();
 void ble_loop();

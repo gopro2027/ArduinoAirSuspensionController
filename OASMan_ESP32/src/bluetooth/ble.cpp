@@ -21,44 +21,6 @@ uint32_t value = 0;
 #define CHARACTERISTIC_UUID_1 "66fda100-8972-4ec7-971c-3fd30b3072ac"
 #define CHARACTERISTIC_UUID_2 "f573f13f-b38e-415e-b8f0-59a6a19a4e02"
 
-enum RestCommand
-{
-    AIRUP = 1,
-    AIROUT = 2,
-    AIRSM = 3,
-    SAVETOPROFILE = 4,
-    READPROFILE = 5,
-    AIRUPQUICK = 6,
-    BASEPROFILE = 7,
-    AIRHEIGHTA = 8,
-    AIRHEIGHTB = 9,
-    AIRHEIGHTC = 10,
-    AIRHEIGHTD = 11,
-    RISEONSTART = 12,
-    RAISEONPRESSURESET = 13,
-    REBOOT = 14,
-    CALIBRATE = 15,
-    STARTWEB = 16
-};
-
-union RestValue
-{
-    uint32_t i;
-    float f;
-};
-
-struct RestPacket
-{
-    RestCommand cmd;
-    RestValue args[8];
-    uint8_t *tx()
-    {
-        return (uint8_t *)&cmd;
-    }
-};
-
-#define REST_PACKET_SIZE sizeof(RestPacket)
-
 // Callback function that is called whenever a client is connected or disconnected
 class MyServerCallbacks : public BLEServerCallbacks
 {
@@ -156,12 +118,12 @@ void ble_notify()
 {
     // restCharacteristic is an integer that is increased with every second
     // in the code below we send the value over to the client and increase the integer counter
-    RestPacket packet = RestPacket();
+    BTOasPacket packet = BTOasPacket();
     packet.cmd = AIRUP;
-    packet.args[0] = {.i = value};
-    packet.args[1] = {.f = 1.0f};
+    packet.args[0].i = value;
+    packet.args[1].f = 1.0f;
 
-    restCharacteristic->setValue(packet.tx(), REST_PACKET_SIZE);
+    restCharacteristic->setValue(packet.tx(), BTOAS_PACKET_SIZE);
     restCharacteristic->notify(); // we don't do this on the other characteristic thats why it has to be read manually
     value++;
 
