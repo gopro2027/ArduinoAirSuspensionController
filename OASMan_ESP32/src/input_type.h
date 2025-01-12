@@ -6,14 +6,6 @@
 #include "user_defines.h"
 #include "saveData.h"
 
-struct Ads_Request
-{
-    Adafruit_ADS1115 *adc;
-    byte pin;
-    bool completed;
-    int16_t resultValue;
-};
-
 enum type
 {
     NORMAL,
@@ -37,7 +29,6 @@ public:
     void analogWrite(int value);
 };
 
-void ADSLoop();
-void queueADSRead(Ads_Request *request, Adafruit_ADS1115 *adc, int pin);
+void setupADCReadMutex();
 
 #endif

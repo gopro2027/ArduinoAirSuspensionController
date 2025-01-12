@@ -12,9 +12,11 @@
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
-    beginEEPROM();
+    beginSaveData();
 
     delay(200); // wait for voltage stabilize
+
+    setupADCReadMutex();
 
     Serial.println(F("Startup!"));
 
@@ -32,6 +34,8 @@ void setup()
     wheel[WHEEL_REAR_DRIVER] = new Wheel(manifold->get(REAR_DRIVER_IN), manifold->get(REAR_DRIVER_OUT), pressureInputRearDriver, WHEEL_REAR_DRIVER);
 
     compressor = new Compressor(compressorRelayPin, pressureInputTank);
+
+    accessoryWireSetup();
 
     readProfile(getBaseProfile());
 
@@ -55,8 +59,10 @@ void setup()
 
 void loop()
 {
-
-    saveEEPROMLoop(); // eeprom cannot be saved from inside a task very easily. Easy enough just to tell it to save here in the main loop
-
-    delay(1000); // lmao we only have an eeprom so i guess just save every second roughly
+    accessoryWireLoop();
+    if (getReboot() == true)
+    {
+        ESP.restart();
+    }
+    delay(100);
 }

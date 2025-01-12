@@ -86,16 +86,14 @@ float analogToPressure(int nativeAnalogValue)
     float normalized = floored / totalRange;                             // 0 to 1 where 0 is 0psi and 1 is max psi
     float psi = normalized * pressuretransducermaxPSI;                   // multiply out 0 to 1 by our max psi
 
-    // Serial.print("atp: ");
-    // Serial.print(nativeAnalogValue);
-    // Serial.print("\t");
-    // Serial.print(floored);
-    // Serial.print("\t");
-    // Serial.print(normalized);
-    // Serial.print("\t");
-    // Serial.println(psi);
-
     return psi;
+}
+
+// Testing function, convert pressure value back to analog value, exact reverse of analogToPressure
+float pressureToAnalog(float psi)
+{
+    float totalRange = pressureMaxAnalogValue - pressureZeroAnalogValue; // get the total analog voltage difference between min and max
+    return (psi / pressuretransducermaxPSI) * totalRange + pressureZeroAnalogValue;
 }
 
 float readPinPressure(InputType *pin)
@@ -122,15 +120,7 @@ float Wheel::getPressure()
 
 bool Wheel::isActive()
 {
-    if (this->s_AirIn.isOpen())
-    {
-        return true;
-    }
-    if (this->s_AirOut.isOpen())
-    {
-        return true;
-    }
-    return false;
+    return this->s_AirIn.isOpen() || this->s_AirOut.isOpen();
 }
 
 void Wheel::initPressureGoal(int newPressure, bool quick)
@@ -144,7 +134,7 @@ void Wheel::initPressureGoal(int newPressure, bool quick)
     if (abs(pressureDif) > getMinValveOpenPSI(quick))
     {
         // okay we need to set the values, but only if we are airing out or if the tank has more pressure than what is currently in the bags
-        if (pressureDif < 0 || getTankPressure() > this->getPressure())
+        if (pressureDif < 0 || getCompressor()->getTankPressure() > this->getPressure())
         {
             this->pressureGoal = newPressure;
             this->quickMode = quick;

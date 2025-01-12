@@ -20,7 +20,7 @@
 #define TEST_MODE false
 
 /* LCD screen definitions */
-#define SCREEN_ENABLED false
+#define SCREEN_ENABLED true
 #define SCREEN_WIDTH 128    // OLED display width, in pixels
 #define SCREEN_HEIGHT 64    // OLED display height, in pixels
 #define OLED_RESET -1       // Reset pin # (or -1 if sharing Arduino reset pin)
@@ -42,6 +42,12 @@
 /* Compressor/tank */
 #define compressorRelayPin new InputType(13, OUTPUT) // D13, solenoid
 #define pressureInputTank new InputType(32, INPUT)   // D32/A0, pressure sensor
+
+/* Accessory Wire */
+#define ENABLE_ACCESSORY_WIRE_FUNCTIONALITY false
+#define outputKeepAlivePin new InputType(12, OUTPUT) // D12, output high while accessory input is low to keep input on. Should always output high while accessory is on. Output low when accessory is low to turn off system.
+#define accessoryInput new InputType(14, INPUT)      // D14, digital in high or low. 0 = acc on, 1 = acc off (it's on a pullup resistor)
+#define SYSTEM_SHUTOFF_TIME_MS 15 * 60 * 1000        // 15 minutes
 
 // These will not be exact depending on how accurate your pressure sensors are.
 // For example: Mine will read 220psi when the actual pressure is 180psi
@@ -75,7 +81,7 @@
 
 /* Values for pressure calculations */
 #define pressuretransducerRunningVoltage 5.0f                                                                                                    // most pressure sensors run on 5v
-#define pressuretransducerVoltageZeroPSI 0.45f                                                                                                   // most say 0.5v but may differ  (I was reading 0.295f for 0psi on base esp32)
+#define pressuretransducerVoltageZeroPSI 0.5f                                                                                                    // most say 0.5v but may differ  (I was reading 0.295f for 0psi on base esp32) (on multimeter tested and readings were consistent with 0.5v... .501, .503, .499, .502)
 #define pressuretransducerVoltageMaxPSI 4.5f                                                                                                     // most say 4.5v but may differ
 #define pressuretransducermaxPSI 232                                                                                                             // psi value of transducer being used. (1.6MPA = 232PSI)
 #define microcontrollerMaxAnalogReading 4095                                                                                                     // esp32 built in adc goes to 4095

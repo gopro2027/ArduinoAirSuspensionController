@@ -6,6 +6,7 @@
 #include "components/compressor.h"
 #include "components/wheel.h"
 #include "saveData.h"
+#include "sampleReading.tcc"
 
 extern Manifold *manifold;
 extern Compressor *compressor;
@@ -19,6 +20,7 @@ extern Adafruit_ADS1115 ADS1115B;
 #endif
 
 Manifold *getManifold();
+Compressor *getCompressor();
 Wheel *getWheel(int i);
 void setRideHeightFrontPassenger(byte value);
 void setRideHeightRearPassenger(byte value);
@@ -30,8 +32,9 @@ bool isAnyWheelActive();
 void airUp(bool quick = false);
 void airOut();
 void airUpRelativeToAverage(int value);
-int getTankPressure();
-void compressorLogic();
-void calibratePressureValues();
+void accessoryWireSetup();
+void accessoryWireLoop();
+void notifyKeepAlive();
+bool isVehicleOn();
 
 #endif

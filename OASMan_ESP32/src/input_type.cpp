@@ -1,11 +1,25 @@
 #include "input_type.h"
+#include "airSuspensionUtil.h"
 #include <Wire.h>
 
 // when using simple high and low addressing, 0x48 is low and 0x49 is high
 
-int AnalogADCToESP32Value(int adcVal)
+static SemaphoreHandle_t adcReadMutex;
+
+void setupADCReadMutex()
 {
-    return (int)(adcVal * (4096.0f / 32768.0f));
+    adcReadMutex = xSemaphoreCreateMutex();
+}
+
+int voltageToESP32AnalogValue5v(float voltage)
+{
+    return voltage / 5.0f * 4096.0f;
+}
+
+int AnalogADCToESP32Value(Adafruit_ADS1115 *adc, int adcVal)
+{
+    return voltageToESP32AnalogValue5v(adc->computeVolts(adcVal));
+    // return (int)(adcVal * (4096.0f / 32768.0f)); // the analog value of the adc read is not quite perfect and requires we use the built in computeVolts instead
 }
 
 int AnalogESP32ToADCValue(int espVal)
@@ -13,6 +27,7 @@ int AnalogESP32ToADCValue(int espVal)
     return (int)(espVal * (32768.0f / 4096.0f));
 }
 
+// Function deprecated. analogReadMilliVolts returns a more accurate result than passing analogRead into this function will. keeping this function here for information on the esp's internal adc
 int ESP32InternalADCAdjustValue(int readAnalogValue)
 {
     // ESP32 adc is innacurate, scroll down here to the graph to read about it https://lastminuteengineers.com/esp32-basics-adc/
@@ -46,43 +61,6 @@ int ESP32InternalADCAdjustValue(int readAnalogValue)
     // adjustedAnalogValue = 1240.90909091 ((readAnalogValue / 1333.8762215) + 0.13)
 
     return 1240.90909091f * ((readAnalogValue / 1333.8762215) + 0.13);
-}
-
-float adc5vToExpected5v(float in)
-{
-    return in;
-    // // although 5v is supposed to be 32768, in my testing 5v averaged out to 24954. Tested by unplugging one of the pressure sensors and sticking a wire between data and 5v and uncommenting the code below that references this function name
-    // float realAtZeroPSI = 339.00;
-    // if (getCalibration()->hasCalibrated)
-    // {
-    //     // Serial.print("ADC: ");
-    //     // Serial.println(getCalibration()->adcCalibration);
-    //     realAtZeroPSI = getCalibration()->adcCalibration;
-    // }
-    // return in * (pressureZeroAnalogValue / realAtZeroPSI);
-}
-
-float voltageDivider5vToExpected5v(float in)
-{
-    return in;
-    // float realAtZeroPSI = 307.20;
-    // if (getCalibration()->hasCalibrated)
-    // {
-    //     // Serial.print("VD: ");
-    //     // Serial.println(getCalibration()->voltageDividerCalibration);
-    //     realAtZeroPSI = getCalibration()->voltageDividerCalibration;
-    // }
-    // // realAtZeroPSI = 240;
-    // // Serial.print("vd5te5: ");
-    // // Serial.print(realAtZeroPSI);
-    // // Serial.print("\t");
-    // // Serial.print(in);
-    // // Serial.print("\t");
-    // // Serial.print(pressureZeroAnalogValue / realAtZeroPSI);
-    // // Serial.print("\t");
-    // // Serial.print(in * (pressureZeroAnalogValue / realAtZeroPSI));
-    // // Serial.print("\t");
-    // return in * (pressureZeroAnalogValue / realAtZeroPSI);
 }
 
 InputType::InputType()
@@ -124,14 +102,13 @@ int InputType::analogRead(bool skipVoltageAdjustment)
 {
     if (this->input_type == NORMAL)
     {
-        // Serial.println(::analogRead(this->pin), DEC);
-        // So this is read over the voltage divider! 5v = 4000
-        // Should likely put in some
+        // reading max of 3.3v (5v through the 1.5 voltage divider)
         if (skipVoltageAdjustment)
         {
-            return ::analogRead(this->pin);
         }
-        return ESP32InternalADCAdjustValue(voltageDivider5vToExpected5v(::analogRead(this->pin)));
+
+        // unlike analogRead, analogReadMilliVolts gives a proper reading
+        return ::analogReadMilliVolts(this->pin) * 1.24090909091f; // map millivoltage to line between (0,0),(3.3,4095) to simulate analogRead
     }
     else
     {
@@ -142,19 +119,15 @@ int InputType::analogRead(bool skipVoltageAdjustment)
         }
 #if ADS_MOCK_BYPASS == false
 
-        // ads request special code, ads must be called from the other thread
-        Ads_Request request;
-        queueADSRead(&request, this->adc, this->pin);
-        while (!request.completed)
+        int value = -1;
+        while (xSemaphoreTake(adcReadMutex, 1) != pdTRUE)
         {
             delay(1);
         }
+        value = AnalogADCToESP32Value(this->adc, this->adc->readADC_SingleEnded(this->pin));
+        xSemaphoreGive(adcReadMutex);
 
-        if (skipVoltageAdjustment)
-        {
-            return AnalogADCToESP32Value(request.resultValue);
-        }
-        return AnalogADCToESP32Value(adc5vToExpected5v(request.resultValue));
+        return value;
 #else
         return 3686; // value of max psi on esp32
 #endif
@@ -182,59 +155,5 @@ void InputType::analogWrite(int value)
     else
     {
         // not implemented
-    }
-}
-
-#define ADS_QUEUE_SIZE 10
-Ads_Request *adsQueue[ADS_QUEUE_SIZE];
-
-int getADSQueNextOpenSlot()
-{
-    for (int i = 0; i < ADS_QUEUE_SIZE; i++)
-    {
-        if (adsQueue[i] == 0)
-        {
-            return i;
-        }
-    }
-    return -1;
-}
-bool adsQueLock = false;
-void queueADSRead(Ads_Request *request, Adafruit_ADS1115 *adc, int pin)
-{
-    while (adsQueLock)
-    {
-        delay(1);
-    }
-    adsQueLock = true;
-
-    int i = getADSQueNextOpenSlot();
-    while (i == -1)
-    {
-        delay(1);
-        i = getADSQueNextOpenSlot();
-    }
-
-    request->adc = adc;
-    request->pin = pin;
-    request->completed = false;
-    request->resultValue = -1;
-
-    adsQueue[i] = request;
-
-    adsQueLock = false;
-}
-
-void ADSLoop()
-{
-    for (int i = 0; i < ADS_QUEUE_SIZE; i++)
-    {
-        if (adsQueue[i] != 0)
-        {
-            Ads_Request *adsRequest = adsQueue[i];
-            adsRequest->resultValue = adsRequest->adc->readADC_SingleEnded(adsRequest->pin);
-            adsRequest->completed = true;
-            adsQueue[i] = 0;
-        }
     }
 }

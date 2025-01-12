@@ -2,11 +2,11 @@
 ![image](https://github.com/user-attachments/assets/2990d62f-51a5-47d8-a54a-e71efa27a2cd)
 <!---![image](https://github.com/user-attachments/assets/ea535981-4f51-4782-8f93-9eb1126dc81b)-->
 
+
 <a href="https://discord.gg/pUf7FmHKpg">
 Please click here to join the discord server!!!<br>
-<img src="https://seeklogo.com/images/D/discord-logo-134E148657-seeklogo.com.png" alt="DiscordLogo" width="100" height="100">
+<img src="https://github.com/user-attachments/assets/30a534ca-611c-4ea8-afde-941e5e2d78f3" alt="DiscordLogo" >
 </a> 
-
 <br>
 <br>
 
@@ -15,14 +15,14 @@ V2 (ESP32 version) is almost ready. Some testing has been done, and my car has s
 
 ### Overview:
 This is intended as a DIY replacement for products such as Airlift 3P(3H*) ($1500) or Airtek Stage 2+ ($1000) with a build cost of less than $500. Combined with the customizability of open sourced code, I hope this is a tempting option for some DIY-ers out there.<br>
-Out goal with this project is to provide the car community with a modern fully customizable well documented air suspension system with a budget build cost in mind, all not bound by the limitations of a single company. The rest of your car is custom to you, why not your air suspension too?<br>
+Our goal with this project is to provide the car community with a modern fully customizable well documented air suspension system with a budget build cost in mind, all not bound by the limitations of a single company. The rest of your car is custom to you, why not your air suspension too?<br>
 - You want your car in the background? You got it.<br>
 - You want to put your logo on the manifold? You got it.<br>
 - You want your controller to look like a gameboy? Sure why not! **<br>
 - Proprietary software broke and there's no update? Not an issue here.<br>
 - Sensor broke in your proprietary manifold and you have to buy a whole new one for $1000? Not an issue here, just replace the sensor for $10.<br>
 - Want to use bespoke heavy duty valves but also have a nice user interface? Look no further than OAS-Man!<br>
-- Control your system with a PS3 controller? Yep we have that<br>
+- Control your system with a PS3 controller? Yep, [we have that](https://www.youtube.com/shorts/fbXJVwzc6P0)<br>
 - Restomodding an old air suspension system? OAS-Man may be the solution!<br>
 
 This github repo includes an android app and arduino code along with some 3d printable files and a PCB. The PCB is pre-made and ready for upload in JLCPCB to order. You will still need to supply the rest of your system which is not covered in this project, such as struts/bags, tank, compressor, tubing and fittings, ect. So that is what you would need in addition to this, similarly to what you would need for one of the on-the-shelf manifolds. If you are unsure what to purchase, I suggest getting the `Airtekk Stage 1 Kit` as that will just about cover everything you need.<br>
