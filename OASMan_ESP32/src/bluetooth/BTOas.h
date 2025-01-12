@@ -32,16 +32,17 @@ union BTOasValue
     float f;
 };
 
+// NOTE: Default max for BLE is 23 bytes. We can do some compression if we need in the future but for now this uses 20 total (5 x 32 bits)
 struct BTOasPacket
 {
     BTOasIdentifier cmd;
-    BTOasValue args[8];
+    BTOasValue args[4];
     uint8_t *tx();
 };
 
 #define BTOAS_PACKET_SIZE sizeof(BTOasPacket)
 
-void runReceivedPacket(BTOasPacket packet);
+void runReceivedPacket(BTOasPacket *packet);
 
 // Outgoing packets
 struct StatusPacket : BTOasPacket

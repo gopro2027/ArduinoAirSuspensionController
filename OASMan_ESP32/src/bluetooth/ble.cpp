@@ -159,6 +159,5 @@ void ble_notify()
         setRiseOnStart(false);
         setRaiseOnPressureSet(false);
         setReboot(true);
-        calibratePressureValues();
     }
 }
