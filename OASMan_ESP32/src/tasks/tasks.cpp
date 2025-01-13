@@ -17,7 +17,6 @@ void task_bluetooth(void *parameters)
 
     Serial.println(F("Bluetooth Rest Service Beginning"));
 
-<<<<<<< Updated upstream
     // bt.begin(BT_NAME);
     // for (;;)
     // {
@@ -28,13 +27,6 @@ void task_bluetooth(void *parameters)
     ble_setup();
     delay(100);
     for (;;)
-=======
-   
-
-     ble_setup();
-    delay(100);
-     for (;;)
->>>>>>> Stashed changes
     {
         ble_loop();
         delay(10);
