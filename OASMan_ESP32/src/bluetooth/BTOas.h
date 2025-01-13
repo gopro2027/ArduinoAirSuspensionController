@@ -26,18 +26,25 @@ enum BTOasIdentifier
     STARTWEB = 14
 };
 
-union BTOasValue
+union BTOasValue32
 {
     uint32_t i;
     float f;
+};
+
+union BTOasValue16
+{
+    uint16_t i;
 };
 
 // NOTE: Default max for BLE is 23 bytes. We can do some compression if we need in the future but for now this uses 20 total (5 x 32 bits)
 struct BTOasPacket
 {
     BTOasIdentifier cmd;
-    BTOasValue args[4];
+    uint8_t args[16];
     uint8_t *tx();
+    BTOasValue16 *args16();
+    BTOasValue32 *args32();
 };
 
 #define BTOAS_PACKET_SIZE sizeof(BTOasPacket)

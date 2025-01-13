@@ -1,12 +1,12 @@
 #include "ble.h"
 
 // Initialize all pointers
-BLEServer *pServer = NULL;                    // Pointer to the server
-BLECharacteristic *restCharacteristic = NULL; // Pointer to Characteristic 1
-BLECharacteristic *pCharacteristic_2 = NULL;  // Pointer to Characteristic 2
-BLEDescriptor *pDescr_1;                      // Pointer to Descriptor of Characteristic 1
-BLE2902 *pBLE2902_1;                          // Pointer to BLE2902 of Characteristic 1
-BLE2902 *pBLE2902_2;                          // Pointer to BLE2902 of Characteristic 2
+BLEServer *pServer = NULL;                      // Pointer to the server
+BLECharacteristic *statusCharacteristic = NULL; // Pointer to Characteristic 1
+BLECharacteristic *pCharacteristic_2 = NULL;    // Pointer to Characteristic 2
+BLEDescriptor *pDescr_1;                        // Pointer to Descriptor of Characteristic 1
+BLE2902 *pBLE2902_1;                            // Pointer to BLE2902 of Characteristic 1
+BLE2902 *pBLE2902_2;                            // Pointer to BLE2902 of Characteristic 2
 
 // Some variables to keep track on device connected
 bool deviceConnected = false;
@@ -90,7 +90,7 @@ void ble_loop()
 void ble_create_characteristics(BLEService *pService)
 {
     // Create a BLE Characteristic
-    restCharacteristic = pService->createCharacteristic(
+    statusCharacteristic = pService->createCharacteristic(
         CHARACTERISTIC_UUID_1,
         BLECharacteristic::PROPERTY_NOTIFY);
 
@@ -102,12 +102,12 @@ void ble_create_characteristics(BLEService *pService)
     // // Create a BLE Descriptor
     pDescr_1 = new BLEDescriptor((uint16_t)0x2901);
     pDescr_1->setValue("A very interesting variable");
-    restCharacteristic->addDescriptor(pDescr_1);
+    statusCharacteristic->addDescriptor(pDescr_1);
 
     // Add the BLE2902 Descriptor because we are using "PROPERTY_NOTIFY"
     pBLE2902_1 = new BLE2902();
     pBLE2902_1->setNotifications(true);
-    restCharacteristic->addDescriptor(pBLE2902_1);
+    statusCharacteristic->addDescriptor(pBLE2902_1);
 
     pBLE2902_2 = new BLE2902();
     pBLE2902_2->setNotifications(true);
@@ -116,15 +116,24 @@ void ble_create_characteristics(BLEService *pService)
 
 void ble_notify()
 {
-    // restCharacteristic is an integer that is increased with every second
+    // statusCharacteristic is an integer that is increased with every second
     // in the code below we send the value over to the client and increase the integer counter
-    BTOasPacket packet = BTOasPacket();
-    packet.cmd = AIRUP;
-    packet.args[0].i = value;
-    packet.args[1].f = 1.0f;
+    // BTOasPacket packet = BTOasPacket();
+    // packet.cmd = AIRUP;
+    // packet.args[0].i = value;
+    // packet.args[1].f = 1.0f;
 
-    restCharacteristic->setValue(packet.tx(), BTOAS_PACKET_SIZE);
-    restCharacteristic->notify(); // we don't do this on the other characteristic thats why it has to be read manually
+    StatusPacket *statusPacket = new StatusPacket();
+
+    for (int i = 0; i < BTOAS_PACKET_SIZE; i++)
+    {
+        Serial.print(statusPacket->tx()[i], HEX);
+        Serial.print(" ");
+    }
+    Serial.println("");
+
+    statusCharacteristic->setValue(statusPacket->tx(), BTOAS_PACKET_SIZE);
+    statusCharacteristic->notify(); // we don't do this on the other characteristic thats why it has to be read manually
     value++;
 
     // pCharacteristic_2 is a std::string (NOT a String). In the code below we read the current value

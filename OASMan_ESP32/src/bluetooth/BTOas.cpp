@@ -5,41 +5,52 @@ uint8_t *BTOasPacket::tx()
     return (uint8_t *)&cmd;
 }
 
+BTOasValue16 *BTOasPacket::args16()
+{
+    return (BTOasValue16 *)this->args;
+}
+BTOasValue32 *BTOasPacket::args32()
+{
+    return (BTOasValue32 *)this->args;
+}
+
 // Outgoing packets
 StatusPacket::StatusPacket()
 {
+    memset(this->args, 0, sizeof(this->args));
     this->cmd = STATUSREPORT;
     // 0 through 4
-    this->args[WHEEL_FRONT_PASSENGER].f = getWheel(WHEEL_FRONT_PASSENGER)->getPressure();
-    this->args[WHEEL_REAR_PASSENGER].f = getWheel(WHEEL_REAR_PASSENGER)->getPressure();
-    this->args[WHEEL_FRONT_DRIVER].f = getWheel(WHEEL_FRONT_DRIVER)->getPressure();
-    this->args[WHEEL_REAR_DRIVER].f = getWheel(WHEEL_REAR_DRIVER)->getPressure();
+    this->args16()[WHEEL_FRONT_PASSENGER].i = getWheel(WHEEL_FRONT_PASSENGER)->getPressure();
+    this->args16()[WHEEL_REAR_PASSENGER].i = getWheel(WHEEL_REAR_PASSENGER)->getPressure();
+    this->args16()[WHEEL_FRONT_DRIVER].i = getWheel(WHEEL_FRONT_DRIVER)->getPressure();
+    this->args16()[WHEEL_REAR_DRIVER].i = getWheel(WHEEL_REAR_DRIVER)->getPressure();
+    this->args16()[4].i = getCompressor()->getTankPressure();
 }
 
 // Incoming packets
 
 int AirsmPacket::getRelativeValue()
 {
-    return this->args[0].i;
+    return this->args32()[0].i;
 }
 
 int ProfilePacket::getProfileIndex()
 {
-    return this->args[0].i;
+    return this->args32()[0].i;
 }
 
 bool BooleanPacket::getBoolean()
 {
-    return this->args[0].i != 0;
+    return this->args32()[0].i != 0;
 }
 
 int SetAirheightPacket::getWheelIndex()
 {
-    return this->args[0].i;
+    return this->args32()[0].i;
 }
 int SetAirheightPacket::getPressure()
 {
-    return this->args[1].i;
+    return this->args32()[1].i;
 }
 
 void runReceivedPacket(BTOasPacket *packet)
