@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'header.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+class Setup extends StatelessWidget {
+  const Setup({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -17,8 +13,16 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  bool isDropDownOff = true;
+  bool isLiftUpOff = true;
 
   @override
   Widget build(BuildContext context) {
@@ -33,23 +37,51 @@ class SettingsPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSettingsSectionWithLine('Input type', [
+                  _buildSettingsSectionWithLine(
+                    'Input type',
+                    [
+                      _buildFunctionWithLine(
+                        _buildRadioGroup(
+                          options: ['Pressure', 'Buttons'],
+                          groupValue: 'Pressure',
+                          onChanged: (value) {},
+                        ),
+                      ),
+                    ],
+                    excludeLine: true,
+                  ),
+                  _buildSettingsSectionWithLine('Basic settings', [
                     _buildFunctionWithLine(
-                      _buildRadioGroup(
-                        options: ['Pressure', 'Buttons'],
-                        groupValue: 'Pressure',
-                        onChanged: (value) {},
+                      _buildSwitch(
+                        'Drop down when off',
+                        isDropDownOff,
+                        (value) {
+                          setState(() {
+                            isDropDownOff = value;
+                          });
+                        },
                       ),
                     ),
-                  ]),
-                  _buildSettingsSectionWithLine('Basic settings', [
-                    _buildFunctionWithLine(_buildSwitch('Maintain pressure', true, (value) {})),
-                    _buildFunctionWithLine(_buildSwitch('Rise on start', true, (value) {})),
-                    _buildFunctionWithLine(_buildSwitch('Drop down when off', true, (value) {})),
-                    _buildFunctionWithLine(_buildSlider('Drop down delay', 12, 0, 20, (value) {})),
-                    _buildFunctionWithLine(_buildSwitch('Lift up when on', true, (value) {})),
-                    _buildFunctionWithLine(_buildSlider('Lift up delay', 12, 0, 20, (value) {})),
-                  ]),
+                    if (!isDropDownOff)
+                      _buildFunctionWithLine(
+                        _buildSlider('Drop down delay', 12, 0, 20, (value) {}),
+                      ),
+                    _buildFunctionWithLine(
+                      _buildSwitch(
+                        'Lift up when on',
+                        isLiftUpOff,
+                        (value) {
+                          setState(() {
+                            isLiftUpOff = value;
+                          });
+                        },
+                      ),
+                    ),
+                    if (!isLiftUpOff)
+                      _buildFunctionWithLine(
+                        _buildSlider('Lift up delay', 12, 0, 20, (value) {}),
+                      ),
+                  ], excludeLine: true),
                   _buildSettingsSectionWithLine('Solenoids', [
                     _buildFunctionWithLine(_buildSlider('Solenoid open time (ms)', 100, 0, 500, (value) {})),
                     _buildFunctionWithLine(_buildSlider('Solenoid psi (calibrated)', 5, 0, 10, (value) {})),
@@ -84,7 +116,7 @@ class SettingsPage extends StatelessWidget {
                         ),
                       ],
                     )),
-                  ]),
+                  ], excludeLine: true),
                   _buildSettingsSectionWithLine('Readout type', [
                     _buildFunctionWithLine(
                       _buildRadioGroup(
@@ -93,7 +125,7 @@ class SettingsPage extends StatelessWidget {
                         onChanged: (value) {},
                       ),
                     ),
-                  ]),
+                  ], excludeLine: true),
                   _buildSettingsSectionWithLine('Units', [
                     _buildFunctionWithLine(
                       _buildRadioGroup(
@@ -102,7 +134,7 @@ class SettingsPage extends StatelessWidget {
                         onChanged: (value) {},
                       ),
                     ),
-                  ]),
+                  ], excludeLine: true),
                   _buildSettingsSectionWithLine('System', [
                     _buildFunctionWithLine(
                       _buildRadioGroup(
@@ -111,7 +143,7 @@ class SettingsPage extends StatelessWidget {
                         onChanged: (value) {},
                       ),
                     ),
-                  ]),
+                  ], excludeLine: true),
                 ],
               ),
             ),
@@ -121,18 +153,19 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSettingsSectionWithLine(String title, List<Widget> children) {
+  Widget _buildSettingsSectionWithLine(String title, List<Widget> children, {bool excludeLine = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 4,
-            color: Colors.purple,
-            height: _calculateSectionHeight(children),
-          ),
-          const SizedBox(width: 8),
+          if (!excludeLine)
+            Container(
+              width: 1,
+              color: Colors.purple,
+              height: _calculateSectionHeight(children),
+            ),
+          if (!excludeLine) const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,7 +187,7 @@ class SettingsPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 4,
+            width: 1,
             color: Colors.purple,
           ),
           const SizedBox(width: 8),
@@ -180,13 +213,26 @@ class SettingsPage extends StatelessWidget {
 
   Widget _buildSwitch(String label, bool value, ValueChanged<bool> onChanged) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white)),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: Colors.purple,
+        Container(
+          width: 1,
+          color: Colors.purple, // Den lilla streg
+          height: 40, // Justér højden for at matche switchens størrelse
+        ),
+        const SizedBox(width: 8), // Afstand mellem streg og resten
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: const TextStyle(color: Colors.white)),
+              Switch(
+                value: value,
+                onChanged: onChanged,
+                activeColor: Colors.purple,
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -210,40 +256,39 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-}
-
-Widget _buildRadioGroup({
-  required List<String> options,
-  required String groupValue,
-  required ValueChanged<String?> onChanged,
-}) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4.0),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 4,
-          color: Colors.purple,
-          height: options.length * 60.0, // Adjust based on the approximate height of each child widget.
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            children: options
-                .map(
-                  (option) => RadioListTile<String>(
-                    title: Text(option, style: const TextStyle(color: Colors.white)),
-                    value: option,
-                    groupValue: groupValue,
-                    onChanged: onChanged,
-                    activeColor: Colors.purple,
-                  ),
-                )
-                .toList(),
+  Widget _buildRadioGroup({
+    required List<String> options,
+    required String groupValue,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 1,
+            color: Colors.purple,
+            height: options.length * 60.0, // Adjust based on the approximate height of each child widget.
           ),
-        ),
-      ],
-    ),
-  );
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              children: options
+                  .map(
+                    (option) => RadioListTile<String>(
+                      title: Text(option, style: const TextStyle(color: Colors.white)),
+                      value: option,
+                      groupValue: groupValue,
+                      onChanged: onChanged,
+                      activeColor: Colors.purple,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

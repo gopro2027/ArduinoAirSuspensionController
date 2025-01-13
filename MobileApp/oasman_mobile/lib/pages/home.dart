@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:oasman_mobile/pages/popup/bluetooth.dart';
+import 'package:provider/provider.dart';
+import '../ble_manager.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -7,278 +10,270 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final bleManager = Provider.of<BLEManager>(context);
 
     return Scaffold(
-      backgroundColor: Color(0xFF121212),
+      backgroundColor: const Color(0xFF121212),
       body: SingleChildScrollView(
         child: Container(
-          padding: EdgeInsets.only(top: 0), // Adjust this value to move the entire window up
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
           child: Column(
             children: [
-              // Top Bluetooth Icon
-              Padding(
-                padding: const EdgeInsets.all(1.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.bluetooth,
-                      color: Colors.pink,
-                      size: 24,
-                    ),
-                  ],
-                ),
-              ),
-
-              // Car Section with Pressure and Percentage
-              Container(
-                height: size.height * 0.4,
-                child: Stack(
-                  children: [
-                    Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/car_black-transformed1.png',
-                            width: size.width * 0.6,
-                            height: size.height * 0.4,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Top Left
-                    Positioned(
-                      top: size.height * 0.04,
-                      left: size.width * 0.05,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          
-                           Text(
-                            '-Bar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                            ),
-                          ),
-                           SizedBox(height: 20),
-                          SvgPicture.asset(
-                            'assets/Group2.svg',
-                            width: 20,
-                            height: 20,
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '- %',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-      // Top Right
-      Positioned(
-        top: size.height * 0.04,
-        right: size.width * 0.05,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [         Text(
-                            '-Bar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                            ),
-                          ),
-               SizedBox(height: 20),
-            Transform(
-              transform: Matrix4.identity()..scale(-1.0, 1.0), // Flip horizontally
-              alignment: Alignment.center,
-              child: SvgPicture.asset(
-                'assets/Group2.svg',
-                width: 20,
-                height: 20,
-              ),
-            ),
-            SizedBox(height: 4),
-            Text(
-              '- %',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
-
-                    // Bottom Left
-                    Positioned(
-                      bottom: size.height * 0.09,
-                      left: size.width * 0.05,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                                   Text(
-                            '-Bar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                            ),
-                          ),
-            Transform(
-              transform: Matrix4.identity()..scale(-1.0, 1.0), // Flip horizontally
-              alignment: Alignment.center,
-              child: SvgPicture.asset(
-                'assets/Group1.svg',
-                width: 20,
-                height: 20,
-              ),
-            ),
-                          SizedBox(height: 4),
-                          Text(
-                            '- %',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Bottom Right
-                    Positioned(
-                      bottom: size.height * 0.09,
-                      right: size.width * 0.05,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '-Bar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                            ),
-                          ),
-                          SvgPicture.asset(
-                            'assets/Group1.svg',
-                            width: 20,
-                            height: 20,
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '- %',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Control Buttons Section
-              Container(
-                height: size.height * 0.40,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        // button leftfront
-                        OvalControlButton(
-                          iconUp: Icons.keyboard_arrow_up,
-                          iconDown: Icons.keyboard_arrow_down,
-                          onUpPressed: () => print('Left Front Up Pressed'),
-                          onDownPressed: () => print('Left Front Down Pressed'),
-                        ),
-                        // button front
-                        OvalControlButton(
-                          iconUp: Icons.keyboard_double_arrow_up,
-                          iconDown: Icons.keyboard_double_arrow_down,
-                          isLarge: true,
-                          onUpPressed: () => print('Front Up Pressed'),
-                          onDownPressed: () => print('Front Down Pressed'),
-                        ),
-                        // button rightfront
-                        OvalControlButton(
-                          iconUp: Icons.keyboard_arrow_up,
-                          iconDown: Icons.keyboard_arrow_down,
-                          onUpPressed: () => print('Right Front Up Pressed'),
-                          onDownPressed: () => print('Right Front Down Pressed'),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 15),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        // button leftback
-                        OvalControlButton(
-                          iconUp: Icons.keyboard_arrow_up,
-                          iconDown: Icons.keyboard_arrow_down,
-                          onUpPressed: () => print('Left Back Up Pressed'),
-                          onDownPressed: () => print('Left Back Down Pressed'),
-                        ),
-                        // button back
-                        OvalControlButton(
-                          iconUp: Icons.keyboard_double_arrow_up,
-                          iconDown: Icons.keyboard_double_arrow_down,
-                          isLarge: true,
-                          onUpPressed: () => print('Back Up Pressed'),
-                          onDownPressed: () => print('Back Down Pressed'),
-                        ),
-                        // button rightback
-                        OvalControlButton(
-                          iconUp: Icons.keyboard_arrow_up,
-                          iconDown: Icons.keyboard_arrow_down,
-                          onUpPressed: () => print('Right Back Up Pressed'),
-                          onDownPressed: () => print('Right Back Down Pressed'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              // Presets
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 1.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    for (int i = 1; i <= 5; i++)
-                      GestureDetector(
-                        onTap: () {},
-                        child: CircleAvatar(
-                          backgroundColor: i == 3 ? Colors.purple : Colors.grey[800],
-                          child: Text(
-                            '$i',
-                            style: TextStyle(
-                              color: i == 3 ? Colors.white : Colors.grey[400],
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+              _buildHeader(context, bleManager),
+              _buildCarSection(size, bleManager),
+              _buildControlButtonsSection(size, bleManager),
+              _buildPresetsSection(bleManager),
             ],
           ),
         ),
       ),
     );
   }
+
+  Widget _buildHeader(BuildContext context, BLEManager bleManager) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          icon: Icon(
+            Icons.bluetooth,
+            color: bleManager.connectedDevice != null ? Colors.blue : Colors.grey,
+          ),
+          onPressed: () {
+            if (!bleManager.isScanning) {
+              bleManager.startScan();
+              showDialog(
+                context: context,
+                builder: (context) => const BluetoothPopup(),
+              );
+            }
+          },
+        ),
+        Text(
+          bleManager.connectedDevice != null
+              ? 'Connected to ${bleManager.connectedDevice!.name}'
+              : 'No device connected',
+          style: const TextStyle(color: Colors.white, fontSize: 14),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCarSection(Size size, BLEManager bleManager) {
+    return Container(
+      height: size.height * 0.4,
+      child: Stack(
+        children: [
+          Center(
+            child: Image.asset(
+              'assets/car_black-transformed1.png',
+              width: size.width * 0.6,
+              height: size.height * 0.4,
+            ),
+          ),
+          Positioned(
+            top: size.height * 0.04,
+            left: size.width * 0.05,
+            child: _buildPressureIndicator(
+              label: "Front Left",
+              barValue: bleManager.pressureValues["frontLeft"] ?? "-",
+              percentValue: bleManager.percentValues["frontLeft"] ?? "-",
+            ),
+          ),
+          Positioned(
+            top: size.height * 0.04,
+            right: size.width * 0.05,
+            child: _buildPressureIndicator(
+              label: "Front Right",
+              barValue: bleManager.pressureValues["frontRight"] ?? "-",
+              percentValue: bleManager.percentValues["frontRight"] ?? "-",
+              flip: true,
+            ),
+          ),
+          Positioned(
+            bottom: size.height * 0.09,
+            left: size.width * 0.05,
+            child: _buildPressureIndicator(
+              label: "Rear Left",
+              barValue: bleManager.pressureValues["rearLeft"] ?? "-",
+              percentValue: bleManager.percentValues["rearLeft"] ?? "-",
+            ),
+          ),
+          Positioned(
+            bottom: size.height * 0.09,
+            right: size.width * 0.05,
+            child: _buildPressureIndicator(
+              label: "Rear Right",
+              barValue: bleManager.pressureValues["rearRight"] ?? "-",
+              percentValue: bleManager.percentValues["rearRight"] ?? "-",
+              flip: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildControlButtonsSection(Size size, BLEManager bleManager) {
+    return Container(
+      height: size.height * 0.4,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              OvalControlButton(
+                iconUp: Icons.keyboard_arrow_up,
+                iconDown: Icons.keyboard_arrow_down,
+                onUpPressed: () => bleManager.sendCommand("8888"),
+                onDownPressed: () => bleManager.sendCommand("2"),
+              ),
+              OvalControlButton(
+                iconUp: Icons.keyboard_double_arrow_up,
+                iconDown: Icons.keyboard_double_arrow_down,
+                isLarge: true,
+                onUpPressed: () => bleManager.sendCommand("8888"),
+                onDownPressed: () => bleManager.sendCommand("2"),
+              ),
+              OvalControlButton(
+                iconUp: Icons.keyboard_arrow_up,
+                iconDown: Icons.keyboard_arrow_down,
+                onUpPressed: () => bleManager.sendCommand("1"),
+                onDownPressed: () => bleManager.sendCommand("2"),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              OvalControlButton(
+                iconUp: Icons.keyboard_arrow_up,
+                iconDown: Icons.keyboard_arrow_down,
+                onUpPressed: () => bleManager.sendCommand("leftRearUp"),
+                onDownPressed: () => bleManager.sendCommand("leftRearDown"),
+              ),
+              OvalControlButton(
+                iconUp: Icons.keyboard_double_arrow_up,
+                iconDown: Icons.keyboard_double_arrow_down,
+                isLarge: true,
+                onUpPressed: () => bleManager.sendCommand("rearUp"),
+                onDownPressed: () => bleManager.sendCommand("rearDown"),
+              ),
+              OvalControlButton(
+                iconUp: Icons.keyboard_arrow_up,
+                iconDown: Icons.keyboard_arrow_down,
+                onUpPressed: () => bleManager.sendCommand("rightRearUp"),
+                onDownPressed: () => bleManager.sendCommand("rightRearDown"),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPresetsSection(BLEManager bleManager) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          for (int i = 1; i <= 5; i++)
+            GestureDetector(
+              onTap: () => bleManager.sendCommand("preset$i"),
+              child: CircleAvatar(
+                backgroundColor: i == 3 ? Colors.purple : Colors.grey[800],
+                child: Text(
+                  '$i',
+                  style: TextStyle(
+                    color: i == 3 ? Colors.white : Colors.grey[400],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPressureIndicator({
+    required String label,
+    required String barValue,
+    required String percentValue,
+    bool flip = false,
+  }) {
+    return Column(
+      crossAxisAlignment: flip ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$barValue Bar',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+          ),
+        ),
+        Transform(
+          transform: Matrix4.identity()..scale(flip ? -1.0 : 1.0, 1.0),
+          alignment: Alignment.center,
+          child: SvgPicture.asset(
+            'assets/Group1.svg',
+            width: 20,
+            height: 20,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$percentValue %',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
 }
+
+
+  Widget _buildPressureIndicator({
+    required String label,
+    required String barValue,
+    required String percentValue,
+    bool flip = false,
+  }) {
+    return Column(
+      crossAxisAlignment: flip ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$barValue Bar',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+          ),
+        ),
+        Transform(
+          transform: Matrix4.identity()..scale(flip ? -1.0 : 1.0, 1.0),
+          alignment: Alignment.center,
+          child: SvgPicture.asset(
+            'assets/Group1.svg',
+            width: 20,
+            height: 20,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$percentValue %',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
 
 class OvalControlButton extends StatelessWidget {
   final IconData iconUp;

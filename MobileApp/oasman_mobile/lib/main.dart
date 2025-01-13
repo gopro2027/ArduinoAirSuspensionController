@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:oasman_mobile/ble_manager.dart';
 import 'package:oasman_mobile/pages/menu.dart';
-
 import 'package:oasman_mobile/pages/buttons.dart';
 import 'package:oasman_mobile/pages/setup.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => BLEManager(),
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -16,11 +22,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'OAS-Man',
       theme: ThemeData(
-        colorScheme:
-            ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 0, 0, 0)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF000000)),
         useMaterial3: true,
       ),
-      home: const MainPage(),
+      home: const MainPage(), // Hovedsiden
       routes: {
         '/buttons': (context) => const ButtonsPage(),
         '/Setup': (context) => const SettingsPage(),
@@ -39,6 +44,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
 
+  // Liste over sider
   static const List<Widget> _pages = <Widget>[
     ButtonsPage(),
     SettingsPage(),
@@ -47,13 +53,14 @@ class _MainPageState extends State<MainPage> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      print("Navigated to page index: $_selectedIndex");
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: _pages[_selectedIndex], // Vælg side baseret på index
       bottomNavigationBar: CustomBottomNavigationBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,

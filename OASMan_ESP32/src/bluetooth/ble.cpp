@@ -67,7 +67,50 @@ void ble_loop()
     // notify changed value
     if (deviceConnected)
     {
+<<<<<<< Updated upstream
         ble_notify();
+=======
+        // pCharacteristic_1 is an integer that is increased with every second
+        // in the code below we send the value over to the client and increase the integer counter
+        pCharacteristic_1->setValue(value);
+        pCharacteristic_1->notify();
+        value++;
+
+        // pCharacteristic_2 is a std::string (NOT a String). In the code below we read the current value
+        // write this to the Serial interface and send a different value back to the Client
+        // Here the current value is read using getValue()
+        std::string rxValue = pCharacteristic_2->getValue();
+        Serial.print("Characteristic 2 (getValue): ");
+        Serial.println(rxValue.c_str());
+
+        // Here the value is written to the Client using setValue();
+        String txValue = "String with random value from Server: " + String(random(1000));
+        pCharacteristic_2->setValue(txValue.c_str());
+        Serial.println("Characteristic 2 (setValue): " + txValue);
+
+        // In this example "delay" is used to delay with one second. This is of course a very basic
+        // implementation to keep things simple. I recommend to use millis() for any production code
+        delay(1000);
+
+        if (value == 8888)
+        {
+            // add code in here just so they get included in the compile
+            airUp();
+            airOut();
+            airUpRelativeToAverage(10);
+            writeProfile(0);
+            setBaseProfile(0);
+            readProfile(0);
+            setRideHeightFrontPassenger(0);
+            setRideHeightRearPassenger(0);
+            setRideHeightFrontDriver(0);
+            setRideHeightRearDriver(0);
+            setRiseOnStart(false);
+            setRaiseOnPressureSet(false);
+            setReboot(true);
+               Serial.print("comand 8888 recived: ");
+        }
+>>>>>>> Stashed changes
     }
     // The code below keeps the connection status uptodate:
     // Disconnecting
