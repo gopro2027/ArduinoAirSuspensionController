@@ -3,7 +3,7 @@
 // Initialize all pointers
 BLEServer *pServer = NULL;                      // Pointer to the server
 BLECharacteristic *statusCharacteristic = NULL; // Pointer to Characteristic 1
-BLECharacteristic *pCharacteristic_2 = NULL;    // Pointer to Characteristic 2
+BLECharacteristic *restCharacteristic = NULL;   // Pointer to Characteristic 2
 BLEDescriptor *pDescr_1;                        // Pointer to Descriptor of Characteristic 1
 BLE2902 *pBLE2902_1;                            // Pointer to BLE2902 of Characteristic 1
 BLE2902 *pBLE2902_2;                            // Pointer to BLE2902 of Characteristic 2
@@ -18,8 +18,8 @@ uint32_t value = 0;
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
 #define SERVICE_UUID "679425c8-d3b4-4491-9eb2-3e3d15b625f0"
-#define CHARACTERISTIC_UUID_1 "66fda100-8972-4ec7-971c-3fd30b3072ac"
-#define CHARACTERISTIC_UUID_2 "f573f13f-b38e-415e-b8f0-59a6a19a4e02"
+#define STATUS_CHARACTERISTIC_UUID "66fda100-8972-4ec7-971c-3fd30b3072ac"
+#define REST_CHARACTERISTIC_UUID "f573f13f-b38e-415e-b8f0-59a6a19a4e02"
 
 // Callback function that is called whenever a client is connected or disconnected
 class MyServerCallbacks : public BLEServerCallbacks
@@ -62,8 +62,13 @@ void ble_setup()
     Serial.println("Waiting a client connection to notify...");
 }
 
+uint64_t currentUserNum = 1;
 void ble_loop()
 {
+    if (value > 5)
+    {
+        value = 2;
+    }
     // notify changed value
     if (deviceConnected)
     {
@@ -84,6 +89,12 @@ void ble_loop()
         // do stuff here on connecting
         oldDeviceConnected = deviceConnected;
         // TODO: Might want to add a delay of like 100ms here? not sure
+
+        // send assignment packet... will be more important after fixing it so we can allow multiple devices to connect
+        AssignRecipientPacket *arp = new AssignRecipientPacket(currentUserNum);
+        restCharacteristic->setValue(arp->tx(), BTOAS_PACKET_SIZE);
+
+        currentUserNum++;
     }
 }
 
@@ -91,17 +102,16 @@ void ble_create_characteristics(BLEService *pService)
 {
     // Create a BLE Characteristic
     statusCharacteristic = pService->createCharacteristic(
-        CHARACTERISTIC_UUID_1,
+        STATUS_CHARACTERISTIC_UUID,
         BLECharacteristic::PROPERTY_NOTIFY);
 
-    pCharacteristic_2 = pService->createCharacteristic(
-        CHARACTERISTIC_UUID_2,
-
+    restCharacteristic = pService->createCharacteristic(
+        REST_CHARACTERISTIC_UUID,
         BLECharacteristic::PROPERTY_NOTIFY);
 
     // // Create a BLE Descriptor
     pDescr_1 = new BLEDescriptor((uint16_t)0x2901);
-    pDescr_1->setValue("A very interesting variable");
+    pDescr_1->setValue("Status");
     statusCharacteristic->addDescriptor(pDescr_1);
 
     // Add the BLE2902 Descriptor because we are using "PROPERTY_NOTIFY"
@@ -111,7 +121,10 @@ void ble_create_characteristics(BLEService *pService)
 
     pBLE2902_2 = new BLE2902();
     pBLE2902_2->setNotifications(true);
-    pCharacteristic_2->addDescriptor(pBLE2902_2);
+    restCharacteristic->addDescriptor(pBLE2902_2);
+
+    IdlePacket *ip = new IdlePacket();
+    restCharacteristic->setValue(ip->tx(), BTOAS_PACKET_SIZE);
 }
 
 void ble_notify()
@@ -136,16 +149,18 @@ void ble_notify()
     statusCharacteristic->notify(); // we don't do this on the other characteristic thats why it has to be read manually
     value++;
 
-    // pCharacteristic_2 is a std::string (NOT a String). In the code below we read the current value
+    // restCharacteristic is a std::string (NOT a String). In the code below we read the current value
     // write this to the Serial interface and send a different value back to the Client
     // Here the current value is read using getValue()
-    std::string rxValue = pCharacteristic_2->getValue();
+    std::string rxValue = restCharacteristic->getValue();
+    uint8_t *data = restCharacteristic->getData();
+    restCharacteristic->getLength();
     Serial.print("Characteristic 2 (getValue): ");
     Serial.println(rxValue.c_str());
 
     // Here the value is written to the Client using setValue();
     String txValue = "String with random value from Server: " + String(random(1000));
-    pCharacteristic_2->setValue(txValue.c_str());
+    restCharacteristic->setValue(txValue.c_str());
     Serial.println("Characteristic 2 (setValue): " + txValue);
 
     // In this example "delay" is used to delay with one second. This is of course a very basic

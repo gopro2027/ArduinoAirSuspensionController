@@ -25,6 +25,36 @@ StatusPacket::StatusPacket()
     this->args16()[WHEEL_FRONT_DRIVER].i = getWheel(WHEEL_FRONT_DRIVER)->getPressure();
     this->args16()[WHEEL_REAR_DRIVER].i = getWheel(WHEEL_REAR_DRIVER)->getPressure();
     this->args16()[4].i = getCompressor()->getTankPressure();
+
+    // doesn't matter for this because it is generic broadcasted for everyone
+    this->sender = 0;
+    this->recipient = 0;
+}
+
+IdlePacket::IdlePacket()
+{
+    memset(this->args, 0, sizeof(this->args));
+    this->cmd = IDLE;
+    this->sender = 0;
+    this->recipient = 0;
+}
+
+AssignRecipientPacket::AssignRecipientPacket(int assignmentNumber)
+{
+    memset(this->args, 0, sizeof(this->args));
+    this->cmd = ASSIGNRECEPIENT;
+    this->sender = 0;
+    this->recipient = 0; // client should assume if they haven't been assigned yet then they are being assigned this
+    this->args32()[0].i = assignmentNumber;
+}
+
+MessagePacket::MessagePacket(short recipient, std::string message)
+{
+    memset(this->args, 0, sizeof(this->args));
+    this->cmd = MESSAGE;
+    this->sender = 0;
+    this->recipient = recipient;
+    memcpy(this->args, (uint8_t *)message.data(), message.length());
 }
 
 // Incoming packets
@@ -57,6 +87,12 @@ void runReceivedPacket(BTOasPacket *packet)
 {
     switch (packet->cmd)
     {
+    case BTOasIdentifier::IDLE:
+        break;
+    case BTOasIdentifier::ASSIGNRECEPIENT: // ignore from server
+        break;
+    case BTOasIdentifier::MESSAGE: // ignore from server
+        break;
     case BTOasIdentifier::AIRUP:
         airUp();
         break;

@@ -10,6 +10,7 @@ extern bool startOTAServiceRequest;
 
 enum BTOasIdentifier
 {
+    IDLE = 0,
     STATUSREPORT = 1,
     AIRUP = 2,
     AIROUT = 3,
@@ -23,7 +24,9 @@ enum BTOasIdentifier
     RAISEONPRESSURESET = 11,
     REBOOT = 12,
     CALIBRATE = 13,
-    STARTWEB = 14
+    STARTWEB = 14,
+    ASSIGNRECEPIENT = 15,
+    MESSAGE = 16
 };
 
 union BTOasValue32
@@ -40,8 +43,11 @@ union BTOasValue16
 // NOTE: Default max for BLE is 23 bytes. We can do some compression if we need in the future but for now this uses 20 total (5 x 32 bits)
 struct BTOasPacket
 {
-    BTOasIdentifier cmd;
+    uint16_t cmd; // BTOasIdentifier
+    uint8_t sender;
+    uint8_t recipient;
     uint8_t args[16];
+
     uint8_t *tx();
     BTOasValue16 *args16();
     BTOasValue32 *args32();
@@ -55,6 +61,21 @@ void runReceivedPacket(BTOasPacket *packet);
 struct StatusPacket : BTOasPacket
 {
     StatusPacket();
+};
+
+struct AssignRecipientPacket : BTOasPacket
+{
+    AssignRecipientPacket(int assignmentNumber);
+};
+
+struct IdlePacket : BTOasPacket
+{
+    IdlePacket();
+};
+
+struct MessagePacket : BTOasPacket
+{
+    MessagePacket(short recipient, std::string message);
 };
 
 // Incoming packets
