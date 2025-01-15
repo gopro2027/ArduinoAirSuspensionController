@@ -6,56 +6,41 @@
 #include "ui.h"
 #include "ui_helpers.h"
 
-///////////////////// VARIABLES ////////////////////
-
-
-// SCREEN: ui_scrMain
-void ui_scrMain_screen_init(void);
-lv_obj_t * ui_scrMain;
-lv_obj_t * ui_pnlMain;
-lv_obj_t * ui_lblMilliseconds;
-lv_obj_t * ui_lblMillisecondsValue;
-lv_obj_t * ui_lblCdr;
-lv_obj_t * ui_lblCdrValue;
-void ui_event_Rotate(lv_event_t * e);
-lv_obj_t * ui_Rotate;
-lv_obj_t * ui_Label1;
-void ui_event_btnCount(lv_event_t * e);
-lv_obj_t * ui_btnCount;
-lv_obj_t * ui_lblButton;
-lv_obj_t * ui_lblCount;
-lv_obj_t * ui_lblCountValue;
-lv_obj_t * ui_GradR;
-lv_obj_t * ui_GradG;
-lv_obj_t * ui_GradB;
-lv_obj_t * ui____initial_actions0;
 
 ///////////////////// TEST LVGL SETTINGS ////////////////////
 #if LV_COLOR_DEPTH != 16
     #error "LV_COLOR_DEPTH should be 16bit to match SquareLine Studio's settings"
 #endif
 
-///////////////////// ANIMATIONS ////////////////////
+SCREEN currentScreen;
 
-///////////////////// FUNCTIONS ////////////////////
-void ui_event_Rotate(lv_event_t * e)
+
+//https://docs.lvgl.io/master/details/main-components/indev.html
+void my_input_read(lv_indev_t * indev, lv_indev_data_t * data)
+{
+    // if(touchpad_pressed) {
+    //     data->point.x = touchpad_x;
+    //     data->point.y = touchpad_y;
+    //     data->state = LV_INDEV_STATE_PRESSED;
+    // } else {
+    //     data->state = LV_INDEV_STATE_RELEASED;
+    // }
+    if (data->state != 0) {
+    log_i("state: %i",data->state);
+    log_i("x: %d",data->point.x);
+    log_i("y: %d",data->point.y);
+    }
+}
+
+void ui_allEvents(lv_event_t * e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
     lv_obj_t * target = lv_event_get_target(e);
     if(event_code == LV_EVENT_CLICKED) {
-        OnRotateClicked(e);
+        
+        log_i("Clicked: ");
     }
 }
-void ui_event_btnCount(lv_event_t * e)
-{
-    lv_event_code_t event_code = lv_event_get_code(e);
-    lv_obj_t * target = lv_event_get_target(e);
-    if(event_code == LV_EVENT_CLICKED) {
-        OnAddOneClicked(e);
-    }
-}
-
-///////////////////// SCREENS ////////////////////
 
 void ui_init(void)
 {
@@ -64,6 +49,38 @@ void ui_init(void)
                                                false, LV_FONT_DEFAULT);
     lv_disp_set_theme(dispp, theme);
     ui_scrMain_screen_init();
-    ui____initial_actions0 = lv_obj_create(NULL);
-    lv_disp_load_scr(ui_scrMain);
+    ui_scrHome_screen_init();
+    scrMain.ui____initial_actions0 = lv_obj_create(NULL);
+    changeScreen(SCREEN_MAIN);
+
+    // lv_indev_t * indev = lv_wayland_get_indev_touchscreen();        /* Create input device connected to Default Display. */
+    // //lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);   /* Touch pad is a pointer-like device. */
+    // lv_indev_set_read_cb(indev, my_input_read);    /* Set driver function. */
+
+    //lv_indev_t * touch_indev = lv_wayland_get_indev_touchscreen(); 
+
+}
+
+
+void changeScreen(SCREEN screen) {
+    currentScreen = screen;
+    switch (screen) {
+        case SCREEN_MAIN:
+            lv_disp_load_scr(scrMain.ui_scrMain);
+            break;
+        case SCREEN_HOME:
+            lv_disp_load_scr(scrHome.ui_scrHome);
+            break;
+    }
+}
+
+void screenLoop() {
+    switch (currentScreen) {
+        case SCREEN_MAIN:
+            ui_scrMain_loop();
+            break;
+        case SCREEN_HOME:
+            ui_scrHome_loop();
+            break;
+    }
 }

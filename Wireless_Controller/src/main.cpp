@@ -3,11 +3,13 @@
 #include <esp32_smartdisplay.h>
 #include <ui/ui.h>
 
+#include "touch_lib.h"
+
 void OnAddOneClicked(lv_event_t *e)
 {
     static uint32_t cnt = 0;
     cnt++;
-    lv_label_set_text_fmt(ui_lblCountValue, "%u", cnt);
+    lv_label_set_text_fmt(scrMain.ui_lblCountValue, "%u", cnt);
 }
 
 void OnRotateClicked(lv_event_t *e)
@@ -40,40 +42,39 @@ void setup()
     ui_init();
 
     // To use third party libraries, enable the define in lv_conf.h: #define LV_USE_QRCODE 1
-    auto ui_qrcode = lv_qrcode_create(ui_scrMain);
-    lv_qrcode_set_size(ui_qrcode, 100);
-    lv_qrcode_set_dark_color(ui_qrcode, lv_color_black());
-    lv_qrcode_set_light_color(ui_qrcode, lv_color_white());
-    const char *qr_data = "https://github.com/rzeldent/esp32-smartdisplay";
-    lv_qrcode_update(ui_qrcode, qr_data, strlen(qr_data));
-    lv_obj_center(ui_qrcode);
+    // auto ui_qrcode = lv_qrcode_create(ui_scrMain);
+    // lv_qrcode_set_size(ui_qrcode, 100);
+    // lv_qrcode_set_dark_color(ui_qrcode, lv_color_black());
+    // lv_qrcode_set_light_color(ui_qrcode, lv_color_white());
+    // const char *qr_data = "https://github.com/rzeldent/esp32-smartdisplay";
+    // lv_qrcode_update(ui_qrcode, qr_data, strlen(qr_data));
+    // lv_obj_center(ui_qrcode);
+
+    setup_touchscreen_hook();
 }
 
-ulong next_millis;
 auto lv_last_tick = millis();
+
+#include <esp32_smartdisplay.h>
+#include <esp_lcd_panel_ops.h>
+
+#include <esp_lcd_touch.h>
 
 void loop()
 {
     auto const now = millis();
-    if (now > next_millis)
+
+    if (isJustPressed())
     {
-        next_millis = now + 500;
-
-        char text_buffer[32];
-        sprintf(text_buffer, "%lu", now);
-        lv_label_set_text(ui_lblMillisecondsValue, text_buffer);
-
-#ifdef BOARD_HAS_RGB_LED
-        auto const rgb = (now / 2000) % 8;
-        smartdisplay_led_set_rgb(rgb & 0x01, rgb & 0x02, rgb & 0x04);
-#endif
-
-#ifdef BOARD_HAS_CDS
-        auto cdr = analogReadMilliVolts(CDS);
-        sprintf(text_buffer, "%d", cdr);
-        lv_label_set_text(ui_lblCdrValue, text_buffer);
-#endif
+        log_i("Just Pressed %d %d ", touchX(), touchY());
     }
+    if (isJustReleased())
+    {
+        log_i("Just Released %d %d ", touchX(), touchY());
+    }
+
+    // screen code
+    screenLoop();
 
     // Update the ticker
     lv_tick_inc(now - lv_last_tick);

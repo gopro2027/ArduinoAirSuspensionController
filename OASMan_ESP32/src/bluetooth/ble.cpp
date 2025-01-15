@@ -1,5 +1,7 @@
 #include "ble.h"
 
+// Based on this file: https://github.com/mo-thunderz/Esp32BlePart2/blob/main/Arduino/BLE_server_2characteristics/BLE_server_2characteristics.ino
+
 // Initialize all pointers
 BLEServer *pServer = NULL;                      // Pointer to the server
 BLECharacteristic *statusCharacteristic = NULL; // Pointer to Characteristic 1
