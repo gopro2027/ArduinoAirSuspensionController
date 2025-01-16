@@ -3,7 +3,7 @@
 #include <esp32_smartdisplay.h>
 #include <ui/ui.h>
 
-#include "touch_lib.h"
+#include "utils/touch_lib.h"
 
 void OnAddOneClicked(lv_event_t *e)
 {
@@ -18,6 +18,8 @@ void OnRotateClicked(lv_event_t *e)
     auto rotation = (lv_display_rotation_t)((lv_disp_get_rotation(disp) + 1) % (LV_DISPLAY_ROTATION_270 + 1));
     lv_display_set_rotation(disp, rotation);
 }
+lv_obj_t *burnInRect;
+void startBurnInFix();
 
 void setup()
 {
@@ -50,28 +52,55 @@ void setup()
     // lv_qrcode_update(ui_qrcode, qr_data, strlen(qr_data));
     // lv_obj_center(ui_qrcode);
 
+    burnInRect = lv_obj_create(scrMain.ui_scrMain);
+    lv_obj_set_size(burnInRect, 240, 320);
+    lv_obj_center(burnInRect);
+    lv_obj_set_style_bg_color(burnInRect, lv_color_hex(esp_random()), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_add_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
+
+    startBurnInFix();
+
     setup_touchscreen_hook();
 }
 
 auto lv_last_tick = millis();
 
-#include <esp32_smartdisplay.h>
-#include <esp_lcd_panel_ops.h>
+boolean doBurnInFix = false;
+void startBurnInFix()
+{
+    smartdisplay_lcd_set_backlight(0.01f);
+    doBurnInFix = true;
+    lv_obj_clear_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
+}
 
-#include <esp_lcd_touch.h>
+void stopBurnInFix()
+{
+    smartdisplay_lcd_set_backlight(0.5f);
+    doBurnInFix = false;
+    lv_obj_add_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
+}
 
 void loop()
 {
     auto const now = millis();
 
-    if (isJustPressed())
+    if (doBurnInFix)
     {
-        log_i("Just Pressed %d %d ", touchX(), touchY());
+        lv_obj_set_style_bg_color(burnInRect, lv_color_hex(esp_random()), LV_PART_MAIN | LV_STATE_DEFAULT);
+        if (isJustPressed())
+        {
+            stopBurnInFix();
+        }
     }
-    if (isJustReleased())
-    {
-        log_i("Just Released %d %d ", touchX(), touchY());
-    }
+
+    // if (isJustPressed())
+    // {
+    //     log_i("Just Pressed %d %d ", touchX(), touchY());
+    // }
+    // if (isJustReleased())
+    // {
+    //     log_i("Just Released %d %d ", touchX(), touchY());
+    // }
 
     // screen code
     screenLoop();

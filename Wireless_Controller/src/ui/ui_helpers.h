@@ -6,11 +6,11 @@
 #ifndef _SQUARELINE_PROJECT_UI_HELPERS_H
 #define _SQUARELINE_PROJECT_UI_HELPERS_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "Arduino.h"
+#include "lvgl.h"
 
-#include "ui.h"
+#include "ui_helpers.h"
+#include "ui_events.h"
 
 #define _UI_TEMPORARY_STRING_BUFFER_SIZE 32
 #define _UI_BAR_PROPERTY_VALUE 0
@@ -140,10 +140,5 @@ void _ui_spinbox_step(lv_obj_t * target, int val)
 void _ui_switch_theme(int val)
 ;
 
-
-
-#ifdef __cplusplus
-} /*extern "C"*/
-#endif
 
 #endif

@@ -69,7 +69,10 @@
 			"lvgl.h": "c",
 			"esp32_smartdisplay.h": "c",
 			"esp_lcd_panel_ops.h": "c",
-			"lv_display_private.h": "c"
+			"lv_display_private.h": "c",
+			"util.h": "c",
+			"ui_scrhome.h": "c",
+			"ui_events.h": "c"
 		}
 	}
 }

@@ -11,5 +11,6 @@ int32_t touchY();
 boolean isTouched();
 boolean isJustPressed();
 boolean isJustReleased();
+void resetTouchInputFrame();
 
 #endif

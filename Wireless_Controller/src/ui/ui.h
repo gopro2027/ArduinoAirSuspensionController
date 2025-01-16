@@ -6,10 +6,6 @@
 #ifndef _SQUARELINE_PROJECT_UI_H
 #define _SQUARELINE_PROJECT_UI_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "Arduino.h"
 #include "lvgl.h"
 
@@ -19,20 +15,16 @@ extern "C" {
 #include "screens/ui_scrMain.h"
 #include "screens/ui_scrHome.h"
 
-    typedef enum
-    {
-        SCREEN_MAIN,
-        SCREEN_HOME
-    } SCREEN;
+typedef enum
+{
+    SCREEN_MAIN,
+    SCREEN_HOME
+} SCREEN;
 
-    void ui_init(void);
-    void changeScreen(SCREEN screen);
-    void screenLoop();
+void ui_init(void);
+void changeScreen(SCREEN screen);
+void screenLoop();
 
-    extern SCREEN currentScreen;
-
-#ifdef __cplusplus
-} /*extern "C"*/
-#endif
+extern SCREEN currentScreen;
 
 #endif

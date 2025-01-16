@@ -38,7 +38,6 @@ boolean isJustPressed()
 {
     if (touchPressed && lastTouched == false)
     {
-        lastTouched = true;
         return true;
     }
     return false;
@@ -48,10 +47,16 @@ boolean isJustReleased()
 {
     if (touchPressed == false && lastTouched)
     {
-        lastTouched = false;
         return true;
     }
     return false;
+}
+
+// effectively disables 'just pressed' and 'just released'
+// reasoning: previously this code was inside each of those functions, but it makes more sense to just do it at the end of the frame instead so that we can call 'just' multiple times per frame and not limit it to 1 call per frame due to it resetting ittself
+void resetTouchInputFrame()
+{
+    lastTouched = touchPressed;
 }
 
 extern lv_indev_t *indev; // esp32_smartdisplay.c

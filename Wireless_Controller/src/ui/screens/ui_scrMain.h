@@ -1,9 +1,6 @@
 #ifndef ui_scrMain_h
 #define ui_scrMain_h
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 #include <Arduino.h>
 #include "lvgl.h"
 #include "../ui_helpers.h"
@@ -35,10 +32,5 @@ void ui_scrMain_event_btnCount(lv_event_t *e);
 void ui_scrMain_loop();
 
 extern ScrMain scrMain;
-extern void ui_allEvents(lv_event_t *e);
-
-#ifdef __cplusplus
-} /*extern "C"*/
-#endif
 
 #endif

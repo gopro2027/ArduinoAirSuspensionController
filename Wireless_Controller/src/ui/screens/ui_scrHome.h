@@ -1,13 +1,13 @@
 #ifndef ui_scrHome_h
 #define ui_scrHome_h
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 #include <Arduino.h>
 #include "lvgl.h"
 #include "../ui_helpers.h"
 #include "../ui_events.h"
+
+#include "utils/util.h"
+#include "utils/touch_lib.h"
 
 typedef struct
 {
@@ -18,9 +18,5 @@ void ui_scrHome_screen_init(void);
 void ui_scrHome_loop();
 
 extern ScrHome scrHome;
-
-#ifdef __cplusplus
-} /*extern "C"*/
-#endif
 
 #endif
