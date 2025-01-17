@@ -7,6 +7,7 @@
 #include "utils/touch_lib.h"
 
 SCREEN currentScreen;
+
 void ui_init(void)
 {
     lv_disp_t *dispp = lv_display_get_default();
@@ -14,13 +15,18 @@ void ui_init(void)
                                               false, LV_FONT_DEFAULT);
     lv_disp_set_theme(dispp, theme);
     ui_scrMain_screen_init();
-    ui_scrHome_screen_init();
+    scrHome.init();
+    scrPresets.init();
+    scrSettings.init();
     scrMain.ui____initial_actions0 = lv_obj_create(NULL);
-    changeScreen(SCREEN_MAIN);
+    changeScreen(SCREEN_HOME);
 }
 
 void changeScreen(SCREEN screen)
 {
+    if (currentScreen == screen) {
+        return;
+    }
     currentScreen = screen;
     switch (screen)
     {
@@ -28,7 +34,13 @@ void changeScreen(SCREEN screen)
         lv_disp_load_scr(scrMain.ui_scrMain);
         break;
     case SCREEN_HOME:
-        lv_disp_load_scr(scrHome.ui_scrHome);
+        lv_disp_load_scr(scrHome.scr);
+        break;
+    case SCREEN_PRESETS:
+        lv_disp_load_scr(scrPresets.scr);
+        break;
+    case SCREEN_SETTINGS:
+        lv_disp_load_scr(scrSettings.scr);
         break;
     }
 }
@@ -41,7 +53,13 @@ void screenLoop()
         ui_scrMain_loop();
         break;
     case SCREEN_HOME:
-        ui_scrHome_loop();
+        scrHome.loop();
+        break;
+    case SCREEN_PRESETS:
+        scrPresets.loop();
+        break;
+    case SCREEN_SETTINGS:
+        scrSettings.loop();
         break;
     }
 

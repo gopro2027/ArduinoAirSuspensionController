@@ -1,21 +1,21 @@
 #ifndef ui_scrHome_h
 #define ui_scrHome_h
 
-#include <Arduino.h>
-#include "lvgl.h"
-#include "../ui_helpers.h"
-#include "../ui_events.h"
+#include "ui/components/Scr.h"
 
-#include "utils/util.h"
-#include "utils/touch_lib.h"
-
-typedef struct
-{
-    lv_obj_t *ui_scrHome;
-    lv_obj_t *ui_scrHome_icon_home_bg;
-} ScrHome;
-void ui_scrHome_screen_init(void);
-void ui_scrHome_loop();
+class ScrHome : public Scr {
+    using Scr::Scr;
+public:
+    void init();
+    void runTouchInput(SimplePoint pos, bool down);
+    void loop();
+    lv_obj_t *icon_home_bg;
+    lv_obj_t *ui_lblPressureFrontDriver;
+    lv_obj_t *ui_lblPressureRearDriver;
+    lv_obj_t *ui_lblPressureFrontPassenger;
+    lv_obj_t *ui_lblPressureRearPassenger;
+    lv_obj_t *ui_lblPressureTank;
+};
 
 extern ScrHome scrHome;
 

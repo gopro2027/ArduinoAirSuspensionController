@@ -72,7 +72,9 @@
 			"lv_display_private.h": "c",
 			"util.h": "c",
 			"ui_scrhome.h": "c",
-			"ui_events.h": "c"
+			"ui_events.h": "c",
+			"scr.h": "c",
+			"ui_scrsettings.h": "c"
 		}
 	}
 }

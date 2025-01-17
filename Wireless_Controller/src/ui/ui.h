@@ -14,11 +14,15 @@
 
 #include "screens/ui_scrMain.h"
 #include "screens/ui_scrHome.h"
+#include "screens/ui_scrPresets.h"
+#include "screens/ui_scrSettings.h"
 
 typedef enum
 {
     SCREEN_MAIN,
-    SCREEN_HOME
+    SCREEN_HOME,
+    SCREEN_PRESETS,
+    SCREEN_SETTINGS
 } SCREEN;
 
 void ui_init(void);

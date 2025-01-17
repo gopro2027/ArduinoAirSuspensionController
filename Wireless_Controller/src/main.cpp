@@ -43,16 +43,9 @@ void setup()
 
     ui_init();
 
-    // To use third party libraries, enable the define in lv_conf.h: #define LV_USE_QRCODE 1
-    // auto ui_qrcode = lv_qrcode_create(ui_scrMain);
-    // lv_qrcode_set_size(ui_qrcode, 100);
-    // lv_qrcode_set_dark_color(ui_qrcode, lv_color_black());
-    // lv_qrcode_set_light_color(ui_qrcode, lv_color_white());
-    // const char *qr_data = "https://github.com/rzeldent/esp32-smartdisplay";
-    // lv_qrcode_update(ui_qrcode, qr_data, strlen(qr_data));
-    // lv_obj_center(ui_qrcode);
-
-    burnInRect = lv_obj_create(scrMain.ui_scrMain);
+    burnInRect = lv_obj_create(scrHome.scr);
+    lv_obj_remove_style_all(burnInRect);
+    lv_obj_set_style_bg_opa(burnInRect, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_size(burnInRect, 240, 320);
     lv_obj_center(burnInRect);
     lv_obj_set_style_bg_color(burnInRect, lv_color_hex(esp_random()), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -91,19 +84,20 @@ void loop()
         {
             stopBurnInFix();
         }
+    } else {
+
+        // if (isJustPressed())
+        // {
+        //     log_i("Just Pressed %d %d ", touchX(), touchY());
+        // }
+        // if (isJustReleased())
+        // {
+        //     log_i("Just Released %d %d ", touchX(), touchY());
+        // }
+
+        // screen code
+        screenLoop();
     }
-
-    // if (isJustPressed())
-    // {
-    //     log_i("Just Pressed %d %d ", touchX(), touchY());
-    // }
-    // if (isJustReleased())
-    // {
-    //     log_i("Just Released %d %d ", touchX(), touchY());
-    // }
-
-    // screen code
-    screenLoop();
 
     // Update the ticker
     lv_tick_inc(now - lv_last_tick);
