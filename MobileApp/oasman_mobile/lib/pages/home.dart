@@ -77,7 +77,7 @@ class HomePage extends StatelessWidget {
             child: _buildPressureIndicator(
               label: "Front Left",
               barValue: bleManager.pressureValues["frontLeft"] ?? "-",
-              percentValue: bleManager.percentValues["frontLeft"] ?? "-",
+              percentValue: "-",
             ),
           ),
           Positioned(
@@ -86,7 +86,7 @@ class HomePage extends StatelessWidget {
             child: _buildPressureIndicator(
               label: "Front Right",
               barValue: bleManager.pressureValues["frontRight"] ?? "-",
-              percentValue: bleManager.percentValues["frontRight"] ?? "-",
+              percentValue: "-",
               flip: true,
             ),
           ),
@@ -96,7 +96,7 @@ class HomePage extends StatelessWidget {
             child: _buildPressureIndicator(
               label: "Rear Left",
               barValue: bleManager.pressureValues["rearLeft"] ?? "-",
-              percentValue: bleManager.percentValues["rearLeft"] ?? "-",
+              percentValue: "-",
             ),
           ),
           Positioned(
@@ -105,7 +105,7 @@ class HomePage extends StatelessWidget {
             child: _buildPressureIndicator(
               label: "Rear Right",
               barValue: bleManager.pressureValues["rearRight"] ?? "-",
-              percentValue: bleManager.percentValues["rearRight"] ?? "-",
+              percentValue:  "-",
               flip: true,
             ),
           ),

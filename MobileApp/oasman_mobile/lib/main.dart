@@ -7,9 +7,11 @@ import 'package:oasman_mobile/pages/setup.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => BLEManager(),
-      child: MyApp(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => BLEManager()), // Gør BLEManager globalt tilgængelig
+      ],
+      child: const MyApp(),
     ),
   );
 }
@@ -28,7 +30,7 @@ class MyApp extends StatelessWidget {
       home: const MainPage(), // Hovedsiden
       routes: {
         '/buttons': (context) => const ButtonsPage(),
-        '/Setup': (context) => const SettingsPage(),
+        '/setup': (context) => const SettingsPage(),
       },
     );
   }
@@ -60,7 +62,13 @@ class _MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectedIndex], // Vælg side baseret på index
+      body: Column(
+        children: [
+          Expanded(
+            child: _pages[_selectedIndex], // Vælg side baseret på index
+          ),
+        ],
+      ),
       bottomNavigationBar: CustomBottomNavigationBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,

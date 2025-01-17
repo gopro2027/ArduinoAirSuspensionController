@@ -1,18 +1,6 @@
 import 'package:flutter/material.dart';
 import 'header.dart';
 
-class Setup extends StatelessWidget {
-  const Setup({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: const SettingsPage(),
-    );
-  }
-}
-
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -21,157 +9,104 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool isDropDownOff = true;
-  bool isLiftUpOff = true;
+  String inputType = 'Buttons';
+  bool maintainPressure = true;
+  bool riseOnStart = true;
+  bool dropDownWhenOff = true;
+  bool liftUpWhenOn = true;
+  double dropDownDelay = 12.0;
+  double liftUpDelay = 12.0;
+  double solenoidOpenTime = 100.0;
+  double solenoidPsi = 5.0;
+  String readoutType = 'Height sensors';
+  String units = 'Psi';
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const Header(),
-            Container(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSettingsSectionWithLine(
-                    'Input type',
-                    [
-                      _buildFunctionWithLine(
-                        _buildRadioGroup(
-                          options: ['Pressure', 'Buttons'],
-                          groupValue: 'Pressure',
-                          onChanged: (value) {},
-                        ),
-                      ),
-                    ],
-                    excludeLine: true,
-                  ),
-                  _buildSettingsSectionWithLine('Basic settings', [
-                    _buildFunctionWithLine(
-                      _buildSwitch(
-                        'Drop down when off',
-                        isDropDownOff,
-                        (value) {
-                          setState(() {
-                            isDropDownOff = value;
-                          });
-                        },
-                      ),
-                    ),
-                    if (!isDropDownOff)
-                      _buildFunctionWithLine(
-                        _buildSlider('Drop down delay', 12, 0, 20, (value) {}),
-                      ),
-                    _buildFunctionWithLine(
-                      _buildSwitch(
-                        'Lift up when on',
-                        isLiftUpOff,
-                        (value) {
-                          setState(() {
-                            isLiftUpOff = value;
-                          });
-                        },
-                      ),
-                    ),
-                    if (!isLiftUpOff)
-                      _buildFunctionWithLine(
-                        _buildSlider('Lift up delay', 12, 0, 20, (value) {}),
-                      ),
-                  ], excludeLine: true),
-                  _buildSettingsSectionWithLine('Solenoids', [
-                    _buildFunctionWithLine(_buildSlider('Solenoid open time (ms)', 100, 0, 500, (value) {})),
-                    _buildFunctionWithLine(_buildSlider('Solenoid psi (calibrated)', 5, 0, 10, (value) {})),
-                    _buildFunctionWithLine(Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.purple,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          ),
-                          child: const Text(
-                            'Calibrate',
-                            style: TextStyle(color: Colors.black),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {},
-                          style: TextButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                          ),
-                          child: const Text(
-                            'Remove calibration',
-                            style: TextStyle(color: Colors.purple),
-                          ),
-                        ),
-                      ],
-                    )),
-                  ], excludeLine: true),
-                  _buildSettingsSectionWithLine('Readout type', [
-                    _buildFunctionWithLine(
-                      _buildRadioGroup(
-                        options: ['Pressure', 'Height sensors'],
-                        groupValue: 'Pressure',
-                        onChanged: (value) {},
-                      ),
-                    ),
-                  ], excludeLine: true),
-                  _buildSettingsSectionWithLine('Units', [
-                    _buildFunctionWithLine(
-                      _buildRadioGroup(
-                        options: ['Bar', 'Psi'],
-                        groupValue: 'Psi',
-                        onChanged: (value) {},
-                      ),
-                    ),
-                  ], excludeLine: true),
-                  _buildSettingsSectionWithLine('System', [
-                    _buildFunctionWithLine(
-                      _buildRadioGroup(
-                        options: ['4 point', '2 point'],
-                        groupValue: '4 point',
-                        onChanged: (value) {},
-                      ),
-                    ),
-                  ], excludeLine: true),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSettingsSectionWithLine(String title, List<Widget> children, {bool excludeLine = false}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!excludeLine)
-            Container(
-              width: 1,
-              color: Colors.purple,
-              height: _calculateSectionHeight(children),
-            ),
-          if (!excludeLine) const SizedBox(width: 8),
-          Expanded(
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: const Color(0xFF121212),
+    body: Column(
+      children: [
+        const Header(), // Fast header
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSectionTitle(title),
-                ...children,
+                _buildInputTypeSection(),
+                _buildBasicSettingsSection(),
+                _buildDropDownWhenOffSection(),
+                _buildLiftUpWhenOnSection(),
+                _buildSolenoidsSection(),
+                _buildReadoutTypeSection(),
+                _buildTankPressureSection(),
+                _buildDutyCycleSection(),
+                _buildUnitsSection(),
+                _buildSystemSection(),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+  
+  Widget _buildInputTypeSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Input type',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+              ),
+            ),
+            child: Column(
+              children: [
+                RadioListTile<String>(
+                  title: Text(
+                    'Pressure',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  value: 'Pressure',
+                  groupValue: inputType,
+                  onChanged: (value) {
+                    setState(() {
+                      inputType = value!;
+                    });
+                  },
+                  activeColor: Color(0xFFBB86FC) ,
+                ),
+                RadioListTile<String>(
+                  title: Text(
+                    'Buttons',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  value: 'Buttons',
+                  groupValue: inputType,
+                  onChanged: (value) {
+                    setState(() {
+                      inputType = value!;
+                    });
+                  },
+                  activeColor: Color(0xFFBB86FC) ,
+                ),
               ],
             ),
           ),
@@ -180,115 +115,646 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildFunctionWithLine(Widget child) {
+  Widget _buildBasicSettingsSection() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 1,
-            color: Colors.purple,
+          Text(
+            'Basic settings',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
-          const SizedBox(width: 8),
-          Expanded(child: child),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+              ),
+            ),
+            child: Column(
+              children: [
+                _buildSwitch(
+                  'Maintain pressure',
+                  maintainPressure,
+                  (value) {
+                    setState(() {
+                      maintainPressure = value;
+                    });
+                  },
+                ),
+                _buildSwitch(
+                  'Rise on start',
+                  riseOnStart,
+                  (value) {
+                    setState(() {
+                      riseOnStart = value;
+                    });
+                  },
+                ),
+                _buildSwitch(
+                  'Drop down when off',
+                  dropDownWhenOff,
+                  (value) {
+                    setState(() {
+                      dropDownWhenOff = value;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  double _calculateSectionHeight(List<Widget> children) {
-    return children.length * 60.0; // Adjust based on the approximate height of each child widget.
+  Widget _buildDropDownWhenOffSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Drop down when off',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              Switch(
+                value: dropDownWhenOff,
+                onChanged: (value) {
+                  setState(() {
+                    dropDownWhenOff = value;
+                  });
+                },
+                activeColor: Color(0xFFBB86FC) ,
+              ),
+            ],
+          ),
+          if (dropDownWhenOff)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Delay',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.remove, color: Color(0xFFBB86FC) ),
+                        onPressed: () {
+                          setState(() {
+                            if (dropDownDelay > 0) dropDownDelay--;
+                          });
+                        },
+                      ),
+                      Text(
+                        '${dropDownDelay.toStringAsFixed(0)}s',
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.add, color: Color(0xFFBB86FC) ),
+                        onPressed: () {
+                          setState(() {
+                            dropDownDelay++;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildLiftUpWhenOnSection() {
     return Padding(
-      padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Lift up when on',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              Switch(
+                value: liftUpWhenOn,
+                onChanged: (value) {
+                  setState(() {
+                    liftUpWhenOn = value;
+                  });
+                },
+                activeColor: Color(0xFFBB86FC) ,
+              ),
+            ],
+          ),
+          if (liftUpWhenOn)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Delay',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.remove, color: Color(0xFFBB86FC) ),
+                        onPressed: () {
+                          setState(() {
+                            if (liftUpDelay > 0) liftUpDelay--;
+                          });
+                        },
+                      ),
+                      Text(
+                        '${liftUpDelay.toStringAsFixed(0)}s',
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.add, color: Color(0xFFBB86FC) ),
+                        onPressed: () {
+                          setState(() {
+                            liftUpDelay++;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSolenoidsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Solenoids',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+              ),
+            ),
+            child: Column(
+              children: [
+                _buildAdjustableRow(
+                  'Solenoid open time on click (not calibrated)',
+                  solenoidOpenTime,
+                  'ms',
+                  (value) {
+                    setState(() {
+                      solenoidOpenTime = value;
+                    });
+                  },
+                ),
+                _buildAdjustableRow(
+                  'Solenoid psi on click (calibrated)',
+                  solenoidPsi,
+                  'psi',
+                  (value) {
+                    setState(() {
+                      solenoidPsi = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {},
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFFBB86FC) ,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: const Text(
+                        'Calibrate',
+                        style: TextStyle(color: Colors.black),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {},
+                      style: TextButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                      ),
+                      child: const Text(
+                        'Remove calibration',
+                        style: TextStyle(color: Color(0xFFBB86FC) ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReadoutTypeSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Readout type',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+              ),
+            ),
+            child: Column(
+              children: [
+                RadioListTile<String>(
+                  title: Text(
+                    'Pressure',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  value: 'Pressure',
+                  groupValue: readoutType,
+                  onChanged: (value) {
+                    setState(() {
+                      readoutType = value!;
+                    });
+                  },
+                  activeColor: Color(0xFFBB86FC) ,
+                ),
+                RadioListTile<String>(
+                  title: Text(
+                    'Height sensors',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  value: 'Height sensors',
+                  groupValue: readoutType,
+                  onChanged: (value) {
+                    setState(() {
+                      readoutType = value!;
+                    });
+                  },
+                  activeColor: Color(0xFFBB86FC) ,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTankPressureSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tank pressure',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+              ),
+            ),
+            child: ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFBB86FC) ,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(
+                'Set tank pressure',
+                style: TextStyle(color: Colors.black),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdjustableRow(String label, double value, String unit, ValueChanged<double> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ),
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.remove, color: Color(0xFFBB86FC) ),
+                onPressed: () {
+                  if (value > 0) {
+                    onChanged(value - 1);
+                  }
+                },
+              ),
+              Text(
+                '${value.toStringAsFixed(0)} $unit',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              IconButton(
+                icon: Icon(Icons.add, color: Color(0xFFBB86FC) ),
+                onPressed: () {
+                  onChanged(value + 1);
+                },
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildSwitch(String label, bool value, ValueChanged<bool> onChanged) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 1,
-          color: Colors.purple, // Den lilla streg
-          height: 40, // Justér højden for at matche switchens størrelse
-        ),
-        const SizedBox(width: 8), // Afstand mellem streg og resten
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label, style: const TextStyle(color: Colors.white)),
-              Switch(
-                value: value,
-                onChanged: onChanged,
-                activeColor: Colors.purple,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSlider(String label, double value, double min, double max, ValueChanged<double> onChanged) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('$label: ${value.toStringAsFixed(1)}', style: const TextStyle(color: Colors.white)),
-        Slider(
-          value: value,
-          min: min,
-          max: max,
-          divisions: 20,
-          label: value.toStringAsFixed(1),
-          onChanged: onChanged,
-          activeColor: Colors.purple,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRadioGroup({
-    required List<String> options,
-    required String groupValue,
-    required ValueChanged<String?> onChanged,
-  }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: Color(0xFFBB86FC) 
+          ),
+        ],
+      ),
+    );
+  }
+}
+  Widget _buildDutyCycleSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 1,
-            color: Colors.purple,
-            height: options.length * 60.0, // Adjust based on the approximate height of each child widget.
+          Text(
+            'Duty cycle',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              children: options
-                  .map(
-                    (option) => RadioListTile<String>(
-                      title: Text(option, style: const TextStyle(color: Colors.white)),
-                      value: option,
-                      groupValue: groupValue,
-                      onChanged: onChanged,
-                      activeColor: Colors.purple,
-                    ),
-                  )
-                  .toList(),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+              ),
+            ),
+            child: ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFBB86FC) ,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(
+                'Set Duty cycle',
+                style: TextStyle(color: Colors.black),
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+     Widget _buildUnitsSection() {
+    String units = 'Psi';
+
+    return StatefulBuilder(
+      builder: (BuildContext context, StateSetter setState) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Units',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      title: Text(
+                        'Bar',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      value: 'Bar',
+                      groupValue: units,
+                      onChanged: (value) {
+                        setState(() {
+                          units = value!;
+                        });
+                      },
+                      activeColor: Color(0xFFBB86FC) ,
+                    ),
+                    RadioListTile<String>(
+                      title: Text(
+                        'Psi',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      value: 'Psi',
+                      groupValue: units,
+                      onChanged: (value) {
+                        setState(() {
+                          units = value!;
+                        });
+                      },
+                      activeColor: Color(0xFFBB86FC) ,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+    Widget _buildSystemSection() {
+    String system = '2 point';
+
+    return StatefulBuilder(
+      builder: (BuildContext context, StateSetter setState) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'System',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      title: Text(
+                        '4 point',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      value: '4 point',
+                      groupValue: system,
+                      onChanged: (value) {
+                        setState(() {
+                          system = value!;
+                        });
+                      },
+                      activeColor: Color(0xFFBB86FC) ,
+                    ),
+                    RadioListTile<String>(
+                      title: Text(
+                        '2 point',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      value: '2 point',
+                      groupValue: system,
+                      onChanged: (value) {
+                        setState(() {
+                          system = value!;
+                        });
+                      },
+                      activeColor: Color(0xFFBB86FC) ,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
+
+void main() {
+  runApp(SettingsApp());
+}
+
+class SettingsApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: SettingsPage(),
     );
   }
 }

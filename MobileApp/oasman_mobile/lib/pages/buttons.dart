@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'header.dart';
+import '../ble_manager.dart';
+import 'popup/nobt.dart'; // Import for NoBluetoothPopup
 
 class ButtonsPage extends StatefulWidget {
   const ButtonsPage({super.key});
@@ -9,108 +12,152 @@ class ButtonsPage extends StatefulWidget {
 }
 
 class _ButtonsPageState extends State<ButtonsPage> {
+  late BLEManager bleManager;
   int _selectedPreset = -1;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    bleManager = Provider.of<BLEManager>(context);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
-      backgroundColor: Color(0xFF121212),
-      body: Column(
-        children: [
-          // Header Section
-          Header(),
-
-          // Control Buttons Section
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      backgroundColor: const Color(0xFF121212),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+                minWidth: constraints.maxWidth,
+              ),
+              child: IntrinsicHeight(
+                child: Column(
                   children: [
-                    OvalControlButton(
-                      iconUp: Icons.keyboard_arrow_up,
-                      iconDown: Icons.keyboard_arrow_down,
-                      onUpPressed: () => print('Left Front Up Pressed'),
-                      onDownPressed: () => print('Left Front Down Pressed'),
-                    ),
-                    OvalControlButton(
-                      iconUp: Icons.keyboard_double_arrow_up,
-                      iconDown: Icons.keyboard_double_arrow_down,
-                      isLarge: true,
-                      onUpPressed: () => print('Front Up Pressed'),
-                      onDownPressed: () => print('Front Down Pressed'),
-                    ),
-                    OvalControlButton(
-                      iconUp: Icons.keyboard_arrow_up,
-                      iconDown: Icons.keyboard_arrow_down,
-                      onUpPressed: () => print('Right Front Up Pressed'),
-                      onDownPressed: () => print('Right Front Down Pressed'),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 15),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    OvalControlButton(
-                      iconUp: Icons.keyboard_arrow_up,
-                      iconDown: Icons.keyboard_arrow_down,
-                      onUpPressed: () => print('Left Back Up Pressed'),
-                      onDownPressed: () => print('Left Back Down Pressed'),
-                    ),
-                    OvalControlButton(
-                      iconUp: Icons.keyboard_double_arrow_up,
-                      iconDown: Icons.keyboard_double_arrow_down,
-                      isLarge: true,
-                      onUpPressed: () => print('Back Up Pressed'),
-                      onDownPressed: () => print('Back Down Pressed'),
-                    ),
-                    OvalControlButton(
-                      iconUp: Icons.keyboard_arrow_up,
-                      iconDown: Icons.keyboard_arrow_down,
-                      onUpPressed: () => print('Right Back Up Pressed'),
-                      onDownPressed: () => print('Right Back Down Pressed'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+                    const Header(),
 
-          // Presets Section
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 15.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                for (int i = 1; i <= 5; i++)
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedPreset = i;
-                      });
-                       print('Preset $i Selected');
-                    },
-                    child: CircleAvatar(
-                      backgroundColor: i == _selectedPreset ? Color(0xFFBB86FC) : Colors.grey[800],
-                      
-                      child: Text(
-                        '$i',
-                        style: TextStyle(
-                          color: i == _selectedPreset ? Colors.white : Colors.grey[400],
+                    // Control Buttons Section
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                OvalControlButton(
+                                  iconUp: Icons.keyboard_arrow_up,
+                                  iconDown: Icons.keyboard_arrow_down,
+                                  onUpPressed: () => _handleCommand(context, "LEFT_FRONT_UP"),
+                                  onDownPressed: () => _handleCommand(context, "LEFT_FRONT_DOWN"),
+                                ),
+                                OvalControlButton(
+                                  iconUp: Icons.keyboard_double_arrow_up,
+                                  iconDown: Icons.keyboard_double_arrow_down,
+                                  isLarge: true,
+                                  onUpPressed: () => _handleCommand(context, "8888"),
+                                  onDownPressed: () => _handleCommand(context, "FRONT_DOWN"),
+                                ),
+                                OvalControlButton(
+                                  iconUp: Icons.keyboard_arrow_up,
+                                  iconDown: Icons.keyboard_arrow_down,
+                                  onUpPressed: () => _handleCommand(context, "RIGHT_FRONT_UP"),
+                                  onDownPressed: () => _handleCommand(context, "RIGHT_FRONT_DOWN"),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 15),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                OvalControlButton(
+                                  iconUp: Icons.keyboard_arrow_up,
+                                  iconDown: Icons.keyboard_arrow_down,
+                                  onUpPressed: () => _handleCommand(context, "LEFT_BACK_UP"),
+                                  onDownPressed: () => _handleCommand(context, "LEFT_BACK_DOWN"),
+                                ),
+                                OvalControlButton(
+                                  iconUp: Icons.keyboard_double_arrow_up,
+                                  iconDown: Icons.keyboard_double_arrow_down,
+                                  isLarge: true,
+                                  onUpPressed: () => _handleCommand(context, "BACK_UP"),
+                                  onDownPressed: () => _handleCommand(context, "BACK_DOWN"),
+                                ),
+                                OvalControlButton(
+                                  iconUp: Icons.keyboard_arrow_up,
+                                  iconDown: Icons.keyboard_arrow_down,
+                                  onUpPressed: () => _handleCommand(context, "RIGHT_BACK_UP"),
+                                  onDownPressed: () => _handleCommand(context, "RIGHT_BACK_DOWN"),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-              ],
+
+                    // Presets Section
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 15.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          for (int i = 1; i <= 5; i++)
+                            GestureDetector(
+                              onTap: () {
+                                if (bleManager.connectedDevice != null) {
+                                  setState(() {
+                                    _selectedPreset = i;
+                                  });
+                                  bleManager.sendCommand("PRESET_$i");
+                                  print('Preset $i Command Sent');
+                                } else {
+                                  showDialog(
+                                    context: context,
+                                    builder: (_) => const NoBluetoothPopup(),
+                                  );
+                                }
+                              },
+                              child: CircleAvatar(
+                                backgroundColor: i == _selectedPreset
+                                    ? const Color(0xFFBB86FC)
+                                    : Colors.grey[800],
+                                child: Text(
+                                  '$i',
+                                  style: TextStyle(
+                                    color: i == _selectedPreset
+                                        ? Colors.white
+                                        : Colors.grey[400],
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
+  }
+
+  void _handleCommand(BuildContext context, String command) {
+    if (bleManager.connectedDevice != null) {
+      bleManager.sendCommand(command);
+      print('$command Command Sent');
+    } else {
+      showDialog(
+        context: context,
+        builder: (_) => const NoBluetoothPopup(),
+      );
+    }
   }
 }
 
@@ -136,11 +183,11 @@ class OvalControlButton extends StatelessWidget {
       width: isLarge ? 60 : 50,
       height: isLarge ? 110 : 80,
       decoration: BoxDecoration(
-        color: Color(0xFF121212),
+        color: const Color(0xFF121212),
         borderRadius: BorderRadius.circular(isLarge ? 40 : 30),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFFBB86FC).withOpacity(0.1),
+            color: const Color(0xFFBB86FC).withOpacity(0.1),
             blurRadius: 15,
             spreadRadius: 2,
           ),
@@ -189,14 +236,14 @@ class ControlButton extends StatelessWidget {
         width: isLarge ? 40 : 40,
         height: isLarge ? 40 : 40,
         decoration: BoxDecoration(
-          color: Color(0xFF121212),
+          color: const Color(0xFF121212),
           borderRadius: BorderRadius.circular(isLarge ? 30 : 20),
         ),
         child: Align(
           alignment: alignment,
           child: Icon(
             icon,
-            color: Color(0xFFBB86FC),
+            color: const Color(0xFFBB86FC),
             size: iconSize ?? (isLarge ? 22 : 20),
           ),
         ),

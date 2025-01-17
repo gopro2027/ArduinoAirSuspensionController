@@ -15,35 +15,63 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
   Widget build(BuildContext context) {
     final bleManager = Provider.of<BLEManager>(context);
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: Colors.black,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.8,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildHeader(bleManager),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: bleManager.isScanning
-                  ? null
-                  : () {
-                      print("Starting scan...");
-                      bleManager.startScan();
-                    },
-              child: const Text("Scan for Devices"),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenHeight = MediaQuery.of(context).size.height;
+        final screenWidth = MediaQuery.of(context).size.width;
+
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: Colors.black,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: screenWidth * 0.9,
+              maxHeight: screenHeight * 0.8,
             ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: _buildDeviceLists(bleManager),
+            child: SingleChildScrollView(
+              child: IntrinsicHeight(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildHeader(bleManager),
+                    const SizedBox(height: 20),
+                    Flexible(
+                      child: SizedBox(
+                        height: screenHeight * 0.5, // Dynamisk højde baseret på skærmstørrelse
+                        child: bleManager.connectedDevice == null
+                            ? _buildDeviceList(bleManager)
+                            : _buildConnectedDevice(bleManager),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (bleManager.connectedDevice == null)
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (bleManager.isScanning) {
+                            await bleManager.stopScan();
+                          }
+                          await bleManager.startScan();
+                          setState(() {});
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFBB86FC),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                        ),
+                        child: const Text(
+                          "Refresh",
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -51,22 +79,13 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Icon(
-              Icons.bluetooth,
-              color: bleManager.isConnected() ? Colors.green : Colors.grey,
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              "Connect to the controller",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+        const Text(
+          "Connect to the controller",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         IconButton(
           icon: const Icon(Icons.close, color: Colors.white),
@@ -79,45 +98,7 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
     );
   }
 
-  Widget _buildDeviceLists(BLEManager bleManager) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildConnectedDevices(bleManager),
-          const SizedBox(height: 20),
-          _buildScannedDevices(bleManager),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildConnectedDevices(BLEManager bleManager) {
-    return StreamBuilder<List<BluetoothDevice>>(
-      stream: Stream.periodic(const Duration(seconds: 5))
-          .asyncMap((_) => FlutterBluePlus.connectedDevices),
-      initialData: const [],
-      builder: (context, snapshot) {
-        final connectedDevices = snapshot.data ?? [];
-        if (connectedDevices.isEmpty) {
-          return const Text(
-            "No connected devices",
-            style: TextStyle(color: Colors.grey),
-          );
-        }
-        return Column(
-          children: connectedDevices.map((device) {
-            return _buildDeviceTile(
-              device: device,
-              bleManager: bleManager,
-              isConnected: true,
-            );
-          }).toList(),
-        );
-      },
-    );
-  }
-
-  Widget _buildScannedDevices(BLEManager bleManager) {
+  Widget _buildDeviceList(BLEManager bleManager) {
     return StreamBuilder<List<ScanResult>>(
       stream: FlutterBluePlus.scanResults,
       initialData: const [],
@@ -128,66 +109,105 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
             .toList();
 
         if (filteredResults.isEmpty) {
-          return const Text(
-            "No available devices found. Please scan again.",
-            style: TextStyle(color: Colors.grey),
+          return const Center(
+            child: Text(
+              "No devices found. Please refresh.",
+              style: TextStyle(color: Colors.grey),
+            ),
           );
         }
 
-        return ListView.builder(
+        return ListView.separated(
           shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
           itemCount: filteredResults.length,
+          separatorBuilder: (context, index) => const Divider(color: Colors.grey),
           itemBuilder: (context, index) {
-            return _buildDeviceTile(
-              device: filteredResults[index].device,
-              bleManager: bleManager,
-              isConnected: false,
-            );
+            final device = filteredResults[index].device;
+            return _buildDeviceTile(device, bleManager);
           },
         );
       },
     );
   }
 
-  Widget _buildDeviceTile({
-    required BluetoothDevice device,
-    required BLEManager bleManager,
-    required bool isConnected,
-  }) {
-    return Column(
-      children: [
-        ListTile(
-          title: Text(
-            device.name.isEmpty ? "Unnamed Device" : device.name,
-            style: const TextStyle(color: Color(0xFFEDEDED)),
+  Widget _buildConnectedDevice(BLEManager bleManager) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            bleManager.connectedDevice!.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          leading: Icon(
-            Icons.devices,
-            color: const Color(0xFFEDEDED).withOpacity(0.3),
+          const SizedBox(height: 4),
+          const Text(
+            "Connected",
+            style: TextStyle(
+              color: Colors.green,
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+            ),
           ),
-          trailing: ElevatedButton(
+          const SizedBox(height: 10),
+          ElevatedButton(
+            onPressed: () async {
+              await bleManager.disconnectDevice();
+            },
             style: ElevatedButton.styleFrom(
-              backgroundColor: isConnected ? Colors.green : Colors.orange,
+              backgroundColor: const Color(0xFFBB86FC),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+            ),
+            child: const Text(
+              "Disconnect",
+              style: TextStyle(color: Colors.white, fontSize: 14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeviceTile(BluetoothDevice device, BLEManager bleManager) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              device.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            onPressed: isConnected
-                ? () async {
-                    await bleManager.disconnectDevice();
-                  }
-                : () async {
-                    await bleManager.connectToDevice(device);
-                    setState(() {});
-                  },
-            child: Text(
-              isConnected ? "Disconnect" : "Connect",
-              style: const TextStyle(color: Color(0xFFEDEDED)),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFBB86FC),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.keyboard_arrow_right, color: Color.fromARGB(255, 0, 0, 0)),
+              onPressed: () async {
+                await bleManager.connectToDevice(device);
+              },
             ),
           ),
-        ),
-        const Divider(),
-      ],
+        ],
+      ),
     );
   }
 }
