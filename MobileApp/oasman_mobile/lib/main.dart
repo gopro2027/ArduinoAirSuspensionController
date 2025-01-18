@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:oasman_mobile/ble_manager.dart';
+import 'package:oasman_mobile/provider/unit_provider.dart'; // Import UnitProvider
 import 'package:oasman_mobile/pages/menu.dart';
 import 'package:oasman_mobile/pages/buttons.dart';
 import 'package:oasman_mobile/pages/setup.dart';
@@ -9,7 +10,8 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => BLEManager()), // Gør BLEManager globalt tilgængelig
+        ChangeNotifierProvider(create: (_) => BLEManager()), // BLEManager globally available
+        ChangeNotifierProvider(create: (_) => UnitProvider()), // UnitProvider globally available
       ],
       child: const MyApp(),
     ),
@@ -27,7 +29,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF000000)),
         useMaterial3: true,
       ),
-      home: const MainPage(), // Hovedsiden
+      home: const MainPage(), // Main page
       routes: {
         '/buttons': (context) => const ButtonsPage(),
         '/setup': (context) => const SettingsPage(),
@@ -46,7 +48,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
 
-  // Liste over sider
+  // List of pages
   static const List<Widget> _pages = <Widget>[
     ButtonsPage(),
     SettingsPage(),
@@ -65,7 +67,7 @@ class _MainPageState extends State<MainPage> {
       body: Column(
         children: [
           Expanded(
-            child: _pages[_selectedIndex], // Vælg side baseret på index
+            child: _pages[_selectedIndex], // Switch page based on index
           ),
         ],
       ),

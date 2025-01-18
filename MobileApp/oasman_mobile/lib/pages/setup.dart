@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'header.dart';
+import 'package:provider/provider.dart';
+import '../provider/unit_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -42,7 +44,7 @@ Widget build(BuildContext context) {
                 _buildReadoutTypeSection(),
                 _buildTankPressureSection(),
                 _buildDutyCycleSection(),
-                _buildUnitsSection(),
+                _buildUnitsSection(context),
                 _buildSystemSection(),
               ],
             ),
@@ -611,17 +613,16 @@ Widget build(BuildContext context) {
     );
   }
 
-     Widget _buildUnitsSection() {
-    String units = 'Psi';
-
-    return StatefulBuilder(
-      builder: (BuildContext context, StateSetter setState) {
+    
+  Widget _buildUnitsSection(BuildContext context) {
+    return Consumer<UnitProvider>(
+      builder: (context, unitProvider, child) {
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'Units',
                 style: TextStyle(
                   fontSize: 18,
@@ -629,46 +630,21 @@ Widget build(BuildContext context) {
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    RadioListTile<String>(
-                      title: Text(
-                        'Bar',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      value: 'Bar',
-                      groupValue: units,
-                      onChanged: (value) {
-                        setState(() {
-                          units = value!;
-                        });
-                      },
-                      activeColor: Color(0xFFBB86FC) ,
-                    ),
-                    RadioListTile<String>(
-                      title: Text(
-                        'Psi',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      value: 'Psi',
-                      groupValue: units,
-                      onChanged: (value) {
-                        setState(() {
-                          units = value!;
-                        });
-                      },
-                      activeColor: Color(0xFFBB86FC) ,
-                    ),
-                  ],
-                ),
+              RadioListTile<String>(
+                title: const Text('Psi', style: TextStyle(color: Colors.white)),
+                value: 'Psi',
+                groupValue: unitProvider.unit,
+                onChanged: (value) {
+                  unitProvider.setUnit(value!);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Bar', style: TextStyle(color: Colors.white)),
+                value: 'Bar',
+                groupValue: unitProvider.unit,
+                onChanged: (value) {
+                  unitProvider.setUnit(value!);
+                },
               ),
             ],
           ),
@@ -744,17 +720,3 @@ Widget build(BuildContext context) {
   }
 
 
-
-void main() {
-  runApp(SettingsApp());
-}
-
-class SettingsApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: SettingsPage(),
-    );
-  }
-}
