@@ -36,7 +36,7 @@ class _ButtonsPageState extends State<ButtonsPage> {
               child: IntrinsicHeight(
                 child: Column(
                   children: [
-                    const Header(),
+                 
 
                     // Control Buttons Section
                     Expanded(

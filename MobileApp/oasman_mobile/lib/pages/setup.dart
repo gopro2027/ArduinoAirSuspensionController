@@ -29,7 +29,7 @@ Widget build(BuildContext context) {
     backgroundColor: const Color(0xFF121212),
     body: Column(
       children: [
-        const Header(), // Fast header
+      
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
