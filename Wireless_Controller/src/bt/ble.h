@@ -7,5 +7,7 @@
 // #include "BLEScan.h"
 
 bool connectCharacteristic(BLERemoteService *pRemoteService, BLERemoteCharacteristic *l_BLERemoteChar);
+void ble_setup();
+void ble_loop();
 
 #endif

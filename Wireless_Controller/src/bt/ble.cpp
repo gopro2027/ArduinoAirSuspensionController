@@ -7,10 +7,16 @@
 
 #include "ble.h"
 
+#define SERVICE_UUID "679425c8-d3b4-4491-9eb2-3e3d15b625f0"
+#define STATUS_CHARACTERISTIC_UUID "66fda100-8972-4ec7-971c-3fd30b3072ac"
+#define REST_CHARACTERISTIC_UUID "f573f13f-b38e-415e-b8f0-59a6a19a4e02"
+#define VALVECONTROL_CHARACTERISTIC_UUID "e225a15a-e816-4e9d-99b7-c384f91f273b"
+
 // Define UUIDs:
-static BLEUUID serviceUUID("679425c8-d3b4-4491-9eb2-3e3d15b625f0");
-static BLEUUID charUUID_1("66fda100-8972-4ec7-971c-3fd30b3072ac");
-static BLEUUID charUUID_2("f573f13f-b38e-415e-b8f0-59a6a19a4e02");
+static BLEUUID serviceUUID(SERVICE_UUID);
+static BLEUUID charUUID_1(STATUS_CHARACTERISTIC_UUID);
+static BLEUUID charUUID_2(REST_CHARACTERISTIC_UUID);
+static BLEUUID charUUID_3(VALVECONTROL_CHARACTERISTIC_UUID);
 
 // Some variables to keep track on device connected
 static bool doConnect = false;
@@ -131,7 +137,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
         // We have found a device, let us now see if it contains the service we are looking for.
         if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID))
         {
-
+            Serial.println("Connecting to device! ");
             BLEDevice::getScan()->stop();
             myDevice = new BLEAdvertisedDevice(advertisedDevice);
             doConnect = true;

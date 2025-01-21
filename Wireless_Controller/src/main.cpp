@@ -4,6 +4,7 @@
 #include <ui/ui.h>
 
 #include "utils/touch_lib.h"
+#include "tasks/tasks.h"
 
 void OnAddOneClicked(lv_event_t *e)
 {
@@ -24,7 +25,7 @@ void startBurnInFix();
 void setup()
 {
 #ifdef ARDUINO_USB_CDC_ON_BOOT
-    delay(5000);
+    // delay(5000);
 #endif
     Serial.begin(115200);
     Serial.setDebugOutput(true);
@@ -33,6 +34,8 @@ void setup()
     log_i("Free heap: %d bytes", ESP.getFreeHeap());
     log_i("Free PSRAM: %d bytes", ESP.getPsramSize());
     log_i("SDK version: %s", ESP.getSdkVersion());
+
+    setup_tasks();
 
     smartdisplay_init();
 
@@ -84,7 +87,9 @@ void loop()
         {
             stopBurnInFix();
         }
-    } else {
+    }
+    else
+    {
 
         // if (isJustPressed())
         // {
