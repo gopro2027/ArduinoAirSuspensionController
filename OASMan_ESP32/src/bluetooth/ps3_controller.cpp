@@ -575,7 +575,7 @@ void ps3_controller_setup()
 {
     Ps3.attach(notify);
     Ps3.attachOnConnect(onConnect);
-    Ps3.begin();
+    Ps3.begin(); // Put 00:00:00:00:00:00 here if you want to set the WHOLE esp32's mac address to zeros. This does seem to break BLE however
 
     Serial.println("PS3 Ready.");
 }

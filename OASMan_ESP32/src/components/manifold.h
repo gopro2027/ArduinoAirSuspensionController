@@ -2,6 +2,8 @@
 #define manifold_h
 
 #include "input_type.h"
+#include "solenoid.h"
+#include "components/wheel.h"
 
 enum SOLENOID_INDEX
 {
@@ -38,6 +40,9 @@ public:
     void unpauseValvesForBlockingTaskCompleted();
 };
 
+Solenoid *getSolenoidFromIndex(int solenoid);
+
 extern Manifold *getManifold(); // defined in airSuspensionUtil.h
+extern Wheel *getWheel(int i);
 
 #endif

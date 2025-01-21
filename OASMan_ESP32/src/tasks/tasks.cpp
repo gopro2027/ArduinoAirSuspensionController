@@ -25,7 +25,7 @@ void task_bluetooth(void *parameters)
     // }
 
     ble_setup();
-    delay(100);
+    delay(10);
     for (;;)
     {
         ble_loop();
@@ -108,7 +108,7 @@ void setup_tasks()
     xTaskCreate(
         task_bluetooth,
         "Bluetooth",
-        512 * 4,
+        512 * 5,
         NULL,
         1000,
         NULL);

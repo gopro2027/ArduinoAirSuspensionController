@@ -5,7 +5,6 @@
 #include "user_defines.h"
 #include "input_type.h"
 #include "solenoid.h"
-#include "manifold.h"
 #include "compressor.h"
 
 class Wheel
