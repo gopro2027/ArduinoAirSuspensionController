@@ -13,6 +13,7 @@ BLEDescriptor *pDescr_3;                              // Pointer to Descriptor o
 BLE2902 *pBLE2902_1;                                  // Pointer to BLE2902 of Characteristic 1
 BLE2902 *pBLE2902_2;                                  // Pointer to BLE2902 of Characteristic 2
 BLE2902 *pBLE2902_3;                                  // Pointer to BLE2902 of Characteristic 3
+BLEAddress *recentAddr;
 
 // Some variables to keep track on device connected
 bool deviceConnected = false;
@@ -31,8 +32,23 @@ uint32_t value = 0;
 // Callback function that is called whenever a client is connected or disconnected
 class MyServerCallbacks : public BLEServerCallbacks
 {
-    void onConnect(BLEServer *pServer)
+    void onConnect(BLEServer *pServer, esp_ble_gatts_cb_param_t *param)
     {
+        char remoteAddress[18];
+
+        sprintf(
+            remoteAddress,
+            "%.2X:%.2X:%.2X:%.2X:%.2X:%.2X",
+            param->connect.remote_bda[0],
+            param->connect.remote_bda[1],
+            param->connect.remote_bda[2],
+            param->connect.remote_bda[3],
+            param->connect.remote_bda[4],
+            param->connect.remote_bda[5]);
+
+        ESP_LOGI(LOG_TAG, "myServerCallback onConnect, MAC: %s", remoteAddress);
+        Serial.println(remoteAddress);
+        recentAddr = new BLEAddress(param->connect.remote_bda);
         deviceConnected = true;
     };
 
@@ -51,6 +67,7 @@ void ble_setup()
     // Create the BLE Server
     pServer = BLEDevice::createServer();
     pServer->setCallbacks(new MyServerCallbacks());
+    // pServer->updateConnParams
 
     // Create the BLE Service
     BLEService *pService = pServer->createService(SERVICE_UUID);
@@ -63,8 +80,13 @@ void ble_setup()
     // Start advertising
     BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(SERVICE_UUID);
-    pAdvertising->setScanResponse(false);
-    pAdvertising->setMinPreferred(0x0); // set value to 0x00 to not advertise this parameter
+    pAdvertising->setScanResponse(true); // this is required to share the service id on the initial scan for the client
+    // pAdvertising->setMinPreferred(0x0); // set value to 0x00 to not advertise this parameter
+    pAdvertising->setMinPreferred(0x06); // functions that help with iPhone connections issue
+    pAdvertising->setMaxPreferred(0x12);
+    // BLEAdvertisementData bad = BLEAdvertisementData();
+    // bad.
+    // pAdvertising->setAdvertisementData();
     BLEDevice::startAdvertising();
     Serial.println("Waiting a client connection to notify...");
 }
@@ -93,6 +115,10 @@ void ble_loop()
         oldDeviceConnected = deviceConnected;
         // TODO: Might want to add a delay of like 100ms here? not sure
         delay(100);
+
+        // Serial.print("Connecting to: ");
+        // Serial.println(recentAddr->toString().c_str());
+        // pServer->connect(*recentAddr /*pServer->getPeerDevices(false)[0].peer_device*/); // causes ESP_GATTC_OPEN_EVT to get called???
 
         // send assignment packet... will be more important after fixing it so we can allow multiple devices to connect
         AssignRecipientPacket *arp = new AssignRecipientPacket(currentUserNum);
@@ -186,7 +212,7 @@ void ble_notify()
         Serial.println("");
 
         statusCharacteristic->setValue(statusPacket->tx(), BTOAS_PACKET_SIZE);
-        statusCharacteristic->notify(); // we don't do this on the other characteristic thats why it has to be read manually
+        statusCharacteristic->notify(); // we don't do this on the other characteristic thats why it has to be read manually TODO: THIS CRASHED AT ONE POINT????????? HAVING TROUBLE READING THE BLE VALUE
     }
 
     // restCharacteristic is a std::string (NOT a String). In the code below we read the current value
@@ -195,13 +221,13 @@ void ble_notify()
     std::string rxValue = restCharacteristic->getValue();
     uint8_t *data = restCharacteristic->getData();
     restCharacteristic->getLength();
-    Serial.print("Characteristic 2 (getValue): ");
-    Serial.println(rxValue.c_str());
+    // Serial.print("Characteristic 2 (getValue): ");
+    // Serial.println(rxValue.c_str());
 
     // Here the value is written to the Client using setValue();
-    String txValue = "String with random value from Server: " + String(random(1000));
-    restCharacteristic->setValue(txValue.c_str());
-    Serial.println("Characteristic 2 (setValue): " + txValue);
+    // String txValue = "String with random value from Server: " + String(random(1000));
+    // restCharacteristic->setValue(txValue.c_str());
+    // Serial.println("Characteristic 2 (setValue): " + txValue);
 
     // valve control characteristic reading
     static unsigned int valveTableValues = 0;
@@ -249,5 +275,79 @@ void ble_notify()
         setRiseOnStart(false);
         setRaiseOnPressureSet(false);
         setReboot(true);
+    }
+}
+
+extern bool startOTAServiceRequest;
+void runReceivedPacket(BTOasPacket *packet)
+{
+    switch (packet->cmd)
+    {
+    case BTOasIdentifier::IDLE:
+        break;
+    case BTOasIdentifier::ASSIGNRECEPIENT: // ignore from server
+        break;
+    case BTOasIdentifier::MESSAGE: // ignore from server
+        break;
+    case BTOasIdentifier::AIRUP:
+        airUp();
+        break;
+    case BTOasIdentifier::AIROUT:
+        airOut();
+        break;
+    case BTOasIdentifier::AIRSM:
+        airUpRelativeToAverage(((AirsmPacket *)packet)->getRelativeValue());
+        break;
+    case BTOasIdentifier::SAVETOPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
+        writeProfile(((SaveToProfilePacket *)packet)->getProfileIndex());
+        break;
+    case BTOasIdentifier::READPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
+        readProfile(((ReadProfilePacket *)packet)->getProfileIndex());
+        break;
+    case BTOasIdentifier::AIRUPQUICK: // add if (profileIndex > MAX_PROFILE_COUNT)
+        // load profile then air up
+        readProfile(((AirupQuickPacket *)packet)->getProfileIndex());
+        airUp(true);
+        break;
+    case BTOasIdentifier::BASEPROFILE:
+        setBaseProfile(((BaseProfilePacket *)packet)->getProfileIndex());
+        break;
+    case BTOasIdentifier::SETAIRHEIGHT:
+    {
+        SetAirheightPacket *ahp = (SetAirheightPacket *)packet;
+        switch (ahp->getWheelIndex())
+        {
+        case WHEEL_FRONT_PASSENGER:
+            setRideHeightFrontPassenger(ahp->getPressure());
+            break;
+        case WHEEL_REAR_PASSENGER:
+            setRideHeightRearPassenger(ahp->getPressure());
+            break;
+        case WHEEL_FRONT_DRIVER:
+            setRideHeightFrontDriver(ahp->getPressure());
+            break;
+        case WHEEL_REAR_DRIVER:
+            setRideHeightRearDriver(ahp->getPressure());
+            break;
+        }
+    }
+    break;
+    case BTOasIdentifier::RISEONSTART:
+        setRiseOnStart(((RiseOnStartPacket *)packet)->getBoolean());
+        break;
+    case BTOasIdentifier::RAISEONPRESSURESET:
+        setRaiseOnPressureSet(((RaiseOnPressureSetPacket *)packet)->getBoolean());
+        break;
+    case BTOasIdentifier::REBOOT:
+        setReboot(true);
+        Serial.println(F("Rebooting..."));
+        break;
+    case BTOasIdentifier::CALIBRATE:
+        Serial.println(F("calibrate does nothign lmao"));
+        break;
+    case BTOasIdentifier::STARTWEB:
+        Serial.println(F("Starting OTA..."));
+        startOTAServiceRequest = true;
+        break;
     }
 }

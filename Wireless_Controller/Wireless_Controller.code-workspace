@@ -74,7 +74,11 @@
 			"ui_scrhome.h": "c",
 			"ui_events.h": "c",
 			"scr.h": "c",
-			"ui_scrsettings.h": "c"
+			"ui_scrsettings.h": "c",
+			"touch_lib.h": "c",
+			"lv_libjpeg_turbo.h": "c",
+			"lv_qrcode.h": "c",
+			"lv_tick.h": "c"
 		}
 	}
 }

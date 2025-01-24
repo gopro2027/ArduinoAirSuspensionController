@@ -1,12 +1,13 @@
 // This definition includes all the functions to create packets
 
+// NOTICE: If this file is renamed/moved/or other imports added... please be mindfull of how it will affect the Wireless_Controller project
+
 #ifndef BTOas_h
 #define BTOas_h
 #include <Arduino.h>
 
 #include "user_defines.h"
 #include "airSuspensionUtil.h"
-extern bool startOTAServiceRequest;
 
 enum BTOasIdentifier
 {
