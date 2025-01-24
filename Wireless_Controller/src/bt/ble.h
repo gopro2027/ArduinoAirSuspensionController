@@ -3,7 +3,8 @@
 
 #include "Arduino.h"
 
-#include "BLEDevice.h"
+//#include "BLEDevice.h"
+#include "NimBLEDevice.h"
 // #include "BLEScan.h"
 
 // included from base project, same files

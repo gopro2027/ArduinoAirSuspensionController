@@ -24,7 +24,7 @@ static bool connected = false;
 static bool doScan = false;
 
 // Define pointer for the BLE connection
-static BLEAdvertisedDevice *myDevice;
+// static BLEAdvertisedDevice *myDevice;
 BLERemoteCharacteristic *pRemoteChar_1;
 BLERemoteCharacteristic *pRemoteChar_2;
 
@@ -66,7 +66,7 @@ class MyClientCallback : public BLEClientCallbacks
 };
 
 // Function that is run whenever the server is connected
-bool connectToServer()
+bool connectToServer(const BLEAdvertisedDevice *myDevice)
 {
     Serial.println(charUUID_1.toString().c_str());
     Serial.print("Forming a connection to ");
@@ -88,7 +88,7 @@ bool connectToServer()
     if (!_connected)
     {
         Serial.println("Connection error");
-        delete pClient;
+        // delete pClient;
         delete myDevice;
         return false;
     }
@@ -141,42 +141,42 @@ bool connectCharacteristic(BLERemoteService *pRemoteService, BLERemoteCharacteri
     }
     // Serial.println(" - Found characteristic: " + String(l_BLERemoteChar->getUUID().toString().c_str()));
 
-    if (l_BLERemoteChar->canNotify())
-        l_BLERemoteChar->registerForNotify(notifyCallback);
+    // if (l_BLERemoteChar->canNotify())
+    //     l_BLERemoteChar->registerForNotify(notifyCallback);
 
     return true;
 }
 
 // Scan for BLE servers and find the first one that advertises the service we are looking for.
-class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
-{
-    // Called for each advertising BLE server.
-    void onResult(BLEAdvertisedDevice advertisedDevice)
-    {
-        // Serial.print("BLE Advertised Device found: ");
-        // Serial.println(advertisedDevice.toString().c_str());
+// class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
+// {
+//     // Called for each advertising BLE server.
+//     void onResult(BLEAdvertisedDevice advertisedDevice)
+//     {
+//         // Serial.print("BLE Advertised Device found: ");
+//         // Serial.println(advertisedDevice.toString().c_str());
 
-        // for (advertisedDevice.getServiceUUIDCount()) {
-        // advertisedDevice.getServiceUUID()
+//         // for (advertisedDevice.getServiceUUIDCount()) {
+//         // advertisedDevice.getServiceUUID()
 
-        // Serial.println(advertisedDevice.isAdvertisingService(serviceUUID));
-        // Serial.println(advertisedDevice.haveServiceUUID());
+//         // Serial.println(advertisedDevice.isAdvertisingService(serviceUUID));
+//         // Serial.println(advertisedDevice.haveServiceUUID());
 
-        // We have found a device, let us now see if it contains the service we are looking for. EDIT THIS DOESN"T WORK FOR SOME REASON SERVICE NAMES NOT FOUND :(
-        if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID))
-        // if (advertisedDevice.getName() == "OASMan")
-        {
-            Serial.println("Connecting to device! ");
-            BLEDevice::getScan()->stop();
-            myDevice = new BLEAdvertisedDevice(advertisedDevice);
-            // delay(500);
-             //connectToServer();
-            doConnect = true;
-            doScan = true;
+//         // We have found a device, let us now see if it contains the service we are looking for. EDIT THIS DOESN"T WORK FOR SOME REASON SERVICE NAMES NOT FOUND :(
+//         if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID))
+//         // if (advertisedDevice.getName() == "OASMan")
+//         {
+//             Serial.println("Connecting to device! ");
+//             BLEDevice::getScan()->stop();
+//             myDevice = new BLEAdvertisedDevice(advertisedDevice);
+//             // delay(500);
+//             // connectToServer();
+//             doConnect = true;
+//             doScan = true;
 
-        } // Found our server
-    } // onResult
-}; // MyAdvertisedDeviceCallbacks
+//         } // Found our server
+//     } // onResult
+// }; // MyAdvertisedDeviceCallbacks
 
 void ble_setup()
 {
@@ -187,11 +187,35 @@ void ble_setup()
     // have detected a new device.  Specify that we want active scanning and start the
     // scan to run for 5 seconds.
     BLEScan *pBLEScan = BLEDevice::getScan();
-    pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-    pBLEScan->setInterval(1349);
-    pBLEScan->setWindow(449);
-    pBLEScan->setActiveScan(true);
-    pBLEScan->start(5, false);
+
+    NimBLEScanResults results = pBLEScan->getResults(10 * 1000);
+    for (int i = 0; i < results.getCount(); i++)
+    {
+        const NimBLEAdvertisedDevice *device = results.getDevice(i);
+
+        // if (device->isAdvertisingService(serviceUuid))
+        // {
+        //     // create a client and connect
+        // }
+
+        if (device->haveServiceUUID() && device->isAdvertisingService(serviceUUID))
+        // if (advertisedDevice.getName() == "OASMan")
+        {
+            Serial.println("Connecting to device! ");
+            BLEDevice::getScan()->stop();
+            // myDevice = new BLEAdvertisedDevice(*device);
+            //  delay(500);
+            connectToServer(device);
+            doConnect = true;
+            doScan = true;
+        }
+    }
+
+    // pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+    // pBLEScan->setInterval(1349);
+    // pBLEScan->setWindow(449);
+    // pBLEScan->setActiveScan(true);
+    // pBLEScan->start(5, false);
 } // End of setup.
 
 void ble_loop()
@@ -200,18 +224,18 @@ void ble_loop()
     // If the flag "doConnect" is true then we have scanned for and found the desired
     // BLE Server with which we wish to connect.  Now we connect to it.  Once we are
     // connected we set the connected flag to be true.
-    if (doConnect == true)
-    {
-        if (connectToServer())
-        {
-            Serial.println("We are now connected to the BLE Server.");
-        }
-        else
-        {
-            Serial.println("We have failed to connect to the server; there is nothin more we will do.");
-        }
-        doConnect = false;
-    }
+    // if (doConnect == true)
+    // {
+    //     if (connectToServer())
+    //     {
+    //         Serial.println("We are now connected to the BLE Server.");
+    //     }
+    //     else
+    //     {
+    //         Serial.println("We have failed to connect to the server; there is nothin more we will do.");
+    //     }
+    //     doConnect = false;
+    // }
 
     // If we are connected to a peer BLE Server, update the characteristic each time we are reached
     // with the current time since boot.
