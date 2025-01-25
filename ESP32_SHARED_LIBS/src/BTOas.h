@@ -7,7 +7,6 @@
 #include <Arduino.h>
 
 #include "user_defines.h"
-#include "airSuspensionUtil.h"
 
 enum BTOasIdentifier
 {
@@ -61,7 +60,7 @@ void runReceivedPacket(BTOasPacket *packet);
 // Outgoing packets
 struct StatusPacket : BTOasPacket
 {
-    StatusPacket();
+    StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE);
 };
 
 struct AssignRecipientPacket : BTOasPacket

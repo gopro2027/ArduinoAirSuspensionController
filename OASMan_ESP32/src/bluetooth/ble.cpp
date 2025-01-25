@@ -202,7 +202,7 @@ void ble_notify()
 
     if (runNotifications)
     {
-        StatusPacket *statusPacket = new StatusPacket();
+        StatusPacket *statusPacket = new StatusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getPressure(), getWheel(WHEEL_REAR_PASSENGER)->getPressure(), getWheel(WHEEL_FRONT_DRIVER)->getPressure(), getWheel(WHEEL_REAR_DRIVER)->getPressure(), getCompressor()->getTankPressure());
 
         for (int i = 0; i < BTOAS_PACKET_SIZE; i++)
         {

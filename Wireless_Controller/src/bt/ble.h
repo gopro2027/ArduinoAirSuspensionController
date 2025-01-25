@@ -3,12 +3,12 @@
 
 #include "Arduino.h"
 
-//#include "BLEDevice.h"
+// #include "BLEDevice.h"
 #include "NimBLEDevice.h"
 // #include "BLEScan.h"
 
-// included from base project, same files
-#include "../../../OASMan_ESP32/src/bluetooth/BTOas.h"
+#include <BTOas.h>
+#include <user_defines.h>
 
 bool connectCharacteristic(BLERemoteService *pRemoteService, BLERemoteCharacteristic *l_BLERemoteChar);
 void ble_setup();
