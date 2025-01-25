@@ -14,9 +14,9 @@
 
 // Define UUIDs:
 BLEUUID serviceUUID(SERVICE_UUID);
-BLEUUID charUUID_1(STATUS_CHARACTERISTIC_UUID);
-BLEUUID charUUID_2(REST_CHARACTERISTIC_UUID);
-BLEUUID charUUID_3(VALVECONTROL_CHARACTERISTIC_UUID);
+BLEUUID charUUID_Status(STATUS_CHARACTERISTIC_UUID);
+BLEUUID charUUID_Rest(REST_CHARACTERISTIC_UUID);
+BLEUUID charUUID_ValveControl(VALVECONTROL_CHARACTERISTIC_UUID);
 
 // Some variables to keep track on device connected
 static bool doConnect = false;
@@ -25,16 +25,44 @@ static bool doScan = false;
 
 // Define pointer for the BLE connection
 // static BLEAdvertisedDevice *myDevice;
-BLERemoteCharacteristic *pRemoteChar_1;
-BLERemoteCharacteristic *pRemoteChar_2;
+BLERemoteCharacteristic *pRemoteChar_Status;
+BLERemoteCharacteristic *pRemoteChar_Rest;
+BLERemoteCharacteristic *pRemoteChar_ValveControl;
 
 // Callback function for Notify function
-static void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
-                           uint8_t *pData,
-                           size_t length,
-                           bool isNotify)
+void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
+                    uint8_t *pData,
+                    size_t length,
+                    bool isNotify)
 {
-    if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_1.toString())
+    Serial.print("Got a notify callback: ");
+    Serial.println(pBLERemoteCharacteristic->getUUID().toString().c_str());
+    if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Status.toString())
+    {
+
+        // convert received bytes to integer
+        StatusPacket *status = (StatusPacket *)pData;
+        Serial.print("WHEEL_FRONT_PASSENGER: ");
+        Serial.println(status->args16()[WHEEL_FRONT_PASSENGER].i);
+        Serial.print("WHEEL_REAR_PASSENGER: ");
+        Serial.println(status->args16()[WHEEL_REAR_PASSENGER].i);
+        Serial.print("WHEEL_FRONT_DRIVER: ");
+        Serial.println(status->args16()[WHEEL_FRONT_DRIVER].i);
+        Serial.print("WHEEL_REAR_DRIVER: ");
+        Serial.println(status->args16()[WHEEL_REAR_DRIVER].i);
+        Serial.print("TANK: ");
+        Serial.println(status->args16()[4].i);
+        uint32_t counter = pData[0];
+        for (int i = 1; i < length; i++)
+        {
+            counter = counter | (pData[i] << i * 8);
+        }
+
+        // print to Serial
+        Serial.print("Characteristic 1 (Status) (Notify) from server: ");
+        Serial.println(counter);
+    }
+    if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Rest.toString())
     {
 
         // convert received bytes to integer
@@ -45,7 +73,7 @@ static void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
         }
 
         // print to Serial
-        Serial.print("Characteristic 1 (Notify) from server: ");
+        Serial.print("Characteristic 2 (Rest) (Notify) from server: ");
         Serial.println(counter);
     }
 }
@@ -68,7 +96,7 @@ class MyClientCallback : public BLEClientCallbacks
 // Function that is run whenever the server is connected
 bool connectToServer(const BLEAdvertisedDevice *myDevice)
 {
-    Serial.println(charUUID_1.toString().c_str());
+    Serial.println(charUUID_Status.toString().c_str());
     Serial.print("Forming a connection to ");
     Serial.println(myDevice->getAddress().toString().c_str());
 
@@ -112,12 +140,14 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     Serial.println(" - Found our service");
 
     connected = true;
-    pRemoteChar_1 = pRemoteService->getCharacteristic(charUUID_1);
-    pRemoteChar_2 = pRemoteService->getCharacteristic(charUUID_2);
-    // pRemoteChar_1 = new BLERemoteCharacteristic(*pRemoteChar_1);
-    if (connectCharacteristic(pRemoteService, pRemoteChar_1) == false)
+    pRemoteChar_Status = pRemoteService->getCharacteristic(charUUID_Status);
+    pRemoteChar_Rest = pRemoteService->getCharacteristic(charUUID_Rest);
+    pRemoteChar_ValveControl = pRemoteService->getCharacteristic(charUUID_ValveControl);
+    if (connectCharacteristic(pRemoteService, pRemoteChar_Status) == false)
         connected = false;
-    else if (connectCharacteristic(pRemoteService, pRemoteChar_2) == false)
+    else if (connectCharacteristic(pRemoteService, pRemoteChar_Rest) == false)
+        connected = false;
+    else if (connectCharacteristic(pRemoteService, pRemoteChar_ValveControl) == false)
         connected = false;
 
     if (connected == false)
@@ -143,11 +173,13 @@ bool connectCharacteristic(BLERemoteService *pRemoteService, BLERemoteCharacteri
 
     // if (l_BLERemoteChar->canNotify())
     //     l_BLERemoteChar->registerForNotify(notifyCallback);
+    // if (l_BLERemoteChar->canNotify())
+    l_BLERemoteChar->subscribe(true, notifyCallback, false);
 
     return true;
 }
 
-// Scan for BLE servers and find the first one that advertises the service we are looking for.
+// //Scan for BLE servers and find the first one that advertises the service we are looking for.
 // class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 // {
 //     // Called for each advertising BLE server.
@@ -168,7 +200,7 @@ bool connectCharacteristic(BLERemoteService *pRemoteService, BLERemoteCharacteri
 //         {
 //             Serial.println("Connecting to device! ");
 //             BLEDevice::getScan()->stop();
-//             myDevice = new BLEAdvertisedDevice(advertisedDevice);
+//             //myDevice = new BLEAdvertisedDevice(advertisedDevice);
 //             // delay(500);
 //             // connectToServer();
 //             doConnect = true;
@@ -188,6 +220,7 @@ void ble_setup()
     // scan to run for 5 seconds.
     BLEScan *pBLEScan = BLEDevice::getScan();
 
+    // pBLEScan->setScanCallbacks(new MyAdvertisedDeviceCallbacks()); // TODO: Consider using this callback instead
     NimBLEScanResults results = pBLEScan->getResults(10 * 1000);
     for (int i = 0; i < results.getCount(); i++)
     {
@@ -241,7 +274,7 @@ void ble_loop()
     // with the current time since boot.
     if (connected)
     {
-        std::string rxValue = pRemoteChar_2->readValue();
+        std::string rxValue = pRemoteChar_Rest->readValue();
         Serial.print("Characteristic 2 (readValue): ");
         Serial.println(rxValue.c_str());
 
@@ -249,7 +282,7 @@ void ble_loop()
         Serial.println("Characteristic 2 (writeValue): " + txValue);
 
         // Set the characteristic's value to be the array of bytes that is actually a string.
-        pRemoteChar_2->writeValue(txValue.c_str(), txValue.length());
+        pRemoteChar_Rest->writeValue(txValue.c_str(), txValue.length());
     }
     else if (doScan)
     {
