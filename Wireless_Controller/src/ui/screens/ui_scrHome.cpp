@@ -61,4 +61,13 @@ void ScrHome::runTouchInput(SimplePoint pos, bool down)
 void ScrHome::loop()
 {
     Scr::loop();
+    this->updatePressureValues();
+}
+
+void ScrHome::updatePressureValues() {
+    lv_label_set_text_fmt(this->ui_lblPressureFrontPassenger, "%u", currentPressures[WHEEL_FRONT_PASSENGER]);
+    lv_label_set_text_fmt(this->ui_lblPressureRearPassenger, "%u", currentPressures[WHEEL_REAR_PASSENGER]);
+    lv_label_set_text_fmt(this->ui_lblPressureFrontDriver, "%u", currentPressures[WHEEL_FRONT_DRIVER]);
+    lv_label_set_text_fmt(this->ui_lblPressureRearDriver, "%u", currentPressures[WHEEL_REAR_DRIVER]);
+    lv_label_set_text_fmt(this->ui_lblPressureTank, "%u", currentPressures[_TANK_INDEX]);
 }

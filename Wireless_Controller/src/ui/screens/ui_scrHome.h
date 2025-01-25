@@ -1,6 +1,7 @@
 #ifndef ui_scrHome_h
 #define ui_scrHome_h
 
+#include <user_defines.h>
 #include "ui/components/Scr.h"
 
 class ScrHome : public Scr {
@@ -9,6 +10,7 @@ public:
     void init();
     void runTouchInput(SimplePoint pos, bool down);
     void loop();
+    void updatePressureValues();
     lv_obj_t *icon_home_bg;
     lv_obj_t *ui_lblPressureFrontDriver;
     lv_obj_t *ui_lblPressureRearDriver;

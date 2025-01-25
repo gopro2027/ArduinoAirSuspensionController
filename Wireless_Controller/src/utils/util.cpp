@@ -35,3 +35,5 @@ CenterRect ctr_row1col2down = {189, 241, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT
 SimpleRect navbarbtn_home = {0, 291, 80, 29};
 SimpleRect navbarbtn_presets = {80, 291, 80, 29};
 SimpleRect navbarbtn_settings = {160, 291, 80, 29};
+
+int currentPressures[5];

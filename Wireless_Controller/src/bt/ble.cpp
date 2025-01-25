@@ -42,25 +42,23 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
 
         // convert received bytes to integer
         StatusPacket *status = (StatusPacket *)pData;
-        Serial.print("WHEEL_FRONT_PASSENGER: ");
-        Serial.println(status->args16()[WHEEL_FRONT_PASSENGER].i);
-        Serial.print("WHEEL_REAR_PASSENGER: ");
-        Serial.println(status->args16()[WHEEL_REAR_PASSENGER].i);
-        Serial.print("WHEEL_FRONT_DRIVER: ");
-        Serial.println(status->args16()[WHEEL_FRONT_DRIVER].i);
-        Serial.print("WHEEL_REAR_DRIVER: ");
-        Serial.println(status->args16()[WHEEL_REAR_DRIVER].i);
-        Serial.print("TANK: ");
-        Serial.println(status->args16()[4].i);
-        uint32_t counter = pData[0];
-        for (int i = 1; i < length; i++)
-        {
-            counter = counter | (pData[i] << i * 8);
-        }
+        // Serial.print("WHEEL_FRONT_PASSENGER: ");
+        // Serial.println(status->args16()[WHEEL_FRONT_PASSENGER].i);
+        // Serial.print("WHEEL_REAR_PASSENGER: ");
+        // Serial.println(status->args16()[WHEEL_REAR_PASSENGER].i);
+        // Serial.print("WHEEL_FRONT_DRIVER: ");
+        // Serial.println(status->args16()[WHEEL_FRONT_DRIVER].i);
+        // Serial.print("WHEEL_REAR_DRIVER: ");
+        // Serial.println(status->args16()[WHEEL_REAR_DRIVER].i);
+        // Serial.print("TANK: ");
+        // Serial.println(status->args16()[_TANK_INDEX].i);
 
-        // print to Serial
-        Serial.print("Characteristic 1 (Status) (Notify) from server: ");
-        Serial.println(counter);
+        currentPressures[WHEEL_FRONT_PASSENGER] = status->args16()[WHEEL_FRONT_PASSENGER].i;
+        currentPressures[WHEEL_REAR_PASSENGER] = status->args16()[WHEEL_REAR_PASSENGER].i;
+        currentPressures[WHEEL_FRONT_DRIVER] = status->args16()[WHEEL_FRONT_DRIVER].i;
+        currentPressures[WHEEL_REAR_DRIVER] = status->args16()[WHEEL_REAR_DRIVER].i;
+        currentPressures[_TANK_INDEX] = status->args16()[_TANK_INDEX].i;
+        
     }
     if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Rest.toString())
     {
@@ -274,15 +272,15 @@ void ble_loop()
     // with the current time since boot.
     if (connected)
     {
-        std::string rxValue = pRemoteChar_Rest->readValue();
-        Serial.print("Characteristic 2 (readValue): ");
-        Serial.println(rxValue.c_str());
+        // std::string rxValue = pRemoteChar_Rest->readValue();
+        // Serial.print("Characteristic 2 (readValue): ");
+        // Serial.println(rxValue.c_str());
 
-        String txValue = "String with random value from client: " + String(-random(1000));
-        Serial.println("Characteristic 2 (writeValue): " + txValue);
+        // String txValue = "String with random value from client: " + String(-random(1000));
+        // Serial.println("Characteristic 2 (writeValue): " + txValue);
 
-        // Set the characteristic's value to be the array of bytes that is actually a string.
-        pRemoteChar_Rest->writeValue(txValue.c_str(), txValue.length());
+        // // Set the characteristic's value to be the array of bytes that is actually a string.
+        // pRemoteChar_Rest->writeValue(txValue.c_str(), txValue.length());
     }
     else if (doScan)
     {

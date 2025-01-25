@@ -51,4 +51,6 @@ extern SimpleRect navbarbtn_home;
 extern SimpleRect navbarbtn_presets;
 extern SimpleRect navbarbtn_settings;
 
+extern int currentPressures[5];
+
 #endif
