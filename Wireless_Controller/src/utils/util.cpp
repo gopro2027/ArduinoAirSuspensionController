@@ -37,3 +37,60 @@ SimpleRect navbarbtn_presets = {80, 291, 80, 29};
 SimpleRect navbarbtn_settings = {160, 291, 80, 29};
 
 int currentPressures[5];
+
+#define BTOASPACKETCOUNT 10
+struct PacketEntry
+{
+    bool taken;
+    BTOasPacket packet;
+};
+PacketEntry packets[BTOASPACKETCOUNT];
+static SemaphoreHandle_t restMutex;
+void setupRestSemaphore()
+{
+    restMutex = xSemaphoreCreateMutex();
+    memset(packets, 0, sizeof(packets));
+}
+void waitRestSemaphore()
+{
+    while (xSemaphoreTake(restMutex, 1) != pdTRUE)
+    {
+        delay(1);
+    }
+}
+void giveRestSemaphore()
+{
+    xSemaphoreGive(restMutex);
+}
+
+bool getBTRestPacketToSend(BTOasPacket *copyTo)
+{
+    bool ret = false;
+    waitRestSemaphore();
+    for (int i = 0; i < BTOASPACKETCOUNT; i++)
+    {
+        if (packets[i].taken)
+        {
+            packets[i].taken = false;
+            memcpy(copyTo, &packets[i].packet, BTOAS_PACKET_SIZE);
+            ret = true;
+            break;
+        }
+    }
+    giveRestSemaphore();
+    return ret;
+}
+void sendRestPacket(BTOasPacket *packet)
+{
+    waitRestSemaphore();
+    for (int i = 0; i < BTOASPACKETCOUNT; i++)
+    {
+        if (!packets[i].taken)
+        {
+            packets[i].taken = true;
+            memcpy(&packets[i].packet, packet, BTOAS_PACKET_SIZE);
+            break;
+        }
+    }
+    giveRestSemaphore();
+}

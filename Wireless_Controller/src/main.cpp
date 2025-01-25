@@ -6,6 +6,8 @@
 #include "utils/touch_lib.h"
 #include "tasks/tasks.h"
 
+#include "utils/util.h"
+
 void OnAddOneClicked(lv_event_t *e)
 {
     static uint32_t cnt = 0;
@@ -28,12 +30,14 @@ void setup()
     // delay(5000);
 #endif
     Serial.begin(115200);
-    //Serial.setDebugOutput(true);
+    // Serial.setDebugOutput(true);
     log_i("Board: %s", BOARD_NAME);
     log_i("CPU: %s rev%d, CPU Freq: %d Mhz, %d core(s)", ESP.getChipModel(), ESP.getChipRevision(), getCpuFrequencyMhz(), ESP.getChipCores());
     log_i("Free heap: %d bytes", ESP.getFreeHeap());
     log_i("Free PSRAM: %d bytes", ESP.getPsramSize());
     log_i("SDK version: %s", ESP.getSdkVersion());
+
+    setupRestSemaphore();
 
     setup_tasks();
 

@@ -1,6 +1,8 @@
 #ifndef util_h
 #define util_h
 
+#include <BTOas.h>
+
 typedef struct
 {
     double x, y;
@@ -12,15 +14,14 @@ typedef struct
 
 } SimpleRect;
 
-typedef struct {
+typedef struct
+{
     double cx, cy, w, h;
 } CenterRect;
 
 int sr_contains(SimpleRect r, SimplePoint p);
 
 int cr_contains(CenterRect cr, SimplePoint p);
-
-
 
 #define ARROW_BUTTON_WIDTH 54
 #define ARROW_BUTTON_HEIGHT 44
@@ -52,5 +53,10 @@ extern SimpleRect navbarbtn_presets;
 extern SimpleRect navbarbtn_settings;
 
 extern int currentPressures[5];
+
+// returns 0 if none to send
+bool getBTRestPacketToSend(BTOasPacket *copyTo);
+void sendRestPacket(BTOasPacket *packet);
+void setupRestSemaphore();
 
 #endif

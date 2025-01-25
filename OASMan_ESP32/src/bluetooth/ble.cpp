@@ -29,6 +29,11 @@ uint32_t value = 0;
 #define REST_CHARACTERISTIC_UUID "f573f13f-b38e-415e-b8f0-59a6a19a4e02"
 #define VALVECONTROL_CHARACTERISTIC_UUID "e225a15a-e816-4e9d-99b7-c384f91f273b"
 
+BLEUUID serviceUUID(SERVICE_UUID);
+BLEUUID charUUID_Status(STATUS_CHARACTERISTIC_UUID);
+BLEUUID charUUID_Rest(REST_CHARACTERISTIC_UUID);
+BLEUUID charUUID_ValveControl(VALVECONTROL_CHARACTERISTIC_UUID);
+
 // Callback function that is called whenever a client is connected or disconnected
 class MyServerCallbacks : public BLEServerCallbacks
 {
@@ -55,6 +60,20 @@ class MyServerCallbacks : public BLEServerCallbacks
     void onDisconnect(BLEServer *pServer)
     {
         deviceConnected = false;
+    }
+};
+
+class CharacteristicCallback : public BLECharacteristicCallbacks
+{
+    void onWrite(BLECharacteristic *pChar, esp_ble_gatts_cb_param_t *param) override
+    {
+        if (pChar->getUUID().toString() == charUUID_Rest.toString())
+        {
+            Serial.println("Received rest command");
+            BTOasPacket *packet = (BTOasPacket *)pChar->getData();
+            packet->dump();
+            runReceivedPacket(packet);
+        }
     }
 };
 
@@ -121,8 +140,8 @@ void ble_loop()
         // pServer->connect(*recentAddr /*pServer->getPeerDevices(false)[0].peer_device*/); // causes ESP_GATTC_OPEN_EVT to get called???
 
         // send assignment packet... will be more important after fixing it so we can allow multiple devices to connect
-        AssignRecipientPacket *arp = new AssignRecipientPacket(currentUserNum);
-        restCharacteristic->setValue(arp->tx(), BTOAS_PACKET_SIZE);
+        AssignRecipientPacket arp(currentUserNum);
+        restCharacteristic->setValue(arp.tx(), BTOAS_PACKET_SIZE);
 
         currentUserNum++;
     }
@@ -154,7 +173,7 @@ void ble_create_characteristics(BLEService *pService)
     pBLE2902_1->setNotifications(true);
     statusCharacteristic->addDescriptor(pBLE2902_1);
 
-    // RESET
+    // REST
     // // Create a BLE Descriptor
     pDescr_2 = new BLEDescriptor((uint16_t)0x2901);
     pDescr_2->setValue("Rest");
@@ -164,8 +183,10 @@ void ble_create_characteristics(BLEService *pService)
     pBLE2902_2->setNotifications(true);
     restCharacteristic->addDescriptor(pBLE2902_2);
 
-    IdlePacket *ip = new IdlePacket();
-    restCharacteristic->setValue(ip->tx(), BTOAS_PACKET_SIZE);
+    IdlePacket idlepacket;
+    restCharacteristic->setValue(idlepacket.tx(), BTOAS_PACKET_SIZE);
+
+    restCharacteristic->setCallbacks(new CharacteristicCallback());
 
     // VALVE CONTROL
     //  // Create a BLE Descriptor
@@ -192,7 +213,7 @@ void ble_notify()
 
     // calculate whether or not to do stuff at a specific interval, in this case, every 1 second we want to send out a notify.
     static bool prevTime = false;
-    bool timeChange = (millis() / 1000) % 2; // changes from 0 to 1 every 1000ms
+    bool timeChange = (millis() / 250) % 2; // changes from 0 to 1 every 250ms
     bool runNotifications = false;
     if (prevTime != timeChange)
     {
@@ -202,25 +223,20 @@ void ble_notify()
 
     if (runNotifications)
     {
-        StatusPacket *statusPacket = new StatusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getPressure(), getWheel(WHEEL_REAR_PASSENGER)->getPressure(), getWheel(WHEEL_FRONT_DRIVER)->getPressure(), getWheel(WHEEL_REAR_DRIVER)->getPressure(), getCompressor()->getTankPressure());
+        StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getPressure(), getWheel(WHEEL_REAR_PASSENGER)->getPressure(), getWheel(WHEEL_FRONT_DRIVER)->getPressure(), getWheel(WHEEL_REAR_DRIVER)->getPressure(), getCompressor()->getTankPressure());
 
-        for (int i = 0; i < BTOAS_PACKET_SIZE; i++)
-        {
-            Serial.print(statusPacket->tx()[i], HEX);
-            Serial.print(" ");
-        }
-        Serial.println("");
+        // statusPacket.dump();
 
-        statusCharacteristic->setValue(statusPacket->tx(), BTOAS_PACKET_SIZE);
-        statusCharacteristic->notify(); // we don't do this on the other characteristic thats why it has to be read manually TODO: THIS CRASHED AT ONE POINT????????? HAVING TROUBLE READING THE BLE VALUE
+        statusCharacteristic->setValue(statusPacket.tx(), BTOAS_PACKET_SIZE);
+        statusCharacteristic->notify(); // we don't do this on the other characteristic thats why it has to be read manually TODO: THIS CRASHED AT ONE POINT????????? HAVING TROUBLE READING THE BLE VALUE. TRY RUNNING IN VERBOSE MODE AND SET IT TO IDLE FOR A LONG TIME TO DEBUG
     }
 
     // restCharacteristic is a std::string (NOT a String). In the code below we read the current value
     // write this to the Serial interface and send a different value back to the Client
     // Here the current value is read using getValue()
-    std::string rxValue = restCharacteristic->getValue();
-    uint8_t *data = restCharacteristic->getData();
-    restCharacteristic->getLength();
+    // std::string rxValue = restCharacteristic->getValue();
+    // uint8_t *data = restCharacteristic->getData();
+    // restCharacteristic->getLength();
     // Serial.print("Characteristic 2 (getValue): ");
     // Serial.println(rxValue.c_str());
 
@@ -258,24 +274,6 @@ void ble_notify()
     // In this example "delay" is used to delay with one second. This is of course a very basic
     // implementation to keep things simple. I recommend to use millis() for any production code
     // delay(1000);
-
-    if (value == 8888)
-    {
-        // add code in here just so they get included in the compile
-        airUp();
-        airOut();
-        airUpRelativeToAverage(10);
-        writeProfile(0);
-        setBaseProfile(0);
-        readProfile(0);
-        setRideHeightFrontPassenger(0);
-        setRideHeightRearPassenger(0);
-        setRideHeightFrontDriver(0);
-        setRideHeightRearDriver(0);
-        setRiseOnStart(false);
-        setRaiseOnPressureSet(false);
-        setReboot(true);
-    }
 }
 
 extern bool startOTAServiceRequest;
@@ -290,6 +288,7 @@ void runReceivedPacket(BTOasPacket *packet)
     case BTOasIdentifier::MESSAGE: // ignore from server
         break;
     case BTOasIdentifier::AIRUP:
+        Serial.println("Calling air up!");
         airUp();
         break;
     case BTOasIdentifier::AIROUT:

@@ -6,7 +6,8 @@ LV_IMG_DECLARE(navbar_home);
 
 ScrHome scrHome(navbar_home);
 
-void setupPressureLabel(ScrHome *scr, lv_obj_t **label, int x, int y, lv_align_t align) {
+void setupPressureLabel(ScrHome *scr, lv_obj_t **label, int x, int y, lv_align_t align)
+{
     *label = lv_label_create(scr->scr);
     lv_obj_set_style_text_color(*label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_width(*label, LV_SIZE_CONTENT);  /// 1
@@ -38,23 +39,17 @@ void ScrHome::init(void)
     setupPressureLabel(this, &this->ui_lblPressureFrontPassenger, -xPadding, 10, LV_ALIGN_TOP_RIGHT);
     setupPressureLabel(this, &this->ui_lblPressureRearPassenger, -xPadding, 40, LV_ALIGN_TOP_RIGHT);
     setupPressureLabel(this, &this->ui_lblPressureTank, 0, 10, LV_ALIGN_TOP_MID);
-    
 }
 
 // down = true when just pressed, false when just released
 void ScrHome::runTouchInput(SimplePoint pos, bool down)
 {
-    Scr::runTouchInput(pos,down);
+    Scr::runTouchInput(pos, down);
     if (cr_contains(ctr_row0col0up, pos))
     {
         log_i("pressed ctr_row0col0up");
-        static int cnt = 0;
-        cnt++;
-        lv_label_set_text_fmt(this->ui_lblPressureTank, "%u", cnt);
-        lv_label_set_text_fmt(this->ui_lblPressureFrontDriver, "%u", cnt);
-        lv_label_set_text_fmt(this->ui_lblPressureRearDriver, "%u", cnt);
-        lv_label_set_text_fmt(this->ui_lblPressureFrontPassenger, "%u", cnt);
-        lv_label_set_text_fmt(this->ui_lblPressureRearPassenger, "%u", cnt);
+        AirupPacket aup;
+        sendRestPacket(&aup);
     }
 }
 
@@ -64,7 +59,8 @@ void ScrHome::loop()
     this->updatePressureValues();
 }
 
-void ScrHome::updatePressureValues() {
+void ScrHome::updatePressureValues()
+{
     lv_label_set_text_fmt(this->ui_lblPressureFrontPassenger, "%u", currentPressures[WHEEL_FRONT_PASSENGER]);
     lv_label_set_text_fmt(this->ui_lblPressureRearPassenger, "%u", currentPressures[WHEEL_REAR_PASSENGER]);
     lv_label_set_text_fmt(this->ui_lblPressureFrontDriver, "%u", currentPressures[WHEEL_FRONT_DRIVER]);

@@ -35,8 +35,8 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
                     size_t length,
                     bool isNotify)
 {
-    Serial.print("Got a notify callback: ");
-    Serial.println(pBLERemoteCharacteristic->getUUID().toString().c_str());
+    // Serial.print("Got a notify callback: ");
+    // Serial.println(pBLERemoteCharacteristic->getUUID().toString().c_str());
     if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Status.toString())
     {
 
@@ -58,7 +58,6 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
         currentPressures[WHEEL_FRONT_DRIVER] = status->args16()[WHEEL_FRONT_DRIVER].i;
         currentPressures[WHEEL_REAR_DRIVER] = status->args16()[WHEEL_REAR_DRIVER].i;
         currentPressures[_TANK_INDEX] = status->args16()[_TANK_INDEX].i;
-        
     }
     if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Rest.toString())
     {
@@ -154,6 +153,7 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
         Serial.println("At least one characteristic UUID not found");
         return false;
     }
+    Serial.println("Connected Successfully");
     return true;
 }
 
@@ -281,6 +281,14 @@ void ble_loop()
 
         // // Set the characteristic's value to be the array of bytes that is actually a string.
         // pRemoteChar_Rest->writeValue(txValue.c_str(), txValue.length());
+
+        BTOasPacket packet;
+        bool hasPacketToSend = getBTRestPacketToSend(&packet);
+        if (hasPacketToSend)
+        {
+            packet.dump();
+            pRemoteChar_Rest->writeValue(packet.tx(), BTOAS_PACKET_SIZE);
+        }
     }
     else if (doScan)
     {
@@ -289,5 +297,5 @@ void ble_loop()
 
     // In this example "delay" is used to delay with one second. This is of course a very basic
     // implementation to keep things simple. I recommend to use millis() for any production code
-    delay(1000);
+    delay(10);
 }

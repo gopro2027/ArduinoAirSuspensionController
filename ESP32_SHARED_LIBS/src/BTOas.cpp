@@ -14,10 +14,28 @@ BTOasValue32 *BTOasPacket::args32()
     return (BTOasValue32 *)this->args;
 }
 
+BTOasPacket::BTOasPacket()
+{
+    // blank packet
+    this->cmd = IDLE;
+    this->sender = 0;
+    this->recipient = 0;
+    memset(this->args, 0, sizeof(this->args));
+}
+
+void BTOasPacket::dump()
+{
+    for (int i = 0; i < BTOAS_PACKET_SIZE; i++)
+    {
+        Serial.print(this->tx()[i], HEX);
+        Serial.print(" ");
+    }
+    Serial.println("");
+}
+
 // Outgoing packets
 StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE)
 {
-    memset(this->args, 0, sizeof(this->args));
     this->cmd = STATUSREPORT;
     // 0 through 4
     this->args16()[WHEEL_FRONT_PASSENGER].i = WHEEL_FRONT_PASSENGER_PRESSURE; // getWheel(WHEEL_FRONT_PASSENGER)->getPressure();
@@ -33,15 +51,11 @@ StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REA
 
 IdlePacket::IdlePacket()
 {
-    memset(this->args, 0, sizeof(this->args));
-    this->cmd = IDLE;
-    this->sender = 0;
-    this->recipient = 0;
+    // idle packet is the same as a blank BTOasPacket
 }
 
 AssignRecipientPacket::AssignRecipientPacket(int assignmentNumber)
 {
-    memset(this->args, 0, sizeof(this->args));
     this->cmd = ASSIGNRECEPIENT;
     this->sender = 0;
     this->recipient = 0; // client should assume if they haven't been assigned yet then they are being assigned this
@@ -50,7 +64,6 @@ AssignRecipientPacket::AssignRecipientPacket(int assignmentNumber)
 
 MessagePacket::MessagePacket(short recipient, std::string message)
 {
-    memset(this->args, 0, sizeof(this->args));
     this->cmd = MESSAGE;
     this->sender = 0;
     this->recipient = recipient;
@@ -58,6 +71,63 @@ MessagePacket::MessagePacket(short recipient, std::string message)
 }
 
 // Incoming packets
+AirupPacket::AirupPacket()
+{
+    this->cmd = AIRUP;
+}
+AiroutPacket::AiroutPacket()
+{
+    this->cmd = AIROUT;
+}
+AirsmPacket::AirsmPacket(int relativeValue)
+{
+    this->cmd = AIRSM;
+    this->args32()[0].i = relativeValue;
+}
+SaveToProfilePacket::SaveToProfilePacket(int profileIndex)
+{
+    this->cmd = SAVETOPROFILE;
+    this->args32()[0].i = profileIndex;
+}
+ReadProfilePacket::ReadProfilePacket(int profileIndex)
+{
+    this->cmd = READPROFILE;
+    this->args32()[0].i = profileIndex;
+}
+AirupQuickPacket::AirupQuickPacket(int profileIndex)
+{
+    this->cmd = AIRUPQUICK;
+    this->args32()[0].i = profileIndex;
+}
+BaseProfilePacket::BaseProfilePacket(int profileIndex)
+{
+    this->cmd = BASEPROFILE;
+    this->args32()[0].i = profileIndex;
+}
+SetAirheightPacket::SetAirheightPacket(int wheelIndex, int pressure)
+{
+    this->cmd = SETAIRHEIGHT;
+    this->args32()[0].i = wheelIndex;
+    this->args32()[1].i = pressure;
+}
+RiseOnStartPacket::RiseOnStartPacket(bool enable)
+{
+    this->cmd = RISEONSTART;
+    this->args32()[0].i = enable;
+}
+RaiseOnPressureSetPacket::RaiseOnPressureSetPacket(bool enable)
+{
+    this->cmd = RAISEONPRESSURESET;
+    this->args32()[0].i = enable;
+}
+RebootPacket::RebootPacket()
+{
+    this->cmd = REBOOT;
+}
+StartwebPacket::StartwebPacket()
+{
+    this->cmd = STARTWEB;
+}
 
 int AirsmPacket::getRelativeValue()
 {

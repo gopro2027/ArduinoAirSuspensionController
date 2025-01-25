@@ -51,6 +51,10 @@ struct BTOasPacket
     uint8_t *tx();
     BTOasValue16 *args16();
     BTOasValue32 *args32();
+
+    void dump();
+
+    BTOasPacket();
 };
 
 #define BTOAS_PACKET_SIZE sizeof(BTOasPacket)
@@ -81,12 +85,15 @@ struct MessagePacket : BTOasPacket
 // Incoming packets
 struct AirupPacket : BTOasPacket
 {
+    AirupPacket();
 };
 struct AiroutPacket : BTOasPacket
 {
+    AiroutPacket();
 };
 struct AirsmPacket : BTOasPacket
 {
+    AirsmPacket(int relativeValue);
     int getRelativeValue();
 };
 struct ProfilePacket : BTOasPacket
@@ -99,32 +106,41 @@ struct BooleanPacket : BTOasPacket
 };
 struct SaveToProfilePacket : ProfilePacket
 {
+    SaveToProfilePacket(int profileIndex);
 };
 struct ReadProfilePacket : ProfilePacket
 {
+    ReadProfilePacket(int profileIndex);
 };
 struct AirupQuickPacket : ProfilePacket
 {
+    AirupQuickPacket(int profileIndex);
 };
 struct BaseProfilePacket : ProfilePacket
 {
+    BaseProfilePacket(int profileIndex);
 };
 struct SetAirheightPacket : BTOasPacket
 {
+    SetAirheightPacket(int wheelIndex, int pressure);
     int getWheelIndex();
     int getPressure();
 };
 struct RiseOnStartPacket : BooleanPacket
 {
+    RiseOnStartPacket(bool enable);
 };
 struct RaiseOnPressureSetPacket : BooleanPacket
 {
+    RaiseOnPressureSetPacket(bool enable);
 };
 struct RebootPacket : BTOasPacket
 {
+    RebootPacket();
 };
 struct StartwebPacket : BTOasPacket
 {
+    StartwebPacket();
 };
 
 #endif

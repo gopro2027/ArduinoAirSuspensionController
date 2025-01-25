@@ -78,7 +78,9 @@
 			"touch_lib.h": "c",
 			"lv_libjpeg_turbo.h": "c",
 			"lv_qrcode.h": "c",
-			"lv_tick.h": "c"
+			"lv_tick.h": "c",
+			"btoas.h": "c",
+			"user_defines.h": "c"
 		}
 	}
 }
