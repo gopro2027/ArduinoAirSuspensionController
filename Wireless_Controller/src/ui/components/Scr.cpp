@@ -6,7 +6,8 @@
 #include "Scr.h"
 #include "ui/ui.h" // sketchy backwards import may break in the future
 
-Scr::Scr(lv_image_dsc_t navbarImage) {
+Scr::Scr(lv_image_dsc_t navbarImage)
+{
     this->navbarImage = navbarImage;
 }
 
@@ -20,7 +21,7 @@ void Scr::init()
     lv_obj_remove_style_all(this->rect_bg);
     lv_obj_set_size(this->rect_bg, 240, 320);
     lv_obj_set_align(this->rect_bg, LV_ALIGN_TOP_MID);
-    lv_obj_get_style_border_width(this->rect_bg,0);
+    lv_obj_get_style_border_width(this->rect_bg, 0);
     lv_obj_set_style_bg_color(this->rect_bg, lv_color_hex(0x1F1F1F), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_remove_flag(this->rect_bg, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE)); /// Flags
     lv_obj_set_style_bg_opa(this->rect_bg, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -30,7 +31,7 @@ void Scr::init()
     lv_image_set_src(this->icon_navbar, &this->navbarImage);
     lv_obj_set_align(this->icon_navbar, LV_ALIGN_BOTTOM_MID);
 
-    
+    this->alert = new Alert(this);
 }
 
 // down = true when just pressed, false when just released
@@ -52,7 +53,7 @@ void Scr::runTouchInput(SimplePoint pos, bool down)
 
 void Scr::loop()
 {
-
+    dialogLoop(this);
     if (isJustPressed())
     {
         SimplePoint tp = {touchX(), touchY()};

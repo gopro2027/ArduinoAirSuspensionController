@@ -53,7 +53,7 @@ void setup()
     burnInRect = lv_obj_create(scrHome.scr);
     lv_obj_remove_style_all(burnInRect);
     lv_obj_set_style_bg_opa(burnInRect, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_size(burnInRect, 240, 320);
+    lv_obj_set_size(burnInRect, DISPLAY_WIDTH, DISPLAY_HEIGHT);
     lv_obj_center(burnInRect);
     lv_obj_set_style_bg_color(burnInRect, lv_color_hex(esp_random()), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_add_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
@@ -70,7 +70,7 @@ void startBurnInFix()
 {
     smartdisplay_lcd_set_backlight(0.01f);
     doBurnInFix = true;
-    lv_obj_clear_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
 }
 
 void stopBurnInFix()

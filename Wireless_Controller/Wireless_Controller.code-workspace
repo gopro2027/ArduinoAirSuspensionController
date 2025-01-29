@@ -80,7 +80,8 @@
 			"lv_qrcode.h": "c",
 			"lv_tick.h": "c",
 			"btoas.h": "c",
-			"user_defines.h": "c"
+			"user_defines.h": "c",
+			"alert.h": "c"
 		}
 	}
 }

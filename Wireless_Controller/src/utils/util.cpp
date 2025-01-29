@@ -38,6 +38,8 @@ SimpleRect navbarbtn_settings = {160, 291, 80, 29};
 
 int currentPressures[5];
 
+#pragma region bluetooth packets
+
 #define BTOASPACKETCOUNT 10
 struct PacketEntry
 {
@@ -93,4 +95,27 @@ void sendRestPacket(BTOasPacket *packet)
         }
     }
     giveRestSemaphore();
+}
+
+#pragma endregion
+
+unsigned long dialogEndTime = 0;
+lv_color_t dialogColor;
+char dialogText[50];
+void showDialog(char *text, lv_color_t color, unsigned long durationMS)
+{
+    strncpy(dialogText, text, sizeof(dialogText));
+    memcpy(&dialogColor, &color, sizeof(lv_color_t));
+    dialogEndTime = millis() + durationMS;
+}
+void dialogLoop(Scr *scr)
+{
+    if (dialogEndTime < millis())
+    {
+        scr->alert->hide();
+    }
+    else
+    {
+        scr->alert->show(dialogColor, dialogText);
+    }
 }

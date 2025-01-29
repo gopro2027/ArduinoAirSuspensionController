@@ -18,16 +18,36 @@ BLEUUID charUUID_Status(STATUS_CHARACTERISTIC_UUID);
 BLEUUID charUUID_Rest(REST_CHARACTERISTIC_UUID);
 BLEUUID charUUID_ValveControl(VALVECONTROL_CHARACTERISTIC_UUID);
 
-// Some variables to keep track on device connected
-static bool doConnect = false;
 static bool connected = false;
-static bool doScan = false;
+static bool doScan = true; // default to true so it initiates a scan on start
+static unsigned long timeoutMS = 0;
+static bool hasReceivedStatus = false;
+BLEClient *pClient = nullptr;
 
 // Define pointer for the BLE connection
 // static BLEAdvertisedDevice *myDevice;
 BLERemoteCharacteristic *pRemoteChar_Status;
 BLERemoteCharacteristic *pRemoteChar_Rest;
 BLERemoteCharacteristic *pRemoteChar_ValveControl;
+
+void disconnect()
+{
+    connected = false;
+
+    // cheeky call to tell it to restart scanning again i guess?
+    doScan = true;
+
+    // make sure it waits until it received it's first status before checking status timeouts
+    hasReceivedStatus = false;
+
+    if (pClient != nullptr)
+    {
+        pClient->disconnect();
+        pClient->end();
+        BLEDevice::deleteClient(pClient);
+        pClient = nullptr;
+    }
+}
 
 // Callback function for Notify function
 void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
@@ -39,6 +59,8 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
     // Serial.println(pBLERemoteCharacteristic->getUUID().toString().c_str());
     if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Status.toString())
     {
+        timeoutMS = millis() + 5000;
+        hasReceivedStatus = true;
 
         // convert received bytes to integer
         StatusPacket *status = (StatusPacket *)pData;
@@ -85,8 +107,8 @@ class MyClientCallback : public BLEClientCallbacks
 
     void onDisconnect(BLEClient *pclient)
     {
-        connected = false;
         Serial.println("onDisconnect");
+        disconnect();
     }
 };
 
@@ -97,7 +119,7 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     Serial.print("Forming a connection to ");
     Serial.println(myDevice->getAddress().toString().c_str());
 
-    BLEClient *pClient = BLEDevice::createClient();
+    pClient = BLEDevice::createClient();
     Serial.println(" - Created client");
 
     pClient->setClientCallbacks(new MyClientCallback());
@@ -107,14 +129,11 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     // Connect to the remove BLE Server.
     Serial.print("Address type: ");
     Serial.println(myDevice->getAddressType());
-    // myDevice->setAddressType(BLE_ADDR_TYPE_RPA_PUBLIC);
-    // delay(1000);
     bool _connected = pClient->connect(myDevice); // if you pass BLEAdvertisedDevice instead of address, it will be recognized type of peer device address (public or private)
     if (!_connected)
     {
         Serial.println("Connection error");
         // delete pClient;
-        delete myDevice;
         return false;
     }
     Serial.println(" - Connected to server");
@@ -136,18 +155,18 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     }
     Serial.println(" - Found our service");
 
-    connected = true;
+    // TODO: it will lock up if it fails in this characteristic code below. Not sure why tbh
     pRemoteChar_Status = pRemoteService->getCharacteristic(charUUID_Status);
     pRemoteChar_Rest = pRemoteService->getCharacteristic(charUUID_Rest);
     pRemoteChar_ValveControl = pRemoteService->getCharacteristic(charUUID_ValveControl);
     if (connectCharacteristic(pRemoteService, pRemoteChar_Status) == false)
-        connected = false;
+        _connected = false;
     else if (connectCharacteristic(pRemoteService, pRemoteChar_Rest) == false)
-        connected = false;
+        _connected = false;
     else if (connectCharacteristic(pRemoteService, pRemoteChar_ValveControl) == false)
-        connected = false;
+        _connected = false;
 
-    if (connected == false)
+    if (_connected == false)
     {
         // pClient->disconnect();
         Serial.println("At least one characteristic UUID not found");
@@ -171,102 +190,71 @@ bool connectCharacteristic(BLERemoteService *pRemoteService, BLERemoteCharacteri
 
     // if (l_BLERemoteChar->canNotify())
     //     l_BLERemoteChar->registerForNotify(notifyCallback);
-    // if (l_BLERemoteChar->canNotify())
-    l_BLERemoteChar->subscribe(true, notifyCallback, false);
+    if (l_BLERemoteChar->canNotify())
+        l_BLERemoteChar->subscribe(true, notifyCallback, false);
 
     return true;
 }
 
-// //Scan for BLE servers and find the first one that advertises the service we are looking for.
-// class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
-// {
-//     // Called for each advertising BLE server.
-//     void onResult(BLEAdvertisedDevice advertisedDevice)
-//     {
-//         // Serial.print("BLE Advertised Device found: ");
-//         // Serial.println(advertisedDevice.toString().c_str());
-
-//         // for (advertisedDevice.getServiceUUIDCount()) {
-//         // advertisedDevice.getServiceUUID()
-
-//         // Serial.println(advertisedDevice.isAdvertisingService(serviceUUID));
-//         // Serial.println(advertisedDevice.haveServiceUUID());
-
-//         // We have found a device, let us now see if it contains the service we are looking for. EDIT THIS DOESN"T WORK FOR SOME REASON SERVICE NAMES NOT FOUND :(
-//         if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID))
-//         // if (advertisedDevice.getName() == "OASMan")
-//         {
-//             Serial.println("Connecting to device! ");
-//             BLEDevice::getScan()->stop();
-//             //myDevice = new BLEAdvertisedDevice(advertisedDevice);
-//             // delay(500);
-//             // connectToServer();
-//             doConnect = true;
-//             doScan = true;
-
-//         } // Found our server
-//     } // onResult
-// }; // MyAdvertisedDeviceCallbacks
-
-void ble_setup()
+void scan()
 {
-    Serial.println("Starting Arduino BLE Client application...");
-    BLEDevice::init("OASMan_Controller");
+
+    // disable scan on next loop
+    doScan = false;
 
     // Retrieve a Scanner and set the callback we want to use to be informed when we
     // have detected a new device.  Specify that we want active scanning and start the
     // scan to run for 5 seconds.
     BLEScan *pBLEScan = BLEDevice::getScan();
 
+    boolean anyFound = false;
+
     // pBLEScan->setScanCallbacks(new MyAdvertisedDeviceCallbacks()); // TODO: Consider using this callback instead
-    NimBLEScanResults results = pBLEScan->getResults(10 * 1000);
+    NimBLEScanResults results = pBLEScan->getResults(5 * 1000);
     for (int i = 0; i < results.getCount(); i++)
     {
         const NimBLEAdvertisedDevice *device = results.getDevice(i);
 
-        // if (device->isAdvertisingService(serviceUuid))
-        // {
-        //     // create a client and connect
-        // }
-
         if (device->haveServiceUUID() && device->isAdvertisingService(serviceUUID))
         // if (advertisedDevice.getName() == "OASMan")
         {
+            anyFound = true;
             Serial.println("Connecting to device! ");
             BLEDevice::getScan()->stop();
-            // myDevice = new BLEAdvertisedDevice(*device);
-            //  delay(500);
-            connectToServer(device);
-            doConnect = true;
-            doScan = true;
+            connected = connectToServer(device);
+            if (connected)
+            {
+                showDialog("Connected to manifold", lv_color_hex(0x22bb33));
+                return; // might as well return, no use in trying to connect still
+            }
+            else
+            {
+                showDialog("Error connecting!", lv_color_hex(0xFF0000), 30000);
+            }
         }
     }
 
-    // pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-    // pBLEScan->setInterval(1349);
-    // pBLEScan->setWindow(449);
-    // pBLEScan->setActiveScan(true);
-    // pBLEScan->start(5, false);
-} // End of setup.
+    if (anyFound == false && connected == false)
+    {
+        showDialog("No manifold found!", lv_color_hex(0xFF0000), 30000);
+    }
+
+    if (!connected)
+    {
+        // failed to connect, do disconnect procedure
+        disconnect();
+    }
+}
+void ble_setup()
+{
+    Serial.println("Starting Arduino BLE Client application...");
+    BLEDevice::init("OASMan_Controller");
+
+    disconnect(); // sets up variables to get it ready to go
+}
 
 void ble_loop()
 {
-
-    // If the flag "doConnect" is true then we have scanned for and found the desired
-    // BLE Server with which we wish to connect.  Now we connect to it.  Once we are
-    // connected we set the connected flag to be true.
-    // if (doConnect == true)
-    // {
-    //     if (connectToServer())
-    //     {
-    //         Serial.println("We are now connected to the BLE Server.");
-    //     }
-    //     else
-    //     {
-    //         Serial.println("We have failed to connect to the server; there is nothin more we will do.");
-    //     }
-    //     doConnect = false;
-    // }
 
     // If we are connected to a peer BLE Server, update the characteristic each time we are reached
     // with the current time since boot.
@@ -284,18 +272,29 @@ void ble_loop()
 
         BTOasPacket packet;
         bool hasPacketToSend = getBTRestPacketToSend(&packet);
+        bool success = true;
         if (hasPacketToSend)
         {
             packet.dump();
-            pRemoteChar_Rest->writeValue(packet.tx(), BTOAS_PACKET_SIZE);
+            success = pRemoteChar_Rest->writeValue(packet.tx(), BTOAS_PACKET_SIZE);
+        }
+
+        if (!success)
+        {
+            showDialog("Error sending command!", lv_color_hex(0xFF0000), 3000);
+        }
+
+        // check for connection issue
+        if (hasReceivedStatus && timeoutMS < millis())
+        {
+            showDialog("BLE Connection Timed Out!", lv_color_hex(0xFF0000), 30000);
+            disconnect();
         }
     }
     else if (doScan)
     {
-        // BLEDevice::getScan()->start(0); // this is just example to start scan after disconnect, most likely there is better way to do it in arduino
+        scan();
     }
 
-    // In this example "delay" is used to delay with one second. This is of course a very basic
-    // implementation to keep things simple. I recommend to use millis() for any production code
     delay(10);
 }

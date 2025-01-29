@@ -2,22 +2,25 @@
 #define util_h
 
 #include <BTOas.h>
+#include "ui/components/Scr.h"
+#include "lvgl.h"
 
-typedef struct
+class Scr;
+
+struct SimplePoint
 {
     double x, y;
-} SimplePoint;
+};
 
-typedef struct
+struct SimpleRect
 {
     double x, y, w, h;
+};
 
-} SimpleRect;
-
-typedef struct
+struct CenterRect
 {
     double cx, cy, w, h;
-} CenterRect;
+};
 
 int sr_contains(SimpleRect r, SimplePoint p);
 
@@ -58,5 +61,8 @@ extern int currentPressures[5];
 bool getBTRestPacketToSend(BTOasPacket *copyTo);
 void sendRestPacket(BTOasPacket *packet);
 void setupRestSemaphore();
+
+void showDialog(char *text, lv_color_t color = {0, 0, 0xff}, unsigned long durationMS = 5000);
+void dialogLoop(Scr *scr);
 
 #endif
