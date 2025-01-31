@@ -51,7 +51,7 @@ class MyServerCallbacks : public BLEServerCallbacks
             param->connect.remote_bda[4],
             param->connect.remote_bda[5]);
 
-        ESP_LOGI(LOG_TAG, "myServerCallback onConnect, MAC: %s", remoteAddress);
+        log_i("myServerCallback onConnect, MAC: %s", remoteAddress);
         Serial.println(remoteAddress);
         recentAddr = new BLEAddress(param->connect.remote_bda);
         deviceConnected = true;

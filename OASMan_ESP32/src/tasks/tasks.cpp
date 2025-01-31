@@ -128,7 +128,7 @@ void setup_tasks()
     xTaskCreate(
         task_compressor,
         "Compressor Control",
-        512 * 3,
+        512 * 4,
         NULL,
         1000,
         NULL);

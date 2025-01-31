@@ -173,6 +173,9 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
         return false;
     }
     Serial.println("Connected Successfully");
+
+    // TODO: Send rest command and wait for response in here to verify we are connected. If we return false here it will continue on the other found oasman devices!
+
     return true;
 }
 
