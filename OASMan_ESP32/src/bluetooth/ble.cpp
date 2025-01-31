@@ -19,9 +19,6 @@ BLEAddress *recentAddr;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
 
-// Variable that will continuously be increased and written to the client
-uint32_t value = 0;
-
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
 #define SERVICE_UUID "679425c8-d3b4-4491-9eb2-3e3d15b625f0"
@@ -52,12 +49,11 @@ class MyServerCallbacks : public BLEServerCallbacks
             param->connect.remote_bda[5]);
 
         log_i("myServerCallback onConnect, MAC: %s", remoteAddress);
-        Serial.println(remoteAddress);
         recentAddr = new BLEAddress(param->connect.remote_bda);
         deviceConnected = true;
     };
 
-    void onDisconnect(BLEServer *pServer)
+    void onDisconnect(BLEServer *pServer, esp_ble_gatts_cb_param_t *param)
     {
         deviceConnected = false;
     }
@@ -86,7 +82,6 @@ void ble_setup()
     // Create the BLE Server
     pServer = BLEDevice::createServer();
     pServer->setCallbacks(new MyServerCallbacks());
-    // pServer->updateConnParams
 
     // Create the BLE Service
     BLEService *pService = pServer->createService(SERVICE_UUID);
@@ -103,10 +98,8 @@ void ble_setup()
     // pAdvertising->setMinPreferred(0x0); // set value to 0x00 to not advertise this parameter
     pAdvertising->setMinPreferred(0x06); // functions that help with iPhone connections issue
     pAdvertising->setMaxPreferred(0x12);
-    // BLEAdvertisementData bad = BLEAdvertisementData();
-    // bad.
-    // pAdvertising->setAdvertisementData();
-    BLEDevice::startAdvertising();
+
+    pServer->startAdvertising();
     Serial.println("Waiting a client connection to notify...");
 }
 
@@ -118,26 +111,25 @@ void ble_loop()
     {
         ble_notify();
     }
-    // The code below keeps the connection status uptodate:
+
     // Disconnecting
     if (!deviceConnected && oldDeviceConnected)
     {
-        delay(500);                  // give the bluetooth stack the chance to get things ready
+        delay(200);                  // give the bluetooth stack the chance to get things ready
         pServer->startAdvertising(); // restart advertising
         Serial.println("start advertising");
-        oldDeviceConnected = deviceConnected;
+        oldDeviceConnected = false;
     }
+
     // Connecting
     if (deviceConnected && !oldDeviceConnected)
     {
-        // do stuff here on connecting
-        oldDeviceConnected = deviceConnected;
-        // TODO: Might want to add a delay of like 100ms here? not sure
-        delay(100);
 
-        // Serial.print("Connecting to: ");
-        // Serial.println(recentAddr->toString().c_str());
-        // pServer->connect(*recentAddr /*pServer->getPeerDevices(false)[0].peer_device*/); // causes ESP_GATTC_OPEN_EVT to get called???
+        log_i("New device connecting!");
+
+        // do stuff here on connecting
+        oldDeviceConnected = true;
+        delay(100);
 
         // send assignment packet... will be more important after fixing it so we can allow multiple devices to connect
         AssignRecipientPacket arp(currentUserNum);
@@ -204,13 +196,6 @@ void ble_create_characteristics(BLEService *pService)
 
 void ble_notify()
 {
-    // statusCharacteristic is an integer that is increased with every second
-    // in the code below we send the value over to the client and increase the integer counter
-    // BTOasPacket packet = BTOasPacket();
-    // packet.cmd = AIRUP;
-    // packet.args[0].i = value;
-    // packet.args[1].f = 1.0f;
-
     // calculate whether or not to do stuff at a specific interval, in this case, every 1 second we want to send out a notify.
     static bool prevTime = false;
     bool timeChange = (millis() / 250) % 2; // changes from 0 to 1 every 250ms
@@ -225,26 +210,11 @@ void ble_notify()
     {
         StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getPressure(), getWheel(WHEEL_REAR_PASSENGER)->getPressure(), getWheel(WHEEL_FRONT_DRIVER)->getPressure(), getWheel(WHEEL_REAR_DRIVER)->getPressure(), getCompressor()->getTankPressure());
 
-        // statusPacket.dump();
-
         statusCharacteristic->setValue(statusPacket.tx(), BTOAS_PACKET_SIZE);
         statusCharacteristic->notify(); // we don't do this on the other characteristic thats why it has to be read manually TODO: THIS CRASHED AT ONE POINT????????? HAVING TROUBLE READING THE BLE VALUE. TRY RUNNING IN VERBOSE MODE AND SET IT TO IDLE FOR A LONG TIME TO DEBUG
     }
 
-    // restCharacteristic is a std::string (NOT a String). In the code below we read the current value
-    // write this to the Serial interface and send a different value back to the Client
-    // Here the current value is read using getValue()
-    // std::string rxValue = restCharacteristic->getValue();
-    // uint8_t *data = restCharacteristic->getData();
-    // restCharacteristic->getLength();
-    // Serial.print("Characteristic 2 (getValue): ");
-    // Serial.println(rxValue.c_str());
-
-    // Here the value is written to the Client using setValue();
-    // String txValue = "String with random value from Server: " + String(random(1000));
-    // restCharacteristic->setValue(txValue.c_str());
-    // Serial.println("Characteristic 2 (setValue): " + txValue);
-
+    // TODO: move this code to the callback function above instead of in here
     // valve control characteristic reading
     static unsigned int valveTableValues = 0;
     unsigned int valveControlBittset = ((unsigned int *)valveControlCharacteristic->getData())[0];
@@ -270,10 +240,6 @@ void ble_notify()
         }
     }
     valveTableValues = valveControlBittset;
-
-    // In this example "delay" is used to delay with one second. This is of course a very basic
-    // implementation to keep things simple. I recommend to use millis() for any production code
-    // delay(1000);
 }
 
 extern bool startOTAServiceRequest;
