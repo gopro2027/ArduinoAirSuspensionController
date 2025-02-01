@@ -27,7 +27,8 @@ enum BTOasIdentifier
     STARTWEB = 14,
     ASSIGNRECEPIENT = 15,
     MESSAGE = 16,
-    SAVECURRENTPRESSURESTOPROFILE = 17
+    SAVECURRENTPRESSURESTOPROFILE = 17,
+    PRESETREPORT = 1,
 };
 
 union BTOasValue32
@@ -66,6 +67,11 @@ void runReceivedPacket(BTOasPacket *packet);
 struct StatusPacket : BTOasPacket
 {
     StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE);
+};
+
+struct PresetPacket : BTOasPacket
+{
+    PresetPacket(int profileIndex, float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE);
 };
 
 struct AssignRecipientPacket : BTOasPacket

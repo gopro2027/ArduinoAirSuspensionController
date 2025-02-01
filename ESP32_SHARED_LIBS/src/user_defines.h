@@ -78,10 +78,10 @@
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
 
 /* Disable the hang if ads fails to load */
-#define ADS_MOCK_BYPASS true
+#define ADS_MOCK_BYPASS false
 
 /* For testing purposes: mock tank pressure to 200psi */
-#define TANK_PRESSURE_MOCK true
+#define TANK_PRESSURE_MOCK false
 
 /* Values for pressure calculations */
 #define pressuretransducerRunningVoltage 5.0f                                                                                                    // most pressure sensors run on 5v
@@ -91,6 +91,12 @@
 #define microcontrollerMaxAnalogReading 4095                                                                                                     // esp32 built in adc goes to 4095
 #define pressureZeroAnalogValue (float)((pressuretransducerVoltageZeroPSI / pressuretransducerRunningVoltage) * microcontrollerMaxAnalogReading) // analog reading of pressure transducer at 0psi.
 #define pressureMaxAnalogValue (float)((pressuretransducerVoltageMaxPSI / pressuretransducerRunningVoltage) * microcontrollerMaxAnalogReading)   // analog reading of pressure transducer at max psi.
+
+/* The amount of time the pressure routine will try to reach the goal pressure before 'giving up' (usually due to lower pressure in tank or something) Default is 10 seconds. */
+#define ROUTINE_TIMEOUT_MS 10 * 1000
+
+/* Use new BLE with latest features or old classic bluetooth with the classic android app */
+#define USE_BLE true
 
 /* DO NOT CHANGE ANY PAST THIS LINE */
 #define WHEEL_FRONT_PASSENGER 0
@@ -111,9 +117,6 @@ enum SOLENOID_INDEX
     REAR_DRIVER_OUT
 };
 #define SOLENOID_COUNT 8
-
-/* The amount of time the pressure routine will try to reach the goal pressure before 'giving up' (usually due to lower pressure in tank or something) Default is 10 seconds. */
-#define ROUTINE_TIMEOUT_MS 10 * 1000
 
 #endif
 

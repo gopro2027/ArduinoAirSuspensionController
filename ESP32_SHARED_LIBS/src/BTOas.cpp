@@ -49,6 +49,21 @@ StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REA
     this->recipient = 0;
 }
 
+PresetPacket::PresetPacket(int profileIndex, float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE)
+{
+    this->cmd = STATUSREPORT;
+    // 0 through 4
+    this->args16()[WHEEL_FRONT_PASSENGER].i = WHEEL_FRONT_PASSENGER_PRESSURE; // getWheel(WHEEL_FRONT_PASSENGER)->getPressure();
+    this->args16()[WHEEL_REAR_PASSENGER].i = WHEEL_REAR_PASSENGER_PRESSURE;   // getWheel(WHEEL_REAR_PASSENGER)->getPressure();
+    this->args16()[WHEEL_FRONT_DRIVER].i = WHEEL_FRONT_DRIVER_PRESSURE;       // getWheel(WHEEL_FRONT_DRIVER)->getPressure();
+    this->args16()[WHEEL_REAR_DRIVER].i = WHEEL_REAR_DRIVER_PRESSURE;         // getWheel(WHEEL_REAR_DRIVER)->getPressure();
+    this->args16()[4].i = profileIndex;                                       // profile index
+
+    // doesn't matter for this because it is generic broadcasted for everyone
+    this->sender = 0;
+    this->recipient = 0;
+}
+
 IdlePacket::IdlePacket()
 {
     // idle packet is the same as a blank BTOasPacket

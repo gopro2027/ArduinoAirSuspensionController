@@ -37,6 +37,8 @@ SimpleRect navbarbtn_presets = {80, 291, 80, 29};
 SimpleRect navbarbtn_settings = {160, 291, 80, 29};
 
 int currentPressures[5];
+int profilePressures[5][4];
+bool profileUpdated = false;
 
 #pragma region bluetooth packets
 

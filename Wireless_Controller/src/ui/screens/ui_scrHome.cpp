@@ -140,7 +140,7 @@ void ScrHome::runTouchInput(SimplePoint pos, bool down)
         if (_REAR_AXLE_OUT)
         {
             setValveBit(REAR_DRIVER_OUT);
-            setValveBit(REAR_PASSENGER_IN);
+            setValveBit(REAR_PASSENGER_OUT);
         }
     }
 }

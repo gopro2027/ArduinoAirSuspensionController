@@ -75,7 +75,7 @@ void startBurnInFix()
 
 void stopBurnInFix()
 {
-    smartdisplay_lcd_set_backlight(0.5f);
+    smartdisplay_lcd_set_backlight(0.8f);
     doBurnInFix = false;
     lv_obj_add_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
 }

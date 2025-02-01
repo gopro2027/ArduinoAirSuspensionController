@@ -108,16 +108,16 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
     if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Rest.toString())
     {
 
-        // convert received bytes to integer
-        uint32_t counter = pData[0];
-        for (int i = 1; i < length; i++)
-        {
-            counter = counter | (pData[i] << i * 8);
-        }
+        PresetPacket *profile = (PresetPacket *)pData;
 
-        // print to Serial
-        Serial.print("Characteristic 2 (Rest) (Notify) from server: ");
-        Serial.println(counter);
+        profilePressures[profile->args16()[4].i][WHEEL_FRONT_PASSENGER] = profile->args16()[WHEEL_FRONT_PASSENGER].i;
+        profilePressures[profile->args16()[4].i][WHEEL_REAR_PASSENGER] = profile->args16()[WHEEL_REAR_PASSENGER].i;
+        profilePressures[profile->args16()[4].i][WHEEL_FRONT_DRIVER] = profile->args16()[WHEEL_FRONT_DRIVER].i;
+        profilePressures[profile->args16()[4].i][WHEEL_REAR_DRIVER] = profile->args16()[WHEEL_REAR_DRIVER].i;
+
+        log_i("Preset received: %i %i", profile->args16()[4].i, profilePressures[profile->args16()[4].i][WHEEL_FRONT_PASSENGER]);
+
+        profileUpdated = true; // this should be a semaphore and just call it directly but fuck it
     }
 }
 

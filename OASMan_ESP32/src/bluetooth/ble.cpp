@@ -365,5 +365,14 @@ void runReceivedPacket(BTOasPacket *packet)
         Serial.println(F("Starting OTA..."));
         startOTAServiceRequest = true;
         break;
+    case BTOasIdentifier::PRESETREPORT:
+    {
+        readProfile(((PresetPacket *)packet)->args16()[4].i);
+        PresetPacket presetPacket(((PresetPacket *)packet)->args16()[4].i, currentProfile[WHEEL_FRONT_PASSENGER], currentProfile[WHEEL_REAR_PASSENGER], currentProfile[WHEEL_FRONT_DRIVER], currentProfile[WHEEL_REAR_DRIVER]);
+
+        restCharacteristic->setValue(presetPacket.tx(), BTOAS_PACKET_SIZE);
+        restCharacteristic->notify();
+        break;
+    }
     }
 }
