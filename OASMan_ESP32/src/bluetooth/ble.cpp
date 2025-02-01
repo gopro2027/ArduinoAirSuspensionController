@@ -103,6 +103,8 @@ class SecurityCallback : public BLESecurityCallbacks
         else
         {
             Serial.println("   - SecurityCallback - Authentication Failure*");
+
+            pServer->disconnect(pServer->getConnId());
             pServer->removePeerDevice(pServer->getConnId(), true);
         }
         BLEDevice::startAdvertising();
@@ -118,7 +120,8 @@ void bleSecurity()
     uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
     uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
     uint32_t passkey = BLE_PASSKEY;
-    uint8_t auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_ENABLE; // ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_DISABLE;
+    uint8_t auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_ENABLE;
+    auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_DISABLE; // allows mini device to connect TODO: remove this line and force the little device to enter the passkey too
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(uint32_t));
     esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, sizeof(uint8_t));
     esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(uint8_t));

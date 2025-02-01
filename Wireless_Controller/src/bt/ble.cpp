@@ -105,6 +105,10 @@ class MyClientCallback : public NimBLEClientCallbacks
     void onConnect(BLEClient *pclient) override
     {
         log_i("onConnect");
+        // NimBLEDevice::injectPassKey(connInfo, BLE_PASSKEY);
+        //  NimBLEDevice::startSecurity(desc);
+
+        // pclient->secureConnection(); // okay but this line did cause it to not hang forever on the connect so that's interesting
     }
 
     void onDisconnect(BLEClient *pclient, int reason) override
@@ -151,6 +155,12 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     // BLEDevice::setSecurityAuth(true, true, true);
     // BLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
     // log_i("Set passkey: %i", BLE_PASSKEY);
+
+    // NimBLEDevice::setSecurityAuth(true, true, false);
+
+    BLEDevice::setSecurityPasskey(BLE_PASSKEY);
+    NimBLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY); // Should use the passkey
+    NimBLEDevice::setSecurityAuth(false, false, true);      // Default
 
     pClient->setClientCallbacks(&clientCallbacks, false);
 
@@ -236,9 +246,9 @@ void scan()
     // scan to run for 5 seconds.
     BLEScan *pBLEScan = BLEDevice::getScan();
     BLEDevice::setSecurityPasskey(BLE_PASSKEY);
-    NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
-    NimBLEDevice::setSecurityAuth(BLE_SM_PAIR_AUTHREQ_BOND | BLE_SM_PAIR_AUTHREQ_MITM | BLE_SM_PAIR_AUTHREQ_SC);
-    // BLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
+    // NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
+    // NimBLEDevice::setSecurityAuth(BLE_SM_PAIR_AUTHREQ_BOND | BLE_SM_PAIR_AUTHREQ_MITM | BLE_SM_PAIR_AUTHREQ_SC);
+    //  BLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
 
     boolean anyFound = false;
 
