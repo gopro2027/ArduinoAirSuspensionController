@@ -5,6 +5,8 @@
  * updated by chegewara and MoThunderz
  */
 
+// Please see this for a good reference at some setup auth and ect: https://github.com/h2zero/NimBLE-Arduino/blob/master/examples/NimBLE_Client/NimBLE_Client.ino
+
 #include "ble.h"
 
 #define SERVICE_UUID "679425c8-d3b4-4491-9eb2-3e3d15b625f0"
@@ -98,29 +100,29 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
 }
 
 // Callback function that is called whenever a client is connected or disconnected
-class MyClientCallback : public BLEClientCallbacks
+class MyClientCallback : public NimBLEClientCallbacks
 {
-    void onConnect(BLEClient *pclient)
+    void onConnect(BLEClient *pclient) override
     {
         log_i("onConnect");
     }
 
-    void onDisconnect(BLEClient *pclient)
+    void onDisconnect(BLEClient *pclient, int reason) override
     {
         log_i("onDisconnect");
         disconnect();
     }
-    void onPassKeyEntry(NimBLEConnInfo &connInfo)
+    void onPassKeyEntry(NimBLEConnInfo &connInfo) override
     {
         log_i("onPassKeyEntry");
         NimBLEDevice::injectPassKey(connInfo, BLE_PASSKEY);
     }
-    void onConfirmPasskey(NimBLEConnInfo &connInfo, uint32_t pin)
+    void onConfirmPasskey(NimBLEConnInfo &connInfo, uint32_t pin) override
     {
         log_i("The passkey YES/NO number: %" PRIu32 "\n", pin);
         NimBLEDevice::injectConfirmPasskey(connInfo, true);
     };
-    void onAuthenticationComplete(NimBLEConnInfo &connInfo)
+    void onAuthenticationComplete(NimBLEConnInfo &connInfo) override
     {
         log_i("On auth complete");
         log_i("onAuthenticationComplete");
@@ -132,7 +134,7 @@ class MyClientCallback : public BLEClientCallbacks
             return;
         }
     }
-};
+} clientCallbacks;
 
 // Function that is run whenever the server is connected
 bool connectToServer(const BLEAdvertisedDevice *myDevice)
@@ -150,7 +152,7 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     // BLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
     // log_i("Set passkey: %i", BLE_PASSKEY);
 
-    pClient->setClientCallbacks(new MyClientCallback());
+    pClient->setClientCallbacks(&clientCallbacks, false);
 
     Serial.println("Set callbacks");
 
@@ -234,6 +236,8 @@ void scan()
     // scan to run for 5 seconds.
     BLEScan *pBLEScan = BLEDevice::getScan();
     BLEDevice::setSecurityPasskey(BLE_PASSKEY);
+    NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
+    NimBLEDevice::setSecurityAuth(BLE_SM_PAIR_AUTHREQ_BOND | BLE_SM_PAIR_AUTHREQ_MITM | BLE_SM_PAIR_AUTHREQ_SC);
     // BLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
 
     boolean anyFound = false;
