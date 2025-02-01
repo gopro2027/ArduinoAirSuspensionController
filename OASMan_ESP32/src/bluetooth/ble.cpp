@@ -313,6 +313,7 @@ void runReceivedPacket(BTOasPacket *packet)
         writeProfile(((SaveToProfilePacket *)packet)->getProfileIndex());
         break;
     case BTOasIdentifier::SAVECURRENTPRESSURESTOPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
+        Serial.println("Calling Save Current Pressures To Profile!");
         savePressuresToProfile(((SaveCurrentPressuresToProfilePacket *)packet)->getProfileIndex(), getWheel(WHEEL_FRONT_PASSENGER)->getPressure(), getWheel(WHEEL_REAR_PASSENGER)->getPressure(), getWheel(WHEEL_FRONT_DRIVER)->getPressure(), getWheel(WHEEL_REAR_DRIVER)->getPressure());
         break;
     case BTOasIdentifier::READPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
@@ -320,6 +321,7 @@ void runReceivedPacket(BTOasPacket *packet)
         break;
     case BTOasIdentifier::AIRUPQUICK: // add if (profileIndex > MAX_PROFILE_COUNT)
         // load profile then air up
+        Serial.println("Calling air up quick!");
         readProfile(((AirupQuickPacket *)packet)->getProfileIndex());
         airUp(true);
         break;

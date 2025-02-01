@@ -51,7 +51,6 @@ void ScrHome::runTouchInput(SimplePoint pos, bool down)
 
     if (down == false)
     {
-        log_i("closing valves");
         closeValves();
     }
     else

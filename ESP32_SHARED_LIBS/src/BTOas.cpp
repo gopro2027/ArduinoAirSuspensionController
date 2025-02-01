@@ -89,6 +89,11 @@ SaveToProfilePacket::SaveToProfilePacket(int profileIndex)
     this->cmd = SAVETOPROFILE;
     this->args32()[0].i = profileIndex;
 }
+SaveCurrentPressuresToProfilePacket::SaveCurrentPressuresToProfilePacket(int profileIndex)
+{
+    this->cmd = SAVECURRENTPRESSURESTOPROFILE;
+    this->args32()[0].i = profileIndex;
+}
 ReadProfilePacket::ReadProfilePacket(int profileIndex)
 {
     this->cmd = READPROFILE;
