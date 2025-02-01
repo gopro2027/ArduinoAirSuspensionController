@@ -63,6 +63,7 @@ class CharacteristicCallback : public BLECharacteristicCallbacks
 {
     void onWrite(BLECharacteristic *pChar, esp_ble_gatts_cb_param_t *param) override
     {
+        static unsigned int valveTableValues = 0;
         if (pChar->getUUID().toString() == charUUID_Rest.toString())
         {
             Serial.println("Received rest command");
@@ -70,8 +71,34 @@ class CharacteristicCallback : public BLECharacteristicCallbacks
             packet->dump();
             runReceivedPacket(packet);
         }
+        if (pChar->getUUID().toString() == charUUID_ValveControl.toString())
+        {
+            unsigned int valveControlBittset = ((unsigned int *)pChar->getData())[0];
+
+            for (int i = 0; i < 8; i++)
+            {
+                bool prevVal = (valveTableValues >> i) & 1;
+                bool curVal = (valveControlBittset >> i) & 1;
+                if (prevVal != curVal)
+                {
+                    if (curVal)
+                    {
+                        Serial.print("Opening ");
+                        Serial.println(i);
+                        getSolenoidFromIndex(i)->open();
+                    }
+                    else
+                    {
+                        Serial.print("Closing ");
+                        Serial.println(i);
+                        getSolenoidFromIndex(i)->close();
+                    }
+                }
+            }
+            valveTableValues = valveControlBittset;
+        }
     }
-};
+} characteristicCallback;
 
 class SecurityCallback : public BLESecurityCallbacks
 {
@@ -222,7 +249,7 @@ void ble_create_characteristics(BLEService *pService)
     IdlePacket idlepacket;
     restCharacteristic->setValue(idlepacket.tx(), BTOAS_PACKET_SIZE);
 
-    restCharacteristic->setCallbacks(new CharacteristicCallback());
+    restCharacteristic->setCallbacks(&characteristicCallback);
 
     // VALVE CONTROL
     //  // Create a BLE Descriptor
@@ -236,6 +263,8 @@ void ble_create_characteristics(BLEService *pService)
     valveControlCharacteristic->addDescriptor(pBLE2902_3);
     int valveValue = 0;
     valveControlCharacteristic->setValue(valveValue);
+
+    valveControlCharacteristic->setCallbacks(&characteristicCallback);
 }
 
 void ble_notify()
@@ -257,33 +286,6 @@ void ble_notify()
         statusCharacteristic->setValue(statusPacket.tx(), BTOAS_PACKET_SIZE);
         statusCharacteristic->notify(); // we don't do this on the other characteristic thats why it has to be read manually TODO: THIS CRASHED AT ONE POINT????????? HAVING TROUBLE READING THE BLE VALUE. TRY RUNNING IN VERBOSE MODE AND SET IT TO IDLE FOR A LONG TIME TO DEBUG
     }
-
-    // TODO: move this code to the callback function above instead of in here
-    // valve control characteristic reading
-    static unsigned int valveTableValues = 0;
-    unsigned int valveControlBittset = ((unsigned int *)valveControlCharacteristic->getData())[0];
-
-    for (int i = 0; i < 8; i++)
-    {
-        bool prevVal = (valveTableValues >> i) & 1;
-        bool curVal = (valveControlBittset >> i) & 1;
-        if (prevVal != curVal)
-        {
-            if (curVal)
-            {
-                Serial.print("Opening ");
-                Serial.println(i);
-                getSolenoidFromIndex(i)->open();
-            }
-            else
-            {
-                Serial.print("Closing ");
-                Serial.println(i);
-                getSolenoidFromIndex(i)->close();
-            }
-        }
-    }
-    valveTableValues = valveControlBittset;
 }
 
 extern bool startOTAServiceRequest;

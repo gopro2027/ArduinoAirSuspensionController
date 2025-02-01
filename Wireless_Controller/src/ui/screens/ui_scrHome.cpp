@@ -45,11 +45,104 @@ void ScrHome::init(void)
 void ScrHome::runTouchInput(SimplePoint pos, bool down)
 {
     Scr::runTouchInput(pos, down);
-    if (cr_contains(ctr_row0col0up, pos))
+
+    // AirupPacket aup;
+    // sendRestPacket(&aup);
+
+    if (down == false)
     {
-        log_i("pressed ctr_row0col0up");
-        AirupPacket aup;
-        sendRestPacket(&aup);
+        log_i("closing valves");
+        closeValves();
+    }
+    else
+    {
+        // driver side
+        bool _FRONT_DRIVER_IN = cr_contains(ctr_row0col0up, pos);
+        bool _FRONT_DRIVER_OUT = cr_contains(ctr_row0col0down, pos);
+
+        bool _REAR_DRIVER_IN = cr_contains(ctr_row1col0up, pos);
+        bool _REAR_DRIVER_OUT = cr_contains(ctr_row1col0down, pos);
+
+        // passenger side
+        bool _FRONT_PASSENGER_IN = cr_contains(ctr_row0col2up, pos);
+        bool _FRONT_PASSENGER_OUT = cr_contains(ctr_row0col2down, pos);
+
+        bool _REAR_PASSENGER_IN = cr_contains(ctr_row1col2up, pos);
+        bool _REAR_PASSENGER_OUT = cr_contains(ctr_row1col2down, pos);
+
+        // axles
+        bool _FRONT_AXLE_IN = cr_contains(ctr_row0col1up, pos);
+        bool _FRONT_AXLE_OUT = cr_contains(ctr_row0col1down, pos);
+
+        bool _REAR_AXLE_IN = cr_contains(ctr_row1col1up, pos);
+        bool _REAR_AXLE_OUT = cr_contains(ctr_row1col1down, pos);
+
+        // driver side
+        if (_FRONT_DRIVER_IN)
+        {
+            setValveBit(FRONT_DRIVER_IN);
+        }
+
+        if (_FRONT_DRIVER_OUT)
+        {
+            setValveBit(FRONT_DRIVER_OUT);
+        }
+
+        if (_REAR_DRIVER_IN)
+        {
+            setValveBit(REAR_DRIVER_IN);
+        }
+
+        if (_REAR_DRIVER_OUT)
+        {
+            setValveBit(REAR_DRIVER_OUT);
+        }
+
+        // passenger side
+        if (_FRONT_PASSENGER_IN)
+        {
+            setValveBit(FRONT_PASSENGER_IN);
+        }
+
+        if (_FRONT_PASSENGER_OUT)
+        {
+            setValveBit(FRONT_PASSENGER_OUT);
+        }
+
+        if (_REAR_PASSENGER_IN)
+        {
+            setValveBit(REAR_PASSENGER_IN);
+        }
+
+        if (_REAR_PASSENGER_OUT)
+        {
+            setValveBit(REAR_PASSENGER_OUT);
+        }
+
+        // axles
+        if (_FRONT_AXLE_IN)
+        {
+            setValveBit(FRONT_DRIVER_IN);
+            setValveBit(FRONT_PASSENGER_IN);
+        }
+
+        if (_FRONT_AXLE_OUT)
+        {
+            setValveBit(FRONT_DRIVER_OUT);
+            setValveBit(FRONT_PASSENGER_OUT);
+        }
+
+        if (_REAR_AXLE_IN)
+        {
+            setValveBit(REAR_DRIVER_IN);
+            setValveBit(REAR_PASSENGER_IN);
+        }
+
+        if (_REAR_AXLE_OUT)
+        {
+            setValveBit(REAR_DRIVER_OUT);
+            setValveBit(REAR_PASSENGER_IN);
+        }
     }
 }
 

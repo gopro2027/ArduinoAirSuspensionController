@@ -65,4 +65,8 @@ void setupRestSemaphore();
 void showDialog(char *text, lv_color_t color = {0, 0, 0xff}, unsigned long durationMS = 5000);
 void dialogLoop(Scr *scr);
 
+unsigned int getValveControlValue();
+void setValveBit(int bit);
+void closeValves();
+
 #endif

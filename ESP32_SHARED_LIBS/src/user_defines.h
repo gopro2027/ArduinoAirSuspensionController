@@ -99,6 +99,19 @@
 #define WHEEL_REAR_DRIVER 3
 #define _TANK_INDEX 4
 
+enum SOLENOID_INDEX
+{
+    FRONT_PASSENGER_IN,
+    FRONT_PASSENGER_OUT,
+    REAR_PASSENGER_IN,
+    REAR_PASSENGER_OUT,
+    FRONT_DRIVER_IN,
+    FRONT_DRIVER_OUT,
+    REAR_DRIVER_IN,
+    REAR_DRIVER_OUT
+};
+#define SOLENOID_COUNT 8
+
 /* The amount of time the pressure routine will try to reach the goal pressure before 'giving up' (usually due to lower pressure in tank or something) Default is 10 seconds. */
 #define ROUTINE_TIMEOUT_MS 10 * 1000
 

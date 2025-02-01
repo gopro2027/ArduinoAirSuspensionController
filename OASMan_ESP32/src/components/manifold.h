@@ -4,19 +4,7 @@
 #include "input_type.h"
 #include "solenoid.h"
 #include "components/wheel.h"
-
-enum SOLENOID_INDEX
-{
-    FRONT_PASSENGER_IN,
-    FRONT_PASSENGER_OUT,
-    REAR_PASSENGER_IN,
-    REAR_PASSENGER_OUT,
-    FRONT_DRIVER_IN,
-    FRONT_DRIVER_OUT,
-    REAR_DRIVER_IN,
-    REAR_DRIVER_OUT
-};
-#define SOLENOID_COUNT 8
+#include <user_defines.h>
 
 class Manifold
 {

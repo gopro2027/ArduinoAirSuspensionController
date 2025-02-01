@@ -54,9 +54,13 @@ void Scr::runTouchInput(SimplePoint pos, bool down)
 void Scr::loop()
 {
     dialogLoop(this);
+    SimplePoint tp = {touchX(), touchY()};
     if (isJustPressed())
     {
-        SimplePoint tp = {touchX(), touchY()};
         this->runTouchInput(tp, true);
+    }
+    if (isJustReleased())
+    {
+        this->runTouchInput(tp, false);
     }
 }

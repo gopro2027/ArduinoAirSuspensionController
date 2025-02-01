@@ -300,6 +300,8 @@ void ble_setup()
 void ble_loop()
 {
 
+    static unsigned int previousValveInt = 0;
+
     // If we are connected to a peer BLE Server, update the characteristic each time we are reached
     // with the current time since boot.
     if (connected)
@@ -321,6 +323,13 @@ void ble_loop()
         {
             packet.dump();
             success = pRemoteChar_Rest->writeValue(packet.tx(), BTOAS_PACKET_SIZE);
+        }
+
+        unsigned int valveControlValue = getValveControlValue();
+        if (previousValveInt != valveControlValue)
+        {
+            success = success && pRemoteChar_ValveControl->writeValue((uint8_t *)&valveControlValue, 4);
+            previousValveInt = valveControlValue;
         }
 
         if (!success)

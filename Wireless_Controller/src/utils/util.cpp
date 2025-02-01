@@ -119,3 +119,19 @@ void dialogLoop(Scr *scr)
         scr->alert->show(dialogColor, dialogText);
     }
 }
+
+#pragma region valveControl
+unsigned int valveControlValue = 0;
+unsigned int getValveControlValue()
+{
+    return valveControlValue;
+}
+void setValveBit(int bit)
+{
+    valveControlValue = valveControlValue | (1 << bit);
+}
+void closeValves()
+{
+    valveControlValue = 0;
+}
+#pragma endregion
