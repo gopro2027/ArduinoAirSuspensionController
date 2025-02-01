@@ -15,9 +15,7 @@ BLE2902 *pBLE2902_2;                                  // Pointer to BLE2902 of C
 BLE2902 *pBLE2902_3;                                  // Pointer to BLE2902 of Characteristic 3
 BLEAddress *recentAddr;
 
-// Some variables to keep track on device connected
-bool deviceConnected = false;
-bool oldDeviceConnected = false;
+uint64_t currentUserNum = 1;
 
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
@@ -50,12 +48,14 @@ class MyServerCallbacks : public BLEServerCallbacks
 
         log_i("myServerCallback onConnect, MAC: %s", remoteAddress);
         recentAddr = new BLEAddress(param->connect.remote_bda);
-        deviceConnected = true;
+        AssignRecipientPacket arp(currentUserNum);
+        restCharacteristic->setValue(arp.tx(), BTOAS_PACKET_SIZE);
+
+        currentUserNum++;
     };
 
     void onDisconnect(BLEServer *pServer, esp_ble_gatts_cb_param_t *param)
     {
-        deviceConnected = false;
     }
 };
 
@@ -73,11 +73,68 @@ class CharacteristicCallback : public BLECharacteristicCallbacks
     }
 };
 
+class SecurityCallback : public BLESecurityCallbacks
+{
+
+    uint32_t onPassKeyRequest()
+    {
+        return 000000;
+    }
+
+    void onPassKeyNotify(uint32_t pass_key) {}
+
+    bool onConfirmPIN(uint32_t pass_key)
+    {
+        vTaskDelay(5000);
+        return true;
+    }
+
+    bool onSecurityRequest()
+    {
+        return true;
+    }
+
+    void onAuthenticationComplete(esp_ble_auth_cmpl_t cmpl)
+    {
+        if (cmpl.success)
+        {
+            Serial.println("   - SecurityCallback - Authentication Success");
+        }
+        else
+        {
+            Serial.println("   - SecurityCallback - Authentication Failure*");
+            pServer->removePeerDevice(pServer->getConnId(), true);
+        }
+        BLEDevice::startAdvertising();
+    }
+};
+
+// https://www.youtube.com/watch?v=TwexLJwdLEw&ab_channel=ThatProject
+void bleSecurity()
+{
+    esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
+    esp_ble_io_cap_t iocap = ESP_IO_CAP_OUT;
+    uint8_t key_size = 16;
+    uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
+    uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
+    uint32_t passkey = BLE_PASSKEY;
+    uint8_t auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_ENABLE; // ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_DISABLE;
+    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(uint32_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, sizeof(uint8_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(uint8_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &key_size, sizeof(uint8_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_ONLY_ACCEPT_SPECIFIED_SEC_AUTH, &auth_option, sizeof(uint8_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(uint8_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
+}
+
 void ble_setup()
 {
 
     // Create the BLE Device
     BLEDevice::init("OASMan");
+    BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT);
+    BLEDevice::setSecurityCallbacks(new SecurityCallback());
 
     // Create the BLE Server
     pServer = BLEDevice::createServer();
@@ -100,43 +157,23 @@ void ble_setup()
     pAdvertising->setMaxPreferred(0x12);
 
     pServer->startAdvertising();
+
+    bleSecurity(); // can comment this line to disable security
+
     Serial.println("Waiting a client connection to notify...");
 }
 
-uint64_t currentUserNum = 1;
 void ble_loop()
 {
-    // notify changed value
-    if (deviceConnected)
+    static int prevConnectedCount = -1;
+    int connectedCount = pServer->getConnectedCount();
+    if (connectedCount != prevConnectedCount)
     {
-        ble_notify();
+        Serial.printf("connectedCount: %d\n", connectedCount);
     }
+    prevConnectedCount = connectedCount;
 
-    // Disconnecting
-    if (!deviceConnected && oldDeviceConnected)
-    {
-        delay(200);                  // give the bluetooth stack the chance to get things ready
-        pServer->startAdvertising(); // restart advertising
-        Serial.println("start advertising");
-        oldDeviceConnected = false;
-    }
-
-    // Connecting
-    if (deviceConnected && !oldDeviceConnected)
-    {
-
-        log_i("New device connecting!");
-
-        // do stuff here on connecting
-        oldDeviceConnected = true;
-        delay(100);
-
-        // send assignment packet... will be more important after fixing it so we can allow multiple devices to connect
-        AssignRecipientPacket arp(currentUserNum);
-        restCharacteristic->setValue(arp.tx(), BTOAS_PACKET_SIZE);
-
-        currentUserNum++;
-    }
+    ble_notify();
 }
 
 void ble_create_characteristics(BLEService *pService)
@@ -153,6 +190,10 @@ void ble_create_characteristics(BLEService *pService)
     valveControlCharacteristic = pService->createCharacteristic(
         VALVECONTROL_CHARACTERISTIC_UUID,
         BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE_NR); // NR meaning no response from the server
+
+    // statusCharacteristic->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
+    // restCharacteristic->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
+    // valveControlCharacteristic->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
 
     // STATUS
     // // Create a BLE Descriptor
@@ -265,6 +306,9 @@ void runReceivedPacket(BTOasPacket *packet)
         break;
     case BTOasIdentifier::SAVETOPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
         writeProfile(((SaveToProfilePacket *)packet)->getProfileIndex());
+        break;
+    case BTOasIdentifier::SAVECURRENTPRESSURESTOPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
+        savePressuresToProfile(((SaveCurrentPressuresToProfilePacket *)packet)->getProfileIndex(), getWheel(WHEEL_FRONT_PASSENGER)->getPressure(), getWheel(WHEEL_REAR_PASSENGER)->getPressure(), getWheel(WHEEL_FRONT_DRIVER)->getPressure(), getWheel(WHEEL_REAR_DRIVER)->getPressure());
         break;
     case BTOasIdentifier::READPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
         readProfile(((ReadProfilePacket *)packet)->getProfileIndex());

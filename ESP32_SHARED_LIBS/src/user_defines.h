@@ -16,6 +16,10 @@
 /* This is the private passcode you need to access your system from the app. Set the same value in the app settings after launching the app. */
 #define PASSWORD "12345678"
 
+// pass key is 6 digits, add zeros to the beginning of it to make it 6 in total
+// For example, if your pass is 2027 please type 002027
+#define BLE_PASSKEY 202777
+
 /* turns on/off some test features for debug use. Best left false */
 #define TEST_MODE false
 

@@ -24,9 +24,13 @@ void ui_init(void)
 
 void changeScreen(SCREEN screen)
 {
-    if (currentScreen == screen) {
+    if (currentScreen == screen)
+    {
         return;
     }
+
+    // lv_refr_now(lv_disp_get_default());
+
     currentScreen = screen;
     switch (screen)
     {

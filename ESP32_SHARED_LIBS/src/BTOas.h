@@ -26,7 +26,8 @@ enum BTOasIdentifier
     CALIBRATE = 13,
     STARTWEB = 14,
     ASSIGNRECEPIENT = 15,
-    MESSAGE = 16
+    MESSAGE = 16,
+    SAVECURRENTPRESSURESTOPROFILE = 17
 };
 
 union BTOasValue32
@@ -107,6 +108,10 @@ struct BooleanPacket : BTOasPacket
 struct SaveToProfilePacket : ProfilePacket
 {
     SaveToProfilePacket(int profileIndex);
+};
+struct SaveCurrentPressuresToProfilePacket : ProfilePacket
+{
+    SaveCurrentPressuresToProfilePacket(int profileIndex);
 };
 struct ReadProfilePacket : ProfilePacket
 {

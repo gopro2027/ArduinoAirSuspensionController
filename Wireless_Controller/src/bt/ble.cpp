@@ -102,13 +102,35 @@ class MyClientCallback : public BLEClientCallbacks
 {
     void onConnect(BLEClient *pclient)
     {
-        Serial.println("onConnect");
+        log_i("onConnect");
     }
 
     void onDisconnect(BLEClient *pclient)
     {
-        Serial.println("onDisconnect");
+        log_i("onDisconnect");
         disconnect();
+    }
+    void onPassKeyEntry(NimBLEConnInfo &connInfo)
+    {
+        log_i("onPassKeyEntry");
+        NimBLEDevice::injectPassKey(connInfo, BLE_PASSKEY);
+    }
+    void onConfirmPasskey(NimBLEConnInfo &connInfo, uint32_t pin)
+    {
+        log_i("The passkey YES/NO number: %" PRIu32 "\n", pin);
+        NimBLEDevice::injectConfirmPasskey(connInfo, true);
+    };
+    void onAuthenticationComplete(NimBLEConnInfo &connInfo)
+    {
+        log_i("On auth complete");
+        log_i("onAuthenticationComplete");
+        if (!connInfo.isEncrypted())
+        {
+            log_i("Encrypt connection failed - disconnecting\n");
+            /** Find the client with the connection handle provided in desc */
+            NimBLEDevice::getClientByHandle(connInfo.getConnHandle())->disconnect();
+            return;
+        }
     }
 };
 
@@ -121,6 +143,12 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
 
     pClient = BLEDevice::createClient();
     Serial.println(" - Created client");
+
+    // pClient->secureConnection(true);
+    // BLEDevice::setSecurityPasskey(BLE_PASSKEY);
+    // BLEDevice::setSecurityAuth(true, true, true);
+    // BLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
+    // log_i("Set passkey: %i", BLE_PASSKEY);
 
     pClient->setClientCallbacks(new MyClientCallback());
 
@@ -186,13 +214,9 @@ bool connectCharacteristic(BLERemoteService *pRemoteService, BLERemoteCharacteri
     if (l_BLERemoteChar == nullptr)
     {
         Serial.print("Failed to find one of the characteristics");
-        // Serial.print(l_BLERemoteChar->getUUID().toString().c_str());
         return false;
     }
-    // Serial.println(" - Found characteristic: " + String(l_BLERemoteChar->getUUID().toString().c_str()));
 
-    // if (l_BLERemoteChar->canNotify())
-    //     l_BLERemoteChar->registerForNotify(notifyCallback);
     if (l_BLERemoteChar->canNotify())
         l_BLERemoteChar->subscribe(true, notifyCallback, false);
 
@@ -209,6 +233,8 @@ void scan()
     // have detected a new device.  Specify that we want active scanning and start the
     // scan to run for 5 seconds.
     BLEScan *pBLEScan = BLEDevice::getScan();
+    BLEDevice::setSecurityPasskey(BLE_PASSKEY);
+    // BLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
 
     boolean anyFound = false;
 
@@ -232,6 +258,7 @@ void scan()
             }
             else
             {
+                // disconnect(); Todo test this later
                 showDialog("Error connecting!", lv_color_hex(0xFF0000), 30000);
             }
         }

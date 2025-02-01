@@ -51,6 +51,7 @@ extern bool sendProfileBT;
 void beginSaveData();
 void readProfile(byte profileIndex);
 void writeProfile(byte profileIndex);
+void savePressuresToProfile(byte profileIndex, float _WHEEL_FRONT_PASSENGER, float _WHEEL_REAR_PASSENGER, float _WHEEL_FRONT_DRIVER, float _WHEEL_REAR_DRIVER);
 bool getRiseOnStart();
 void setRiseOnStart(bool value);
 byte getBaseProfile();
