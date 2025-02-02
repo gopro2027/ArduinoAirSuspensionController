@@ -35,17 +35,17 @@ void hideList2()
 
 void showList2()
 {
+    lv_obj_remove_flag(loadButton, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(setButton, LV_OBJ_FLAG_HIDDEN);
+}
+
+void showPressures()
+{
     // show them all
     lv_obj_remove_flag(fp, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(rp, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(fd, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(rd, LV_OBJ_FLAG_HIDDEN);
-}
-
-void showPressures()
-{
-    lv_obj_remove_flag(loadButton, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_remove_flag(setButton, LV_OBJ_FLAG_HIDDEN);
 }
 
 static void event_handler(lv_event_t *e)
