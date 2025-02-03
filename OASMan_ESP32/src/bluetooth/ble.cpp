@@ -323,7 +323,7 @@ void runReceivedPacket(BTOasPacket *packet)
         // load profile then air up
         Serial.println("Calling air up quick!");
         readProfile(((AirupQuickPacket *)packet)->getProfileIndex());
-        airUp(true);
+        airUp(false); // typically this was true but im changing it to not be because now this is the main air up method on the controller :)
         break;
     case BTOasIdentifier::BASEPROFILE:
         setBaseProfile(((BaseProfilePacket *)packet)->getProfileIndex());
