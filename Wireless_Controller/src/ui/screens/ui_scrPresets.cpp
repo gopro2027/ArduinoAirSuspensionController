@@ -21,11 +21,19 @@ const int car_y_3 = car_y_2 - 4;
 const int car_y_4 = car_y_3 - 4;
 const int car_y_5 = car_y_4 - 4;
 
+SimpleRect fender1Offset = {40, 37, 72 - 40, 63 - 37};
+SimpleRect fender2Offset = {166, 35, 199 - 166, 60 - 35};
+
+// square 1: 40,37 -> 71, 63
+// square 2: 166,35 -> 198, 60
+
 void car_anim_func(lv_obj_t *obj, int32_t y)
 {
 
     lv_obj_set_y(obj, y);
-    lv_obj_move_foreground(scrPresets.wheels);
+    lv_obj_set_y(scrPresets.ww1, y + fender1Offset.y);
+    lv_obj_set_y(scrPresets.ww2, y + fender2Offset.y);
+    // lv_obj_move_foreground(scrPresets.wheels);
 }
 
 void animCarPreset(ScrPresets *scr, lv_coord_t end)
@@ -53,18 +61,40 @@ void ScrPresets::init()
     lv_image_set_src(this->rect_bg, &presets_bg);
     lv_obj_set_align(this->rect_bg, LV_ALIGN_TOP_MID);
 
-    // car
-    this->car = lv_image_create(this->scr);
-    lv_image_set_src(this->car, &img_car);
-    // lv_obj_set_align(this->car, LV_ALIGN_CENTER);
-    lv_obj_set_x(this->car, car_x);
-    lv_obj_set_y(this->car, car_y_1);
+    // wheel well 1
+    this->ww1 = lv_obj_create(this->scr);
+    lv_obj_remove_style_all(this->ww1);
+    lv_obj_get_style_border_width(this->ww1, 0);
+    lv_obj_set_size(this->ww1, fender1Offset.w, fender1Offset.h);
+    lv_obj_set_style_bg_color(this->ww1, lv_color_hex(0x0), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_remove_flag(this->ww1, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE)); /// Flags
+    lv_obj_set_style_bg_opa(this->ww1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_x(this->ww1, car_x + fender1Offset.x);
+    lv_obj_set_y(this->ww1, car_y_1 + fender1Offset.y);
+
+    // wheel well 2
+    this->ww2 = lv_obj_create(this->scr);
+    lv_obj_remove_style_all(this->ww2);
+    lv_obj_get_style_border_width(this->ww2, 0);
+    lv_obj_set_size(this->ww2, fender2Offset.w, fender2Offset.h);
+    lv_obj_set_style_bg_color(this->ww2, lv_color_hex(0x0), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_remove_flag(this->ww2, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE)); /// Flags
+    lv_obj_set_style_bg_opa(this->ww2, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_x(this->ww2, car_x + fender2Offset.x);
+    lv_obj_set_y(this->ww2, car_y_1 + fender2Offset.y);
 
     // wheels
     this->wheels = lv_image_create(this->scr);
     lv_image_set_src(this->wheels, &img_wheels);
     lv_obj_set_x(this->wheels, wheels_x);
     lv_obj_set_y(this->wheels, wheels_y);
+
+    // car
+    this->car = lv_image_create(this->scr);
+    lv_image_set_src(this->car, &img_car);
+    // lv_obj_set_align(this->car, LV_ALIGN_CENTER);
+    lv_obj_set_x(this->car, car_x);
+    lv_obj_set_y(this->car, car_y_1);
 
     // preset selector overlays
     this->btnPreset1 = lv_image_create(this->scr);

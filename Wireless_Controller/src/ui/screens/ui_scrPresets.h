@@ -10,6 +10,8 @@ class ScrPresets : public Scr
 public:
     lv_obj_t *panel;
     lv_obj_t *car;
+    lv_obj_t *ww1;
+    lv_obj_t *ww2;
     lv_obj_t *wheels;
     lv_obj_t *btnPreset1;
     lv_obj_t *btnPreset2;
