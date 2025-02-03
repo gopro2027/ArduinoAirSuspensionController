@@ -18,9 +18,10 @@ class Alert
 public:
     lv_obj_t *rect;
     lv_obj_t *text;
+    unsigned long expiry;
     Alert(Scr *scr);
-    void show(lv_color_t color, char *text);
-    void hide();
+    void show(lv_color_t color, char *text, unsigned long expiry);
+    void loop();
 };
 
 #endif

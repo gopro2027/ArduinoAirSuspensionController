@@ -4,21 +4,7 @@
 LV_IMG_DECLARE(home_bg);
 LV_IMG_DECLARE(navbar_home);
 
-ScrHome scrHome(navbar_home);
-
-void setupPressureLabel(ScrHome *scr, lv_obj_t **label, int x, int y, lv_align_t align)
-{
-    *label = lv_label_create(scr->scr);
-    lv_obj_set_style_text_color(*label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_width(*label, LV_SIZE_CONTENT);  /// 1
-    lv_obj_set_height(*label, LV_SIZE_CONTENT); /// 1
-    lv_obj_set_x(*label, x);
-    lv_obj_set_y(*label, y);
-    lv_obj_set_align(*label, align);
-    lv_label_set_text(*label, "0");
-
-    lv_obj_move_foreground(*label);
-}
+ScrHome scrHome(navbar_home, true);
 
 void ScrHome::init(void)
 {
@@ -30,15 +16,12 @@ void ScrHome::init(void)
     lv_image_set_src(this->icon_home_bg, &home_bg);
     lv_obj_center(this->icon_home_bg);
 
-    lv_obj_move_foreground(this->icon_navbar); // bring navbar to foreground
-
-    // air pressures at top
-    const int xPadding = 45;
-    setupPressureLabel(this, &this->ui_lblPressureFrontDriver, xPadding, 10, LV_ALIGN_TOP_LEFT);
-    setupPressureLabel(this, &this->ui_lblPressureRearDriver, xPadding, 40, LV_ALIGN_TOP_LEFT);
-    setupPressureLabel(this, &this->ui_lblPressureFrontPassenger, -xPadding, 10, LV_ALIGN_TOP_RIGHT);
-    setupPressureLabel(this, &this->ui_lblPressureRearPassenger, -xPadding, 40, LV_ALIGN_TOP_RIGHT);
-    setupPressureLabel(this, &this->ui_lblPressureTank, 0, 10, LV_ALIGN_TOP_MID);
+    lv_obj_move_foreground(this->icon_navbar);                  // bring navbar to foreground
+    lv_obj_move_foreground(this->ui_lblPressureFrontPassenger); // pressures to foreground front
+    lv_obj_move_foreground(this->ui_lblPressureRearPassenger);  // pressures to foreground front
+    lv_obj_move_foreground(this->ui_lblPressureFrontDriver);    // pressures to foreground front
+    lv_obj_move_foreground(this->ui_lblPressureRearDriver);     // pressures to foreground front
+    lv_obj_move_foreground(this->ui_lblPressureTank);           // pressures to foreground front
 }
 
 // down = true when just pressed, false when just released
@@ -148,14 +131,4 @@ void ScrHome::runTouchInput(SimplePoint pos, bool down)
 void ScrHome::loop()
 {
     Scr::loop();
-    this->updatePressureValues();
-}
-
-void ScrHome::updatePressureValues()
-{
-    lv_label_set_text_fmt(this->ui_lblPressureFrontPassenger, "%u", currentPressures[WHEEL_FRONT_PASSENGER]);
-    lv_label_set_text_fmt(this->ui_lblPressureRearPassenger, "%u", currentPressures[WHEEL_REAR_PASSENGER]);
-    lv_label_set_text_fmt(this->ui_lblPressureFrontDriver, "%u", currentPressures[WHEEL_FRONT_DRIVER]);
-    lv_label_set_text_fmt(this->ui_lblPressureRearDriver, "%u", currentPressures[WHEEL_REAR_DRIVER]);
-    lv_label_set_text_fmt(this->ui_lblPressureTank, "%u", currentPressures[_TANK_INDEX]);
 }

@@ -9,6 +9,8 @@ class ScrPresets : public Scr
 
 public:
     lv_obj_t *panel;
+    lv_obj_t *car;
+    lv_obj_t *wheels;
     lv_obj_t *btnPreset1;
     lv_obj_t *btnPreset2;
     lv_obj_t *btnPreset3;
@@ -17,6 +19,8 @@ public:
     void init();
     void runTouchInput(SimplePoint pos, bool down);
     void loop();
+    void setPreset(int num);
+    void hideSelectors();
 };
 
 extern ScrPresets scrPresets;

@@ -106,6 +106,7 @@ void loop()
 
         // screen code
         screenLoop();
+        dialogLoop();
     }
 
     // Update the ticker

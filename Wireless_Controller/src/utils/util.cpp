@@ -36,9 +36,22 @@ SimpleRect navbarbtn_home = {0, 291, 80, 29};
 SimpleRect navbarbtn_presets = {80, 291, 80, 29};
 SimpleRect navbarbtn_settings = {160, 291, 80, 29};
 
+// presets buttons
+CenterRect ctr_preset_1 = {48 / 2 + 48 * 0, 182, 48, 48};
+CenterRect ctr_preset_2 = {48 / 2 + 48 * 1, 182, 48, 48};
+CenterRect ctr_preset_3 = {48 / 2 + 48 * 2, 182, 48, 48};
+CenterRect ctr_preset_4 = {48 / 2 + 48 * 3, 182, 48, 48};
+CenterRect ctr_preset_5 = {48 / 2 + 48 * 4, 182, 48, 48};
+
+// preset save and load
+SimpleRect preset_save = {18, 235, 91 - 18, 251 - 235};
+SimpleRect preset_load = {110, 225, 221 - 110, 256 - 225};
+
 int currentPressures[5];
 int profilePressures[5][4];
 bool profileUpdated = false;
+
+Scr *screens[3];
 
 #pragma region bluetooth packets
 
@@ -104,21 +117,22 @@ void sendRestPacket(BTOasPacket *packet)
 unsigned long dialogEndTime = 0;
 lv_color_t dialogColor;
 char dialogText[50];
+bool updateDialog = false;
 void showDialog(char *text, lv_color_t color, unsigned long durationMS)
 {
     strncpy(dialogText, text, sizeof(dialogText));
     memcpy(&dialogColor, &color, sizeof(lv_color_t));
     dialogEndTime = millis() + durationMS;
+    updateDialog = true;
 }
-void dialogLoop(Scr *scr)
+void dialogLoop()
 {
-    if (dialogEndTime < millis())
+    if (updateDialog)
     {
-        scr->alert->hide();
-    }
-    else
-    {
-        scr->alert->show(dialogColor, dialogText);
+        screens[0]->alert->show(dialogColor, dialogText, dialogEndTime);
+        screens[1]->alert->show(dialogColor, dialogText, dialogEndTime);
+        screens[2]->alert->show(dialogColor, dialogText, dialogEndTime);
+        updateDialog = false;
     }
 }
 

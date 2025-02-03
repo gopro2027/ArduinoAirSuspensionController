@@ -6,9 +6,24 @@
 #include "Scr.h"
 #include "ui/ui.h" // sketchy backwards import may break in the future
 
-Scr::Scr(lv_image_dsc_t navbarImage)
+void setupPressureLabel(Scr *scr, lv_obj_t **label, int x, int y, lv_align_t align)
+{
+    *label = lv_label_create(scr->scr);
+    lv_obj_set_style_text_color(*label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_width(*label, LV_SIZE_CONTENT);  /// 1
+    lv_obj_set_height(*label, LV_SIZE_CONTENT); /// 1
+    lv_obj_set_x(*label, x);
+    lv_obj_set_y(*label, y);
+    lv_obj_set_align(*label, align);
+    lv_label_set_text(*label, "0");
+
+    lv_obj_move_foreground(*label);
+}
+
+Scr::Scr(lv_image_dsc_t navbarImage, bool showPressures)
 {
     this->navbarImage = navbarImage;
+    this->showPressures = showPressures;
 }
 
 void Scr::init()
@@ -32,6 +47,17 @@ void Scr::init()
     lv_obj_set_align(this->icon_navbar, LV_ALIGN_BOTTOM_MID);
 
     this->alert = new Alert(this);
+
+    if (this->showPressures)
+    {
+        // air pressures at top
+        const int xPadding = 45;
+        setupPressureLabel(this, &this->ui_lblPressureFrontDriver, xPadding, 10, LV_ALIGN_TOP_LEFT);
+        setupPressureLabel(this, &this->ui_lblPressureRearDriver, xPadding, 40, LV_ALIGN_TOP_LEFT);
+        setupPressureLabel(this, &this->ui_lblPressureFrontPassenger, -xPadding, 10, LV_ALIGN_TOP_RIGHT);
+        setupPressureLabel(this, &this->ui_lblPressureRearPassenger, -xPadding, 40, LV_ALIGN_TOP_RIGHT);
+        setupPressureLabel(this, &this->ui_lblPressureTank, 0, 10, LV_ALIGN_TOP_MID);
+    }
 }
 
 // down = true when just pressed, false when just released
@@ -53,7 +79,6 @@ void Scr::runTouchInput(SimplePoint pos, bool down)
 
 void Scr::loop()
 {
-    dialogLoop(this);
     SimplePoint tp = {touchX(), touchY()};
     if (isJustPressed())
     {
@@ -62,5 +87,28 @@ void Scr::loop()
     if (isJustReleased())
     {
         this->runTouchInput(tp, false);
+    }
+    this->updatePressureValues();
+    this->alert->loop();
+}
+
+void updatePressure(Scr *scr, lv_obj_t *obj, int index)
+{
+    if (scr->prevPressures[index] != currentPressures[index])
+    {
+        lv_label_set_text_fmt(obj, "%u", currentPressures[index]);
+        scr->prevPressures[index] = currentPressures[index];
+    }
+}
+
+void Scr::updatePressureValues()
+{
+    if (this->showPressures)
+    {
+        updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER);
+        updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER);
+        updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER);
+        updatePressure(this, this->ui_lblPressureRearDriver, WHEEL_REAR_DRIVER);
+        updatePressure(this, this->ui_lblPressureTank, _TANK_INDEX);
     }
 }

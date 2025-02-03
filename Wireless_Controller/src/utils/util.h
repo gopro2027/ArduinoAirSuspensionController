@@ -55,6 +55,17 @@ extern SimpleRect navbarbtn_home;
 extern SimpleRect navbarbtn_presets;
 extern SimpleRect navbarbtn_settings;
 
+// presets buttons
+extern CenterRect ctr_preset_1;
+extern CenterRect ctr_preset_2;
+extern CenterRect ctr_preset_3;
+extern CenterRect ctr_preset_4;
+extern CenterRect ctr_preset_5;
+
+// preset save and load
+extern SimpleRect preset_save;
+extern SimpleRect preset_load;
+
 extern int currentPressures[5];
 extern int profilePressures[5][4];
 extern bool profileUpdated;
@@ -65,10 +76,12 @@ void sendRestPacket(BTOasPacket *packet);
 void setupRestSemaphore();
 
 void showDialog(char *text, lv_color_t color = {0, 0, 0xff}, unsigned long durationMS = 5000);
-void dialogLoop(Scr *scr);
+void dialogLoop();
 
 unsigned int getValveControlValue();
 void setValveBit(int bit);
 void closeValves();
+
+extern Scr *screens[3];
 
 #endif

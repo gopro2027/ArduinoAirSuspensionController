@@ -20,31 +20,34 @@ Alert::Alert(Scr *scr)
     lv_obj_set_style_bg_color(this->rect, lv_color_hex(esp_random()), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_opa(this->rect, LV_OPA_50, 0);
 
-    this->hide();
+    loop(); // hide it
+
+    this->expiry = 0;
 }
 
-void Alert::hide()
+void Alert::loop()
 {
-    if (!lv_obj_has_flag(this->text, LV_OBJ_FLAG_HIDDEN))
+    if (millis() > expiry)
     {
-        lv_obj_add_flag(this->text, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(this->rect, LV_OBJ_FLAG_HIDDEN);
+        if (!lv_obj_has_flag(this->text, LV_OBJ_FLAG_HIDDEN))
+        {
+            lv_obj_add_flag(this->text, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(this->rect, LV_OBJ_FLAG_HIDDEN);
+        }
     }
 }
 
-void Alert::show(lv_color_t color, char *text)
+void Alert::show(lv_color_t color, char *text, unsigned long expiry)
 {
 
-    if (strcmp(lv_label_get_text(this->text), text) != 0)
-    {
+    this->expiry = expiry;
 
-        lv_obj_remove_flag(this->text, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_remove_flag(this->rect, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(this->text, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(this->rect, LV_OBJ_FLAG_HIDDEN);
 
-        lv_obj_move_foreground(this->rect);
-        lv_obj_move_foreground(this->text);
+    lv_obj_move_foreground(this->rect);
+    lv_obj_move_foreground(this->text);
 
-        lv_obj_set_style_bg_color(this->rect, color, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_label_set_text_fmt(this->text, "%s", text);
-    }
+    lv_obj_set_style_bg_color(this->rect, color, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_label_set_text_fmt(this->text, "%s", text);
 }
