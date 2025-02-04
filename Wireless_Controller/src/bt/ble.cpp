@@ -32,26 +32,8 @@ BLERemoteCharacteristic *pRemoteChar_Status;
 BLERemoteCharacteristic *pRemoteChar_Rest;
 BLERemoteCharacteristic *pRemoteChar_ValveControl;
 
-static SemaphoreHandle_t disconnectMutex;
-void setupDisconnectSemaphore()
-{
-    disconnectMutex = xSemaphoreCreateMutex();
-}
-void waitDisconnectSemaphore()
-{
-    while (xSemaphoreTake(disconnectMutex, 1) != pdTRUE)
-    {
-        delay(1);
-    }
-}
-void giveDisconnectSemaphore()
-{
-    xSemaphoreGive(disconnectMutex);
-}
-
 void disconnect()
 {
-    waitDisconnectSemaphore();
     connected = false;
 
     // cheeky call to tell it to restart scanning again i guess?
@@ -70,7 +52,6 @@ void disconnect()
     }
 
     log_i("disconnected... restarting");
-    giveDisconnectSemaphore();
 }
 
 // Callback function for Notify function
@@ -313,7 +294,6 @@ void scan()
 }
 void ble_setup()
 {
-    setupDisconnectSemaphore();
     Serial.println("Starting Arduino BLE Client application...");
     BLEDevice::init("OASMan_Controller");
 
@@ -322,8 +302,6 @@ void ble_setup()
 
 void ble_loop()
 {
-
-    waitDisconnectSemaphore();
 
     static unsigned int previousValveInt = 0;
 
@@ -375,6 +353,4 @@ void ble_loop()
     }
 
     delay(10);
-
-    giveDisconnectSemaphore();
 }
