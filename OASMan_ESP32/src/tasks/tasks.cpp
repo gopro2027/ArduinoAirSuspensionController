@@ -120,7 +120,7 @@ void setup_tasks()
     xTaskCreate(
         task_screen,
         "OLED",
-        512 * 3,
+        512 * 4,
         NULL,
         1000,
         NULL);

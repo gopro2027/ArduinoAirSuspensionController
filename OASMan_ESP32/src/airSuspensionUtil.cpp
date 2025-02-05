@@ -169,7 +169,7 @@ void accessoryWireSetup()
 {
     accessoryWire = accessoryInput;
     outputKeepESPAlive = outputKeepAlivePin;
-    outputKeepESPAlive->digitalWrite(HIGH);
+    outputKeepESPAlive->digitalWrite(LOW);
     lastTimeLive = millis();
 }
 const int accessoryWireSampleSize = 5;
