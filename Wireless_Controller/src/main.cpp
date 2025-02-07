@@ -22,8 +22,20 @@ void OnRotateClicked(lv_event_t *e)
     lv_display_set_rotation(disp, rotation);
 }
 lv_obj_t *burnInRect;
-void startBurnInFix();
+boolean doBurnInFix = false;
+void startBurnInFix()
+{
+    smartdisplay_lcd_set_backlight(0.01f);
+    doBurnInFix = true;
+    lv_obj_remove_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
+}
 
+void stopBurnInFix()
+{
+    smartdisplay_lcd_set_backlight(0.8f);
+    doBurnInFix = false;
+    lv_obj_add_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
+}
 void setup()
 {
 #ifdef ARDUINO_USB_CDC_ON_BOOT
@@ -58,28 +70,13 @@ void setup()
     lv_obj_set_style_bg_color(burnInRect, lv_color_hex(esp_random()), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_add_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
 
-    startBurnInFix();
+    // startBurnInFix();
+    stopBurnInFix();
 
     setup_touchscreen_hook();
 }
 
 auto lv_last_tick = millis();
-
-boolean doBurnInFix = false;
-void startBurnInFix()
-{
-    smartdisplay_lcd_set_backlight(0.01f);
-    doBurnInFix = true;
-    lv_obj_remove_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
-}
-
-void stopBurnInFix()
-{
-    smartdisplay_lcd_set_backlight(0.8f);
-    doBurnInFix = false;
-    lv_obj_add_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
-}
-
 void loop()
 {
     auto const now = millis();
