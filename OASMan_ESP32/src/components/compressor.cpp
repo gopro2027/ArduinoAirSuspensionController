@@ -47,6 +47,16 @@ float Compressor::getTankPressure()
 #endif
 }
 
+bool Compressor::isFrozen()
+{
+    return (millis() < this->pauseExecutionUntilTime);
+}
+
+bool Compressor::isOn()
+{
+    return this->s_trigger.isOpen();
+}
+
 void Compressor::loop()
 {
     unsigned long curTime = millis();
@@ -99,7 +109,7 @@ void Compressor::loop()
     }
 
     // part 2 of freeze check code. pause execution if our pauseExecutionUntilTime is in the future
-    if (curTime < this->pauseExecutionUntilTime)
+    if (this->isFrozen())
     {
         this->s_trigger.close();
         return;

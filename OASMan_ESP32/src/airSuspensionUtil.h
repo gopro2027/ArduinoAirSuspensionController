@@ -36,5 +36,6 @@ void accessoryWireSetup();
 void accessoryWireLoop();
 void notifyKeepAlive();
 bool isVehicleOn();
+bool isKeepAliveTimerExpired();
 
 #endif

@@ -48,6 +48,7 @@ SimpleRect preset_save = {18, 235, 91 - 18, 251 - 235};
 SimpleRect preset_load = {110, 225, 221 - 110, 256 - 225};
 
 int currentPressures[5];
+uint16_t statusBittset = 0;
 int profilePressures[5][4];
 bool profileUpdated = false;
 
@@ -151,3 +152,17 @@ void closeValves()
     valveControlValue = 0;
 }
 #pragma endregion
+
+void setupPressureLabel(Scr *scr, lv_obj_t **label, int x, int y, lv_align_t align, const char *defaultText)
+{
+    *label = lv_label_create(scr->scr);
+    lv_obj_set_style_text_color(*label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_width(*label, LV_SIZE_CONTENT);  /// 1
+    lv_obj_set_height(*label, LV_SIZE_CONTENT); /// 1
+    lv_obj_set_x(*label, x);
+    lv_obj_set_y(*label, y);
+    lv_obj_set_align(*label, align);
+    lv_label_set_text(*label, defaultText);
+
+    lv_obj_move_foreground(*label);
+}

@@ -31,6 +31,15 @@ enum BTOasIdentifier
     PRESETREPORT = 1,
 };
 
+enum StatusPacketBittset
+{
+    COMPRESSOR_FROZEN,
+    COMPRESSOR_STATUS_ON,
+    ACC_STATUS_ON,
+    TIMER_STATUS_EXPIRED,
+    CLOCK,
+};
+
 union BTOasValue32
 {
     uint32_t i;
@@ -66,7 +75,7 @@ void runReceivedPacket(BTOasPacket *packet);
 // Outgoing packets
 struct StatusPacket : BTOasPacket
 {
-    StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE);
+    StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint16_t bittset);
 };
 
 struct PresetPacket : BTOasPacket

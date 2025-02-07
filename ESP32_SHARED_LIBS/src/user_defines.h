@@ -48,7 +48,7 @@
 #define pressureInputTank new InputType(32, INPUT)   // D32/A0, pressure sensor
 
 /* Accessory Wire */
-#define ENABLE_ACCESSORY_WIRE_FUNCTIONALITY false
+#define ENABLE_ACCESSORY_WIRE_FUNCTIONALITY true
 #define outputKeepAlivePin new InputType(12, OUTPUT) // D12, output high while accessory input is low to keep input on. Should always output high while accessory is on. Output low when accessory is low to turn off system.
 #define accessoryInput new InputType(14, INPUT)      // D14, digital in high or low. 0 = acc on, 1 = acc off (it's on a pullup resistor)
 #define SYSTEM_SHUTOFF_TIME_MS 15 * 60 * 1000        // 15 minutes
@@ -81,7 +81,7 @@
 #define ADS_MOCK_BYPASS true
 
 /* For testing purposes: mock tank pressure to 200psi */
-#define TANK_PRESSURE_MOCK false
+#define TANK_PRESSURE_MOCK true
 
 /* Values for pressure calculations */
 #define pressuretransducerRunningVoltage 5.0f                                                                                                    // most pressure sensors run on 5v

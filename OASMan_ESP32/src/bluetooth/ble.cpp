@@ -281,7 +281,28 @@ void ble_notify()
 
     if (runNotifications)
     {
-        StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getPressure(), getWheel(WHEEL_REAR_PASSENGER)->getPressure(), getWheel(WHEEL_FRONT_DRIVER)->getPressure(), getWheel(WHEEL_REAR_DRIVER)->getPressure(), getCompressor()->getTankPressure());
+        uint16_t statusBittset = 0;
+        if (millis() < getCompressor()->isFrozen())
+        {
+            statusBittset = statusBittset | (1 << COMPRESSOR_FROZEN);
+        }
+        if (getCompressor()->isOn())
+        {
+            statusBittset = statusBittset | (1 << COMPRESSOR_STATUS_ON);
+        }
+        if (isVehicleOn())
+        {
+            statusBittset = statusBittset | (1 << ACC_STATUS_ON);
+        }
+        if (isKeepAliveTimerExpired())
+        {
+            statusBittset = statusBittset | (1 << TIMER_STATUS_EXPIRED);
+        }
+        if (timeChange)
+        {
+            statusBittset = statusBittset | (1 << CLOCK);
+        }
+        StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getPressure(), getWheel(WHEEL_REAR_PASSENGER)->getPressure(), getWheel(WHEEL_FRONT_DRIVER)->getPressure(), getWheel(WHEEL_REAR_DRIVER)->getPressure(), getCompressor()->getTankPressure(), statusBittset);
 
         statusCharacteristic->setValue(statusPacket.tx(), BTOAS_PACKET_SIZE);
         statusCharacteristic->notify(); // we don't do this on the other characteristic thats why it has to be read manually TODO: THIS CRASHED AT ONE POINT????????? HAVING TROUBLE READING THE BLE VALUE. TRY RUNNING IN VERBOSE MODE AND SET IT TO IDLE FOR A LONG TIME TO DEBUG

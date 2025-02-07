@@ -67,6 +67,7 @@ extern SimpleRect preset_save;
 extern SimpleRect preset_load;
 
 extern int currentPressures[5];
+extern uint16_t statusBittset;
 extern int profilePressures[5][4];
 extern bool profileUpdated;
 
@@ -81,6 +82,8 @@ void dialogLoop();
 unsigned int getValveControlValue();
 void setValveBit(int bit);
 void closeValves();
+
+void setupPressureLabel(Scr *scr, lv_obj_t **label, int x, int y, lv_align_t align, const char *defaultText);
 
 extern Scr *screens[3];
 

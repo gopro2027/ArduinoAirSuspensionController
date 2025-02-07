@@ -30,6 +30,8 @@ public:
     float readPressure();
     float getTankPressure();
     InputType *getReadPin();
+    bool isFrozen();
+    bool isOn();
 };
 extern Compressor *getCompressor();           // defined in airSuspensionUtil.h
 extern bool isVehicleOn();                    // defined in airSuspensionUtil.h
