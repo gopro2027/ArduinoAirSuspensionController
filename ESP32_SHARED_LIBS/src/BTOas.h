@@ -28,7 +28,9 @@ enum BTOasIdentifier
     ASSIGNRECEPIENT = 15,
     MESSAGE = 16,
     SAVECURRENTPRESSURESTOPROFILE = 17,
-    PRESETREPORT = 1,
+    PRESETREPORT = 18,
+    MAINTAINPRESSURE = 19,
+    FALLONSHUTDOWN = 20
 };
 
 enum StatusPacketBittset
@@ -36,8 +38,12 @@ enum StatusPacketBittset
     COMPRESSOR_FROZEN,
     COMPRESSOR_STATUS_ON,
     ACC_STATUS_ON,
-    TIMER_STATUS_EXPIRED,
-    CLOCK,
+    TIMER_STATUS_EXPIRED, // not really used
+    CLOCK,                // not really used
+    MAINTAIN_PRESSURE,
+    RISE_ON_START,
+    AIR_OUT_ON_SHUTOFF,
+
 };
 
 union BTOasValue32
@@ -81,6 +87,7 @@ struct StatusPacket : BTOasPacket
 struct PresetPacket : BTOasPacket
 {
     PresetPacket(int profileIndex, float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE);
+    int getProfile();
 };
 
 struct AssignRecipientPacket : BTOasPacket
@@ -150,9 +157,17 @@ struct RiseOnStartPacket : BooleanPacket
 {
     RiseOnStartPacket(bool enable);
 };
+struct FallOnShutdownPacket : BooleanPacket
+{
+    FallOnShutdownPacket(bool enable);
+};
 struct RaiseOnPressureSetPacket : BooleanPacket
 {
     RaiseOnPressureSetPacket(bool enable);
+};
+struct MaintainPressurePacket : BooleanPacket
+{
+    MaintainPressurePacket(bool enable);
 };
 struct RebootPacket : BTOasPacket
 {

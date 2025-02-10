@@ -284,23 +284,35 @@ void ble_notify()
         uint16_t statusBittset = 0;
         if (millis() < getCompressor()->isFrozen())
         {
-            statusBittset = statusBittset | (1 << COMPRESSOR_FROZEN);
+            statusBittset = statusBittset | (1 << StatusPacketBittset::COMPRESSOR_FROZEN);
         }
         if (getCompressor()->isOn())
         {
-            statusBittset = statusBittset | (1 << COMPRESSOR_STATUS_ON);
+            statusBittset = statusBittset | (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON);
         }
         if (isVehicleOn())
         {
-            statusBittset = statusBittset | (1 << ACC_STATUS_ON);
+            statusBittset = statusBittset | (1 << StatusPacketBittset::ACC_STATUS_ON);
         }
         if (isKeepAliveTimerExpired())
         {
-            statusBittset = statusBittset | (1 << TIMER_STATUS_EXPIRED);
+            statusBittset = statusBittset | (1 << StatusPacketBittset::TIMER_STATUS_EXPIRED);
         }
         if (timeChange)
         {
-            statusBittset = statusBittset | (1 << CLOCK);
+            statusBittset = statusBittset | (1 << StatusPacketBittset::CLOCK);
+        }
+        if (getRiseOnStart())
+        {
+            statusBittset = statusBittset | (1 << StatusPacketBittset::RISE_ON_START);
+        }
+        if (getMaintainPressure())
+        {
+            statusBittset = statusBittset | (1 << StatusPacketBittset::MAINTAIN_PRESSURE);
+        }
+        if (getAirOutOnShutoff())
+        {
+            statusBittset = statusBittset | (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF);
         }
         StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getPressure(), getWheel(WHEEL_REAR_PASSENGER)->getPressure(), getWheel(WHEEL_FRONT_DRIVER)->getPressure(), getWheel(WHEEL_REAR_DRIVER)->getPressure(), getCompressor()->getTankPressure(), statusBittset);
 
@@ -372,6 +384,9 @@ void runReceivedPacket(BTOasPacket *packet)
     case BTOasIdentifier::RISEONSTART:
         setRiseOnStart(((RiseOnStartPacket *)packet)->getBoolean());
         break;
+    case BTOasIdentifier::FALLONSHUTDOWN:
+        setAirOutOnShutoff(((FallOnShutdownPacket *)packet)->getBoolean());
+        break;
     case BTOasIdentifier::RAISEONPRESSURESET:
         setRaiseOnPressureSet(((RaiseOnPressureSetPacket *)packet)->getBoolean());
         break;
@@ -388,12 +403,15 @@ void runReceivedPacket(BTOasPacket *packet)
         break;
     case BTOasIdentifier::PRESETREPORT:
     {
-        readProfile(((PresetPacket *)packet)->args16()[4].i);
-        PresetPacket presetPacket(((PresetPacket *)packet)->args16()[4].i, currentProfile[WHEEL_FRONT_PASSENGER], currentProfile[WHEEL_REAR_PASSENGER], currentProfile[WHEEL_FRONT_DRIVER], currentProfile[WHEEL_REAR_DRIVER]);
+        readProfile(((PresetPacket *)packet)->getProfile());
+        PresetPacket presetPacket(((PresetPacket *)packet)->getProfile(), currentProfile[WHEEL_FRONT_PASSENGER], currentProfile[WHEEL_REAR_PASSENGER], currentProfile[WHEEL_FRONT_DRIVER], currentProfile[WHEEL_REAR_DRIVER]);
 
         restCharacteristic->setValue(presetPacket.tx(), BTOAS_PACKET_SIZE);
         restCharacteristic->notify();
         break;
     }
+    case BTOasIdentifier::MAINTAINPRESSURE:
+        setMaintainPressure(((MaintainPressurePacket *)packet)->getBoolean());
+        break;
     }
 }

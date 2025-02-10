@@ -3,26 +3,68 @@
 LV_IMG_DECLARE(navbar_settings);
 ScrSettings scrSettings(navbar_settings, false);
 
+const char *test = "";
 void ScrSettings::init()
 {
     Scr::init();
 
+    this->optionsContainer = lv_obj_create(this->scr);
+    lv_obj_remove_style_all(this->optionsContainer);
+    lv_obj_set_size(this->optionsContainer, DISPLAY_WIDTH, DISPLAY_HEIGHT - NAVBAR_HEIGHT);
+    lv_obj_align(this->optionsContainer, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_set_layout(this->optionsContainer, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(this->optionsContainer, LV_FLEX_FLOW_COLUMN);
+
+    OptionValue defaultCharVal;
+    defaultCharVal.STRING = test; //{.STRING = test}
+    new Option(this->optionsContainer, OptionType::HEADER, "Status", {.INT = 0});
+    this->ui_s1 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Compressor Frozen:", defaultCharVal);
+    this->ui_s2 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Compressor Status:", defaultCharVal);
+    this->ui_s3 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "ACC Status:", defaultCharVal);
+    // this->ui_s4 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Timer Expired:", defaultCharVal);
+    // this->ui_s5 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Clock:", defaultCharVal);
+    new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
+    new Option(this->optionsContainer, OptionType::HEADER, "Basic settings", {.INT = 0});
+    this->ui_maintainprssure = new Option(this->optionsContainer, OptionType::ON_OFF, "Maintain pressure", defaultCharVal, [](void *data)
+                                          { 
+                MaintainPressurePacket pkt(((bool *)data)[0]);
+                sendRestPacket(&pkt);
+                log_i("Pressed maintain pressure %i", ((bool *)data)[0]); });
+    this->ui_riseonstart = new Option(this->optionsContainer, OptionType::ON_OFF, "Rise on start", defaultCharVal, [](void *data)
+                                      { 
+                RiseOnStartPacket pkt(((bool *)data)[0]);
+                sendRestPacket(&pkt);
+                log_i("Pressed riseonstart %i", ((bool *)data)[0]); });
+    this->ui_airoutonshutoff = new Option(this->optionsContainer, OptionType::ON_OFF, "Fall on shutdown", defaultCharVal, [](void *data)
+                                          { 
+                FallOnShutdownPacket pkt(((bool *)data)[0]);
+                sendRestPacket(&pkt);
+                log_i("Pressed fallonshutdown %i", ((bool *)data)[0]); });
+
+    // add space before qr code
+    new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
     // To use third party libraries, enable the define in lv_conf.h: #define LV_USE_QRCODE 1
-    this->ui_qrcode = lv_qrcode_create(scrSettings.scr);
+    this->ui_qrcode = lv_qrcode_create(this->optionsContainer);
     lv_qrcode_set_size(this->ui_qrcode, 100);
     lv_qrcode_set_dark_color(this->ui_qrcode, lv_color_black());
     lv_qrcode_set_light_color(this->ui_qrcode, lv_color_white());
     const char *qr_data = "https://github.com/gopro2027/ArduinoAirSuspensionController";
     lv_qrcode_update(this->ui_qrcode, qr_data, strlen(qr_data));
-    lv_obj_center(this->ui_qrcode);
+    // lv_obj_set_align(this->ui_qrcode, LV_ALIGN_TOP_MID);
+    lv_obj_set_x(this->ui_qrcode, DISPLAY_WIDTH / 2 - 50);
+    //  lv_obj_center(this->ui_qrcode);
+    //  lv_obj_set_y(this->ui_qrcode, DISPLAY_HEIGHT - 10);
 
     // test values
 
-    setupPressureLabel(this, &this->ui_s1, 0, 15 * 0, LV_ALIGN_TOP_MID, "0");
-    setupPressureLabel(this, &this->ui_s2, 0, 15 * 1, LV_ALIGN_TOP_MID, "0");
-    setupPressureLabel(this, &this->ui_s3, 0, 15 * 2, LV_ALIGN_TOP_MID, "0");
-    setupPressureLabel(this, &this->ui_s4, 0, 15 * 3, LV_ALIGN_TOP_MID, "0");
-    setupPressureLabel(this, &this->ui_s5, 0, 15 * 4, LV_ALIGN_TOP_MID, "0");
+    // setupPressureLabel(this->optionsContainer, &this->ui_s1, 0, 15 * 0, LV_ALIGN_TOP_MID, "0");
+    // setupPressureLabel(this->optionsContainer, &this->ui_s2, 0, 15 * 1, LV_ALIGN_TOP_MID, "0");
+    // setupPressureLabel(this->optionsContainer, &this->ui_s3, 0, 15 * 2, LV_ALIGN_TOP_MID, "0");
+    // setupPressureLabel(this->optionsContainer, &this->ui_s4, 0, 15 * 3, LV_ALIGN_TOP_MID, "0");
+    // setupPressureLabel(this->optionsContainer, &this->ui_s5, 0, 15 * 4, LV_ALIGN_TOP_MID, "0");
+
+    // add space at end of list
+    new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
 }
 
 void ScrSettings::runTouchInput(SimplePoint pos, bool down)
@@ -33,9 +75,12 @@ void ScrSettings::runTouchInput(SimplePoint pos, bool down)
 void ScrSettings::loop()
 {
     Scr::loop();
-    lv_label_set_text_fmt(this->ui_s1, "Compressor Frozen: %s", statusBittset & (1 << COMPRESSOR_FROZEN) ? "Yes" : "No");
-    lv_label_set_text_fmt(this->ui_s2, "Compressor Status: %s", statusBittset & (1 << COMPRESSOR_STATUS_ON) ? "On" : "Off");
-    lv_label_set_text_fmt(this->ui_s3, "ACC Status: %s", statusBittset & (1 << ACC_STATUS_ON) ? "On" : "Off");
-    lv_label_set_text_fmt(this->ui_s4, "Timer Expired: %s", statusBittset & (1 << TIMER_STATUS_EXPIRED) ? "Yes" : "No");
-    lv_label_set_text_fmt(this->ui_s5, "Clock: %s", statusBittset & (1 << CLOCK) ? "1" : "0");
+    this->ui_s1->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_FROZEN) ? "Yes" : "No");
+    this->ui_s2->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON) ? "On" : "Off");
+    this->ui_s3->setRightHandText(statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON) ? "On" : "Off");
+    // this->ui_s4->setRightHandText(statusBittset & (1 << TIMER_STATUS_EXPIRED) ? "Yes" : "No");
+    // this->ui_s5->setRightHandText(statusBittset & (1 << CLOCK) ? "1" : "0");
+    this->ui_riseonstart->setBooleanValue(statusBittset & (1 << StatusPacketBittset::RISE_ON_START));
+    this->ui_maintainprssure->setBooleanValue(statusBittset & (1 << StatusPacketBittset::MAINTAIN_PRESSURE));
+    this->ui_airoutonshutoff->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF));
 }

@@ -81,7 +81,8 @@
 			"lv_tick.h": "c",
 			"btoas.h": "c",
 			"user_defines.h": "c",
-			"alert.h": "c"
+			"alert.h": "c",
+			"option.h": "c"
 		}
 	}
 }

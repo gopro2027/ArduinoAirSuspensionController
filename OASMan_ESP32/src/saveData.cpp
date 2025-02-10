@@ -81,6 +81,8 @@ bool sendProfileBT = false;
 void beginSaveData()
 {
     _SaveData.riseOnStart.load("riseOnStart", false);
+    _SaveData.maintainPressure.load("maintainPress", false);
+    _SaveData.airOutOnShutoff.load("airOutOnShutoff", false);
     _SaveData.baseProfile.load("baseProfile", 0);
     _SaveData.raiseOnPressure.load("raiseOnPressure", false);
     _SaveData.internalReboot.load("internalReboot", false);
@@ -137,6 +139,30 @@ void setRiseOnStart(bool value)
     if (getRiseOnStart() != value)
     {
         _SaveData.riseOnStart.set(value);
+    }
+}
+
+bool getMaintainPressure()
+{
+    return _SaveData.maintainPressure.get().i;
+}
+void setMaintainPressure(bool value)
+{
+    if (getMaintainPressure() != value)
+    {
+        _SaveData.maintainPressure.set(value);
+    }
+}
+
+bool getAirOutOnShutoff()
+{
+    return _SaveData.airOutOnShutoff.get().i;
+}
+void setAirOutOnShutoff(bool value)
+{
+    if (getAirOutOnShutoff() != value)
+    {
+        _SaveData.airOutOnShutoff.set(value);
     }
 }
 

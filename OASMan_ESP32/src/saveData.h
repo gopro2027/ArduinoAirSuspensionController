@@ -41,6 +41,8 @@ public:
     Preferencable baseProfile;     // byte
     Preferencable raiseOnPressure; // byte
     Preferencable internalReboot;  // byte
+    Preferencable maintainPressure;
+    Preferencable airOutOnShutoff;
     Profile profile[MAX_PROFILE_COUNT];
 };
 
@@ -54,6 +56,10 @@ void writeProfile(byte profileIndex);
 void savePressuresToProfile(byte profileIndex, float _WHEEL_FRONT_PASSENGER, float _WHEEL_REAR_PASSENGER, float _WHEEL_FRONT_DRIVER, float _WHEEL_REAR_DRIVER);
 bool getRiseOnStart();
 void setRiseOnStart(bool value);
+bool getMaintainPressure();
+void setMaintainPressure(bool value);
+bool getAirOutOnShutoff();
+void setAirOutOnShutoff(bool value);
 byte getBaseProfile();
 void setBaseProfile(byte value);
 bool getRaiseOnPressureSet();

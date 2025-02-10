@@ -52,7 +52,7 @@ StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REA
 
 PresetPacket::PresetPacket(int profileIndex, float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE)
 {
-    this->cmd = STATUSREPORT;
+    this->cmd = PRESETREPORT;
     // 0 through 4
     this->args16()[WHEEL_FRONT_PASSENGER].i = WHEEL_FRONT_PASSENGER_PRESSURE; // getWheel(WHEEL_FRONT_PASSENGER)->getPressure();
     this->args16()[WHEEL_REAR_PASSENGER].i = WHEEL_REAR_PASSENGER_PRESSURE;   // getWheel(WHEEL_REAR_PASSENGER)->getPressure();
@@ -63,6 +63,11 @@ PresetPacket::PresetPacket(int profileIndex, float WHEEL_FRONT_PASSENGER_PRESSUR
     // doesn't matter for this because it is generic broadcasted for everyone
     this->sender = 0;
     this->recipient = 0;
+}
+
+int PresetPacket::getProfile()
+{
+    return this->args16()[4].i;
 }
 
 IdlePacket::IdlePacket()
@@ -136,9 +141,19 @@ RiseOnStartPacket::RiseOnStartPacket(bool enable)
     this->cmd = RISEONSTART;
     this->args32()[0].i = enable;
 }
+FallOnShutdownPacket::FallOnShutdownPacket(bool enable)
+{
+    this->cmd = FALLONSHUTDOWN;
+    this->args32()[0].i = enable;
+}
 RaiseOnPressureSetPacket::RaiseOnPressureSetPacket(bool enable)
 {
     this->cmd = RAISEONPRESSURESET;
+    this->args32()[0].i = enable;
+}
+MaintainPressurePacket::MaintainPressurePacket(bool enable)
+{
+    this->cmd = MAINTAINPRESSURE;
     this->args32()[0].i = enable;
 }
 RebootPacket::RebootPacket()

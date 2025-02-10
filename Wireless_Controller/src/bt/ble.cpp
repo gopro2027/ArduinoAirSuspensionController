@@ -89,17 +89,21 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
     }
     if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Rest.toString())
     {
+        BTOasPacket *pkt = (BTOasPacket *)pData;
+        log_i("Rest packet received: %i", pkt->cmd);
+        switch (pkt->cmd)
+        {
+        case PRESETREPORT:
+            PresetPacket *profile = (PresetPacket *)pkt;
 
-        PresetPacket *profile = (PresetPacket *)pData;
+            profilePressures[profile->getProfile()][WHEEL_FRONT_PASSENGER] = profile->args16()[WHEEL_FRONT_PASSENGER].i;
+            profilePressures[profile->getProfile()][WHEEL_REAR_PASSENGER] = profile->args16()[WHEEL_REAR_PASSENGER].i;
+            profilePressures[profile->getProfile()][WHEEL_FRONT_DRIVER] = profile->args16()[WHEEL_FRONT_DRIVER].i;
+            profilePressures[profile->getProfile()][WHEEL_REAR_DRIVER] = profile->args16()[WHEEL_REAR_DRIVER].i;
 
-        profilePressures[profile->args16()[4].i][WHEEL_FRONT_PASSENGER] = profile->args16()[WHEEL_FRONT_PASSENGER].i;
-        profilePressures[profile->args16()[4].i][WHEEL_REAR_PASSENGER] = profile->args16()[WHEEL_REAR_PASSENGER].i;
-        profilePressures[profile->args16()[4].i][WHEEL_FRONT_DRIVER] = profile->args16()[WHEEL_FRONT_DRIVER].i;
-        profilePressures[profile->args16()[4].i][WHEEL_REAR_DRIVER] = profile->args16()[WHEEL_REAR_DRIVER].i;
-
-        log_i("Preset received: %i %i", profile->args16()[4].i, profilePressures[profile->args16()[4].i][WHEEL_FRONT_PASSENGER]);
-
-        profileUpdated = true; // this should be a semaphore and just call it directly but fuck it
+            profileUpdated = true; // this should be a semaphore and just call it directly but fuck it
+            break;
+        }
     }
 }
 

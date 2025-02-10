@@ -38,28 +38,31 @@ void Scr::init()
     {
         // air pressures at top
         const int xPadding = 45;
-        setupPressureLabel(this, &this->ui_lblPressureFrontDriver, xPadding, 10, LV_ALIGN_TOP_LEFT, "0");
-        setupPressureLabel(this, &this->ui_lblPressureRearDriver, xPadding, 40, LV_ALIGN_TOP_LEFT, "0");
-        setupPressureLabel(this, &this->ui_lblPressureFrontPassenger, -xPadding, 10, LV_ALIGN_TOP_RIGHT, "0");
-        setupPressureLabel(this, &this->ui_lblPressureRearPassenger, -xPadding, 40, LV_ALIGN_TOP_RIGHT, "0");
-        setupPressureLabel(this, &this->ui_lblPressureTank, 0, 10, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureFrontDriver, xPadding, 10, LV_ALIGN_TOP_LEFT, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureRearDriver, xPadding, 40, LV_ALIGN_TOP_LEFT, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureFrontPassenger, -xPadding, 10, LV_ALIGN_TOP_RIGHT, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureRearPassenger, -xPadding, 40, LV_ALIGN_TOP_RIGHT, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureTank, 0, 10, LV_ALIGN_TOP_MID, "0");
     }
 }
 
 // down = true when just pressed, false when just released
 void Scr::runTouchInput(SimplePoint pos, bool down)
 {
-    if (sr_contains(navbarbtn_home, pos))
+    if (down)
     {
-        changeScreen(SCREEN_HOME);
-    }
-    if (sr_contains(navbarbtn_presets, pos))
-    {
-        changeScreen(SCREEN_PRESETS);
-    }
-    if (sr_contains(navbarbtn_settings, pos))
-    {
-        changeScreen(SCREEN_SETTINGS);
+        if (sr_contains(navbarbtn_home, pos))
+        {
+            changeScreen(SCREEN_HOME);
+        }
+        if (sr_contains(navbarbtn_presets, pos))
+        {
+            changeScreen(SCREEN_PRESETS);
+        }
+        if (sr_contains(navbarbtn_settings, pos))
+        {
+            changeScreen(SCREEN_SETTINGS);
+        }
     }
 }
 

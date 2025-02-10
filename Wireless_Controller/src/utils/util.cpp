@@ -153,9 +153,9 @@ void closeValves()
 }
 #pragma endregion
 
-void setupPressureLabel(Scr *scr, lv_obj_t **label, int x, int y, lv_align_t align, const char *defaultText)
+void setupPressureLabel(lv_obj_t *parent, lv_obj_t **label, int x, int y, lv_align_t align, const char *defaultText)
 {
-    *label = lv_label_create(scr->scr);
+    *label = lv_label_create(parent);
     lv_obj_set_style_text_color(*label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_width(*label, LV_SIZE_CONTENT);  /// 1
     lv_obj_set_height(*label, LV_SIZE_CONTENT); /// 1
