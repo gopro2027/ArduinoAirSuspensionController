@@ -1,5 +1,6 @@
 // OASMan ESP32
 
+#include <Preferences.h> // have to include it here or it isn't found in the shared libs
 #include <user_defines.h>
 #include "input_type.h"
 #include "components/wheel.h"

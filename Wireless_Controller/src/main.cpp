@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <Preferences.h> // have to include it here or it isn't found in the shared libs
 
 #include <esp32_smartdisplay.h>
 #include <ui/ui.h>
