@@ -18,9 +18,10 @@ void endNamespace()
 
 void Preferencable::load(char *name, int defaultValue)
 {
-    strncpy(this->name, name, sizeof(this->name));
+    memset(this->name, 0, sizeof(this->name));     // make sure it's 0 terminated
+    strncpy(this->name, name, sizeof(this->name)); // cap it to 14 with 0 termination at end
     openNamespace(SAVEDATA_NAMESPACE, true);
-    if (preferences.isKey(name) == false)
+    if (preferences.isKey(this->name) == false)
     {
         endNamespace();
         openNamespace(SAVEDATA_NAMESPACE, false); // reopen as read write
