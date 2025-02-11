@@ -45,6 +45,7 @@ void disconnect()
     if (pClient != nullptr)
     {
         showDialog("Disconnected!", lv_color_hex(0xFF0000), 30000);
+        pClient->cancelConnect();
         pClient->disconnect();
         // pClient->end();
         BLEDevice::deleteClient(pClient);

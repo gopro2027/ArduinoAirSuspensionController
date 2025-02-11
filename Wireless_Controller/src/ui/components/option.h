@@ -49,7 +49,7 @@ public:
     OptionType type;
     bool boolValue = false;
 
-    Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue value, option_event_cb_t _event_cb = NULL, void *_extraEventClickData = NULL);
+    Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue value = VALUE_ZERO, option_event_cb_t _event_cb = NULL, void *_extraEventClickData = NULL);
     void setRightHandText(const char *str);
     void setBooleanValue(bool value, bool netSend = false);
     void indentText(int extraX = 0);

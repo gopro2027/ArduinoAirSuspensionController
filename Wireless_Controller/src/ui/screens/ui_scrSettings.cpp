@@ -17,14 +17,14 @@ void ScrSettings::init()
 
     OptionValue defaultCharVal;
     defaultCharVal.STRING = test; //{.STRING = test}
-    new Option(this->optionsContainer, OptionType::HEADER, "Status", {.INT = 0});
+    new Option(this->optionsContainer, OptionType::HEADER, "Status");
     this->ui_s1 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Compressor Frozen:", defaultCharVal);
     this->ui_s2 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Compressor Status:", defaultCharVal);
     this->ui_s3 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "ACC Status:", defaultCharVal);
     // this->ui_s4 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Timer Expired:", defaultCharVal);
     // this->ui_s5 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Clock:", defaultCharVal);
-    new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
-    new Option(this->optionsContainer, OptionType::HEADER, "Basic settings", {.INT = 0});
+    new Option(this->optionsContainer, OptionType::SPACE, "");
+    new Option(this->optionsContainer, OptionType::HEADER, "Basic settings");
     this->ui_maintainprssure = new Option(this->optionsContainer, OptionType::ON_OFF, "Maintain pressure", defaultCharVal, [](void *data)
                                           { 
                 MaintainPressurePacket pkt(((bool)data));
@@ -41,10 +41,13 @@ void ScrSettings::init()
                 sendRestPacket(&pkt);
                 log_i("Pressed fallonshutdown %i", ((bool)data)); });
 
-    const char *textarr[3] = {"A", "B", "C"};
-    option_event_cb_t radcb = [](void *data)
-    { log_i("Pressed radio option %i", data); };
-    new RadioOption(this->optionsContainer, textarr, 3, radcb, 1);
+    new Option(this->optionsContainer, OptionType::SPACE, "");
+    new Option(this->optionsContainer, OptionType::HEADER, "Units");
+
+    const char *unitsRadioText[2] = {"PSI", "Bar"}; // aligns with the enum UNITS_MODE
+    option_event_cb_t unitsRadioCB = [](void *data)
+    { setUnits((int)data); };
+    new RadioOption(this->optionsContainer, unitsRadioText, 2, unitsRadioCB, getUnits());
 
     // add space before qr code
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);

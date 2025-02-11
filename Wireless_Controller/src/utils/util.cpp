@@ -166,3 +166,21 @@ void setupPressureLabel(lv_obj_t *parent, lv_obj_t **label, int x, int y, lv_ali
 
     lv_obj_move_foreground(*label);
 }
+
+SaveData _SaveData;
+void beginSaveData()
+{
+    _SaveData.unitsMode.load("units", UNITS_MODE::PSI);
+}
+
+int getUnits()
+{
+    return _SaveData.unitsMode.get().i;
+}
+void setUnits(int value)
+{
+    if (getUnits() != value)
+    {
+        _SaveData.unitsMode.set(value);
+    }
+}

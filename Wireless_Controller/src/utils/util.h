@@ -2,6 +2,7 @@
 #define util_h
 
 #include <BTOas.h>
+#include <preferencable.h>
 #include "ui/components/Scr.h"
 #include "lvgl.h"
 
@@ -87,4 +88,20 @@ void setupPressureLabel(lv_obj_t *parent, lv_obj_t **label, int x, int y, lv_ali
 
 extern Scr *screens[3];
 
+enum UNITS_MODE
+{
+    PSI,
+    BAR
+};
+
+class SaveData
+{
+public:
+    Preferencable unitsMode;
+};
+
+extern SaveData _SaveData;
+void beginSaveData();
+int getUnits();
+void setUnits(int value);
 #endif

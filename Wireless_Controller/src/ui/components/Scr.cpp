@@ -85,7 +85,19 @@ void updatePressure(Scr *scr, lv_obj_t *obj, int index)
 {
     if (scr->prevPressures[index] != currentPressures[index])
     {
-        lv_label_set_text_fmt(obj, "%u", currentPressures[index]);
+        if (getUnits() == UNITS_MODE::PSI)
+        {
+            lv_label_set_text_fmt(obj, "%u", currentPressures[index]);
+        }
+        else
+        { // UNITS_MODE::BAR but %f doesn't work
+
+            float val = currentPressures[index] / 14.5038f;
+            val = val * 100; // move decimal over 2
+            int b = (int)val % 100;
+            int a = ((int)val - b) / 100;
+            lv_label_set_text_fmt(obj, "%i.%i", a, b);
+        }
         scr->prevPressures[index] = currentPressures[index];
     }
 }

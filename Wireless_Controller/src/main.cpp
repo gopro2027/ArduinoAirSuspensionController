@@ -52,6 +52,8 @@ void setup()
 
     setupRestSemaphore();
 
+    beginSaveData();
+
     setup_tasks();
 
     smartdisplay_init();
