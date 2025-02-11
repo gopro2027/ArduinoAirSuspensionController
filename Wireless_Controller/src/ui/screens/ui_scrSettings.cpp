@@ -27,19 +27,24 @@ void ScrSettings::init()
     new Option(this->optionsContainer, OptionType::HEADER, "Basic settings", {.INT = 0});
     this->ui_maintainprssure = new Option(this->optionsContainer, OptionType::ON_OFF, "Maintain pressure", defaultCharVal, [](void *data)
                                           { 
-                MaintainPressurePacket pkt(((bool *)data)[0]);
+                MaintainPressurePacket pkt(((bool)data));
                 sendRestPacket(&pkt);
-                log_i("Pressed maintain pressure %i", ((bool *)data)[0]); });
+                log_i("Pressed maintain pressure %i", ((bool)data)); });
     this->ui_riseonstart = new Option(this->optionsContainer, OptionType::ON_OFF, "Rise on start", defaultCharVal, [](void *data)
                                       { 
-                RiseOnStartPacket pkt(((bool *)data)[0]);
+                RiseOnStartPacket pkt(((bool)data));
                 sendRestPacket(&pkt);
-                log_i("Pressed riseonstart %i", ((bool *)data)[0]); });
+                log_i("Pressed riseonstart %i", ((bool)data)); });
     this->ui_airoutonshutoff = new Option(this->optionsContainer, OptionType::ON_OFF, "Fall on shutdown", defaultCharVal, [](void *data)
                                           { 
-                FallOnShutdownPacket pkt(((bool *)data)[0]);
+                FallOnShutdownPacket pkt(((bool)data));
                 sendRestPacket(&pkt);
-                log_i("Pressed fallonshutdown %i", ((bool *)data)[0]); });
+                log_i("Pressed fallonshutdown %i", ((bool)data)); });
+
+    const char *textarr[3] = {"A", "B", "C"};
+    option_event_cb_t radcb = [](void *data)
+    { log_i("Pressed radio option %i", data); };
+    new RadioOption(this->optionsContainer, textarr, 3, radcb, 1);
 
     // add space before qr code
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);

@@ -3,6 +3,8 @@ lv_style_t stylepointer;
 static bool styleCreated = false;
 LV_IMG_DECLARE(imgOn);
 LV_IMG_DECLARE(imgOff);
+LV_IMG_DECLARE(radioOn);
+LV_IMG_DECLARE(radioOff);
 #define OPTION_ROW_HEIGHT 36
 void createStyle()
 {
@@ -41,9 +43,9 @@ void ui_clicked_imgOn(lv_event_t *e)
         option->setBooleanValue(false, true);
     }
 }
-void Option::indentText()
+void Option::indentText(int extraX)
 {
-    lv_obj_set_x(this->text, 32);
+    lv_obj_set_x(this->text, 32 + extraX);
     this->bar = lv_obj_create(this->root);
     lv_obj_remove_style_all(this->bar);
     lv_obj_set_style_bg_opa(this->bar, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -51,9 +53,21 @@ void Option::indentText()
     lv_obj_set_style_bg_color(this->bar, lv_color_hex(0xBB86FC), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_x(this->bar, 16);
 }
-Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue value, option_event_cb_t _event_cb)
+void ui_clicked_radioOff(lv_event_t *e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    lv_obj_t *target = (lv_obj_t *)lv_event_get_target(e);
+    Option *option = (Option *)lv_event_get_user_data(e);
+    if (event_code == LV_EVENT_CLICKED)
+    {
+        option->event_cb(option);
+    }
+}
+Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue value, option_event_cb_t _event_cb, void *_extraEventClickData)
 {
     this->event_cb = NULL;
+    this->extraEventClickData = _extraEventClickData;
+
     this->type = type;
     createStyle();
     this->root = lv_obj_create(parent);
@@ -97,7 +111,30 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_obj_add_flag(this->ui_imgOff, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
         lv_obj_add_event_cb(this->ui_imgOff, ui_clicked_imgOff, LV_EVENT_ALL, this);
 
+        // set it to true so that when it sets to false it actually runs the code (hacky fix)
+        this->boolValue = true;
         this->setBooleanValue(false);
+    }
+    else if (type == OptionType::RADIO)
+    {
+        this->indentText(16 + 16);
+
+        this->ui_imgOn = lv_image_create(this->root);
+        lv_image_set_src(this->ui_imgOn, &radioOn);
+        lv_obj_set_align(this->ui_imgOn, LV_ALIGN_LEFT_MID);
+        lv_obj_set_x(this->ui_imgOn, 32);
+
+        this->ui_imgOff = lv_image_create(this->root);
+        lv_image_set_src(this->ui_imgOff, &radioOff);
+        lv_obj_set_align(this->ui_imgOff, LV_ALIGN_LEFT_MID);
+        lv_obj_set_x(this->ui_imgOff, 32);
+
+        // lv_obj_add_flag(this->ui_imgOn, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
+        // lv_obj_add_event_cb(this->ui_imgOn, ui_clicked_imgOn, LV_EVENT_ALL, this);
+
+        // only want the off image to be clickable
+        lv_obj_add_flag(this->ui_imgOff, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
+        lv_obj_add_event_cb(this->ui_imgOff, ui_clicked_radioOff, LV_EVENT_ALL, this);
     }
 
     if (_event_cb != NULL)
@@ -110,7 +147,10 @@ void Option::setRightHandText(const char *text)
 {
     if (this->type == OptionType::TEXT_WITH_VALUE)
     {
-        lv_label_set_text(this->rightHandObj, text);
+        if (strcmp(lv_label_get_text(this->rightHandObj), text) != 0)
+        {
+            lv_label_set_text(this->rightHandObj, text);
+        }
         // lv_label_set_text_fmt(this->rightHandObj, "Compressor Frozen: %s", statusBittset & (1 << COMPRESSOR_FROZEN) ? "Yes" : "No");
     }
 }
@@ -118,6 +158,27 @@ void Option::setRightHandText(const char *text)
 void Option::setBooleanValue(bool value, bool netSend)
 {
     if (this->type == OptionType::ON_OFF)
+    {
+        if (value != this->boolValue)
+        {
+            this->boolValue = value;
+            if (value)
+            {
+                lv_obj_add_flag(this->ui_imgOff, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_remove_flag(this->ui_imgOn, LV_OBJ_FLAG_HIDDEN);
+            }
+            else
+            {
+                lv_obj_add_flag(this->ui_imgOn, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_remove_flag(this->ui_imgOff, LV_OBJ_FLAG_HIDDEN);
+            }
+            if (netSend && this->event_cb != NULL)
+            {
+                this->event_cb((void *)value);
+            }
+        }
+    }
+    else if (this->type == OptionType::RADIO)
     {
         if (value)
         {
@@ -128,10 +189,6 @@ void Option::setBooleanValue(bool value, bool netSend)
         {
             lv_obj_add_flag(this->ui_imgOn, LV_OBJ_FLAG_HIDDEN);
             lv_obj_remove_flag(this->ui_imgOff, LV_OBJ_FLAG_HIDDEN);
-        }
-        if (netSend && this->event_cb != NULL)
-        {
-            this->event_cb(&value);
         }
     }
 }

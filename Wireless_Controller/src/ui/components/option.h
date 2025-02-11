@@ -33,6 +33,7 @@ union OptionValue
     const char *STRING;
 };
 const OptionValue VALUE_ZERO = {.INT = 0};
+const OptionValue VALUE_ONE = {.INT = 1};
 
 class Option
 {
@@ -43,13 +44,15 @@ public:
     lv_obj_t *rightHandObj;
     lv_obj_t *ui_imgOn;
     lv_obj_t *ui_imgOff;
+    void *extraEventClickData;
     option_event_cb_t event_cb;
     OptionType type;
+    bool boolValue = false;
 
-    Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue value, option_event_cb_t _event_cb = NULL);
+    Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue value, option_event_cb_t _event_cb = NULL, void *_extraEventClickData = NULL);
     void setRightHandText(const char *str);
     void setBooleanValue(bool value, bool netSend = false);
-    void indentText();
+    void indentText(int extraX = 0);
 };
 
 #endif

@@ -82,7 +82,9 @@
 			"btoas.h": "c",
 			"user_defines.h": "c",
 			"alert.h": "c",
-			"option.h": "c"
+			"option.h": "c",
+			"bitset": "cpp",
+			"regex": "cpp"
 		}
 	}
 }

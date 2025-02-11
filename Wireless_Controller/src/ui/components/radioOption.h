@@ -17,16 +17,18 @@
 
 class Scr;
 
-template <size_t N>
 class RadioOption
 {
 public:
-    Option options[N];
+    Option **options;
+    int size;
     int selected;
+    option_event_cb_t onSelect;
 
-    RadioOption(lv_obj_t *parent, const char **text, option_event_cb_t _event_cb, int _selected = 0);
+    RadioOption(lv_obj_t *parent, const char **text, int _size, option_event_cb_t _event_cb, int _selected = 0);
     void setSelectedOption(int _selected);
     int getSelectedOption();
+    int getOptionIndex(Option *option);
 };
 
 #endif

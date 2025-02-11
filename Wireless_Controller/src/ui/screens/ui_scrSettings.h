@@ -3,6 +3,7 @@
 
 #include "ui/components/Scr.h"
 #include "ui/components/option.h"
+#include "ui/components/radioOption.h"
 class ScrSettings : public Scr
 {
     using Scr::Scr;
