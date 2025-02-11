@@ -22,7 +22,7 @@ Please see the annotated diagram for a full breakdown<br>
 If you intend to utilize the built in lcd screen, follow these instructions:<br>
 Solder the 4 wires and jst connector properly so that the wire names match the board.<br>
 Loosely snug down the screen to the manifold, emphasis on loosely! Just barely snug. The screens are very fragile, particularly on the lower 2 corners of the screen.<br>
-Once the screen is positioned, put some dabs of super blue on the inside nuts to hold it in place.<br>
+Once the screen is positioned, put some dabs of super glue on the inside nuts to hold it in place.<br>
 Please note that when using the screen you will need to slightly bend back some of the mosfets in order to not have them touch the screen.<br>
 <br>
 
