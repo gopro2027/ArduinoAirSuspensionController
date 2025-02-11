@@ -5,8 +5,10 @@
 #include <preferencable.h>
 #include "ui/components/Scr.h"
 #include "lvgl.h"
+#include "ui/components/option.h"
 
 class Scr;
+class Option;
 
 struct SimplePoint
 {
@@ -104,4 +106,8 @@ extern SaveData _SaveData;
 void beginSaveData();
 int getUnits();
 void setUnits(int value);
+
+void initKB();
+void ta_event_cb(lv_event_t *e);
+bool isKeyboardHidden();
 #endif

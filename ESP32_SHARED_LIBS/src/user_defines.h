@@ -8,12 +8,14 @@
 #define MAX_PRESSURE_SAFETY 200
 
 /* Bags generally do not like to sit at exactly 0psi. Please choose which pressure is desired for air out */
+/* Not really used anymore, just using presets! Only kept here as legacy for og app */
 #define AIR_OUT_PRESSURE_PSI 30
 
 /* Set to false if you don't plan to ever use the PS3 controller. MAC address can be left alone. Instructions for controller at https://github.com/gopro2027/ArduinoAirSuspensionController/tree/main/PS3_Controller_Tool */
 #define ENABLE_PS3_CONTROLLER_SUPPORT true
 
 /* This is the private passcode you need to access your system from the app. Set the same value in the app settings after launching the app. */
+/* This is legacy bt, and ota but ota is only enabled when chosen so we can leave it as is */
 #define PASSWORD "12345678"
 
 // pass key is 6 digits, add zeros to the beginning of it to make it 6 in total
@@ -31,7 +33,7 @@
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 
 /* By default the android app is set up for 4 profiles */
-#define MAX_PROFILE_COUNT 4
+#define MAX_PROFILE_COUNT 5
 
 /* These are the pin numbers used for our manifold solenoids */
 #define solenoidFrontPassengerInPin new InputType(33, OUTPUT)

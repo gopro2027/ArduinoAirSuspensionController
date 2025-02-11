@@ -184,3 +184,68 @@ void setUnits(int value)
         _SaveData.unitsMode.set(value);
     }
 }
+
+static lv_obj_t *kb = NULL;
+void closeKeyboard()
+{
+    if (kb != NULL)
+    {
+        lv_keyboard_set_textarea(kb, NULL);
+        // lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_del(kb);
+        kb = NULL;
+    }
+}
+static void kb_event_cb(lv_event_t *e)
+{
+
+    lv_event_code_t event_code = lv_event_get_code(e);
+    lv_obj_t *target = (lv_obj_t *)lv_event_get_target(e);
+    Option *option = (Option *)lv_event_get_user_data(e);
+    if (event_code == LV_EVENT_CANCEL)
+    {
+        // lv_obj_set_height(cont, LV_VER_RES);
+        // lv_obj_del(kb);
+        // kb = NULL;
+        closeKeyboard();
+    }
+    if (event_code == LV_EVENT_READY)
+    {
+        if (option != NULL)
+        {
+            Serial.println(lv_textarea_get_text(option->rightHandObj));
+        }
+        closeKeyboard();
+    }
+}
+void initKB(Option *option)
+{
+    closeKeyboard();
+    kb = lv_keyboard_create(lv_scr_act());
+    // lv_obj_set_height(cont, LV_VER_RES / 2);
+    lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_NUMBER);
+    lv_obj_add_event_cb(kb, kb_event_cb, LV_EVENT_ALL, option);
+}
+
+void ta_event_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *ta = (lv_obj_t *)lv_event_get_target(e);
+    Option *option = (Option *)lv_event_get_user_data(e);
+    if (code == LV_EVENT_FOCUSED)
+    {
+        initKB(option);
+        lv_keyboard_set_textarea(kb, ta);
+        // lv_obj_clear_flag(kb, LV_OBJ_FLAG_HIDDEN);
+        //  lv_obj_move_foreground(kb);
+    }
+    if (code == LV_EVENT_DEFOCUSED)
+    {
+        closeKeyboard();
+    }
+}
+
+bool isKeyboardHidden()
+{
+    return kb == NULL; // lv_obj_has_flag(kb, LV_OBJ_FLAG_HIDDEN);
+}

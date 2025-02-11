@@ -51,17 +51,20 @@ void Scr::runTouchInput(SimplePoint pos, bool down)
 {
     if (down)
     {
-        if (sr_contains(navbarbtn_home, pos))
+        if (isKeyboardHidden())
         {
-            changeScreen(SCREEN_HOME);
-        }
-        if (sr_contains(navbarbtn_presets, pos))
-        {
-            changeScreen(SCREEN_PRESETS);
-        }
-        if (sr_contains(navbarbtn_settings, pos))
-        {
-            changeScreen(SCREEN_SETTINGS);
+            if (sr_contains(navbarbtn_home, pos))
+            {
+                changeScreen(SCREEN_HOME);
+            }
+            if (sr_contains(navbarbtn_presets, pos))
+            {
+                changeScreen(SCREEN_PRESETS);
+            }
+            if (sr_contains(navbarbtn_settings, pos))
+            {
+                changeScreen(SCREEN_SETTINGS);
+            }
         }
     }
 }

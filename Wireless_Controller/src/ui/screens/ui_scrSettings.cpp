@@ -49,10 +49,34 @@ void ScrSettings::init()
     { setUnits((int)data); };
     new RadioOption(this->optionsContainer, unitsRadioText, 2, unitsRadioCB, getUnits());
 
+    new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
+    new Option(this->optionsContainer, OptionType::HEADER, "Config");
+    new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Safety Max PSI" /*"MAX_PRESSURE_SAFETY"*/, {.INT = 200}, [](void *data)
+               { log_i("Pressed %i", (data)); });
+    new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Passkey" /*"BLE_PASSKEY"*/, {.INT = 202777}, [](void *data)
+               { log_i("Pressed %i", (data)); });
+    new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Shutoff Time MS" /*"SYSTEM_SHUTOFF_TIME_MS"*/, {.INT = 15 * 60 * 1000}, [](void *data)
+               { log_i("Pressed %i", (data)); });
+    new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Compressor On PSI" /*"COMPRESSOR_ON_BELOW_PSI"*/, {.INT = 140}, [](void *data)
+               { log_i("Pressed %i", (data)); });
+    new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Compressor Off PSI" /*"COMPRESSOR_MAX_PSI"*/, {.INT = 180}, [](void *data)
+               { log_i("Pressed %i", (data)); });
+    new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Pressure Sensor Rating PSI" /*"pressuretransducermaxPSI"*/, {.INT = 232}, [](void *data)
+               { log_i("Pressed %i", (data)); });
+
     // add space before qr code
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
+
+    lv_obj_t *qrCodeParent = lv_obj_create(this->optionsContainer);
+    lv_obj_remove_style_all(qrCodeParent);
+    // lv_obj_set_style_bg_opa(qrCodeParent, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_size(qrCodeParent, DISPLAY_WIDTH, 100);
+    // lv_obj_set_style_bg_color(qrCodeParent, lv_color_hex(0xBB86FC), LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_x(qrCodeParent, DISPLAY_WIDTH - 100 / 2);
+    // lv_obj_set_align(qrCodeParent, LV_ALIGN_TOP_MID);
+
     // To use third party libraries, enable the define in lv_conf.h: #define LV_USE_QRCODE 1
-    this->ui_qrcode = lv_qrcode_create(this->optionsContainer);
+    this->ui_qrcode = lv_qrcode_create(qrCodeParent);
     lv_qrcode_set_size(this->ui_qrcode, 100);
     lv_qrcode_set_dark_color(this->ui_qrcode, lv_color_black());
     lv_qrcode_set_light_color(this->ui_qrcode, lv_color_white());

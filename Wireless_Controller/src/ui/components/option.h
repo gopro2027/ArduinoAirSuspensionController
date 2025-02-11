@@ -23,7 +23,8 @@ enum OptionType
     SPACE,
     HEADER,
     ON_OFF,
-    RADIO
+    RADIO,
+    KEYBOARD_INPUT_NUMBER
 };
 
 union OptionValue
