@@ -156,10 +156,12 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
 
         // lv_textarea_set_cursor_hidden(ta, true);
         // lv_obj_set_event_cb(this->rightHandObj, ta_event_handler);
-        lv_obj_set_style_text_color(this->rightHandObj, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT | LV_PART_SELECTED | LV_PART_ITEMS);
-        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(0xBB86FC), LV_PART_MAIN | LV_STATE_DEFAULT);
+
+        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(0xBB86FC), LV_PART_MAIN | LV_STATE_DEFAULT);     // bg
+        lv_obj_set_style_border_color(this->rightHandObj, lv_color_hex(0x5A4673), LV_PART_MAIN | LV_STATE_DEFAULT); // border
+
         lv_obj_set_style_radius(this->rightHandObj, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_border_width(this->rightHandObj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+        // lv_obj_set_style_border_width(this->rightHandObj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
         lv_obj_set_width(this->rightHandObj, textAreaWidth);
         lv_obj_set_x(this->rightHandObj, -MARGIN);

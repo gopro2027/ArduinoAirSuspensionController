@@ -225,6 +225,8 @@ void initKB(Option *option)
     // lv_obj_set_height(cont, LV_VER_RES / 2);
     lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_NUMBER);
     lv_obj_add_event_cb(kb, kb_event_cb, LV_EVENT_ALL, option);
+    lv_obj_set_style_bg_color(kb, lv_color_hex(0x5A4673), LV_PART_MAIN | LV_STATE_DEFAULT); // lines in between buttons
+    lv_obj_set_style_bg_color(kb, lv_color_hex(0xBB86FC), LV_PART_ITEMS);                   // buttons
 }
 
 void ta_event_cb(lv_event_t *e)

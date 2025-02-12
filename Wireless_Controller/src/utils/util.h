@@ -107,7 +107,6 @@ void beginSaveData();
 int getUnits();
 void setUnits(int value);
 
-void initKB();
 void ta_event_cb(lv_event_t *e);
 bool isKeyboardHidden();
 #endif
