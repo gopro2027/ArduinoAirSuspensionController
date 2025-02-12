@@ -204,6 +204,14 @@ void closeKeyboard()
         kb = NULL;
     }
 }
+void defocus(Option *option)
+{
+    lv_obj_send_event(option->root, LV_EVENT_FOCUSED, NULL);
+    lv_obj_send_event(option->rightHandObj, LV_EVENT_DEFOCUSED, NULL);
+    lv_obj_remove_state(option->rightHandObj, LV_STATE_FOCUSED);
+    lv_group_focus_obj(option->root);
+    // lv_group_focus_prev(lv_obj_get_group(option->root));
+}
 static void kb_event_cb(lv_event_t *e)
 {
 
@@ -215,12 +223,18 @@ static void kb_event_cb(lv_event_t *e)
         // lv_obj_set_height(cont, LV_VER_RES);
         // lv_obj_del(kb);
         // kb = NULL;
+        if (option != NULL)
+        {
+            defocus(option);
+        }
+
         closeKeyboard();
     }
     if (event_code == LV_EVENT_READY)
     {
         if (option != NULL)
         {
+            defocus(option);
             Serial.println(lv_textarea_get_text(option->rightHandObj));
             option->event_cb((void *)atoi(lv_textarea_get_text(option->rightHandObj)));
         }
@@ -234,8 +248,10 @@ void initKB(Option *option)
     // lv_obj_set_height(cont, LV_VER_RES / 2);
     lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_NUMBER);
     lv_obj_add_event_cb(kb, kb_event_cb, LV_EVENT_ALL, option);
-    lv_obj_set_style_bg_color(kb, lv_color_hex(0x5A4673), LV_PART_MAIN | LV_STATE_DEFAULT); // lines in between buttons
-    lv_obj_set_style_bg_color(kb, lv_color_hex(0xBB86FC), LV_PART_ITEMS);                   // buttons
+    lv_obj_set_style_bg_color(kb, lv_color_hex(0x5A4673), LV_PART_MAIN | LV_STATE_DEFAULT);  // lines in between buttons
+    lv_obj_set_style_bg_color(kb, lv_color_hex(0xBB86FC), LV_PART_ITEMS | LV_STATE_DEFAULT); // buttons
+    lv_obj_set_style_bg_color(kb, lv_color_hex(0xBB86FC), LV_PART_ITEMS | LV_STATE_CHECKED); // buttons (keyboard and checkmark)
+    lv_obj_set_style_bg_color(kb, lv_color_hex(0x9C4DCC), LV_PART_ITEMS | LV_STATE_FOCUSED); // When pressing down on the buttons
 }
 
 void ta_event_cb(lv_event_t *e)
