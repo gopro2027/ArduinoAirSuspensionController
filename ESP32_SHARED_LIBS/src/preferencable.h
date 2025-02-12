@@ -6,8 +6,8 @@
 
 union PreferencableValue
 {
-    int i;
-    float f;
+    uint64_t i;
+    double d;
 };
 
 class Preferencable
@@ -16,10 +16,10 @@ class Preferencable
 public:
     char name[15]; // 15 is max len. Note for future devs: I didn't add any code to make sure it is 0 terminated so be careful how you choose a name i guess
     PreferencableValue value;
-    void load(char *name, int defaultValue);
-    void set(int val);
-    void loadFloat(char *name, float defaultValue);
-    void setFloat(float val);
+    void load(const char *name, uint64_t defaultValue);
+    void set(uint64_t val);
+    void loadDouble(const char *name, double defaultValue);
+    void setDouble(double val);
     PreferencableValue get()
     {
         return value;

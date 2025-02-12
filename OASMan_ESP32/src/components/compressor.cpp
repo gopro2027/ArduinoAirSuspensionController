@@ -1,6 +1,4 @@
 #include "compressor.h"
-#include <Wire.h>
-#include <SPI.h>
 
 Compressor::Compressor() {}
 
@@ -77,7 +75,7 @@ void Compressor::loop()
     // COMPRESSOR CONTROL LOGIC:
 
     // no matter which state compressor is in, check if it is up to max psi and turn it off if needed and return without any further execution. This is most important tank check and should ideally be ran first to turn off in any case where pressure is too high.
-    if (this->getTankPressure() >= COMPRESSOR_MAX_PSI)
+    if (this->getTankPressure() >= getcompressorOffPSI())
     {
         this->s_trigger.close();
         return;
@@ -127,7 +125,7 @@ void Compressor::loop()
     // if compressor off, check if tank psi is below low psi and turn on if needed
     if (!this->s_trigger.isOpen())
     {
-        if (this->getTankPressure() < COMPRESSOR_ON_BELOW_PSI)
+        if (this->getTankPressure() < getcompressorOnPSI())
         {
             this->s_trigger.open();
         }

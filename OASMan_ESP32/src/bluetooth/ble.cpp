@@ -146,7 +146,7 @@ void bleSecurity()
     uint8_t key_size = 16;
     uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
     uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
-    uint32_t passkey = BLE_PASSKEY;
+    uint32_t passkey = getblePasskey();
     uint8_t auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_ENABLE;
     auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_DISABLE; // allows mini device to connect TODO: remove this line and force the little device to enter the passkey too
     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(uint32_t));
@@ -302,15 +302,15 @@ void ble_notify()
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::CLOCK);
         }
-        if (getRiseOnStart())
+        if (getriseOnStart())
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::RISE_ON_START);
         }
-        if (getMaintainPressure())
+        if (getmaintainPressure())
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::MAINTAIN_PRESSURE);
         }
-        if (getAirOutOnShutoff())
+        if (getairOutOnShutoff())
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF);
         }
@@ -359,7 +359,7 @@ void runReceivedPacket(BTOasPacket *packet)
         airUp(false); // typically this was true but im changing it to not be because now this is the main air up method on the controller :)
         break;
     case BTOasIdentifier::BASEPROFILE:
-        setBaseProfile(((BaseProfilePacket *)packet)->getProfileIndex());
+        setbaseProfile(((BaseProfilePacket *)packet)->getProfileIndex());
         break;
     case BTOasIdentifier::SETAIRHEIGHT:
     {
@@ -382,16 +382,16 @@ void runReceivedPacket(BTOasPacket *packet)
     }
     break;
     case BTOasIdentifier::RISEONSTART:
-        setRiseOnStart(((RiseOnStartPacket *)packet)->getBoolean());
+        setriseOnStart(((RiseOnStartPacket *)packet)->getBoolean());
         break;
     case BTOasIdentifier::FALLONSHUTDOWN:
-        setAirOutOnShutoff(((FallOnShutdownPacket *)packet)->getBoolean());
+        setairOutOnShutoff(((FallOnShutdownPacket *)packet)->getBoolean());
         break;
     case BTOasIdentifier::RAISEONPRESSURESET:
-        setRaiseOnPressureSet(((RaiseOnPressureSetPacket *)packet)->getBoolean());
+        setraiseOnPressure(((RaiseOnPressureSetPacket *)packet)->getBoolean());
         break;
     case BTOasIdentifier::REBOOT:
-        setReboot(true);
+        setinternalReboot(true);
         Serial.println(F("Rebooting..."));
         break;
     case BTOasIdentifier::CALIBRATE:
@@ -411,7 +411,7 @@ void runReceivedPacket(BTOasPacket *packet)
         break;
     }
     case BTOasIdentifier::MAINTAINPRESSURE:
-        setMaintainPressure(((MaintainPressurePacket *)packet)->getBoolean());
+        setmaintainPressure(((MaintainPressurePacket *)packet)->getBoolean());
         break;
     }
 }

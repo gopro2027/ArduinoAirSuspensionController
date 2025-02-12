@@ -6,7 +6,7 @@
 
 Preferences preferences;
 
-void openNamespace(char *ns, bool ro)
+void openNamespace(const char *ns, bool ro)
 {
     preferences.begin(ns, ro);
 }
@@ -16,7 +16,7 @@ void endNamespace()
     preferences.end();
 }
 
-void Preferencable::load(char *name, int defaultValue)
+void Preferencable::load(const char *name, uint64_t defaultValue)
 {
     memset(this->name, 0, sizeof(this->name));     // make sure it's 0 terminated
     strncpy(this->name, name, sizeof(this->name)); // cap it to 14 with 0 termination at end
@@ -25,28 +25,28 @@ void Preferencable::load(char *name, int defaultValue)
     {
         endNamespace();
         openNamespace(SAVEDATA_NAMESPACE, false); // reopen as read write
-        preferences.putInt(this->name, defaultValue);
+        preferences.putULong64(this->name, defaultValue);
         this->value.i = defaultValue;
     }
     else
     {
-        this->value.i = preferences.getInt(name, defaultValue);
+        this->value.i = preferences.getULong64(name, defaultValue);
     }
     endNamespace();
 }
 
-void Preferencable::set(int val)
+void Preferencable::set(uint64_t val)
 {
     if (this->value.i != val)
     {
         this->value.i = val;
         openNamespace(SAVEDATA_NAMESPACE, false);
-        preferences.putInt(this->name, val);
+        preferences.putULong64(this->name, val);
         endNamespace();
     }
 }
 
-void Preferencable::loadFloat(char *name, float defaultValue)
+void Preferencable::loadDouble(const char *name, double defaultValue)
 {
     strncpy(this->name, name, sizeof(this->name));
     openNamespace(SAVEDATA_NAMESPACE, true);
@@ -54,23 +54,23 @@ void Preferencable::loadFloat(char *name, float defaultValue)
     {
         endNamespace();
         openNamespace(SAVEDATA_NAMESPACE, false); // reopen as read write
-        preferences.putFloat(this->name, defaultValue);
-        this->value.f = defaultValue;
+        preferences.putDouble(this->name, defaultValue);
+        this->value.d = defaultValue;
     }
     else
     {
-        this->value.f = preferences.getFloat(name, defaultValue);
+        this->value.d = preferences.getDouble(name, defaultValue);
     }
     endNamespace();
 }
 
-void Preferencable::setFloat(float val)
+void Preferencable::setDouble(double val)
 {
-    if (this->value.f != val)
+    if (this->value.d != val)
     {
-        this->value.f = val;
+        this->value.d = val;
         openNamespace(SAVEDATA_NAMESPACE, false);
-        preferences.putFloat(this->name, val);
+        preferences.putDouble(this->name, val);
         endNamespace();
     }
 }

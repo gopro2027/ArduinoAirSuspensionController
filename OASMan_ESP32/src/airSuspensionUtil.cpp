@@ -35,7 +35,7 @@ Wheel *getWheel(int i)
 void setRideHeightFrontPassenger(byte value)
 {
     currentProfile[WHEEL_FRONT_PASSENGER] = value;
-    if (getRaiseOnPressureSet())
+    if (getraiseOnPressure())
     {
         getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(value);
     }
@@ -43,7 +43,7 @@ void setRideHeightFrontPassenger(byte value)
 void setRideHeightRearPassenger(byte value)
 {
     currentProfile[WHEEL_REAR_PASSENGER] = value;
-    if (getRaiseOnPressureSet())
+    if (getraiseOnPressure())
     {
         getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(value);
     }
@@ -51,7 +51,7 @@ void setRideHeightRearPassenger(byte value)
 void setRideHeightFrontDriver(byte value)
 {
     currentProfile[WHEEL_FRONT_DRIVER] = value;
-    if (getRaiseOnPressureSet())
+    if (getraiseOnPressure())
     {
         getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(value);
     }
@@ -59,7 +59,7 @@ void setRideHeightFrontDriver(byte value)
 void setRideHeightRearDriver(byte value)
 {
     currentProfile[WHEEL_REAR_DRIVER] = value;
-    if (getRaiseOnPressureSet())
+    if (getraiseOnPressure())
     {
         getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(value);
     }
@@ -163,7 +163,7 @@ bool isVehicleOn()
 
 bool isKeepAliveTimerExpired()
 {
-    return millis() > (lastTimeLive + SYSTEM_SHUTOFF_TIME_MS);
+    return millis() > (lastTimeLive + getsystemShutoffTimeM() * 60 * 1000);
 }
 
 // in the future we can call this from bluetooth functions to keep the device alive longer if actively using bluetooth while the vehicle is off

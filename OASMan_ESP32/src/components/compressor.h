@@ -6,6 +6,9 @@
 #include "solenoid.h"
 #include "sampleReading.tcc"
 #include <Arduino.h>
+#include <Wire.h>
+#include <SPI.h>
+#include "manifoldSaveData.h"
 
 #define PRESSURE_AVERAGE_ARRAY_SIZE 5
 #define FREEZE_TIME_CHECK_MS 15 * 1000 // 15 seconds

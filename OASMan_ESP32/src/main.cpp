@@ -38,22 +38,22 @@ void setup()
 
     accessoryWireSetup();
 
-    readProfile(getBaseProfile());
+    readProfile(getbaseProfile());
 
     setup_tasks();
 
 #if TEST_MODE == false
     // only want to rise on start if it was a full boot and not a quick reboot
-    if (getReboot() == false)
+    if (getinternalReboot() == false)
     {
-        if (getRiseOnStart() == true)
+        if (getriseOnStart() == true)
         {
             airUp();
         }
     }
 #endif
 
-    setReboot(false);
+    setinternalReboot(false);
 
     Serial.println(F("Startup Complete"));
 }
@@ -61,7 +61,7 @@ void setup()
 void loop()
 {
     accessoryWireLoop();
-    if (getReboot() == true)
+    if (getinternalReboot() == true)
     {
         ESP.restart();
     }

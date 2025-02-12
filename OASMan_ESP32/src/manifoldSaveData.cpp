@@ -12,6 +12,13 @@ void beginSaveData()
     _SaveData.baseProfile.load("baseProfile", 0);
     _SaveData.raiseOnPressure.load("raiseOnPressure", false);
     _SaveData.internalReboot.load("internalReboot", false);
+    // things moves from inside the user config
+    _SaveData.bagMaxPressure.load("bagMaxPressure", MAX_PRESSURE_SAFETY);
+    _SaveData.blePasskey.load("blePasskey", BLE_PASSKEY);
+    _SaveData.systemShutoffTimeM.load("systemShutoffTimeM", SYSTEM_SHUTOFF_TIME_M);
+    _SaveData.compressorOnPSI.load("compressorOnPSI", COMPRESSOR_ON_BELOW_PSI);
+    _SaveData.compressorOffPSI.load("compressorOffPSI", COMPRESSOR_MAX_PSI);
+    _SaveData.pressureSensorMax.load("pressureSensorMax", pressuretransducermaxPSI);
     for (int i = 0; i < MAX_PROFILE_COUNT; i++)
     {
         for (int j = 0; j < 4; j++)
@@ -56,74 +63,17 @@ void savePressuresToProfile(byte profileIndex, float _WHEEL_FRONT_PASSENGER, flo
     _SaveData.profile[profileIndex].pressure[WHEEL_REAR_DRIVER].set((int)_WHEEL_REAR_DRIVER);
 }
 
-bool getRiseOnStart()
-{
-    return _SaveData.riseOnStart.get().i;
-}
-void setRiseOnStart(bool value)
-{
-    if (getRiseOnStart() != value)
-    {
-        _SaveData.riseOnStart.set(value);
-    }
-}
+createSaveFuncInt(riseOnStart, bool);
+createSaveFuncInt(maintainPressure, bool);
+createSaveFuncInt(airOutOnShutoff, bool);
+createSaveFuncInt(baseProfile, byte);
+createSaveFuncInt(raiseOnPressure, bool);
+createSaveFuncInt(internalReboot, bool);
 
-bool getMaintainPressure()
-{
-    return _SaveData.maintainPressure.get().i;
-}
-void setMaintainPressure(bool value)
-{
-    if (getMaintainPressure() != value)
-    {
-        _SaveData.maintainPressure.set(value);
-    }
-}
-
-bool getAirOutOnShutoff()
-{
-    return _SaveData.airOutOnShutoff.get().i;
-}
-void setAirOutOnShutoff(bool value)
-{
-    if (getAirOutOnShutoff() != value)
-    {
-        _SaveData.airOutOnShutoff.set(value);
-    }
-}
-
-byte getBaseProfile()
-{
-    return _SaveData.baseProfile.get().i;
-}
-void setBaseProfile(byte value)
-{
-    if (getBaseProfile() != value)
-    {
-        _SaveData.baseProfile.set(value);
-    }
-}
-
-bool getRaiseOnPressureSet()
-{
-    return _SaveData.raiseOnPressure.get().i;
-}
-void setRaiseOnPressureSet(bool value)
-{
-    if (getRaiseOnPressureSet() != value)
-    {
-        _SaveData.raiseOnPressure.set(value);
-    }
-}
-
-bool getReboot()
-{
-    return _SaveData.internalReboot.get().i;
-}
-void setReboot(bool value)
-{
-    if (getReboot() != value)
-    {
-        _SaveData.internalReboot.set(value);
-    }
-}
+// values moved from the user defines file
+createSaveFuncInt(bagMaxPressure, uint8_t);
+createSaveFuncInt(blePasskey, uint32_t);         // 6 digits base 10
+createSaveFuncInt(systemShutoffTimeM, uint64_t); // may have to change
+createSaveFuncInt(compressorOnPSI, uint8_t);
+createSaveFuncInt(compressorOffPSI, uint8_t);
+createSaveFuncInt(pressureSensorMax, uint8_t);

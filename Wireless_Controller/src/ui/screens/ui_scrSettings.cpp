@@ -51,11 +51,11 @@ void ScrSettings::init()
 
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
     new Option(this->optionsContainer, OptionType::HEADER, "Config");
-    new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Safety Max PSI" /*"MAX_PRESSURE_SAFETY"*/, {.INT = 200}, [](void *data)
+    new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Bag Max PSI" /*"MAX_PRESSURE_SAFETY"*/, {.INT = 200}, [](void *data)
                { log_i("Pressed %i", (data)); });
     new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Passkey" /*"BLE_PASSKEY"*/, {.INT = 202777}, [](void *data)
                { log_i("Pressed %i", (data)); });
-    new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Shutoff Time MS" /*"SYSTEM_SHUTOFF_TIME_MS"*/, {.INT = 15 * 60 * 1000}, [](void *data)
+    new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Shutoff Time (Minutes)" /*"SYSTEM_SHUTOFF_TIME_MS"*/, {.INT = 15}, [](void *data)
                { log_i("Pressed %i", (data)); });
     new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Compressor On PSI" /*"COMPRESSOR_ON_BELOW_PSI"*/, {.INT = 140}, [](void *data)
                { log_i("Pressed %i", (data)); });
