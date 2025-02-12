@@ -5,6 +5,10 @@ uint8_t *BTOasPacket::tx()
     return (uint8_t *)&cmd;
 }
 
+BTOasValue8 *BTOasPacket::args8()
+{
+    return (BTOasValue8 *)this->args;
+}
 BTOasValue16 *BTOasPacket::args16()
 {
     return (BTOasValue16 *)this->args;
@@ -187,4 +191,48 @@ int SetAirheightPacket::getWheelIndex()
 int SetAirheightPacket::getPressure()
 {
     return this->args32()[1].i;
+}
+ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax)
+{
+    this->cmd = GETCONFIGVALUES;
+    *this->_systemShutoffTimeM() = systemShutoffTimeM;
+    *this->_bagMaxPressure() = bagMaxPressure;
+    *this->_compressorOnPSI() = compressorOnPSI;
+    *this->_compressorOffPSI() = compressorOffPSI;
+    *this->_pressureSensorMax() = pressureSensorMax;
+    *this->_setValues() = setValues;
+}
+uint32_t *ConfigValuesPacket::_systemShutoffTimeM()
+{
+    return (uint32_t *)&(this->args32()[0].i);
+}
+uint16_t *ConfigValuesPacket::_pressureSensorMax()
+{
+    return (uint16_t *)&(this->args16()[2].i);
+}
+uint8_t *ConfigValuesPacket::_bagMaxPressure()
+{
+    return (uint8_t *)&(this->args8()[6 + 0].i);
+}
+uint8_t *ConfigValuesPacket::_compressorOnPSI()
+{
+    return (uint8_t *)&(this->args8()[6 + 1].i);
+}
+uint8_t *ConfigValuesPacket::_compressorOffPSI()
+{
+    return (uint8_t *)&(this->args8()[6 + 2].i);
+}
+bool *ConfigValuesPacket::_setValues()
+{
+    return (bool *)&(this->args8()[6 + 3].i);
+}
+
+AuthPacket::AuthPacket(uint32_t blePasskey)
+{
+    this->cmd = AUTHPACKET;
+    this->args32()[0].i = blePasskey;
+}
+uint32_t AuthPacket::getBlePasskey()
+{
+    return this->args32()[0].i;
 }

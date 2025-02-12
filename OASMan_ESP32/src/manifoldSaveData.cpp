@@ -73,7 +73,7 @@ createSaveFuncInt(internalReboot, bool);
 // values moved from the user defines file
 createSaveFuncInt(bagMaxPressure, uint8_t);
 createSaveFuncInt(blePasskey, uint32_t);         // 6 digits base 10
-createSaveFuncInt(systemShutoffTimeM, uint64_t); // may have to change
+createSaveFuncInt(systemShutoffTimeM, uint32_t); // may have to change
 createSaveFuncInt(compressorOnPSI, uint8_t);
 createSaveFuncInt(compressorOffPSI, uint8_t);
-createSaveFuncInt(pressureSensorMax, uint8_t);
+createSaveFuncInt(pressureSensorMax, uint16_t);

@@ -19,6 +19,11 @@ public:
     Option *ui_maintainprssure;
     Option *ui_riseonstart;
     Option *ui_airoutonshutoff;
+    Option *ui_config1;
+    Option *ui_config2;
+    Option *ui_config3;
+    Option *ui_config4;
+    Option *ui_config5;
     void init();
     void runTouchInput(SimplePoint pos, bool down);
     void loop();

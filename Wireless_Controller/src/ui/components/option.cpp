@@ -188,6 +188,13 @@ void Option::setRightHandText(const char *text)
         }
         // lv_label_set_text_fmt(this->rightHandObj, "Compressor Frozen: %s", statusBittset & (1 << COMPRESSOR_FROZEN) ? "Yes" : "No");
     }
+    else if (type == OptionType::KEYBOARD_INPUT_NUMBER)
+    {
+        if (strcmp(lv_textarea_get_text(this->rightHandObj), text) != 0)
+        {
+            lv_textarea_set_text(this->rightHandObj, text); // itoa(value.INT, strbuf, 10)
+        }
+    }
 }
 
 void Option::setBooleanValue(bool value, bool netSend)

@@ -95,6 +95,7 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
         switch (pkt->cmd)
         {
         case PRESETREPORT:
+        {
             PresetPacket *profile = (PresetPacket *)pkt;
 
             profilePressures[profile->getProfile()][WHEEL_FRONT_PASSENGER] = profile->args16()[WHEEL_FRONT_PASSENGER].i;
@@ -103,6 +104,11 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
             profilePressures[profile->getProfile()][WHEEL_REAR_DRIVER] = profile->args16()[WHEEL_REAR_DRIVER].i;
 
             profileUpdated = true; // this should be a semaphore and just call it directly but fuck it
+            break;
+        }
+        case GETCONFIGVALUES:
+            memcpy(util_configValues.args, pkt->args, sizeof(BTOasPacket::args));
+            *util_configValues._setValues() = true;
             break;
         }
     }

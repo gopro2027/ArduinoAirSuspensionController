@@ -30,7 +30,9 @@ enum BTOasIdentifier
     SAVECURRENTPRESSURESTOPROFILE = 17,
     PRESETREPORT = 18,
     MAINTAINPRESSURE = 19,
-    FALLONSHUTDOWN = 20
+    FALLONSHUTDOWN = 20,
+    GETCONFIGVALUES = 21,
+    AUTHPACKET = 22
 };
 
 enum StatusPacketBittset
@@ -57,6 +59,11 @@ union BTOasValue16
     uint16_t i;
 };
 
+union BTOasValue8
+{
+    uint8_t i;
+};
+
 // NOTE: Default max for BLE is 23 bytes. We can do some compression if we need in the future but for now this uses 20 total (5 x 32 bits)
 struct BTOasPacket
 {
@@ -66,6 +73,7 @@ struct BTOasPacket
     uint8_t args[16];
 
     uint8_t *tx();
+    BTOasValue8 *args8();
     BTOasValue16 *args16();
     BTOasValue32 *args32();
 
@@ -176,6 +184,21 @@ struct RebootPacket : BTOasPacket
 struct StartwebPacket : BTOasPacket
 {
     StartwebPacket();
+};
+struct ConfigValuesPacket : BTOasPacket
+{
+    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax);
+    bool *_setValues();
+    uint8_t *_bagMaxPressure();
+    uint32_t *_systemShutoffTimeM();
+    uint8_t *_compressorOnPSI();
+    uint8_t *_compressorOffPSI();
+    uint16_t *_pressureSensorMax();
+};
+struct AuthPacket : BTOasPacket
+{
+    AuthPacket(uint32_t blePasskey);
+    uint32_t getBlePasskey();
 };
 
 #endif

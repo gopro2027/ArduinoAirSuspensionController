@@ -73,6 +73,8 @@ extern int currentPressures[5];
 extern uint16_t statusBittset;
 extern int profilePressures[5][4];
 extern bool profileUpdated;
+extern ConfigValuesPacket util_configValues;
+void sendConfigValuesPacket(bool saveToManifold);
 
 // returns 0 if none to send
 bool getBTRestPacketToSend(BTOasPacket *copyTo);

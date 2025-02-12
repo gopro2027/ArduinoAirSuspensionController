@@ -84,7 +84,8 @@
 			"alert.h": "c",
 			"option.h": "c",
 			"bitset": "cpp",
-			"regex": "cpp"
+			"regex": "cpp",
+			"preferencable.h": "c"
 		}
 	}
 }

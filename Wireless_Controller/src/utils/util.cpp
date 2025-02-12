@@ -52,6 +52,14 @@ uint16_t statusBittset = 0;
 int profilePressures[5][4];
 bool profileUpdated = false;
 
+ConfigValuesPacket util_configValues(0, 0, 0, 0, 0, 0);
+
+void sendConfigValuesPacket(bool saveToManifold)
+{
+    *util_configValues._setValues() = saveToManifold;
+    sendRestPacket(&util_configValues);
+}
+
 Scr *screens[3];
 
 #pragma region bluetooth packets
@@ -214,6 +222,7 @@ static void kb_event_cb(lv_event_t *e)
         if (option != NULL)
         {
             Serial.println(lv_textarea_get_text(option->rightHandObj));
+            option->event_cb((void *)atoi(lv_textarea_get_text(option->rightHandObj)));
         }
         closeKeyboard();
     }

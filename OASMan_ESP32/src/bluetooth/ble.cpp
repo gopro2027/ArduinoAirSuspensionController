@@ -413,5 +413,24 @@ void runReceivedPacket(BTOasPacket *packet)
     case BTOasIdentifier::MAINTAINPRESSURE:
         setmaintainPressure(((MaintainPressurePacket *)packet)->getBoolean());
         break;
+    case BTOasIdentifier::GETCONFIGVALUES:
+    {
+        ConfigValuesPacket *recpkt = (ConfigValuesPacket *)packet;
+        if (*recpkt->_setValues())
+        {
+            setbagMaxPressure(*recpkt->_bagMaxPressure());
+            setsystemShutoffTimeM(*recpkt->_systemShutoffTimeM());
+            setcompressorOnPSI(*recpkt->_compressorOnPSI());
+            setcompressorOffPSI(*recpkt->_compressorOffPSI());
+            setpressureSensorMax(*recpkt->_pressureSensorMax());
+        }
+        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax());
+        restCharacteristic->setValue(pkt.tx(), BTOAS_PACKET_SIZE);
+        restCharacteristic->notify();
+        break;
+    }
+    case BTOasIdentifier::AUTHPACKET:
+        setblePasskey(((AuthPacket *)packet)->getBlePasskey());
+        break;
     }
 }
