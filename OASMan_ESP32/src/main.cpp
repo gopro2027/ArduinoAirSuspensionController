@@ -38,7 +38,8 @@ void setup()
 
     accessoryWireSetup();
 
-    readProfile(getbaseProfile());
+    // readProfile(getbaseProfile());// TODO: add functionality for this in the controller
+    readProfile(2);
 
     setup_tasks();
 

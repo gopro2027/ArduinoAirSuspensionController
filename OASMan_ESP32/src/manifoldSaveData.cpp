@@ -9,7 +9,7 @@ void beginSaveData()
     _SaveData.riseOnStart.load("riseOnStart", false);
     _SaveData.maintainPressure.load("maintainPressure", false);
     _SaveData.airOutOnShutoff.load("airOutOnShutoff", false);
-    _SaveData.baseProfile.load("baseProfile", 0);
+    _SaveData.baseProfile.load("baseProfile", 2);
     _SaveData.raiseOnPressure.load("raiseOnPressure", false);
     _SaveData.internalReboot.load("internalReboot", false);
     // things moves from inside the user config

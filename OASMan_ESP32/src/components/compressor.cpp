@@ -61,16 +61,13 @@ void Compressor::loop()
 
     // READING TANK PRESSURE LOGIC:
 
+    if (this->currentPressure == TANK_READING_NOT_READY_YET_VALUE) // ok I know you aren't supposed to use equals on floats but i am checking the exact value so it's fine
+    {
+        this->currentPressure = this->readPressure();
+    }
+
     // if (!isAnyWheelActive()) // TODO: need to add this check on reading but also at the same time make it safe and turn off the compressor. or maybe just dont add it bc the only issue is innacurate read values when valves are open, and who really cares right???
     sampleReading(this->currentPressure, this->readPressure(), this->pressureArray, this->pressureArrayCounter, PRESSURE_AVERAGE_ARRAY_SIZE);
-
-    // Turn compressor off if i haven't completed a proper reading yet
-    if (this->currentPressure == TANK_READING_NOT_READY_YET_VALUE)
-    {
-        // ok I know you aren't supposed to use equals on floats but i am checking the exact value so it's fine
-        this->s_trigger.close();
-        return;
-    }
 
     // COMPRESSOR CONTROL LOGIC:
 
