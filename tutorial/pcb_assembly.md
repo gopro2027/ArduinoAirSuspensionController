@@ -1,12 +1,15 @@
 # Wiring
 ### PCB assembly
-The pcb assembly is relatively straightforward when following as marked on the board.<br>
+
+The latest version of the PCB is SMD and intended to be assembled by the factory that assembles the PCB so no board assembly is required. Just place in the ESP32.<br>
+
+<!--The pcb assembly is relatively straightforward when following as marked on the board.<br>
 If you have any questions, please feel free to ask on the discord server.<br>
 If you are wondering which soldering iron to use, I personally recommend using a TS100 soldering iron and some led solder.<br>
-Here is a video of me assembling my board, if you wish to follow along:<br>
+Here is a video of me assembling my 2.0 board, if you wish to follow along:<br>
 <br>
 [OAS-Man (Open Air Suspension Management) PCB Assembly<br>![OAS-Man (Open Air Suspension Management) PCB Assembly](https://github.com/user-attachments/assets/1cabc97b-822e-4c43-a45e-32a945192d54)](https://www.youtube.com/watch?v=XGFra2Tvlkg&ab_channel=gopro_2027)
-<br>
+<br> -->
 
 
 ### Pressure and Height Sensor Wiring
@@ -16,8 +19,12 @@ Obviously the height sensors are totally optional.<br>
 <br>
 
 ### Manifold Wiring Harness Assembly (Valvetable)
-The wiring was designed to be as easy as possible. The 3 top wires go in the same order on a 3 pin jst connector, and the 6 bottom wires go in the same order on a 6 pin jst connector. The only catch it to make sure it doesn't connect to the board upside down (aka reverse order) or you will have to cut the pins off and flip the connector over and insert them in the reverse order.<br>Simple?<br>Alright, lets get into the details...<br><br>
-So the wiring harness is split up into 2 parts, because it's a 2x6 connector but 3 of the pins are not used.<br>
+The wiring was designed to be as easy as possible.
+
+The board mimics the wires coming out of the manifold connector. If you imagine hanging the connector above the pcb, straightening out all the wires so they don't cross, then connecting them, that is the order in which the wires need to be connected.
+
+The 3 top wires go in the same order on a 3 pin jst connector, and the 6 bottom wires go in the same order on a 6 pin jst connector. The only catch it to make sure it doesn't connect to the board upside down (aka reverse order) or you will have to cut the pins off and flip the connector over and insert them in the reverse order.<br>Simple?<br>Alright, lets get into the details...<br><br>
+So the wiring harness is split up into 2 jst connectors, because it's a 2x6 connector but 3 of the pins are not used.<br>
 So on the one half with the 3 pins in a row and 3 unused pins, we will connect them to a 3 pin jst connector in the same order (no crossed wires) as so:<br>
 <br>
 ![3 pin on manifold harness](/photos/esp32/ValvetableAndManifold/3pins.jpeg)<br>
@@ -33,7 +40,6 @@ If attached as shown in the video, they should connect to the board with the oth
 <br>
 ![valvetable jst orientation on board](/photos/esp32/ValvetableAndManifold/board_jst_placement.png)<br>
 <br>
-All of the JST connectors on the board, with the exception of the oled screen JST which is sideways, will be installed in this orientation with the clip side pointing 'up' in respect to having the board placed as so the text is right side up and readable.<br>
 <br>
 Here is the full pinout of wiring harness that comes with the manifold for a full cross reference:<br>
 <sub>* Note that this is looking into the connector from the female side, with the holes</sub><br>
@@ -52,11 +58,13 @@ The final result will look something like this:<br>
 After completing all the jst connectors, I put hot glue on the ends of them to keep the wires from being stressed too much when moved around and assembled:<br>
 ![20241210_125036](https://github.com/user-attachments/assets/10d32557-2c95-4b84-b409-b76db983f35b)<br>
 <br>
-Assuming your compressor relay, acc wire, and main 12v and gnd are in the same location this is the ideal set up:<br>
+For your main 4 pin i/o:<br>
 For the power wires and compressor wires you will want to use a 4 wire bundled wire as listed in the parts<br>
-Attach all 3 wires from the power connector, one to constant 12v battery, one to ground, and one to the accessory wire which turns on with the key, then ONLY CONNECT THE NEGATVIVE WIRE THE ON 2 PIN COMPRESSOR OUTPUT<br>
-The negative wire is the signal wire that turns on/off. The positive wire to the compressor relay can be shared with the constant +12v/vcc wire of the power connector or come from a constant 12v from somewhere else in the system.<br>
-So your end result will be a 2 pin connector for the compressor with only one of the 2 pins connected for the negative side. The 3 pin main power connector will have all 3.<br>
-If you do wish to use both the positive and negative wires on the compressor output (eg: maybe the compressor relay is in a completely different location) you totally can do that too though!<br>
+Attach all 4 wires from the power connector, one to constant 12v battery, one to ground, and one to the accessory wire which turns on with the key, and then the negative terminal of the compressor relay (85)<br>
+The negative wire is the signal wire that turns the compressor relay on/off. The positive wire to the compressor relay can be shared with the constant +12v/vcc wire of the power connector or come from a constant 12v from somewhere else in the system such as the acc wire.<br>
+For the compressor relay, both 30 and 86 go to battery 12v power, 85 to oasman manifold board compressor output, 87 to compressor. 86 can be a smaller wire. 86 and 85 are also switchable/reversable.<br>
+See video [here](https://www.youtube.com/watch?v=QAD8vDHTbzo&ab_channel=WiringRescue) for additional wiring info on a negative triggered relay, where the oasman compressor output wire is acting as the switch in this video.
+<!-- Note to self: my car is this but im not sure it's correct even though it works: 86 goes to manifold compressor output, 85 goes to +12v battery, 30 to gnd, 87 to compressor -->
+
 <br>
 ### Congratulations on assembling the wiring!

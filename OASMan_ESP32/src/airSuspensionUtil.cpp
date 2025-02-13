@@ -1,5 +1,5 @@
 #include "airSuspensionUtil.h"
-#include "saveData.h"
+#include "manifoldSaveData.h"
 
 #pragma region variables
 
@@ -35,7 +35,7 @@ Wheel *getWheel(int i)
 void setRideHeightFrontPassenger(byte value)
 {
     currentProfile[WHEEL_FRONT_PASSENGER] = value;
-    if (getRaiseOnPressureSet())
+    if (getraiseOnPressure())
     {
         getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(value);
     }
@@ -43,7 +43,7 @@ void setRideHeightFrontPassenger(byte value)
 void setRideHeightRearPassenger(byte value)
 {
     currentProfile[WHEEL_REAR_PASSENGER] = value;
-    if (getRaiseOnPressureSet())
+    if (getraiseOnPressure())
     {
         getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(value);
     }
@@ -51,7 +51,7 @@ void setRideHeightRearPassenger(byte value)
 void setRideHeightFrontDriver(byte value)
 {
     currentProfile[WHEEL_FRONT_DRIVER] = value;
-    if (getRaiseOnPressureSet())
+    if (getraiseOnPressure())
     {
         getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(value);
     }
@@ -59,7 +59,7 @@ void setRideHeightFrontDriver(byte value)
 void setRideHeightRearDriver(byte value)
 {
     currentProfile[WHEEL_REAR_DRIVER] = value;
-    if (getRaiseOnPressureSet())
+    if (getraiseOnPressure())
     {
         getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(value);
     }
@@ -155,21 +155,32 @@ void airUpRelativeToAverage(int value)
 #pragma region accessory_wire
 
 bool vehicleOn = false;
+unsigned long lastTimeLive = 0;
 bool isVehicleOn()
 {
     return vehicleOn;
+}
+
+bool isKeepAliveTimerExpired()
+{
+    return millis() > (lastTimeLive + getsystemShutoffTimeM() * 60 * 1000);
+}
+
+// in the future we can call this from bluetooth functions to keep the device alive longer if actively using bluetooth while the vehicle is off
+void notifyKeepAlive()
+{
+    lastTimeLive = millis();
 }
 
 #if ENABLE_ACCESSORY_WIRE_FUNCTIONALITY == true
 
 InputType *accessoryWire;
 InputType *outputKeepESPAlive;
-unsigned long lastTimeLive = 0;
 void accessoryWireSetup()
 {
     accessoryWire = accessoryInput;
     outputKeepESPAlive = outputKeepAlivePin;
-    outputKeepESPAlive->digitalWrite(HIGH);
+    outputKeepESPAlive->digitalWrite(LOW);
     lastTimeLive = millis();
 }
 const int accessoryWireSampleSize = 5;
@@ -183,7 +194,7 @@ void accessoryWireLoop()
         // accessory wire is supplying 12v (car on)
         notifyKeepAlive();
     }
-    if (millis() > (lastTimeLive + SYSTEM_SHUTOFF_TIME_MS))
+    if (isKeepAliveTimerExpired())
     {
         outputKeepESPAlive->digitalWrite(LOW); // acc wire has been off for some time, shut down system
     }
@@ -191,12 +202,6 @@ void accessoryWireLoop()
     {
         outputKeepESPAlive->digitalWrite(HIGH);
     }
-}
-
-// in the future we can call this from bluetooth functions to keep the device alive longer if actively using bluetooth while the vehicle is off
-void notifyKeepAlive()
-{
-    lastTimeLive = millis();
 }
 
 #else
@@ -208,7 +213,6 @@ void accessoryWireLoop()
 {
     vehicleOn = true;
 }
-void notifyKeepAlive() {}
 #endif
 
 #pragma endregion

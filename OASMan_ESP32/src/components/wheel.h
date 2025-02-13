@@ -2,11 +2,13 @@
 #define wheel_h
 
 #include <Arduino.h>
-#include "user_defines.h"
+#include <Wire.h>
+#include <SPI.h>
+#include <user_defines.h>
 #include "input_type.h"
 #include "solenoid.h"
-#include "manifold.h"
 #include "compressor.h"
+#include "manifoldSaveData.h"
 
 class Wheel
 {

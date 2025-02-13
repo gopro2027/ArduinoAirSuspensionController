@@ -17,22 +17,23 @@ void task_bluetooth(void *parameters)
 
     Serial.println(F("Bluetooth Rest Service Beginning"));
 
+#if USE_BLE == false
     bt.begin(BT_NAME);
     for (;;)
     {
         bt_cmd();
         delay(10);
     }
-
-    // ble_setup();
-    // delay(100);
-    // for (;;)
-    // {
-    //     ble_loop();
-    //     delay(10);
-    // }
+#else
+    ble_setup();
+    delay(10);
+    for (;;)
+    {
+        ble_loop();
+        delay(10);
+    }
+#endif
 }
-
 #if SCREEN_ENABLED == true
 void task_screen(void *parameters)
 {
@@ -109,7 +110,7 @@ void setup_tasks()
     xTaskCreate(
         task_bluetooth,
         "Bluetooth",
-        512 * 4,
+        512 * 5,
         NULL,
         1000,
         NULL);
@@ -119,7 +120,7 @@ void setup_tasks()
     xTaskCreate(
         task_screen,
         "OLED",
-        512 * 3,
+        512 * 4,
         NULL,
         1000,
         NULL);
@@ -129,7 +130,7 @@ void setup_tasks()
     xTaskCreate(
         task_compressor,
         "Compressor Control",
-        512 * 3,
+        512 * 4,
         NULL,
         1000,
         NULL);

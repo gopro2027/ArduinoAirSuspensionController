@@ -1,11 +1,12 @@
 // OASMan ESP32
 
-#include "user_defines.h"
+#include <Preferences.h> // have to include it here or it isn't found in the shared libs
+#include <user_defines.h>
 #include "input_type.h"
 #include "components/wheel.h"
 #include "components/compressor.h"
 #include "bitmaps.h"
-#include "saveData.h"
+#include "manifoldSaveData.h"
 #include "airSuspensionUtil.h"
 #include "tasks/tasks.h"
 
@@ -37,22 +38,23 @@ void setup()
 
     accessoryWireSetup();
 
-    readProfile(getBaseProfile());
+    // readProfile(getbaseProfile());// TODO: add functionality for this in the controller
+    readProfile(2);
 
     setup_tasks();
 
 #if TEST_MODE == false
     // only want to rise on start if it was a full boot and not a quick reboot
-    if (getReboot() == false)
+    if (getinternalReboot() == false)
     {
-        if (getRiseOnStart() == true)
+        if (getriseOnStart() == true)
         {
             airUp();
         }
     }
 #endif
 
-    setReboot(false);
+    setinternalReboot(false);
 
     Serial.println(F("Startup Complete"));
 }
@@ -60,7 +62,7 @@ void setup()
 void loop()
 {
     accessoryWireLoop();
-    if (getReboot() == true)
+    if (getinternalReboot() == true)
     {
         ESP.restart();
     }

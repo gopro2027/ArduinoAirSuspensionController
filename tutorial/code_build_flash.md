@@ -1,6 +1,9 @@
 
 
 ### ESP32 Flashing Steps
+# Future info
+We intend to have a website where you can flash the project online. For now I have hosted some in dev-versions here and will later move more stable releases onto here. https://gopro2027.github.io/oasman/ <br>
+For now please follow the steps below on how to use git (github desktop ui) and platformio as the project is not yet in a fully released state.
 # Cloning the project code
 1. Use git to clone the project normally. It is recommended you clone it and not download it, so that you can get future updates easily.
 2. Here is what I recommend if you would like to easily clone the project, and what I will reference in the rest of this documentation:
