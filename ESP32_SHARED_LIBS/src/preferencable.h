@@ -26,4 +26,21 @@ public:
     }
 };
 
+#define createSaveFuncInt(VARNAME, _TYPE) \
+    _TYPE get##VARNAME()                  \
+    {                                     \
+        return _SaveData.VARNAME.get().i; \
+    }                                     \
+    void set##VARNAME(_TYPE value)        \
+    {                                     \
+        if (get##VARNAME() != value)      \
+        {                                 \
+            _SaveData.VARNAME.set(value); \
+        }                                 \
+    }
+
+#define headerDefineSaveFunc(VARNAME, _TYPE) \
+    _TYPE get##VARNAME();                    \
+    void set##VARNAME(_TYPE value);
+
 #endif

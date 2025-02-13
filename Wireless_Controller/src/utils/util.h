@@ -75,13 +75,15 @@ extern int profilePressures[5][4];
 extern bool profileUpdated;
 extern ConfigValuesPacket util_configValues;
 void sendConfigValuesPacket(bool saveToManifold);
+void onBLEConnectionCompleted();
 
 // returns 0 if none to send
+void clearPackets();
 bool getBTRestPacketToSend(BTOasPacket *copyTo);
 void sendRestPacket(BTOasPacket *packet);
 void setupRestSemaphore();
 
-void showDialog(char *text, lv_color_t color = {0, 0, 0xff}, unsigned long durationMS = 5000);
+void showDialog(const char *text, lv_color_t color = {0, 0, 0xff}, unsigned long durationMS = 5000);
 void dialogLoop();
 
 unsigned int getValveControlValue();
@@ -102,12 +104,13 @@ class SaveData
 {
 public:
     Preferencable unitsMode;
+    Preferencable blePasskey;
 };
 
 extern SaveData _SaveData;
 void beginSaveData();
-int getUnits();
-void setUnits(int value);
+headerDefineSaveFunc(unitsMode, int);
+headerDefineSaveFunc(blePasskey, uint32_t);
 
 void ta_event_cb(lv_event_t *e);
 bool isKeyboardHidden();

@@ -26,11 +26,18 @@ static unsigned long timeoutMS = 0;
 static bool hasReceivedStatus = false;
 BLEClient *pClient = nullptr;
 
+bool isConnectedToManifold()
+{
+    return connected;
+}
+
 // Define pointer for the BLE connection
 // static BLEAdvertisedDevice *myDevice;
 BLERemoteCharacteristic *pRemoteChar_Status;
 BLERemoteCharacteristic *pRemoteChar_Rest;
 BLERemoteCharacteristic *pRemoteChar_ValveControl;
+
+AuthResult authenticationResult = AUTHRESULT_WAITING;
 
 void disconnect()
 {
@@ -44,7 +51,14 @@ void disconnect()
 
     if (pClient != nullptr)
     {
-        showDialog("Disconnected!", lv_color_hex(0xFF0000), 30000);
+        if (authenticationResult == AuthResult::AUTHRESULT_FAIL)
+        {
+            showDialog("Invalid passkey!", lv_color_hex(0xFF0000), 30000);
+        }
+        else
+        {
+            showDialog("Disconnected!", lv_color_hex(0xFF0000), 30000);
+        }
         pClient->cancelConnect();
         pClient->disconnect();
         // pClient->end();
@@ -110,6 +124,8 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
             memcpy(util_configValues.args, pkt->args, sizeof(BTOasPacket::args));
             *util_configValues._setValues() = true;
             break;
+        case AUTHPACKET:
+            authenticationResult = ((AuthPacket *)pkt)->getBleAuthResult();
         }
     }
 }
@@ -158,6 +174,8 @@ class MyClientCallback : public NimBLEClientCallbacks
 // Function that is run whenever the server is connected
 bool connectToServer(const BLEAdvertisedDevice *myDevice)
 {
+    clearPackets(); // not sure this is actually needed, but leaving in here to just give a clean slate?
+    authenticationResult = AuthResult::AUTHRESULT_WAITING;
     Serial.println(charUUID_Status.toString().c_str());
     Serial.print("Forming a connection to ");
     Serial.println(myDevice->getAddress().toString().c_str());
@@ -227,9 +245,36 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
         Serial.println("At least one characteristic UUID not found");
         return false;
     }
-    Serial.println("Connected Successfully");
 
-    // TODO: Send rest command and wait for response in here to verify we are connected. If we return false here it will continue on the other found oasman devices!
+    Serial.println("Checking auth...");
+
+    AuthPacket authPacket(getblePasskey(), AuthResult::AUTHRESULT_WAITING);
+    pRemoteChar_Rest->writeValue(authPacket.tx(), BTOAS_PACKET_SIZE);
+
+    unsigned long authEnd = millis() + 5000;
+    while (true)
+    {
+        if (authenticationResult == AuthResult::AUTHRESULT_SUCCESS)
+        {
+            Serial.println("Auth success!");
+            return true;
+        }
+        if (authenticationResult == AuthResult::AUTHRESULT_FAIL)
+        {
+            Serial.println("Auth failed");
+            pClient->disconnect();
+            return false;
+        }
+        if (millis() > authEnd)
+        {
+            Serial.println("Auth timed out");
+            pClient->disconnect();
+            return false;
+        }
+        delay(10);
+    }
+
+    Serial.println("Connected Successfully");
 
     return true;
 }
@@ -283,12 +328,19 @@ void scan()
             if (connected)
             {
                 showDialog("Connected to manifold", lv_color_hex(0x22bb33));
+                onBLEConnectionCompleted();
                 return; // might as well return, no use in trying to connect still
             }
             else
             {
-                // disconnect(); Todo test this later
-                showDialog("Error connecting!", lv_color_hex(0xFF0000), 30000);
+                // if (authenticationResult == AuthResult::AUTHRESULT_WAITING)
+                // {
+                //     showDialog("Wrong passkey!", lv_color_hex(0xFF0000), 30000);
+                // }
+                // else
+                // {
+                //     showDialog("Error connecting!", lv_color_hex(0xFF0000), 30000);
+                // }
             }
         }
     }
@@ -359,7 +411,7 @@ void ble_loop()
             disconnect();
         }
     }
-    else if (doScan)
+    else // if (doScan)
     {
         scan();
     }

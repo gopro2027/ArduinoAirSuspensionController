@@ -48,6 +48,14 @@ enum StatusPacketBittset
 
 };
 
+enum AuthResult
+{
+    AUTHRESULT_WAITING,
+    AUTHRESULT_SUCCESS,
+    AUTHRESULT_FAIL,
+    AUTHRESULT_UPDATEKEY
+};
+
 union BTOasValue32
 {
     uint32_t i;
@@ -197,8 +205,10 @@ struct ConfigValuesPacket : BTOasPacket
 };
 struct AuthPacket : BTOasPacket
 {
-    AuthPacket(uint32_t blePasskey);
+    AuthPacket(uint32_t blePasskey, AuthResult authResult);
     uint32_t getBlePasskey();
+    AuthResult getBleAuthResult();
+    void setBleAuthResult(AuthResult ar);
 };
 
 #endif

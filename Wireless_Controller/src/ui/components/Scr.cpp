@@ -88,7 +88,7 @@ void updatePressure(Scr *scr, lv_obj_t *obj, int index)
 {
     if (scr->prevPressures[index] != currentPressures[index])
     {
-        if (getUnits() == UNITS_MODE::PSI)
+        if (getunitsMode() == UNITS_MODE::PSI)
         {
             lv_label_set_text_fmt(obj, "%u", currentPressures[index]);
         }

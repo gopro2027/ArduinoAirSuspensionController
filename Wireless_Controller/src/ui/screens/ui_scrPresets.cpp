@@ -130,7 +130,7 @@ void ScrPresets::init()
     lv_obj_move_foreground(this->ui_lblPressureTank);           // pressures to foreground front
 
     this->hideSelectors();
-    setPreset(3);
+    this->setPreset(3);
 }
 
 void ScrPresets::hideSelectors()

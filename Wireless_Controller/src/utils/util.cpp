@@ -89,6 +89,16 @@ void giveRestSemaphore()
     xSemaphoreGive(restMutex);
 }
 
+void clearPackets()
+{
+    waitRestSemaphore();
+    for (int i = 0; i < BTOASPACKETCOUNT; i++)
+    {
+        packets[i].taken = false;
+    }
+    giveRestSemaphore();
+}
+
 bool getBTRestPacketToSend(BTOasPacket *copyTo)
 {
     bool ret = false;
@@ -127,7 +137,7 @@ unsigned long dialogEndTime = 0;
 lv_color_t dialogColor;
 char dialogText[50];
 bool updateDialog = false;
-void showDialog(char *text, lv_color_t color, unsigned long durationMS)
+void showDialog(const char *text, lv_color_t color, unsigned long durationMS)
 {
     strncpy(dialogText, text, sizeof(dialogText));
     memcpy(&dialogColor, &color, sizeof(lv_color_t));
@@ -179,19 +189,11 @@ SaveData _SaveData;
 void beginSaveData()
 {
     _SaveData.unitsMode.load("units", UNITS_MODE::PSI);
+    _SaveData.blePasskey.load("blePasskey", 202777);
 }
 
-int getUnits()
-{
-    return _SaveData.unitsMode.get().i;
-}
-void setUnits(int value)
-{
-    if (getUnits() != value)
-    {
-        _SaveData.unitsMode.set(value);
-    }
-}
+createSaveFuncInt(unitsMode, int);
+createSaveFuncInt(blePasskey, uint32_t);
 
 static lv_obj_t *kb = NULL;
 void closeKeyboard()
@@ -275,4 +277,9 @@ void ta_event_cb(lv_event_t *e)
 bool isKeyboardHidden()
 {
     return kb == NULL; // lv_obj_has_flag(kb, LV_OBJ_FLAG_HIDDEN);
+}
+
+void onBLEConnectionCompleted()
+{
+    sendConfigValuesPacket(false);
 }

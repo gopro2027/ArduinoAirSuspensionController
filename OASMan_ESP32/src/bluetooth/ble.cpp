@@ -29,6 +29,65 @@ BLEUUID charUUID_Status(STATUS_CHARACTERISTIC_UUID);
 BLEUUID charUUID_Rest(REST_CHARACTERISTIC_UUID);
 BLEUUID charUUID_ValveControl(VALVECONTROL_CHARACTERISTIC_UUID);
 
+std::vector<uint16_t> authedClients;
+bool isAuthed(uint16_t conn_id)
+{
+    return std::find(authedClients.begin(), authedClients.end(), conn_id) != authedClients.end();
+}
+void addAuthed(uint16_t conn_id)
+{
+    authedClients.push_back(conn_id);
+}
+void removeAuthed(uint16_t conn_id)
+{
+    auto index = std::find(authedClients.begin(), authedClients.end(), conn_id);
+    while (index != authedClients.end())
+    {
+        log_i("Removing auth from client: %i", conn_id);
+        authedClients.erase(index);
+        index = std::find(authedClients.begin(), authedClients.end(), conn_id);
+    }
+}
+
+// code for checking if a client auth times out
+struct ClientTime
+{
+    uint16_t conn_id;
+    unsigned long connectTime;
+};
+std::vector<ClientTime> connectedClientTimer;
+void addConnectedClient(ClientTime cl)
+{
+    connectedClientTimer.push_back(cl);
+}
+
+#define AUTH_TIMEOUT 5000
+void checkConnectedClients()
+{
+    unsigned long curtime = millis();
+
+    std::vector<ClientTime>::iterator iter;
+    for (iter = connectedClientTimer.begin(); iter != connectedClientTimer.end();)
+    {
+        if ((*iter).connectTime + AUTH_TIMEOUT < curtime)
+        {
+            // check for authed
+            if (!isAuthed((*iter).conn_id))
+            {
+                // not authed, go ahead and disconnect
+                log_i("Client auth timed out... disconnecting: %i", (*iter).conn_id);
+                pServer->disconnect((*iter).conn_id);
+            }
+            // remove
+            iter = connectedClientTimer.erase(iter);
+        }
+        else
+        {
+            ++iter;
+        }
+    }
+}
+
 // Callback function that is called whenever a client is connected or disconnected
 class MyServerCallbacks : public BLEServerCallbacks
 {
@@ -52,50 +111,83 @@ class MyServerCallbacks : public BLEServerCallbacks
         restCharacteristic->setValue(arp.tx(), BTOAS_PACKET_SIZE);
 
         currentUserNum++;
+
+        addConnectedClient({param->connect.conn_id, millis()});
     };
 
     void onDisconnect(BLEServer *pServer, esp_ble_gatts_cb_param_t *param)
     {
+        log_i("Client disconnected!");
+        removeAuthed(param->connect.conn_id);
     }
 };
-
 class CharacteristicCallback : public BLECharacteristicCallbacks
 {
     void onWrite(BLECharacteristic *pChar, esp_ble_gatts_cb_param_t *param) override
     {
+
         static unsigned int valveTableValues = 0;
         if (pChar->getUUID().toString() == charUUID_Rest.toString())
         {
             Serial.println("Received rest command");
             BTOasPacket *packet = (BTOasPacket *)pChar->getData();
             packet->dump();
-            runReceivedPacket(packet);
-        }
-        if (pChar->getUUID().toString() == charUUID_ValveControl.toString())
-        {
-            unsigned int valveControlBittset = ((unsigned int *)pChar->getData())[0];
-
-            for (int i = 0; i < 8; i++)
+            if (isAuthed(param->connect.conn_id))
             {
-                bool prevVal = (valveTableValues >> i) & 1;
-                bool curVal = (valveControlBittset >> i) & 1;
-                if (prevVal != curVal)
+                log_i("authed success");
+                runReceivedPacket(packet);
+            }
+
+            // Authed thing on connect
+            if (packet->cmd == BTOasIdentifier::AUTHPACKET)
+            {
+                AuthPacket *ap = ((AuthPacket *)packet);
+                if (ap->getBleAuthResult() == AuthResult::AUTHRESULT_WAITING)
                 {
-                    if (curVal)
+                    // AUTH REQUEST
+                    if (ap->getBlePasskey() == getblePasskey())
                     {
-                        Serial.print("Opening ");
-                        Serial.println(i);
-                        getSolenoidFromIndex(i)->open();
+                        ap->setBleAuthResult(AuthResult::AUTHRESULT_SUCCESS);
+                        addAuthed(param->connect.conn_id);
                     }
                     else
                     {
-                        Serial.print("Closing ");
-                        Serial.println(i);
-                        getSolenoidFromIndex(i)->close();
+                        ap->setBleAuthResult(AuthResult::AUTHRESULT_FAIL);
                     }
+                    restCharacteristic->setValue(ap->tx(), BTOAS_PACKET_SIZE);
+                    restCharacteristic->notify();
                 }
             }
-            valveTableValues = valveControlBittset;
+        }
+
+        if (pChar->getUUID().toString() == charUUID_ValveControl.toString())
+        {
+            if (isAuthed(param->connect.conn_id))
+            {
+                unsigned int valveControlBittset = ((unsigned int *)pChar->getData())[0];
+
+                for (int i = 0; i < 8; i++)
+                {
+                    bool prevVal = (valveTableValues >> i) & 1;
+                    bool curVal = (valveControlBittset >> i) & 1;
+                    if (prevVal != curVal)
+                    {
+                        if (curVal)
+                        {
+                            Serial.print("Opening ");
+                            Serial.println(i);
+                            getSolenoidFromIndex(i)->open();
+                        }
+                        else
+                        {
+                            Serial.print("Closing ");
+                            Serial.println(i);
+                            getSolenoidFromIndex(i)->close();
+                        }
+                    }
+                }
+                valveTableValues = valveControlBittset;
+            }
         }
     }
 } characteristicCallback;
@@ -131,8 +223,8 @@ class SecurityCallback : public BLESecurityCallbacks
         {
             Serial.println("   - SecurityCallback - Authentication Failure*");
 
-            pServer->disconnect(pServer->getConnId());
-            pServer->removePeerDevice(pServer->getConnId(), true);
+            // pServer->disconnect(pServer->getConnId());
+            // pServer->removePeerDevice(pServer->getConnId(), true);
         }
         BLEDevice::startAdvertising();
     }
@@ -202,6 +294,8 @@ void ble_loop()
         Serial.printf("connectedCount: %d\n", connectedCount);
     }
     prevConnectedCount = connectedCount;
+
+    checkConnectedClients();
 
     ble_notify();
 }
@@ -430,7 +524,10 @@ void runReceivedPacket(BTOasPacket *packet)
         break;
     }
     case BTOasIdentifier::AUTHPACKET:
-        setblePasskey(((AuthPacket *)packet)->getBlePasskey());
+        if (((AuthPacket *)packet)->getBleAuthResult() == AuthResult::AUTHRESULT_UPDATEKEY)
+        {
+            setblePasskey(((AuthPacket *)packet)->getBlePasskey());
+        }
         break;
     }
 }

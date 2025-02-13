@@ -227,12 +227,21 @@ bool *ConfigValuesPacket::_setValues()
     return (bool *)&(this->args8()[6 + 3].i);
 }
 
-AuthPacket::AuthPacket(uint32_t blePasskey)
+AuthPacket::AuthPacket(uint32_t blePasskey, AuthResult authResult)
 {
     this->cmd = AUTHPACKET;
     this->args32()[0].i = blePasskey;
+    this->args32()[1].i = authResult;
 }
 uint32_t AuthPacket::getBlePasskey()
 {
     return this->args32()[0].i;
+}
+AuthResult AuthPacket::getBleAuthResult()
+{
+    return (AuthResult)this->args32()[1].i;
+}
+void AuthPacket::setBleAuthResult(AuthResult ar)
+{
+    this->args32()[1].i = (uint32_t)ar;
 }

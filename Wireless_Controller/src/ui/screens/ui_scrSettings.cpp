@@ -9,6 +9,7 @@ void alertValueUpdated()
 }
 
 const char *test = "";
+extern bool isConnectedToManifold(); // from ble.cpp
 void ScrSettings::init()
 {
     Scr::init();
@@ -51,8 +52,8 @@ void ScrSettings::init()
 
     const char *unitsRadioText[2] = {"PSI", "Bar"}; // aligns with the enum UNITS_MODE
     option_event_cb_t unitsRadioCB = [](void *data)
-    { setUnits((int)data); };
-    new RadioOption(this->optionsContainer, unitsRadioText, 2, unitsRadioCB, getUnits());
+    { setunitsMode((int)data); };
+    new RadioOption(this->optionsContainer, unitsRadioText, 2, unitsRadioCB, getunitsMode());
 
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
     new Option(this->optionsContainer, OptionType::HEADER, "Config");
@@ -63,9 +64,15 @@ void ScrSettings::init()
         sendConfigValuesPacket(true);
     alertValueUpdated(); });
 
-    new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Passkey" /*"BLE_PASSKEY"*/, {.INT = 202777}, [](void *data)
+    new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Bluetooth Passkey (6 digits)" /*"BLE_PASSKEY"*/, {.INT = getblePasskey()}, [](void *data)
+               { log_i("Pressed %i", (data));
+        setblePasskey((uint32_t)data); // save locally
+        if (isConnectedToManifold()) {
+            AuthPacket pkt(getblePasskey(), AuthResult::AUTHRESULT_UPDATEKEY); // save on manifold
+            sendRestPacket(&pkt); 
+        }
+        alertValueUpdated(); });
 
-               { log_i("Pressed %i", (data)); });
     this->ui_config2 = new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Shutoff Time (Minutes)" /*"SYSTEM_SHUTOFF_TIME_MS"*/, {.INT = 0}, [](void *data)
                                   { log_i("Pressed %i", ((uint32_t)data)); 
         *util_configValues._systemShutoffTimeM() = (uint32_t)data;
