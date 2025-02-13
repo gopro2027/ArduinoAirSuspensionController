@@ -30,8 +30,23 @@ This github repo includes an android app and arduino code along with some 3d pri
 
 ### Branch Information:
 **main branch = ESP32** (Current full version of OASMan)<br>
+**dev branch = ESP32** (Bleeding edge updates to OASMAN)<br>
 **nano-v1 branch = Arduino Nano** (outdated, no longer maintained, only exists for legacy purposes)<br>
 **Other branches = current dev work** (Other dev work which you can ignore)<br>
+<br>
+### Folder Information:
+**tutorial** - Contains important build instructions (must read)<br>
+**OASMan_ESP32** - The main board project<br>
+**Wireless_Controller** - The project for the wireless controller of the main board<br>
+**builds** - Mobile App Builds (apk's ect)<br>
+**ESP32_SHARED_LIBS** - Contains files used between the main board and controller projects. Notably the config file which you may or may not need to edit.<br>
+**LCDImageCreatorTool** - Code generator for making images for the tiny 128x64 screen on the manifold.<br>
+**MobileApp** - New flutter mobile app using BLE<br>
+**AirSuspension** - Legacy android app using traditional bluetooth. Will be deleted in the future.<br>
+**3d Prints** - Contains files for 3d printing (more info in tutorials)<br>
+**PCB** - PCB files. More info in tutorial<br>
+**PS3_Controller_Tool** - Contains instructions & exe for setting the MAC address of your ps3 controller to work with OASMan<br>
+**photos** - photos<br>
 <br>
 
 ### Please [click here to view the comprehensive tutorial](/tutorial/README.md) documentation!<br>
@@ -55,4 +70,3 @@ This github repo includes an android app and arduino code along with some 3d pri
 ![app_airsuspension](https://user-images.githubusercontent.com/7937950/236578835-0e3a208d-48cf-48e8-a882-4479f1afe35c.png)
 <!--![car_airsuspension](https://user-images.githubusercontent.com/7937950/236578918-bfa39ad6-a3b5-4d52-b36a-be34e8c608af.png)-->
 ![oasman mascot car](https://github.com/user-attachments/assets/aef9e896-0be0-4203-92d2-81836c27fd5d)
-

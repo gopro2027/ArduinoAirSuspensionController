@@ -129,7 +129,7 @@ int InputType::analogRead(bool skipVoltageAdjustment)
 
         return value;
 #else
-        return 3686; // value of max psi on esp32
+        return random(3686); // value of max psi on esp32
 #endif
     }
 }
