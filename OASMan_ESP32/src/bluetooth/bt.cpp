@@ -179,7 +179,7 @@ bool runInput()
         {
             return false;
         }
-        setBaseProfile(profileIndex);
+        setbaseProfile(profileIndex);
         return true;
     }
     else if (comp(inBuffer, _READPROFILE))
@@ -233,11 +233,11 @@ bool runInput()
         unsigned long ros = trailingInt(_RISEONSTART);
         if (ros == 0)
         {
-            setRiseOnStart(false);
+            setriseOnStart(false);
         }
         else
         {
-            setRiseOnStart(true);
+            setriseOnStart(true);
         }
         return true;
     }
@@ -246,17 +246,17 @@ bool runInput()
         unsigned long rops = trailingInt(_RAISEONPRESSURESET);
         if (rops == 0)
         {
-            setRaiseOnPressureSet(false);
+            setraiseOnPressure(false);
         }
         else
         {
-            setRaiseOnPressureSet(true);
+            setraiseOnPressure(true);
         }
         return true;
     }
     else if (comp(inBuffer, _REBOOT))
     {
-        setReboot(true);
+        setinternalReboot(true);
         Serial.println(F("Rebooting..."));
         return true;
     }

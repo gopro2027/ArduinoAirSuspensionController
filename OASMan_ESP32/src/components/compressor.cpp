@@ -1,6 +1,4 @@
 #include "compressor.h"
-#include <Wire.h>
-#include <SPI.h>
 
 Compressor::Compressor() {}
 
@@ -47,27 +45,34 @@ float Compressor::getTankPressure()
 #endif
 }
 
+bool Compressor::isFrozen()
+{
+    return (millis() < this->pauseExecutionUntilTime);
+}
+
+bool Compressor::isOn()
+{
+    return this->s_trigger.isOpen();
+}
+
 void Compressor::loop()
 {
     unsigned long curTime = millis();
 
     // READING TANK PRESSURE LOGIC:
 
+    if (this->currentPressure == TANK_READING_NOT_READY_YET_VALUE) // ok I know you aren't supposed to use equals on floats but i am checking the exact value so it's fine
+    {
+        this->currentPressure = this->readPressure();
+    }
+
     // if (!isAnyWheelActive()) // TODO: need to add this check on reading but also at the same time make it safe and turn off the compressor. or maybe just dont add it bc the only issue is innacurate read values when valves are open, and who really cares right???
     sampleReading(this->currentPressure, this->readPressure(), this->pressureArray, this->pressureArrayCounter, PRESSURE_AVERAGE_ARRAY_SIZE);
-
-    // Turn compressor off if i haven't completed a proper reading yet
-    if (this->currentPressure == TANK_READING_NOT_READY_YET_VALUE)
-    {
-        // ok I know you aren't supposed to use equals on floats but i am checking the exact value so it's fine
-        this->s_trigger.close();
-        return;
-    }
 
     // COMPRESSOR CONTROL LOGIC:
 
     // no matter which state compressor is in, check if it is up to max psi and turn it off if needed and return without any further execution. This is most important tank check and should ideally be ran first to turn off in any case where pressure is too high.
-    if (this->getTankPressure() >= COMPRESSOR_MAX_PSI)
+    if (this->getTankPressure() >= getcompressorOffPSI())
     {
         this->s_trigger.close();
         return;
@@ -99,7 +104,7 @@ void Compressor::loop()
     }
 
     // part 2 of freeze check code. pause execution if our pauseExecutionUntilTime is in the future
-    if (curTime < this->pauseExecutionUntilTime)
+    if (this->isFrozen())
     {
         this->s_trigger.close();
         return;
@@ -117,7 +122,7 @@ void Compressor::loop()
     // if compressor off, check if tank psi is below low psi and turn on if needed
     if (!this->s_trigger.isOpen())
     {
-        if (this->getTankPressure() < COMPRESSOR_ON_BELOW_PSI)
+        if (this->getTankPressure() < getcompressorOnPSI())
         {
             this->s_trigger.open();
         }

@@ -1,9 +1,13 @@
 #include <Arduino.h>
+#include <Preferences.h> // have to include it here or it isn't found in the shared libs
 
 #include <esp32_smartdisplay.h>
 #include <ui/ui.h>
 
 #include "utils/touch_lib.h"
+#include "tasks/tasks.h"
+
+#include "utils/util.h"
 
 void OnAddOneClicked(lv_event_t *e)
 {
@@ -19,20 +23,38 @@ void OnRotateClicked(lv_event_t *e)
     lv_display_set_rotation(disp, rotation);
 }
 lv_obj_t *burnInRect;
-void startBurnInFix();
+boolean doBurnInFix = false;
+void startBurnInFix()
+{
+    smartdisplay_lcd_set_backlight(0.01f);
+    doBurnInFix = true;
+    lv_obj_remove_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
+}
 
+void stopBurnInFix()
+{
+    smartdisplay_lcd_set_backlight(0.8f);
+    doBurnInFix = false;
+    lv_obj_add_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
+}
 void setup()
 {
 #ifdef ARDUINO_USB_CDC_ON_BOOT
-    delay(5000);
+    // delay(5000);
 #endif
     Serial.begin(115200);
-    Serial.setDebugOutput(true);
+    // Serial.setDebugOutput(true);
     log_i("Board: %s", BOARD_NAME);
     log_i("CPU: %s rev%d, CPU Freq: %d Mhz, %d core(s)", ESP.getChipModel(), ESP.getChipRevision(), getCpuFrequencyMhz(), ESP.getChipCores());
     log_i("Free heap: %d bytes", ESP.getFreeHeap());
     log_i("Free PSRAM: %d bytes", ESP.getPsramSize());
     log_i("SDK version: %s", ESP.getSdkVersion());
+
+    setupRestSemaphore();
+
+    beginSaveData();
+
+    setup_tasks();
 
     smartdisplay_init();
 
@@ -46,33 +68,18 @@ void setup()
     burnInRect = lv_obj_create(scrHome.scr);
     lv_obj_remove_style_all(burnInRect);
     lv_obj_set_style_bg_opa(burnInRect, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_size(burnInRect, 240, 320);
+    lv_obj_set_size(burnInRect, DISPLAY_WIDTH, DISPLAY_HEIGHT);
     lv_obj_center(burnInRect);
     lv_obj_set_style_bg_color(burnInRect, lv_color_hex(esp_random()), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_add_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
 
-    startBurnInFix();
+    // startBurnInFix();
+    stopBurnInFix();
 
     setup_touchscreen_hook();
 }
 
 auto lv_last_tick = millis();
-
-boolean doBurnInFix = false;
-void startBurnInFix()
-{
-    smartdisplay_lcd_set_backlight(0.01f);
-    doBurnInFix = true;
-    lv_obj_clear_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
-}
-
-void stopBurnInFix()
-{
-    smartdisplay_lcd_set_backlight(0.5f);
-    doBurnInFix = false;
-    lv_obj_add_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
-}
-
 void loop()
 {
     auto const now = millis();
@@ -84,7 +91,9 @@ void loop()
         {
             stopBurnInFix();
         }
-    } else {
+    }
+    else
+    {
 
         // if (isJustPressed())
         // {
@@ -97,6 +106,7 @@ void loop()
 
         // screen code
         screenLoop();
+        dialogLoop();
     }
 
     // Update the ticker

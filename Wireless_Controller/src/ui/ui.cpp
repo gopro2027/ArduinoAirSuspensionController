@@ -20,13 +20,21 @@ void ui_init(void)
     scrSettings.init();
     scrMain.ui____initial_actions0 = lv_obj_create(NULL);
     changeScreen(SCREEN_HOME);
+
+    screens[0] = &scrHome;
+    screens[1] = &scrPresets;
+    screens[2] = &scrSettings;
 }
 
 void changeScreen(SCREEN screen)
 {
-    if (currentScreen == screen) {
+    if (currentScreen == screen)
+    {
         return;
     }
+
+    // lv_refr_now(lv_disp_get_default());
+
     currentScreen = screen;
     switch (screen)
     {
@@ -43,6 +51,8 @@ void changeScreen(SCREEN screen)
         lv_disp_load_scr(scrSettings.scr);
         break;
     }
+
+    screenLoop(); // run one screen loop of the new screen to update things like the alert before it gets shown on screen
 }
 
 void screenLoop()

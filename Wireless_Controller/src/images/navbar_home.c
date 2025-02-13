@@ -65,7 +65,7 @@ const lv_image_dsc_t navbar_home = {
   .header.cf = LV_COLOR_FORMAT_RGB565,
   .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 240,
-  .header.h = 37,
+  .header.h = 37, // NAVBAR_HEIGHT
   .data_size = 8880 * 2,
   .data = navbar_home_map,
 };

@@ -17,6 +17,8 @@
 #include "screens/ui_scrPresets.h"
 #include "screens/ui_scrSettings.h"
 
+#include "utils/util.h"
+
 typedef enum
 {
     SCREEN_MAIN,

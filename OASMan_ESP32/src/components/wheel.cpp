@@ -1,6 +1,4 @@
 #include "wheel.h"
-#include <Wire.h>
-#include <SPI.h>
 
 struct PressureGoalValveTiming
 {
@@ -84,7 +82,7 @@ float analogToPressure(int nativeAnalogValue)
     float floored = float(nativeAnalogValue) - pressureZeroAnalogValue;  // chop off the 0 value
     float totalRange = pressureMaxAnalogValue - pressureZeroAnalogValue; // get the total analog voltage difference between min and max
     float normalized = floored / totalRange;                             // 0 to 1 where 0 is 0psi and 1 is max psi
-    float psi = normalized * pressuretransducermaxPSI;                   // multiply out 0 to 1 by our max psi
+    float psi = normalized * getpressureSensorMax();                     // multiply out 0 to 1 by our max psi
 
     return psi;
 }
@@ -93,7 +91,7 @@ float analogToPressure(int nativeAnalogValue)
 float pressureToAnalog(float psi)
 {
     float totalRange = pressureMaxAnalogValue - pressureZeroAnalogValue; // get the total analog voltage difference between min and max
-    return (psi / pressuretransducermaxPSI) * totalRange + pressureZeroAnalogValue;
+    return (psi / getpressureSensorMax()) * totalRange + pressureZeroAnalogValue;
 }
 
 float readPinPressure(InputType *pin)
@@ -125,7 +123,7 @@ bool Wheel::isActive()
 
 void Wheel::initPressureGoal(int newPressure, bool quick)
 {
-    if (newPressure > MAX_PRESSURE_SAFETY)
+    if (newPressure > getbagMaxPressure())
     {
         // hardcode not to go above set psi
         return;
