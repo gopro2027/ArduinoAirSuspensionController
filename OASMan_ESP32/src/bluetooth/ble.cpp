@@ -113,12 +113,14 @@ class MyServerCallbacks : public BLEServerCallbacks
         currentUserNum++;
 
         addConnectedClient({param->connect.conn_id, millis()});
+        BLEDevice::startAdvertising();
     };
 
     void onDisconnect(BLEServer *pServer, esp_ble_gatts_cb_param_t *param)
     {
         log_i("Client disconnected!");
         removeAuthed(param->connect.conn_id);
+        BLEDevice::startAdvertising();
     }
 };
 class CharacteristicCallback : public BLECharacteristicCallbacks
@@ -192,7 +194,7 @@ class CharacteristicCallback : public BLECharacteristicCallbacks
     }
 } characteristicCallback;
 
-// // https://www.youtube.com/watch?v=TwexLJwdLEw&ab_channel=ThatProject
+// https://www.youtube.com/watch?v=TwexLJwdLEw&ab_channel=ThatProject
 // void bleSecurity()
 // {
 //     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
@@ -256,7 +258,6 @@ void ble_loop()
     prevConnectedCount = connectedCount;
 
     checkConnectedClients();
-
     ble_notify();
 }
 
