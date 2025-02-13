@@ -192,71 +192,31 @@ class CharacteristicCallback : public BLECharacteristicCallbacks
     }
 } characteristicCallback;
 
-class SecurityCallback : public BLESecurityCallbacks
-{
-
-    uint32_t onPassKeyRequest()
-    {
-        return 000000;
-    }
-
-    void onPassKeyNotify(uint32_t pass_key) {}
-
-    bool onConfirmPIN(uint32_t pass_key)
-    {
-        vTaskDelay(5000);
-        return true;
-    }
-
-    bool onSecurityRequest()
-    {
-        return true;
-    }
-
-    void onAuthenticationComplete(esp_ble_auth_cmpl_t cmpl)
-    {
-        if (cmpl.success)
-        {
-            Serial.println("   - SecurityCallback - Authentication Success");
-        }
-        else
-        {
-            Serial.println("   - SecurityCallback - Authentication Failure*");
-
-            // pServer->disconnect(pServer->getConnId());
-            // pServer->removePeerDevice(pServer->getConnId(), true);
-        }
-        BLEDevice::startAdvertising();
-    }
-};
-
-// https://www.youtube.com/watch?v=TwexLJwdLEw&ab_channel=ThatProject
-void bleSecurity()
-{
-    esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
-    esp_ble_io_cap_t iocap = ESP_IO_CAP_OUT;
-    uint8_t key_size = 16;
-    uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
-    uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
-    uint32_t passkey = getblePasskey();
-    uint8_t auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_ENABLE;
-    auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_DISABLE; // allows mini device to connect TODO: remove this line and force the little device to enter the passkey too
-    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(uint32_t));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, sizeof(uint8_t));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(uint8_t));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &key_size, sizeof(uint8_t));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_ONLY_ACCEPT_SPECIFIED_SEC_AUTH, &auth_option, sizeof(uint8_t));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(uint8_t));
-    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
-}
+// // https://www.youtube.com/watch?v=TwexLJwdLEw&ab_channel=ThatProject
+// void bleSecurity()
+// {
+//     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
+//     esp_ble_io_cap_t iocap = ESP_IO_CAP_OUT;
+//     uint8_t key_size = 16;
+//     uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
+//     uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
+//     uint32_t passkey = getblePasskey();
+//     uint8_t auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_ENABLE;
+//     auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_DISABLE; // allows mini device to connect TODO: remove this line and force the little device to enter the passkey too
+//     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(uint32_t));
+//     esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, sizeof(uint8_t));
+//     esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(uint8_t));
+//     esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &key_size, sizeof(uint8_t));
+//     esp_ble_gap_set_security_param(ESP_BLE_SM_ONLY_ACCEPT_SPECIFIED_SEC_AUTH, &auth_option, sizeof(uint8_t));
+//     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(uint8_t));
+//     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
+// }
 
 void ble_setup()
 {
 
     // Create the BLE Device
     BLEDevice::init("OASMan");
-    BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT);
-    BLEDevice::setSecurityCallbacks(new SecurityCallback());
 
     // Create the BLE Server
     pServer = BLEDevice::createServer();
@@ -280,7 +240,7 @@ void ble_setup()
 
     pServer->startAdvertising();
 
-    bleSecurity(); // can comment this line to disable security
+    // bleSecurity(); // can comment this line to disable security
 
     Serial.println("Waiting a client connection to notify...");
 }
@@ -313,7 +273,7 @@ void ble_create_characteristics(BLEService *pService)
 
     valveControlCharacteristic = pService->createCharacteristic(
         VALVECONTROL_CHARACTERISTIC_UUID,
-        BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE_NR); // NR meaning no response from the server
+        BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE_NR); // NR meaning no response from the server ?
 
     // statusCharacteristic->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
     // restCharacteristic->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
