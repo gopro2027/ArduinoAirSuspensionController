@@ -190,10 +190,12 @@ void beginSaveData()
 {
     _SaveData.unitsMode.load("units", UNITS_MODE::PSI);
     _SaveData.blePasskey.load("blePasskey", 202777);
+    _SaveData.screenDimTimeM.load("screenDimTimeM", 3);
 }
 
 createSaveFuncInt(unitsMode, int);
 createSaveFuncInt(blePasskey, uint32_t);
+createSaveFuncInt(screenDimTimeM, uint32_t);
 
 static lv_obj_t *kb = NULL;
 void closeKeyboard()

@@ -105,12 +105,14 @@ class SaveData
 public:
     Preferencable unitsMode;
     Preferencable blePasskey;
+    Preferencable screenDimTimeM;
 };
 
 extern SaveData _SaveData;
 void beginSaveData();
 headerDefineSaveFunc(unitsMode, int);
 headerDefineSaveFunc(blePasskey, uint32_t);
+headerDefineSaveFunc(screenDimTimeM, uint32_t);
 
 void ta_event_cb(lv_event_t *e);
 bool isKeyboardHidden();

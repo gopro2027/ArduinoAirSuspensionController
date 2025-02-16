@@ -37,6 +37,9 @@ void stopBurnInFix()
     doBurnInFix = false;
     lv_obj_add_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
 }
+#define DIM_SCREEN_TIME 60 * 1000 * getscreenDimTimeM()
+unsigned long dimScreenTime = 0;
+bool dimmed = false;
 void setup()
 {
 #ifdef ARDUINO_USB_CDC_ON_BOOT
@@ -77,12 +80,30 @@ void setup()
     stopBurnInFix();
 
     setup_touchscreen_hook();
+
+    dimScreenTime = millis() + DIM_SCREEN_TIME;
 }
 
 auto lv_last_tick = millis();
 void loop()
 {
     auto const now = millis();
+
+    if (isTouched())
+    {
+        if (dimmed)
+        {
+            smartdisplay_lcd_set_backlight(0.8f);
+            dimmed = false;
+        }
+        dimScreenTime = now + DIM_SCREEN_TIME;
+    }
+
+    if (dimScreenTime < now && dimmed == false)
+    {
+        smartdisplay_lcd_set_backlight(0.01f);
+        dimmed = true;
+    }
 
     if (doBurnInFix)
     {

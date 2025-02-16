@@ -1,5 +1,5 @@
 #include "option.h"
-lv_style_t stylepointer;
+lv_style_t headerStyle;
 static bool styleCreated = false;
 LV_IMG_DECLARE(imgOn);
 LV_IMG_DECLARE(imgOff);
@@ -14,12 +14,12 @@ void createStyle()
     if (styleCreated == false)
     {
         // create style
-        lv_style_init(&stylepointer);
-        // lv_style_set_bg_color(&stylepointer, lv_color_grey());
-        // lv_style_set_bg_opa(&stylepointer, LV_OPA_50);
-        // lv_style_set_border_width(&stylepointer, 2);
-        // lv_style_set_border_color(&stylepointer, lv_color_black());
-        lv_style_set_text_font(&stylepointer, &lv_font_montserrat_26);
+        lv_style_init(&headerStyle);
+        // lv_style_set_bg_color(&headerStyle, lv_color_grey());
+        // lv_style_set_bg_opa(&headerStyle, LV_OPA_50);
+        // lv_style_set_border_width(&headerStyle, 2);
+        // lv_style_set_border_color(&headerStyle, lv_color_black());
+        lv_style_set_text_font(&headerStyle, &lv_font_montserrat_20);
 
         styleCreated = true;
     }
@@ -88,7 +88,7 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     }
     else if (type == OptionType::HEADER)
     {
-        lv_obj_add_style(this->text, &stylepointer, LV_PART_MAIN);
+        lv_obj_add_style(this->text, &headerStyle, LV_PART_MAIN);
     }
     else if (type == OptionType::ON_OFF)
     {
