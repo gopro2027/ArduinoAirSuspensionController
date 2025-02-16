@@ -64,7 +64,7 @@ void task_ps3_controller(void *parameters)
     for (;;)
     {
         ps3_controller_loop();
-        delay(500);
+        delay(100);
     }
 }
 #endif

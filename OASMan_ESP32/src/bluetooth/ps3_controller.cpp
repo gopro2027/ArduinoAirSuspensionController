@@ -4,6 +4,8 @@
 
 int player = 0;
 int battery = 0;
+bool armed = true;
+bool armedIsHeldDown = false;
 
 enum JoystickMode
 {
@@ -101,6 +103,26 @@ void feedback()
 
 void notify()
 {
+
+    if (Ps3.data.button.r1 && Ps3.data.button.l1)
+    {
+        if (armedIsHeldDown == false)
+        {
+            // this means we just pressed them, flip value of armed
+            armed = !armed;
+            feedback();
+        }
+        armedIsHeldDown = true;
+    }
+    else
+    {
+        armedIsHeldDown = false;
+    }
+
+    if (!armed)
+    {
+        return;
+    }
 
     // Old controllers go bad and the bluetooth starts to act up. I noticed when they act up they don't often go above analog value of 20, but still trigger Ps3.event.button_down. Implemented the same thing but must be greater than 50 to trigger
 
@@ -546,24 +568,45 @@ void printJoystick(JoystickMode js)
     }
 }
 
+// this function is ran every 100ms
 void setBatteryInLED()
 {
-    player += 1;
-    if (player > 10)
-        player = 0;
-    battery = Ps3.data.status.battery;
-    if (battery == ps3_status_battery_charging)
-        Ps3.setPlayer(player);
-    else if (battery == ps3_status_battery_full)
-        Ps3.setPlayer(10);
-    else if (battery == ps3_status_battery_high)
-        Ps3.setPlayer(9);
-    else if (battery == ps3_status_battery_low)
-        Ps3.setPlayer(7);
-    else if (battery == ps3_status_battery_dying)
-        Ps3.setPlayer(4);
-    else if (battery == ps3_status_battery_shutdown)
-        Ps3.setPlayer(0); // idk what shutdown means lol i guess it's coming soon
+    bool flash = (millis() / 2000) % 2; // flip boolean every 2 second
+    static bool previousFlash = false;  // store previous value of the 1 second flip
+    static int flashCounter = 0;
+    if (flash != previousFlash)
+    {
+        // okay soo this means we are at the start of a new second now...
+        flashCounter = 3;
+        previousFlash = flash;
+    }
+    if (flashCounter % 2 == 1 && armed) // will flash on odd numbers. Default set to 3 and decrement every 100ms so it will flash at 3 and 1 and go back to normal for the rest of the second
+    {
+        Ps3.setPlayer(0);
+    }
+    else
+    {
+        player += 1;
+        if (player > 10)
+            player = 0;
+        battery = Ps3.data.status.battery;
+        if (battery == ps3_status_battery_charging)
+            Ps3.setPlayer(player);
+        else if (battery == ps3_status_battery_full)
+            Ps3.setPlayer(10);
+        else if (battery == ps3_status_battery_high)
+            Ps3.setPlayer(9);
+        else if (battery == ps3_status_battery_low)
+            Ps3.setPlayer(7);
+        else if (battery == ps3_status_battery_dying)
+            Ps3.setPlayer(4);
+        else if (battery == ps3_status_battery_shutdown)
+            Ps3.setPlayer(0); // idk what shutdown means lol i guess it's coming soon
+    }
+    if (flashCounter > 0)
+    {
+        flashCounter--;
+    }
 }
 
 void onConnect()
