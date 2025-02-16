@@ -138,14 +138,6 @@ void ScrSettings::init()
     //  lv_obj_center(this->ui_qrcode);
     //  lv_obj_set_y(this->ui_qrcode, DISPLAY_HEIGHT - 10);
 
-    // test values
-
-    // setupPressureLabel(this->optionsContainer, &this->ui_s1, 0, 15 * 0, LV_ALIGN_TOP_MID, "0");
-    // setupPressureLabel(this->optionsContainer, &this->ui_s2, 0, 15 * 1, LV_ALIGN_TOP_MID, "0");
-    // setupPressureLabel(this->optionsContainer, &this->ui_s3, 0, 15 * 2, LV_ALIGN_TOP_MID, "0");
-    // setupPressureLabel(this->optionsContainer, &this->ui_s4, 0, 15 * 3, LV_ALIGN_TOP_MID, "0");
-    // setupPressureLabel(this->optionsContainer, &this->ui_s5, 0, 15 * 4, LV_ALIGN_TOP_MID, "0");
-
     // add space at end of list
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
 
