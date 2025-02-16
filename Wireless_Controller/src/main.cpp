@@ -37,7 +37,7 @@ void stopBurnInFix()
     doBurnInFix = false;
     lv_obj_add_flag(burnInRect, LV_OBJ_FLAG_HIDDEN);
 }
-#define DIM_SCREEN_TIME 5 * 60 * 1000
+#define DIM_SCREEN_TIME 60 * 1000 * getscreenDimTimeM()
 unsigned long dimScreenTime = 0;
 bool dimmed = false;
 void setup()

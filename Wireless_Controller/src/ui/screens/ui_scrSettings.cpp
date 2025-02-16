@@ -55,6 +55,13 @@ void ScrSettings::init()
     { setunitsMode((int)data); };
     new RadioOption(this->optionsContainer, unitsRadioText, 2, unitsRadioCB, getunitsMode());
 
+    new Option(this->optionsContainer, OptionType::SPACE, "");
+    new Option(this->optionsContainer, OptionType::HEADER, "Controller Settings");
+
+    new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Dim Screen (Minutes)", {.INT = getscreenDimTimeM()}, [](void *data)
+               { log_i("Pressed %i", ((uint32_t)data));
+        setscreenDimTimeM((uint32_t)data); });
+
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
     new Option(this->optionsContainer, OptionType::HEADER, "Config");
 
