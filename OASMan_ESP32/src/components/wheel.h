@@ -23,6 +23,7 @@ private:
     bool quickMode;                    // flag to skip extra percise measurements
 
     float pressureValue;
+    float levelValue;
 
     Solenoid s_AirIn;
     Solenoid s_AirOut;
@@ -32,8 +33,8 @@ public:
     Wheel(InputType *solenoidInPin, InputType *solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum);
     void initPressureGoal(int newPressure, bool quick = false);
     void loop();
-    void readPressure();
-    float getPressure();
+    void readInputs();
+    float getSelectedInputValue();
     bool isActive();
     Solenoid *getInSolenoid();
     Solenoid *getOutSolenoid();

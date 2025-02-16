@@ -115,20 +115,25 @@ float readPinPressure(InputType *pin, bool heightMode)
     }
 }
 
-void Wheel::readPressure()
+void Wheel::readInputs()
 {
-    this->pressureValue = readPinPressure(getheightSensorMode() ? this->levelSensorPin : this->pressurePin, getheightSensorMode());
+    this->pressureValue = readPinPressure(this->pressurePin, false);
+    if (getheightSensorMode())
+    {
+        this->levelValue = readPinPressure(this->levelSensorPin, true);
+    }
 }
 
-float Wheel::getPressure()
+float Wheel::getSelectedInputValue()
 {
-    if (this->pressureValue < 0)
+    float value = getheightSensorMode() ? this->levelValue : this->pressureValue;
+    if (value < 0)
     {
         return 0;
     }
     else
     {
-        return this->pressureValue;
+        return value;
     }
 }
 
@@ -144,11 +149,21 @@ void Wheel::initPressureGoal(int newPressure, bool quick)
         // hardcode not to go above set psi
         return;
     }
-    int pressureDif = newPressure - this->getPressure(); // negative if airing out, positive if airing up
+    int pressureDif = newPressure - this->getSelectedInputValue(); // negative if airing out, positive if airing up
     if (abs(pressureDif) > getMinValveOpenPSI(quick))
     {
         // okay we need to set the values, but only if we are airing out or if the tank has more pressure than what is currently in the bags
-        if (pressureDif < 0 || getCompressor()->getTankPressure() > this->getPressure())
+        bool tankIsCapable = true;
+        if (getheightSensorMode() == false)
+        {
+            // it's in pressure mode, check if tank is less than whats currently in the bag and if it is then tankIsCapable is false.
+            // we don't care about the goal because we still want to try to reach the goal even if the tank isn't capable. We do care if tank is more than the bag though because if it's less than the bag then it will actually air out.
+            if (getCompressor()->getTankPressure() < this->getSelectedInputValue())
+            {
+                tankIsCapable = false;
+            }
+        }
+        if (pressureDif < 0 || tankIsCapable)
         {
             this->pressureGoal = newPressure;
             this->quickMode = quick;
@@ -165,7 +180,7 @@ void Wheel::initPressureGoal(int newPressure, bool quick)
 void Wheel::loop()
 {
     // Serial.println("WheelP: ");
-    this->readPressure();
+    this->readInputs();
     if (this->flagStartPressureGoalRoutine)
     {
         this->flagStartPressureGoalRoutine = false;
@@ -178,15 +193,15 @@ void Wheel::loop()
             }
 
             // Main routine
-            this->readPressure();
-            int pressureDif = this->pressureGoal - this->getPressure();
+            this->readInputs();
+            int pressureDif = this->pressureGoal - this->getSelectedInputValue();
             int pressureDifABS = abs(pressureDif);
 
             if (pressureDifABS > getMinValveOpenPSI(this->quickMode))
             {
                 // Decide which valve to use
                 Solenoid *valve;
-                if (this->pressureGoal > this->getPressure())
+                if (this->pressureGoal > this->getSelectedInputValue())
                 {
                     valve = &this->s_AirIn;
                     this->s_AirOut.close();
