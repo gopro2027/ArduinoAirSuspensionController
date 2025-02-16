@@ -42,6 +42,7 @@ int getMinValveOpenPSI(bool quickMode)
     return getheightSensorMode() ? 0 : getValveTiming(0, quickMode)->pressureDelta;
 }
 
+// TODO: Turn this into a function based on the values above so that it is smooth, and add a multiplier to change in the settings for people with larger volume bags where it's too slow by default
 int calculateValveOpenTimeMS(int pressureDifferenceAbsolute, bool quickMode)
 {
     return getheightSensorMode() ? 0 : getValveTiming(pressureDifferenceAbsolute, quickMode)->valveTimingUntilWithin; // Note: Added 0 for height sensor mode but it is unused
