@@ -14,6 +14,7 @@ class Wheel
 {
 private:
     InputType *pressurePin;
+    InputType *levelSensorPin;
     byte thisWheelNum;
 
     byte pressureGoal;
@@ -28,7 +29,7 @@ private:
 
 public:
     Wheel();
-    Wheel(InputType *solenoidInPin, InputType *solenoidOutPin, InputType *pressurePin, byte thisWheelNum);
+    Wheel(InputType *solenoidInPin, InputType *solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum);
     void initPressureGoal(int newPressure, bool quick = false);
     void loop();
     void readPressure();
@@ -39,5 +40,5 @@ public:
     InputType *getPressurePin();
 };
 
-float readPinPressure(InputType *pin);
+float readPinPressure(InputType *pin, bool heightMode);
 #endif

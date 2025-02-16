@@ -39,19 +39,20 @@ PressureGoalValveTiming *getValveTiming(int pressureDifferenceAbsolute, bool qui
 
 int getMinValveOpenPSI(bool quickMode)
 {
-    return getValveTiming(0, quickMode)->pressureDelta;
+    return getheightSensorMode() ? 0 : getValveTiming(0, quickMode)->pressureDelta;
 }
 
 int calculateValveOpenTimeMS(int pressureDifferenceAbsolute, bool quickMode)
 {
-    return getValveTiming(pressureDifferenceAbsolute, quickMode)->valveTimingUntilWithin;
+    return getheightSensorMode() ? 0 : getValveTiming(pressureDifferenceAbsolute, quickMode)->valveTimingUntilWithin; // Note: Added 0 for height sensor mode but it is unused
 }
 
 Wheel::Wheel() {}
 
-Wheel::Wheel(InputType *solenoidInPin, InputType *solenoidOutPin, InputType *pressurePin, byte thisWheelNum)
+Wheel::Wheel(InputType *solenoidInPin, InputType *solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum)
 {
     this->pressurePin = pressurePin;
+    this->levelSensorPin = levelSensorPin;
     this->thisWheelNum = thisWheelNum;
     this->s_AirIn = Solenoid(solenoidInPin);
     this->s_AirOut = Solenoid(solenoidOutPin);
@@ -77,14 +78,22 @@ InputType *Wheel::getPressurePin()
     return this->pressurePin;
 }
 
-float analogToPressure(int nativeAnalogValue)
+float analogToRange(int nativeAnalogValue)
 {
     float floored = float(nativeAnalogValue) - pressureZeroAnalogValue;  // chop off the 0 value
     float totalRange = pressureMaxAnalogValue - pressureZeroAnalogValue; // get the total analog voltage difference between min and max
     float normalized = floored / totalRange;                             // 0 to 1 where 0 is 0psi and 1 is max psi
-    float psi = normalized * getpressureSensorMax();                     // multiply out 0 to 1 by our max psi
+    return normalized;
+}
 
-    return psi;
+float analogToPressure(int nativeAnalogValue)
+{
+    return analogToRange(nativeAnalogValue) * getpressureSensorMax(); // multiply out 0 to 1 by our max psi
+}
+
+float analogToHeightPercentage(int nativeAnalogValue)
+{
+    return analogToRange(nativeAnalogValue) * getHeightSensorMax(); // multiply out 0 to 1 by 100 to get a percentage
 }
 
 // Testing function, convert pressure value back to analog value, exact reverse of analogToPressure
@@ -94,14 +103,21 @@ float pressureToAnalog(float psi)
     return (psi / getpressureSensorMax()) * totalRange + pressureZeroAnalogValue;
 }
 
-float readPinPressure(InputType *pin)
+float readPinPressure(InputType *pin, bool heightMode)
 {
-    return analogToPressure(pin->analogRead());
+    if (heightMode == false)
+    {
+        return analogToPressure(pin->analogRead());
+    }
+    else
+    {
+        return analogToHeightPercentage(pin->analogRead());
+    }
 }
 
 void Wheel::readPressure()
 {
-    this->pressureValue = readPinPressure(this->pressurePin);
+    this->pressureValue = readPinPressure(getheightSensorMode() ? this->levelSensorPin : this->pressurePin, getheightSensorMode());
 }
 
 float Wheel::getPressure()
@@ -123,7 +139,7 @@ bool Wheel::isActive()
 
 void Wheel::initPressureGoal(int newPressure, bool quick)
 {
-    if (newPressure > getbagMaxPressure())
+    if (newPressure > (getheightSensorMode() ? getHeightSensorMax() * 1.03f : getbagMaxPressure()))
     {
         // hardcode not to go above set psi
         return;
@@ -141,6 +157,9 @@ void Wheel::initPressureGoal(int newPressure, bool quick)
         }
     }
 }
+
+// height sensor: AA-ROT-120 https://www.aliexpress.us/item/3256807527882480.html https://www.amazon.com/Height-Sensor-Suspension-Leveling-AA-ROT-120/dp/B08DJ3HX1B
+// Output voltage UA:0.5-4.5
 
 // logic https://www.figma.com/board/YOKnd1caeojOlEjpdfY5NF/Untitled?node-id=0-1&node-type=canvas&t=p1SyY3R7azjm1PKs-0
 void Wheel::loop()
@@ -170,22 +189,35 @@ void Wheel::loop()
                 if (this->pressureGoal > this->getPressure())
                 {
                     valve = &this->s_AirIn;
+                    this->s_AirOut.close();
                 }
                 else
                 {
                     valve = &this->s_AirOut;
+                    this->s_AirIn.close();
                 }
 
-                // Choose time to open for
-                int valveTime = calculateValveOpenTimeMS(pressureDifABS, this->quickMode);
+                if (!getheightSensorMode())
+                {
+                    // Pressure sensor logic. You can't read the pressure accurately with the valve open. Essentially must open the valve for a guesstimate amount of time, then close it, then you are able to read the pressure.
 
-                // Open valve for calculated time
-                valve->open();
-                delay(valveTime);
-                valve->close();
+                    // Choose time to open for
+                    int valveTime = calculateValveOpenTimeMS(pressureDifABS, this->quickMode);
 
-                // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
-                delay(150);
+                    // Open valve for calculated time
+                    valve->open();
+                    delay(valveTime);
+                    valve->close();
+
+                    // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
+                    delay(150);
+                }
+                else
+                {
+                    // for level sensors, just open the valve and read level sensors while valves are open since it doesn't affect the reading
+                    valve->open();
+                    delay(1);
+                }
             }
             else
             {
@@ -193,5 +225,8 @@ void Wheel::loop()
                 break;
             }
         }
+        // close both after (only applies for level sensor logic)
+        this->s_AirIn.close();
+        this->s_AirOut.close();
     }
 }

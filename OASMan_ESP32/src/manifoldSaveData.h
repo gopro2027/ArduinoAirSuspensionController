@@ -57,4 +57,6 @@ headerDefineSaveFunc(compressorOnPSI, uint8_t);
 headerDefineSaveFunc(compressorOffPSI, uint8_t);
 headerDefineSaveFunc(pressureSensorMax, uint16_t);
 
+float getHeightSensorMax();
+
 #endif
