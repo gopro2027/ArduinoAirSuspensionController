@@ -22,6 +22,7 @@ public:
     Preferencable internalReboot;  // byte
     Preferencable maintainPressure;
     Preferencable airOutOnShutoff;
+    Preferencable heightSensorMode;
     Preferencable bagMaxPressure;
     Preferencable blePasskey;
     Preferencable systemShutoffTimeM;
@@ -39,22 +40,11 @@ void beginSaveData();
 void readProfile(byte profileIndex);
 void writeProfile(byte profileIndex);
 void savePressuresToProfile(byte profileIndex, float _WHEEL_FRONT_PASSENGER, float _WHEEL_REAR_PASSENGER, float _WHEEL_FRONT_DRIVER, float _WHEEL_REAR_DRIVER);
-// bool getRiseOnStart();
-// void setRiseOnStart(bool value);
-// bool getMaintainPressure();
-// void setMaintainPressure(bool value);
-// bool getAirOutOnShutoff();
-// void setAirOutOnShutoff(bool value);
-// byte getBaseProfile();
-// void setBaseProfile(byte value);
-// bool getRaiseOnPressureSet();
-// void setRaiseOnPressureSet(bool value);
-// bool getReboot();
-// void setReboot(bool value);
 
 headerDefineSaveFunc(riseOnStart, bool);
 headerDefineSaveFunc(maintainPressure, bool);
 headerDefineSaveFunc(airOutOnShutoff, bool);
+headerDefineSaveFunc(heightSensorMode, bool);
 headerDefineSaveFunc(baseProfile, byte);
 headerDefineSaveFunc(raiseOnPressure, bool);
 headerDefineSaveFunc(internalReboot, bool);
@@ -66,5 +56,7 @@ headerDefineSaveFunc(systemShutoffTimeM, uint32_t); // may have to change
 headerDefineSaveFunc(compressorOnPSI, uint8_t);
 headerDefineSaveFunc(compressorOffPSI, uint8_t);
 headerDefineSaveFunc(pressureSensorMax, uint16_t);
+
+float getHeightSensorMax();
 
 #endif

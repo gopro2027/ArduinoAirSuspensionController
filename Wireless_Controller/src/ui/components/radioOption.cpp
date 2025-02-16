@@ -1,7 +1,11 @@
 #include "radioOption.h"
 
-void RadioOption::setSelectedOption(int _selected)
+void RadioOption::setSelectedOption(int _selected, bool callOnSelect)
 {
+    if (this->selected == _selected)
+    {
+        return;
+    }
     if (_selected < 0)
     {
         log_i("ERROR OPTION INDEX NOT FOUND");
@@ -12,7 +16,10 @@ void RadioOption::setSelectedOption(int _selected)
     {
         this->options[i]->setBooleanValue(i == this->selected);
     }
-    this->onSelect((void *)selected);
+    if (callOnSelect)
+    {
+        this->onSelect((void *)selected);
+    }
 }
 
 int RadioOption::getOptionIndex(Option *option)
@@ -30,12 +37,11 @@ void radioCB(void *data)
 {
     Option *option = (Option *)data;
     RadioOption *radioOption = (RadioOption *)option->extraEventClickData;
-    radioOption->setSelectedOption(radioOption->getOptionIndex(option));
+    radioOption->setSelectedOption(radioOption->getOptionIndex(option), true);
 }
 
 RadioOption::RadioOption(lv_obj_t *parent, const char **text, int _size, option_event_cb_t _event_cb, int _selected)
 {
-
     this->size = _size;
     this->options = (Option **)malloc(sizeof(Option *) * size);
 

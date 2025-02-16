@@ -67,10 +67,10 @@
 #define pressureInputRearDriver new InputType(1, &ADS1115A)     // ADSA/1   Previous: D39/VN/A7
 
 /* Level sensor pins */
-#define levelInputFrontPassenger new InputType(0, ADS1115B) // ADSB/0
-#define levelInputRearPassenger new InputType(3, ADS1115B)  // ADSB/3
-#define levelInputFrontDriver new InputType(2, ADS1115B)    // ADSB/2
-#define levelInputRearDriver new InputType(1, ADS1115B)     // ADSB/1
+#define levelInputFrontPassenger new InputType(0, &ADS1115B) // ADSB/0
+#define levelInputRearPassenger new InputType(3, &ADS1115B)  // ADSB/3
+#define levelInputFrontDriver new InputType(2, &ADS1115B)    // ADSB/2
+#define levelInputRearDriver new InputType(1, &ADS1115B)     // ADSB/1
 
 /* Set to true if in any of the InputType's above you use ADS (Adafruit_ADS1115) */
 #define USE_ADS true
@@ -80,10 +80,10 @@
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
 
 /* Disable the hang if ads fails to load */
-#define ADS_MOCK_BYPASS false
+#define ADS_MOCK_BYPASS true
 
 /* For testing purposes: mock tank pressure to 200psi */
-#define TANK_PRESSURE_MOCK false
+#define TANK_PRESSURE_MOCK true
 
 /* Values for pressure calculations */
 #define pressuretransducerRunningVoltage 5.0f                                                                                                    // most pressure sensors run on 5v

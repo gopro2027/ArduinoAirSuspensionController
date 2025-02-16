@@ -19,6 +19,7 @@ public:
     Option *ui_maintainprssure;
     Option *ui_riseonstart;
     Option *ui_airoutonshutoff;
+    RadioOption *ui_heightsensormode;
     Option *ui_config1;
     Option *ui_config2;
     Option *ui_config3;

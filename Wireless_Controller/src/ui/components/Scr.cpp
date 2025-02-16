@@ -37,11 +37,12 @@ void Scr::init()
     if (this->showPressures)
     {
         // air pressures at top
-        const int xPadding = 45;
-        setupPressureLabel(this->scr, &this->ui_lblPressureFrontDriver, xPadding, 10, LV_ALIGN_TOP_LEFT, "0");
-        setupPressureLabel(this->scr, &this->ui_lblPressureRearDriver, xPadding, 40, LV_ALIGN_TOP_LEFT, "0");
-        setupPressureLabel(this->scr, &this->ui_lblPressureFrontPassenger, -xPadding, 10, LV_ALIGN_TOP_RIGHT, "0");
-        setupPressureLabel(this->scr, &this->ui_lblPressureRearPassenger, -xPadding, 40, LV_ALIGN_TOP_RIGHT, "0");
+        const int xPadding = 72; // pixels from center to end up centered above left/right buttons
+        // for some reas the text is not letting me specify something like "top right" then centering the text over that coordinate. Instead we must use top mid so that it is centered on ittself (ie grows both left and right with width chantge) and then set the offset of that from center.
+        setupPressureLabel(this->scr, &this->ui_lblPressureFrontDriver, -xPadding, 10, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureRearDriver, -xPadding, 40, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureFrontPassenger, xPadding, 10, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureRearPassenger, xPadding, 40, LV_ALIGN_TOP_MID, "0");
         setupPressureLabel(this->scr, &this->ui_lblPressureTank, 0, 10, LV_ALIGN_TOP_MID, "0");
     }
 }
@@ -84,13 +85,17 @@ void Scr::loop()
     this->alert->loop();
 }
 
-void updatePressure(Scr *scr, lv_obj_t *obj, int index)
+void updatePressure(Scr *scr, lv_obj_t *obj, int index, bool isHeightSensorPercentage)
 {
     if (scr->prevPressures[index] != currentPressures[index])
     {
-        if (getunitsMode() == UNITS_MODE::PSI)
+        if (isHeightSensorPercentage)
         {
-            lv_label_set_text_fmt(obj, "%u", currentPressures[index]);
+            lv_label_set_text_fmt(obj, "%u%%", currentPressures[index]);
+        }
+        else if (getunitsMode() == UNITS_MODE::PSI)
+        {
+            lv_label_set_text_fmt(obj, "%u PSI", currentPressures[index]);
         }
         else
         { // UNITS_MODE::BAR but %f doesn't work
@@ -99,7 +104,7 @@ void updatePressure(Scr *scr, lv_obj_t *obj, int index)
             val = val * 100; // move decimal over 2
             int b = (int)val % 100;
             int a = ((int)val - b) / 100;
-            lv_label_set_text_fmt(obj, "%i.%i", a, b);
+            lv_label_set_text_fmt(obj, "%i.%i Bar", a, b);
         }
         scr->prevPressures[index] = currentPressures[index];
     }
@@ -109,10 +114,11 @@ void Scr::updatePressureValues()
 {
     if (this->showPressures)
     {
-        updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER);
-        updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER);
-        updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER);
-        updatePressure(this, this->ui_lblPressureRearDriver, WHEEL_REAR_DRIVER);
-        updatePressure(this, this->ui_lblPressureTank, _TANK_INDEX);
+        bool hs = statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE);
+        updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER, hs);
+        updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER, hs);
+        updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER, hs);
+        updatePressure(this, this->ui_lblPressureRearDriver, WHEEL_REAR_DRIVER, hs);
+        updatePressure(this, this->ui_lblPressureTank, _TANK_INDEX, false);
     }
 }

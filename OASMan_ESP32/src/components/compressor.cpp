@@ -20,7 +20,7 @@ InputType *Compressor::getReadPin()
 
 float Compressor::readPressure()
 {
-    return readPinPressure(this->readPin);
+    return readPinPressure(this->readPin, false); // always false, will always read pressure sensor here not level sensor
 }
 
 float mockTankPressure = 0;

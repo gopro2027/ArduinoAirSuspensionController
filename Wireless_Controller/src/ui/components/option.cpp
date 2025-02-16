@@ -142,7 +142,6 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     else if (type == OptionType::KEYBOARD_INPUT_NUMBER)
     {
         this->indentText();
-        // setupPressureLabel(this->root, &this->rightHandObj, -MARGIN, 0, LV_ALIGN_RIGHT_MID, itoa(value.INT, strbuf, 10));
         const int textAreaWidth = 70;
         const int textMaxWidth = DISPLAY_WIDTH - (MARGIN * 2 + MARGIN + textAreaWidth) - 6;
         lv_obj_set_width(this->text, textMaxWidth); // space between the start position and the text input

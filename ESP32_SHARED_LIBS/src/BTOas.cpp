@@ -150,6 +150,11 @@ FallOnShutdownPacket::FallOnShutdownPacket(bool enable)
     this->cmd = FALLONSHUTDOWN;
     this->args32()[0].i = enable;
 }
+HeightSensorModePacket::HeightSensorModePacket(bool enable)
+{
+    this->cmd = HEIGHTSENSORMODE;
+    this->args32()[0].i = enable;
+}
 RaiseOnPressureSetPacket::RaiseOnPressureSetPacket(bool enable)
 {
     this->cmd = RAISEONPRESSURESET;
