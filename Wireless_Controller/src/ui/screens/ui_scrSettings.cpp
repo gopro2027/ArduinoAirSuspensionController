@@ -48,6 +48,17 @@ void ScrSettings::init()
                 log_i("Pressed fallonshutdown %i", ((bool)data)); });
 
     new Option(this->optionsContainer, OptionType::SPACE, "");
+    new Option(this->optionsContainer, OptionType::HEADER, "Levelling Mode");
+
+    const char *levelTypeRadioText[2] = {"Pressure Sensor", "Level Sensor"};
+    option_event_cb_t levelTypeRadioCB = [](void *data)
+    {
+        HeightSensorModePacket pkt(((bool)data));
+        sendRestPacket(&pkt);
+    };
+    this->ui_heightsensormode = new RadioOption(this->optionsContainer, levelTypeRadioText, 2, levelTypeRadioCB);
+
+    new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "Units");
 
     const char *unitsRadioText[2] = {"PSI", "Bar"}; // aligns with the enum UNITS_MODE
@@ -157,6 +168,7 @@ void ScrSettings::loop()
     this->ui_riseonstart->setBooleanValue(statusBittset & (1 << StatusPacketBittset::RISE_ON_START));
     this->ui_maintainprssure->setBooleanValue(statusBittset & (1 << StatusPacketBittset::MAINTAIN_PRESSURE));
     this->ui_airoutonshutoff->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF));
+    this->ui_heightsensormode->setSelectedOption((statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE)) != 0 ? 1 : 0);
 
     if (*util_configValues._setValues())
     {

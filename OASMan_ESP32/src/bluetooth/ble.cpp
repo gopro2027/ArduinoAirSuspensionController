@@ -369,6 +369,10 @@ void ble_notify()
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF);
         }
+        if (getheightSensorMode())
+        {
+            statusBittset = statusBittset | (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE);
+        }
         StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getPressure(), getWheel(WHEEL_REAR_PASSENGER)->getPressure(), getWheel(WHEEL_FRONT_DRIVER)->getPressure(), getWheel(WHEEL_REAR_DRIVER)->getPressure(), getCompressor()->getTankPressure(), statusBittset);
 
         statusCharacteristic->setValue(statusPacket.tx(), BTOAS_PACKET_SIZE);
@@ -441,6 +445,9 @@ void runReceivedPacket(BTOasPacket *packet)
         break;
     case BTOasIdentifier::FALLONSHUTDOWN:
         setairOutOnShutoff(((FallOnShutdownPacket *)packet)->getBoolean());
+        break;
+    case BTOasIdentifier::HEIGHTSENSORMODE:
+        setheightSensorMode(((HeightSensorModePacket *)packet)->getBoolean());
         break;
     case BTOasIdentifier::RAISEONPRESSURESET:
         setraiseOnPressure(((RaiseOnPressureSetPacket *)packet)->getBoolean());

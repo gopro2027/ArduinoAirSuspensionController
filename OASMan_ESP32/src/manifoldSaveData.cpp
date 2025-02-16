@@ -9,6 +9,7 @@ void beginSaveData()
     _SaveData.riseOnStart.load("riseOnStart", false);
     _SaveData.maintainPressure.load("maintainPressure", false);
     _SaveData.airOutOnShutoff.load("airOutOnShutoff", false);
+    _SaveData.heightSensorMode.load("heightSensorMode", false);
     _SaveData.baseProfile.load("baseProfile", 2);
     _SaveData.raiseOnPressure.load("raiseOnPressure", false);
     _SaveData.internalReboot.load("internalReboot", false);
@@ -66,6 +67,7 @@ void savePressuresToProfile(byte profileIndex, float _WHEEL_FRONT_PASSENGER, flo
 createSaveFuncInt(riseOnStart, bool);
 createSaveFuncInt(maintainPressure, bool);
 createSaveFuncInt(airOutOnShutoff, bool);
+createSaveFuncInt(heightSensorMode, bool);
 createSaveFuncInt(baseProfile, byte);
 createSaveFuncInt(raiseOnPressure, bool);
 createSaveFuncInt(internalReboot, bool);
