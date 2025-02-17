@@ -50,7 +50,6 @@
 #define pressureInputTank new InputType(32, INPUT)   // D32/A0, pressure sensor
 
 /* Accessory Wire */
-#define ENABLE_ACCESSORY_WIRE_FUNCTIONALITY false
 #define outputKeepAlivePin new InputType(12, OUTPUT) // D12, output high while accessory input is low to keep input on. Should always output high while accessory is on. Output low when accessory is low to turn off system.
 #define accessoryInput new InputType(14, INPUT)      // D14, digital in high or low. 0 = acc on, 1 = acc off (it's on a pullup resistor)
 #define SYSTEM_SHUTOFF_TIME_M 15                     // 15 minutes
@@ -80,10 +79,10 @@
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
 
 /* Disable the hang if ads fails to load */
-#define ADS_MOCK_BYPASS false
+#define ADS_MOCK_BYPASS true
 
 /* For testing purposes: mock tank pressure to 200psi */
-#define TANK_PRESSURE_MOCK false
+#define TANK_PRESSURE_MOCK true
 
 /* Values for pressure calculations */
 #define pressuretransducerRunningVoltage 5.0f                                                                                                    // most pressure sensors run on 5v
@@ -119,6 +118,19 @@ enum SOLENOID_INDEX
     REAR_DRIVER_OUT
 };
 #define SOLENOID_COUNT 8
+
+// platformio.ini toggleables
+
+#if defined(OFFICIAL_RELEASE)
+#define ADS_MOCK_BYPASS false
+#define TANK_PRESSURE_MOCK false
+#endif
+
+#if defined(ACCESSORY_WIRE_FUNCTIONALITY)
+#define ENABLE_ACCESSORY_WIRE_FUNCTIONALITY true
+#else
+#define ENABLE_ACCESSORY_WIRE_FUNCTIONALITY false
+#endif
 
 #endif
 
