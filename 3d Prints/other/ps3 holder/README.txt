@@ -1,0 +1,1 @@
+You need to add this to some sort of mount specific to your car. The ps3 will snap in to this, so you don't need to redesign the controller dimensions.

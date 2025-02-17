@@ -3,16 +3,7 @@
 
 #include <Wire.h>
 #include <Adafruit_ADS1X15.h>
-#include "user_defines.h"
-#include "saveData.h"
-
-struct Ads_Request
-{
-    Adafruit_ADS1115 *adc;
-    byte pin;
-    bool completed;
-    int16_t resultValue;
-};
+#include <user_defines.h>
 
 enum type
 {
@@ -37,7 +28,6 @@ public:
     void analogWrite(int value);
 };
 
-void ADSLoop();
-void queueADSRead(Ads_Request *request, Adafruit_ADS1115 *adc, int pin);
+void setupADCReadMutex();
 
 #endif

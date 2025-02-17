@@ -22,20 +22,20 @@ void drawPSIReadings()
 
     display.setCursor(0, 2 * textHeightPx + 5);
     display.print(F("FD: "));
-    display.print(int(getWheel(WHEEL_FRONT_DRIVER)->getPressure())); // front driver
+    display.print(int(getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue())); // front driver
 
     display.setCursor(secondRowXPos, 2 * textHeightPx + 5);
     display.print(F("FP: "));
-    display.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getPressure())); // front passenger
+    display.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue())); // front passenger
 
     // Rear
     display.setCursor(0, 3.5 * textHeightPx + 5);
     display.print(F("RD: "));
-    display.print(int(getWheel(WHEEL_REAR_DRIVER)->getPressure())); // rear driver
+    display.print(int(getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue())); // rear driver
 
     display.setCursor(secondRowXPos, 3.5 * textHeightPx + 5);
     display.print(F("RP: "));
-    display.print(int(getWheel(WHEEL_REAR_PASSENGER)->getPressure())); // rear passenger
+    display.print(int(getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue())); // rear passenger
 
     display.display();
 }
@@ -46,13 +46,13 @@ void drawsplashscreen()
     {
         display.clearDisplay();
 
-        display.drawBitmap(0, i, logo_bmp_airtekk, 128, 64, 1);
+        display.drawBitmap(0, i, logo_bmp_bootimg, 128, 64, 1);
         display.display();
         delay(1); // 1 ms
     }
     display.clearDisplay();
 
-    display.drawBitmap(0, 0, logo_bmp_airtekk, 128, 64, 1);
+    display.drawBitmap(0, 0, logo_bmp_bootimg, 128, 64, 1);
     display.display();
     delay(2000); // 2 seconds
 }

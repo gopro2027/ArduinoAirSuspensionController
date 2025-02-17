@@ -1,11 +1,12 @@
 #ifndef airSuspensionUtil_h
 #define airSuspensionUtil_h
 
-#include "user_defines.h"
+#include <user_defines.h>
 #include "components/manifold.h"
 #include "components/compressor.h"
 #include "components/wheel.h"
-#include "saveData.h"
+#include "manifoldSaveData.h"
+#include "sampleReading.tcc"
 
 extern Manifold *manifold;
 extern Compressor *compressor;
@@ -31,7 +32,10 @@ bool isAnyWheelActive();
 void airUp(bool quick = false);
 void airOut();
 void airUpRelativeToAverage(int value);
-void compressorLogic();
-void calibratePressureValues();
+void accessoryWireSetup();
+void accessoryWireLoop();
+void notifyKeepAlive();
+bool isVehicleOn();
+bool isKeepAliveTimerExpired();
 
 #endif

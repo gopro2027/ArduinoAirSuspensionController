@@ -1,5 +1,5 @@
 #include "airSuspensionUtil.h"
-#include "saveData.h"
+#include "manifoldSaveData.h"
 
 #pragma region variables
 
@@ -35,7 +35,7 @@ Wheel *getWheel(int i)
 void setRideHeightFrontPassenger(byte value)
 {
     currentProfile[WHEEL_FRONT_PASSENGER] = value;
-    if (getRaiseOnPressureSet())
+    if (getraiseOnPressure())
     {
         getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(value);
     }
@@ -43,7 +43,7 @@ void setRideHeightFrontPassenger(byte value)
 void setRideHeightRearPassenger(byte value)
 {
     currentProfile[WHEEL_REAR_PASSENGER] = value;
-    if (getRaiseOnPressureSet())
+    if (getraiseOnPressure())
     {
         getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(value);
     }
@@ -51,7 +51,7 @@ void setRideHeightRearPassenger(byte value)
 void setRideHeightFrontDriver(byte value)
 {
     currentProfile[WHEEL_FRONT_DRIVER] = value;
-    if (getRaiseOnPressureSet())
+    if (getraiseOnPressure())
     {
         getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(value);
     }
@@ -59,7 +59,7 @@ void setRideHeightFrontDriver(byte value)
 void setRideHeightRearDriver(byte value)
 {
     currentProfile[WHEEL_REAR_DRIVER] = value;
-    if (getRaiseOnPressureSet())
+    if (getraiseOnPressure())
     {
         getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(value);
     }
@@ -144,84 +144,75 @@ void airOut()
 
 void airUpRelativeToAverage(int value)
 {
-    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getWheel(WHEEL_FRONT_PASSENGER)->getPressure() + value, true);
-    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getPressure() + value, true);
-    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getPressure() + value, true);
-    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getPressure() + value, true);
+    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue() + value, true);
+    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue() + value, true);
+    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue() + value, true);
+    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue() + value, true);
 }
 
 #pragma endregion
 
-#pragma region tank_comp_functions
+#pragma region accessory_wire
 
-void compressorLogic()
+bool vehicleOn = false;
+unsigned long lastTimeLive = 0;
+bool isVehicleOn()
 {
-    // TODO: check, This resume and pause logic may be able to be removed!!! It says it is used for thread blocking tasks which is no longer an issue
-    // I guess we may still want to keep it  for the case that if a valve is open the tanks pressure is not accurate??? Could probably be removed tbh
-    // if (isAnyWheelActive())
-    // {
-    //     getCompressor()->pause();
-    // }
-    // else
-    // {
-    //     getCompressor()->resume();
-    // }
-
-    getCompressor()->loop();
+    return vehicleOn;
 }
 
-#pragma endregion
-
-#pragma region calibration
-
-// this function is used to grab the realistic values because 5v is not perfect
-// Make sure to add warning for ensure all other functions and not running ect ect
-// This is also very specific to the main designed oasman board, assuming tank is on voltage divider and other values are on adc
-void calibratePressureValues()
+bool isKeepAliveTimerExpired()
 {
-    getCompressor()->pause();
-
-    // step 1: dump all valves
-    for (int i = 0; i < SOLENOID_COUNT; i++)
-    {
-        manifold->get(i)->digitalWrite(HIGH);
-    }
-
-    delay(20 * 1000); // sleep litteral 20 seconds so tanks dump all the air
-
-    // close all valves
-    for (int i = 0; i < SOLENOID_COUNT; i++)
-    {
-        manifold->get(i)->digitalWrite(LOW);
-    }
-
-    // step 2: read valves at 0psi
-
-    const int sampleSize = 25;
-    double totalVoltageDivider = 0;
-    double totalADC = 0;
-
-    for (int i = 0; i < sampleSize; i++)
-    {
-        int v_vd = getCompressor()->getReadPin()->analogRead(true);
-        int v_adc = getWheel(WHEEL_FRONT_PASSENGER)->getPressurePin()->analogRead(true);
-        // Serial.print("v: ");
-        // Serial.print(v_vd);
-        // Serial.print("\t");
-        // Serial.println(v_adc);
-        totalVoltageDivider += v_vd; // read tank pressure analog value at 0psi (voltage divider)
-        totalADC += v_adc;           // read first bag pressure at 0psi (adc)
-        delay(250);                  // should take a total of 6.25 seconds for this loop to complete
-    }
-
-    // step 3: save these values for use in input_type
-
-    Calibration *calibration = getCalibration();
-    calibration->voltageDividerCalibration.setFloat(totalVoltageDivider / sampleSize);
-    calibration->adcCalibration.setFloat(totalADC / sampleSize);
-    calibration->hasCalibrated.set(true);
-
-    getCompressor()->resume();
+    return millis() > (lastTimeLive + getsystemShutoffTimeM() * 60 * 1000);
 }
+
+// in the future we can call this from bluetooth functions to keep the device alive longer if actively using bluetooth while the vehicle is off
+void notifyKeepAlive()
+{
+    lastTimeLive = millis();
+}
+
+#if ENABLE_ACCESSORY_WIRE_FUNCTIONALITY == true
+
+InputType *accessoryWire;
+InputType *outputKeepESPAlive;
+void accessoryWireSetup()
+{
+    accessoryWire = accessoryInput;
+    outputKeepESPAlive = outputKeepAlivePin;
+    outputKeepESPAlive->digitalWrite(LOW);
+    lastTimeLive = millis();
+}
+const int accessoryWireSampleSize = 5;
+bool vehicleOnHistory[accessoryWireSampleSize];
+int vehicleOnCounter = 0;
+void accessoryWireLoop()
+{
+    sampleReading(vehicleOn, accessoryWire->digitalRead() == LOW, vehicleOnHistory, vehicleOnCounter, accessoryWireSampleSize);
+    if (isVehicleOn())
+    {
+        // accessory wire is supplying 12v (car on)
+        notifyKeepAlive();
+    }
+    if (isKeepAliveTimerExpired())
+    {
+        outputKeepESPAlive->digitalWrite(LOW); // acc wire has been off for some time, shut down system
+    }
+    else
+    {
+        outputKeepESPAlive->digitalWrite(HIGH);
+    }
+}
+
+#else
+void accessoryWireSetup()
+{
+    vehicleOn = true;
+}
+void accessoryWireLoop()
+{
+    vehicleOn = true;
+}
+#endif
 
 #pragma endregion

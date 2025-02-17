@@ -17,22 +17,23 @@ void task_bluetooth(void *parameters)
 
     Serial.println(F("Bluetooth Rest Service Beginning"));
 
+#if USE_BLE == false
     bt.begin(BT_NAME);
     for (;;)
     {
         bt_cmd();
         delay(10);
     }
-
-    // ble_setup();
-    // delay(100);
-    // for (;;)
-    // {
-    //     ble_loop();
-    //     delay(10);
-    // }
+#else
+    ble_setup();
+    delay(10);
+    for (;;)
+    {
+        ble_loop();
+        delay(10);
+    }
+#endif
 }
-
 #if SCREEN_ENABLED == true
 void task_screen(void *parameters)
 {
@@ -63,7 +64,7 @@ void task_ps3_controller(void *parameters)
     for (;;)
     {
         ps3_controller_loop();
-        delay(500);
+        delay(100);
     }
 }
 #endif
@@ -72,7 +73,7 @@ void task_compressor(void *parameters)
 {
     for (;;)
     {
-        compressorLogic();
+        getCompressor()->loop();
         delay(100);
     }
 }
@@ -84,15 +85,6 @@ void task_wheel(void *parameters)
     {
         ((Wheel *)parameters)->loop();
         delay(100);
-    }
-}
-
-void task_adc_read(void *parameters)
-{
-    for (;;)
-    {
-        ADSLoop();
-        delay(1);
     }
 }
 
@@ -118,7 +110,7 @@ void setup_tasks()
     xTaskCreate(
         task_bluetooth,
         "Bluetooth",
-        512 * 4,
+        512 * 5,
         NULL,
         1000,
         NULL);
@@ -128,27 +120,17 @@ void setup_tasks()
     xTaskCreate(
         task_screen,
         "OLED",
-        512 * 3,
+        512 * 4,
         NULL,
         1000,
         NULL);
 #endif
 
-#if USE_ADS
-    // ADS Queue Task
-    xTaskCreate(
-        task_adc_read,
-        "ADS Queue",
-        512 * 3,
-        NULL,
-        1000,
-        NULL);
-#endif
     // Compressor Control Task
     xTaskCreate(
         task_compressor,
         "Compressor Control",
-        512 * 3,
+        512 * 4,
         NULL,
         1000,
         NULL);

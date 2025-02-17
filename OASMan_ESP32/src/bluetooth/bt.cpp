@@ -9,13 +9,13 @@ void sendHeartbeat()
 {
     bt.print(F(PASSWORD));
     bt.print(F("PRES"));
-    bt.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getPressure()));
+    bt.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue()));
     bt.print(F("|"));
-    bt.print(int(getWheel(WHEEL_REAR_PASSENGER)->getPressure()));
+    bt.print(int(getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue()));
     bt.print(F("|"));
-    bt.print(int(getWheel(WHEEL_FRONT_DRIVER)->getPressure()));
+    bt.print(int(getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue()));
     bt.print(F("|"));
-    bt.print(int(getWheel(WHEEL_REAR_DRIVER)->getPressure()));
+    bt.print(int(getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue()));
     bt.print(F("|"));
     bt.print(int(getCompressor()->getTankPressure()));
     bt.print(F("\n"));
@@ -118,7 +118,6 @@ const char _AIRHEIGHTD[] PROGMEM = PASSWORD "AIRHEIGHTD\0";
 const char _RISEONSTART[] PROGMEM = PASSWORD "RISEONSTART\0";
 const char _RAISEONPRESSURESET[] PROGMEM = PASSWORD "ROPS\0";
 const char _REBOOT[] PROGMEM = PASSWORD "REBOOT\0";
-const char _CALIBRATE[] PROGMEM = PASSWORD "CALIBRATE\0";
 const char _STARTWEB[] PROGMEM = PASSWORD "STARTWEB\0";
 
 bool comp(char *str1, const char str2[])
@@ -180,7 +179,7 @@ bool runInput()
         {
             return false;
         }
-        setBaseProfile(profileIndex);
+        setbaseProfile(profileIndex);
         return true;
     }
     else if (comp(inBuffer, _READPROFILE))
@@ -234,11 +233,11 @@ bool runInput()
         unsigned long ros = trailingInt(_RISEONSTART);
         if (ros == 0)
         {
-            setRiseOnStart(false);
+            setriseOnStart(false);
         }
         else
         {
-            setRiseOnStart(true);
+            setriseOnStart(true);
         }
         return true;
     }
@@ -247,24 +246,18 @@ bool runInput()
         unsigned long rops = trailingInt(_RAISEONPRESSURESET);
         if (rops == 0)
         {
-            setRaiseOnPressureSet(false);
+            setraiseOnPressure(false);
         }
         else
         {
-            setRaiseOnPressureSet(true);
+            setraiseOnPressure(true);
         }
         return true;
     }
     else if (comp(inBuffer, _REBOOT))
     {
-        setReboot(true);
+        setinternalReboot(true);
         Serial.println(F("Rebooting..."));
-        return true;
-    }
-    else if (comp(inBuffer, _CALIBRATE))
-    {
-        Serial.println(F("Running calibration routine..."));
-        calibratePressureValues();
         return true;
     }
     else if (comp(inBuffer, _STARTWEB))
