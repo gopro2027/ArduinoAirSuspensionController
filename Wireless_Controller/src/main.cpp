@@ -59,6 +59,8 @@ void setup()
 
     setup_tasks();
 
+    // out display file for the lcd:
+    // Wireless_Controller\.pio\libdeps\esp32-2432S032C\esp32_smartdisplay\src\lvgl_panel_st7789_spi.c
     smartdisplay_init();
 
     __attribute__((unused)) auto disp = lv_disp_get_default();
