@@ -6,8 +6,10 @@
 #include "Scr.h"
 #include "ui/ui.h" // sketchy backwards import may break in the future
 
-Scr::Scr(lv_image_dsc_t navbarImage) {
+Scr::Scr(lv_image_dsc_t navbarImage, bool showPressures)
+{
     this->navbarImage = navbarImage;
+    this->showPressures = showPressures;
 }
 
 void Scr::init()
@@ -20,7 +22,7 @@ void Scr::init()
     lv_obj_remove_style_all(this->rect_bg);
     lv_obj_set_size(this->rect_bg, 240, 320);
     lv_obj_set_align(this->rect_bg, LV_ALIGN_TOP_MID);
-    lv_obj_get_style_border_width(this->rect_bg,0);
+    lv_obj_get_style_border_width(this->rect_bg, 0);
     lv_obj_set_style_bg_color(this->rect_bg, lv_color_hex(0x1F1F1F), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_remove_flag(this->rect_bg, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE)); /// Flags
     lv_obj_set_style_bg_opa(this->rect_bg, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -30,32 +32,87 @@ void Scr::init()
     lv_image_set_src(this->icon_navbar, &this->navbarImage);
     lv_obj_set_align(this->icon_navbar, LV_ALIGN_BOTTOM_MID);
 
-    
+    this->alert = new Alert(this);
+
+    if (this->showPressures)
+    {
+        // air pressures at top
+        const int xPadding = 45;
+        setupPressureLabel(this->scr, &this->ui_lblPressureFrontDriver, xPadding, 10, LV_ALIGN_TOP_LEFT, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureRearDriver, xPadding, 40, LV_ALIGN_TOP_LEFT, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureFrontPassenger, -xPadding, 10, LV_ALIGN_TOP_RIGHT, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureRearPassenger, -xPadding, 40, LV_ALIGN_TOP_RIGHT, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureTank, 0, 10, LV_ALIGN_TOP_MID, "0");
+    }
 }
 
 // down = true when just pressed, false when just released
 void Scr::runTouchInput(SimplePoint pos, bool down)
 {
-    if (sr_contains(navbarbtn_home, pos))
+    if (down)
     {
-        changeScreen(SCREEN_HOME);
-    }
-    if (sr_contains(navbarbtn_presets, pos))
-    {
-        changeScreen(SCREEN_PRESETS);
-    }
-    if (sr_contains(navbarbtn_settings, pos))
-    {
-        changeScreen(SCREEN_SETTINGS);
+        if (isKeyboardHidden())
+        {
+            if (sr_contains(navbarbtn_home, pos))
+            {
+                changeScreen(SCREEN_HOME);
+            }
+            if (sr_contains(navbarbtn_presets, pos))
+            {
+                changeScreen(SCREEN_PRESETS);
+            }
+            if (sr_contains(navbarbtn_settings, pos))
+            {
+                changeScreen(SCREEN_SETTINGS);
+            }
+        }
     }
 }
 
 void Scr::loop()
 {
-
+    SimplePoint tp = {touchX(), touchY()};
     if (isJustPressed())
     {
-        SimplePoint tp = {touchX(), touchY()};
         this->runTouchInput(tp, true);
+    }
+    if (isJustReleased())
+    {
+        this->runTouchInput(tp, false);
+    }
+    this->updatePressureValues();
+    this->alert->loop();
+}
+
+void updatePressure(Scr *scr, lv_obj_t *obj, int index)
+{
+    if (scr->prevPressures[index] != currentPressures[index])
+    {
+        if (getunitsMode() == UNITS_MODE::PSI)
+        {
+            lv_label_set_text_fmt(obj, "%u", currentPressures[index]);
+        }
+        else
+        { // UNITS_MODE::BAR but %f doesn't work
+
+            float val = currentPressures[index] / 14.5038f;
+            val = val * 100; // move decimal over 2
+            int b = (int)val % 100;
+            int a = ((int)val - b) / 100;
+            lv_label_set_text_fmt(obj, "%i.%i", a, b);
+        }
+        scr->prevPressures[index] = currentPressures[index];
+    }
+}
+
+void Scr::updatePressureValues()
+{
+    if (this->showPressures)
+    {
+        updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER);
+        updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER);
+        updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER);
+        updatePressure(this, this->ui_lblPressureRearDriver, WHEEL_REAR_DRIVER);
+        updatePressure(this, this->ui_lblPressureTank, _TANK_INDEX);
     }
 }
