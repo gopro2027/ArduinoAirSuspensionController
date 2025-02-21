@@ -51,21 +51,21 @@ class _ButtonsPageState extends State<ButtonsPage> {
                                 OvalControlButton(
                                   iconUp: Icons.keyboard_arrow_up,
                                   iconDown: Icons.keyboard_arrow_down,
-                                  onUpPressed: () => _handleCommand(context, "LEFT_FRONT_UP"),
-                                  onDownPressed: () => _handleCommand(context, "LEFT_FRONT_DOWN"),
+                                  onUpPressed: () => _handleCommand(context, "FRONT_DRIVER_IN"),
+                                  onDownPressed: () => _handleCommand(context, "FRONT_DRIVER_OUT"),
                                 ),
                                 OvalControlButton(
                                   iconUp: Icons.keyboard_double_arrow_up,
                                   iconDown: Icons.keyboard_double_arrow_down,
                                   isLarge: true,
-                                  onUpPressed: () => _handleCommand(context, "8888"),
+                                  onUpPressed: () => _handleCommand(context, "fpi"),
                                   onDownPressed: () => _handleCommand(context, "FRONT_DOWN"),
                                 ),
                                 OvalControlButton(
                                   iconUp: Icons.keyboard_arrow_up,
                                   iconDown: Icons.keyboard_arrow_down,
-                                  onUpPressed: () => _handleCommand(context, "RIGHT_FRONT_UP"),
-                                  onDownPressed: () => _handleCommand(context, "RIGHT_FRONT_DOWN"),
+                                  onUpPressed: () => _handleCommand(context, "FRONT_PASSENGER_IN"),
+                                  onDownPressed: () => _handleCommand(context, "FRONT_PASSENGER_OUT"),
                                 ),
                               ],
                             ),
@@ -76,8 +76,8 @@ class _ButtonsPageState extends State<ButtonsPage> {
                                 OvalControlButton(
                                   iconUp: Icons.keyboard_arrow_up,
                                   iconDown: Icons.keyboard_arrow_down,
-                                  onUpPressed: () => _handleCommand(context, "LEFT_BACK_UP"),
-                                  onDownPressed: () => _handleCommand(context, "LEFT_BACK_DOWN"),
+                                  onUpPressed: () => _handleCommand(context, "REAR_DRIVER_IN"),
+                                  onDownPressed: () => _handleCommand(context, "REAR_DRIVER_OUT"),
                                 ),
                                 OvalControlButton(
                                   iconUp: Icons.keyboard_double_arrow_up,
@@ -89,8 +89,8 @@ class _ButtonsPageState extends State<ButtonsPage> {
                                 OvalControlButton(
                                   iconUp: Icons.keyboard_arrow_up,
                                   iconDown: Icons.keyboard_arrow_down,
-                                  onUpPressed: () => _handleCommand(context, "RIGHT_BACK_UP"),
-                                  onDownPressed: () => _handleCommand(context, "RIGHT_BACK_DOWN"),
+                                  onUpPressed: () => _handleCommand(context, "REAR_PASSENGER_IN"),
+                                  onDownPressed: () => _handleCommand(context, "REAR_PASSENGER_OUT"),
                                 ),
                               ],
                             ),
