@@ -6,7 +6,7 @@
 #include "ui.h"
 #include "utils/touch_lib.h"
 
-SCREEN currentScreen;
+SCREEN currentScreen = SCREEN_NONE;
 
 void ui_init(void)
 {
