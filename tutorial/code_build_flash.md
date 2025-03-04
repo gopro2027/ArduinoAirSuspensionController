@@ -1,9 +1,9 @@
 
 
 ### ESP32 Flashing Steps
-# Future info
-We intend to have a website where you can flash the project online. For now I have hosted some in dev-versions here and will later move more stable releases onto here. https://gopro2027.github.io/oasman/ <br>
-For now please follow the steps below on how to use git (github desktop ui) and platformio as the project is not yet in a fully released state.
+# Quick Flashing
+You can quickly and easily flash your main board and wireless controller through your web browser [here gopro2027.github.io/oasman/](https://gopro2027.github.io/oasman/) <br>
+If you wish to make any customizations to the code, please follow the following information below.
 # Cloning the project code
 1. Use git to clone the project normally. It is recommended you clone it and not download it, so that you can get future updates easily.
 2. Here is what I recommend if you would like to easily clone the project, and what I will reference in the rest of this documentation:
@@ -21,9 +21,9 @@ For now please follow the steps below on how to use git (github desktop ui) and 
 5. Build the project and test for errors:
     1. look in the top right corner and you should see a checkmark that says 'Build' when you hover over it. Click that and verify for no errors.
 6. Install the project onto your esp32 by clicking the dropdown arrow next to the build button and choosing "Upload"
-# Editing the code/config
+# Editing the code
 1. In github desktop, create a new branch and call it `my_config` or whatever you want
-2. Go into the file `user_defines.h` and make necessary edits.
+2. Make edits.
 3. Build and test your changes to make sure it is to your liking
 4. Once you are finished with your edits, go back to github desktop and commit them to your `my_config` branch.
 # Updating to the latest updates
