@@ -7,6 +7,9 @@
 #include "lvgl.h"
 #include "ui/components/option.h"
 
+#define STRINGIFY(x) #x
+#define EVALUATE_AND_STRINGIFY(x) STRINGIFY(x)
+
 class Scr;
 class Option;
 

@@ -138,6 +138,12 @@ void ScrSettings::init()
     //  lv_obj_center(this->ui_qrcode);
     //  lv_obj_set_y(this->ui_qrcode, DISPLAY_HEIGHT - 10);
 
+    new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
+
+    OptionValue versionValue;
+    versionValue.STRING = EVALUATE_AND_STRINGIFY(RELEASE_VERSION);
+    new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Version:", versionValue);
+
     // add space at end of list
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
 
