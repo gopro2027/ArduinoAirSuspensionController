@@ -36,6 +36,15 @@ def post_program_action(source, target, env):
             shutil.copy2(fw, path)
             shutil.copy2(partitions, path)
             shutil.copy2(bootloader, path)
+
+            # update version file now
+            findrv = 'RELEASE_VERSION='
+            with open('../../gopro2027.github.io/oasman/version.txt', 'w') as output:
+                for v in env.GetProjectOption("build_flags"):
+                    if findrv in v:
+                        version = v.split(findrv,1)[1][:-1]
+                        print("Writing version: "+version)
+                        output.write(version)
         else:
             print("Github.io path does not exists, not copying files")
         
