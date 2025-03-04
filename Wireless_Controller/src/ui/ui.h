@@ -21,6 +21,7 @@
 
 typedef enum
 {
+    SCREEN_NONE,
     SCREEN_MAIN,
     SCREEN_HOME,
     SCREEN_PRESETS,

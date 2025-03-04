@@ -1,1 +1,0 @@
-This is the first version of the smd board that Bw ordered. 2/10/2025
