@@ -476,6 +476,7 @@ void runReceivedPacket(BTOasPacket *packet)
         setmaintainPressure(((MaintainPressurePacket *)packet)->getBoolean());
         break;
     case BTOasIdentifier::COMPRESSORSTATUS:
+        // TODO: THIS MIGHT HAVE THREADING ISSUES BUT IDK
         getCompressor()->enableDisableOverride(((CompressorStatusPacket *)packet)->getBoolean());
         break;
     case BTOasIdentifier::GETCONFIGVALUES:

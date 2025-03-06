@@ -150,11 +150,30 @@ void airUpRelativeToAverage(int value)
     getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue() + value, true);
 }
 
+bool isCarMoving()
+{
+    // TODO: add gps code to check if we are driving
+    return true;
+}
+
+void airOutWithSafetyCheck()
+{
+    // only air out if car is not moving!
+    if (!isCarMoving())
+    {
+        if (getairOutOnShutoff())
+        {
+            readProfile(0); // packet 0 should be the lowest setting!
+            airUp(false);
+        }
+    }
+}
+
 #pragma endregion
 
 #pragma region accessory_wire
 
-bool vehicleOn = false;
+bool vehicleOn = true; // want this to be true to begin so it sets the current time first thing so it knows it was on and doesn't run the off routine first.
 unsigned long lastTimeLive = 0;
 bool isVehicleOn()
 {
@@ -166,13 +185,18 @@ bool isKeepAliveTimerExpired()
     return millis() > (lastTimeLive + getsystemShutoffTimeM() * 60 * 1000);
 }
 
+bool isKeepAliveTimeReadyForShutdownRoutine()
+{
+    return millis() > (lastTimeLive + AIR_OUT_AFTER_SHUTDOWN_MS); // 5 seconds before choosing it is actually shut down... sure why not
+}
+
 // in the future we can call this from bluetooth functions to keep the device alive longer if actively using bluetooth while the vehicle is off
 void notifyKeepAlive()
 {
     lastTimeLive = millis();
 }
 
-#if ENABLE_ACCESSORY_WIRE_FUNCTIONALITY == true
+#ifdef ACCESSORY_WIRE_FUNCTIONALITY
 
 InputType *accessoryWire;
 InputType *outputKeepESPAlive;
@@ -186,6 +210,7 @@ void accessoryWireSetup()
 const int accessoryWireSampleSize = 5;
 bool vehicleOnHistory[accessoryWireSampleSize];
 int vehicleOnCounter = 0;
+bool hasJustShutoff = true;
 void accessoryWireLoop()
 {
     sampleReading(vehicleOn, accessoryWire->digitalRead() == LOW, vehicleOnHistory, vehicleOnCounter, accessoryWireSampleSize);
@@ -193,6 +218,21 @@ void accessoryWireLoop()
     {
         // accessory wire is supplying 12v (car on)
         notifyKeepAlive();
+        hasJustShutoff = false;
+    }
+    else
+    {
+        // vehicle is off... first check if 5 seconds have passed
+        if (isKeepAliveTimeReadyForShutdownRoutine())
+        {
+            // one time check that it just happened for the first time
+            if (hasJustShutoff == false)
+            {
+                hasJustShutoff = true;
+                // actually check if air out code is enabled and do as asked
+                airOutWithSafetyCheck();
+            }
+        }
     }
     if (isKeepAliveTimerExpired())
     {
