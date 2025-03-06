@@ -165,6 +165,11 @@ MaintainPressurePacket::MaintainPressurePacket(bool enable)
     this->cmd = MAINTAINPRESSURE;
     this->args32()[0].i = enable;
 }
+CompressorStatusPacket::CompressorStatusPacket(bool enable)
+{
+    this->cmd = COMPRESSORSTATUS;
+    this->args32()[0].i = enable;
+}
 RebootPacket::RebootPacket()
 {
     this->cmd = REBOOT;
