@@ -337,7 +337,7 @@ void ble_notify()
     if (runNotifications)
     {
         uint16_t statusBittset = 0;
-        if (millis() < getCompressor()->isFrozen())
+        if (getCompressor()->isFrozen())
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::COMPRESSOR_FROZEN);
         }
@@ -474,6 +474,10 @@ void runReceivedPacket(BTOasPacket *packet)
     }
     case BTOasIdentifier::MAINTAINPRESSURE:
         setmaintainPressure(((MaintainPressurePacket *)packet)->getBoolean());
+        break;
+    case BTOasIdentifier::COMPRESSORSTATUS:
+        // TODO: THIS MIGHT HAVE THREADING ISSUES BUT IDK
+        getCompressor()->enableDisableOverride(((CompressorStatusPacket *)packet)->getBoolean());
         break;
     case BTOasIdentifier::GETCONFIGVALUES:
     {

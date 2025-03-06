@@ -55,6 +55,31 @@ bool Compressor::isOn()
     return this->s_trigger.isOpen();
 }
 
+void Compressor::enableDisableOverride(bool enable)
+{
+    if (this->getTankPressure() < getcompressorOffPSI())
+    {
+        if (enable)
+        {
+            this->pauseExecutionUntilTime = 0;
+            this->updateFreezeTimer(millis());
+            this->s_trigger.open();
+        }
+        else
+        {
+            this->pauseExecutionUntilTime = ULONG_MAX;
+            this->updateFreezeTimer(millis());
+            this->s_trigger.close();
+        }
+    }
+}
+
+void Compressor::updateFreezeTimer(unsigned long curTime)
+{
+    this->lastFreezeTime = curTime;
+    this->freezeTimerLastReadValue = this->getTankPressure();
+}
+
 void Compressor::loop()
 {
     unsigned long curTime = millis();
@@ -84,7 +109,7 @@ void Compressor::loop()
         if (this->lastFreezeTime + FREEZE_TIME_CHECK_MS < curTime)
         {
 
-            float changeOverLastTimeframe = this->currentPressure - this->freezeTimerLastReadValue;
+            float changeOverLastTimeframe = this->getTankPressure() - this->freezeTimerLastReadValue;
 
             if (changeOverLastTimeframe < 1.75f && changeOverLastTimeframe >= 0)
             {
@@ -92,15 +117,13 @@ void Compressor::loop()
                 this->pauseExecutionUntilTime = curTime + FREEZE_TIME_PAUSE_MS;
             }
 
-            this->lastFreezeTime = curTime;
-            this->freezeTimerLastReadValue = this->currentPressure;
+            this->updateFreezeTimer(curTime);
         }
     }
     else
     {
         // compressor is not on OR one of the wheels is active (we don't want to bother trying to figure out if it's frozen if it's actively moving around pressures), update value just right now then.
-        this->lastFreezeTime = curTime;
-        this->freezeTimerLastReadValue = this->currentPressure;
+        this->updateFreezeTimer(curTime);
     }
 
     // part 2 of freeze check code. pause execution if our pauseExecutionUntilTime is in the future

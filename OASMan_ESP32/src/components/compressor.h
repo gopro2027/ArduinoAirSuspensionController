@@ -35,6 +35,8 @@ public:
     InputType *getReadPin();
     bool isFrozen();
     bool isOn();
+    void enableDisableOverride(bool enable);
+    void updateFreezeTimer(unsigned long curTime);
 };
 extern Compressor *getCompressor();                            // defined in airSuspensionUtil.h
 extern bool isVehicleOn();                                     // defined in airSuspensionUtil.h

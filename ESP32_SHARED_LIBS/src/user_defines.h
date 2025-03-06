@@ -96,6 +96,8 @@
 /* The amount of time the pressure routine will try to reach the goal pressure before 'giving up' (usually due to lower pressure in tank or something) Default is 10 seconds. */
 #define ROUTINE_TIMEOUT_MS 10 * 1000
 
+#define AIR_OUT_AFTER_SHUTDOWN_MS 5000
+
 /* Use new BLE with latest features or old classic bluetooth with the classic android app */
 #define USE_BLE true
 
@@ -124,12 +126,6 @@ enum SOLENOID_INDEX
 #if defined(OFFICIAL_RELEASE)
 #define ADS_MOCK_BYPASS false
 #define TANK_PRESSURE_MOCK false
-#endif
-
-#if defined(ACCESSORY_WIRE_FUNCTIONALITY)
-#define ENABLE_ACCESSORY_WIRE_FUNCTIONALITY true
-#else
-#define ENABLE_ACCESSORY_WIRE_FUNCTIONALITY false
 #endif
 
 #endif
