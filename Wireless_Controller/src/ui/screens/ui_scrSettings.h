@@ -25,6 +25,7 @@ public:
     Option *ui_config3;
     Option *ui_config4;
     Option *ui_config5;
+    Option *ui_config6;
     void init();
     void runTouchInput(SimplePoint pos, bool down);
     void loop();

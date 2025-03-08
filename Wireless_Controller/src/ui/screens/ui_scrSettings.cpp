@@ -120,6 +120,12 @@ void ScrSettings::init()
         sendConfigValuesPacket(true);
     alertValueUpdated(); });
 
+    this->ui_config6 = new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Bag Volume Percentage", {.INT = 0}, [](void *data)
+                                  { log_i("Pressed %i", ((uint32_t)data)); 
+        *util_configValues._bagVolumePercentage() = (uint32_t)data;
+        sendConfigValuesPacket(true);
+    alertValueUpdated(); });
+
     // add space before qr code
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
 
@@ -188,5 +194,6 @@ void ScrSettings::loop()
         this->ui_config3->setRightHandText(itoa(*util_configValues._compressorOnPSI(), buf, 10));
         this->ui_config4->setRightHandText(itoa(*util_configValues._compressorOffPSI(), buf, 10));
         this->ui_config5->setRightHandText(itoa(*util_configValues._pressureSensorMax(), buf, 10));
+        this->ui_config6->setRightHandText(itoa(*util_configValues._bagVolumePercentage(), buf, 10));
     }
 }
