@@ -29,6 +29,7 @@ public:
     Preferencable compressorOnPSI;
     Preferencable compressorOffPSI;
     Preferencable pressureSensorMax;
+    Preferencable bagVolumePercentage;
     Profile profile[MAX_PROFILE_COUNT];
 };
 
@@ -56,6 +57,7 @@ headerDefineSaveFunc(systemShutoffTimeM, uint32_t); // may have to change
 headerDefineSaveFunc(compressorOnPSI, uint8_t);
 headerDefineSaveFunc(compressorOffPSI, uint8_t);
 headerDefineSaveFunc(pressureSensorMax, uint16_t);
+headerDefineSaveFunc(bagVolumePercentage, uint16_t);
 
 float getHeightSensorMax();
 

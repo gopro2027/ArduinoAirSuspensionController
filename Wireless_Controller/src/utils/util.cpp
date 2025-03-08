@@ -52,7 +52,7 @@ uint16_t statusBittset = 0;
 int profilePressures[5][4];
 bool profileUpdated = false;
 
-ConfigValuesPacket util_configValues(0, 0, 0, 0, 0, 0);
+ConfigValuesPacket util_configValues(0, 0, 0, 0, 0, 0, 0);
 
 void sendConfigValuesPacket(bool saveToManifold)
 {

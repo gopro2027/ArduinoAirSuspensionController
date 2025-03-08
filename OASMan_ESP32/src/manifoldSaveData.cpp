@@ -20,6 +20,7 @@ void beginSaveData()
     _SaveData.compressorOnPSI.load("compressorOnPSI", COMPRESSOR_ON_BELOW_PSI);
     _SaveData.compressorOffPSI.load("compressorOffPSI", COMPRESSOR_MAX_PSI);
     _SaveData.pressureSensorMax.load("pressureSensorMax", pressuretransducermaxPSI);
+    _SaveData.bagVolumePercentage.load("bagVolumePercentage", 100);
     for (int i = 0; i < MAX_PROFILE_COUNT; i++)
     {
         for (int j = 0; j < 4; j++)
@@ -79,6 +80,7 @@ createSaveFuncInt(systemShutoffTimeM, uint32_t); // may have to change
 createSaveFuncInt(compressorOnPSI, uint8_t);
 createSaveFuncInt(compressorOffPSI, uint8_t);
 createSaveFuncInt(pressureSensorMax, uint16_t);
+createSaveFuncInt(bagVolumePercentage, uint16_t);
 
 float getHeightSensorMax()
 {

@@ -489,8 +489,9 @@ void runReceivedPacket(BTOasPacket *packet)
             setcompressorOnPSI(*recpkt->_compressorOnPSI());
             setcompressorOffPSI(*recpkt->_compressorOffPSI());
             setpressureSensorMax(*recpkt->_pressureSensorMax());
+            setbagVolumePercentage(*recpkt->_bagVolumePercentage());
         }
-        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax());
+        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage());
         restCharacteristic->setValue(pkt.tx(), BTOAS_PACKET_SIZE);
         restCharacteristic->notify();
         break;
