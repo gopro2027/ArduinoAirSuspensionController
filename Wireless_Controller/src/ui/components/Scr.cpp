@@ -17,6 +17,9 @@ void Scr::init()
     this->scr = lv_obj_create(NULL);
     lv_obj_remove_flag(this->scr, LV_OBJ_FLAG_SCROLLABLE); /// Flags
 
+    this->mb_dialog = NULL;
+    this->deleteMessageBoxNextFrame = false;
+
     // background color
     this->rect_bg = lv_obj_create(this->scr);
     lv_obj_remove_style_all(this->rect_bg);
@@ -54,24 +57,81 @@ void Scr::runTouchInput(SimplePoint pos, bool down)
     {
         if (isKeyboardHidden())
         {
-            if (sr_contains(navbarbtn_home, pos))
+            if (!isMsgBoxDisplayed())
             {
-                changeScreen(SCREEN_HOME);
+                if (sr_contains(navbarbtn_home, pos))
+                {
+                    changeScreen(SCREEN_HOME);
+                }
+                if (sr_contains(navbarbtn_presets, pos))
+                {
+                    changeScreen(SCREEN_PRESETS);
+                }
+                if (sr_contains(navbarbtn_settings, pos))
+                {
+                    changeScreen(SCREEN_SETTINGS);
+                }
             }
-            if (sr_contains(navbarbtn_presets, pos))
-            {
-                changeScreen(SCREEN_PRESETS);
-            }
-            if (sr_contains(navbarbtn_settings, pos))
-            {
-                changeScreen(SCREEN_SETTINGS);
-            }
+        }
+    }
+    else
+    {
+        if (this->mb_dialog != NULL)
+        {
+            this->deleteMessageBoxNextFrame = true;
         }
     }
 }
 
+void dialog_clicked_function(lv_event_t *e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    lv_obj_t *target = (lv_obj_t *)lv_event_get_target(e);
+    DialogData *dialogData = (DialogData *)lv_event_get_user_data(e);
+    if (event_code == LV_EVENT_CLICKED)
+    {
+        if (dialogData->callback != NULL)
+        {
+            dialogData->callback();
+        }
+    }
+}
+
+bool Scr::isMsgBoxDisplayed()
+{
+    return this->mb_dialog != NULL;
+}
+
+void Scr::showMsgBox(const char *title, const char *yesText, const char *noText, std::function<void()> onYes)
+{
+    this->mb_dialog = lv_msgbox_create(this->scr);
+    lv_msgbox_add_title(this->mb_dialog, title);
+
+    this->dialogData.callback = onYes;
+    this->dialogData.type = 0; // not used
+
+    if (yesText != NULL)
+    {
+        lv_obj_t *yesbtn = lv_msgbox_add_footer_button(this->mb_dialog, yesText);
+        lv_obj_add_event_cb(yesbtn, dialog_clicked_function, LV_EVENT_CLICKED, (void *)&this->dialogData);
+    }
+    if (noText != NULL)
+    {
+        lv_obj_t *nobtn = lv_msgbox_add_footer_button(this->mb_dialog, noText);
+    }
+    // lv_msgbox_add_close_button(this->mb_dialog); // x button crashes it due to our implementation... I'm guessing it is trying to delete ittself after we have already deleted it? we don't really need it and ui looks better without it anyways.
+
+    lv_obj_set_width(this->mb_dialog, DISPLAY_WIDTH - 20);
+}
+
 void Scr::loop()
 {
+    if (this->deleteMessageBoxNextFrame)
+    {
+        lv_msgbox_close(this->mb_dialog);
+        this->mb_dialog = NULL;
+        this->deleteMessageBoxNextFrame = false;
+    }
     SimplePoint tp = {touchX(), touchY()};
     if (isJustPressed())
     {

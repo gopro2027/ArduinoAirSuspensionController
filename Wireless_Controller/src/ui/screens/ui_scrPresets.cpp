@@ -177,42 +177,49 @@ void ScrPresets::setPreset(int num)
 
 void ScrPresets::runTouchInput(SimplePoint pos, bool down)
 {
-    Scr::runTouchInput(pos, down);
-    if (down == false) // just released on button
+    Scr::runTouchInput(pos, down); // Note: moved to the bottom (as opposed to at the top of the function) so the message box is removed after the code above is ran (so it doesn't select a preset when you click confirm/cancel)
+    if (down == false)             // just released on button
     {
-        if (cr_contains(ctr_preset_1, pos))
+        if (!this->isMsgBoxDisplayed())
         {
-            setPreset(1);
-        }
-        if (cr_contains(ctr_preset_2, pos))
-        {
-            setPreset(2);
-        }
-        if (cr_contains(ctr_preset_3, pos))
-        {
-            setPreset(3);
-        }
-        if (cr_contains(ctr_preset_4, pos))
-        {
-            setPreset(4);
-        }
-        if (cr_contains(ctr_preset_5, pos))
-        {
-            setPreset(5);
-        }
-        if (sr_contains(preset_save, pos))
-        {
-            Serial.println("save preset");
-            SaveCurrentPressuresToProfilePacket pkt(currentPreset - 1);
-            sendRestPacket(&pkt);
-            showDialog("Saved Preset!", lv_color_hex(0xBB86FC));
-        }
-        if (sr_contains(preset_load, pos))
-        {
-            Serial.println("load preset");
-            AirupQuickPacket pkt(currentPreset - 1);
-            sendRestPacket(&pkt);
-            showDialog("Loaded Preset!", lv_color_hex(0x22bb33));
+            if (cr_contains(ctr_preset_1, pos))
+            {
+                setPreset(1);
+            }
+            if (cr_contains(ctr_preset_2, pos))
+            {
+                setPreset(2);
+            }
+            if (cr_contains(ctr_preset_3, pos))
+            {
+                setPreset(3);
+            }
+            if (cr_contains(ctr_preset_4, pos))
+            {
+                setPreset(4);
+            }
+            if (cr_contains(ctr_preset_5, pos))
+            {
+                setPreset(5);
+            }
+            if (sr_contains(preset_save, pos))
+            {
+                static char buf[40];
+                snprintf(buf, sizeof(buf), "Save current height to preset %i?", currentPreset);
+                this->showMsgBox(buf, "Confirm", "Cancel", []() -> void
+                                 {
+                                    Serial.println("save preset");
+                                    SaveCurrentPressuresToProfilePacket pkt(currentPreset - 1);
+                                    sendRestPacket(&pkt);
+                                    showDialog("Saved Preset!", lv_color_hex(0xBB86FC)); });
+            }
+            if (sr_contains(preset_load, pos))
+            {
+                Serial.println("load preset");
+                AirupQuickPacket pkt(currentPreset - 1);
+                sendRestPacket(&pkt);
+                showDialog("Loaded Preset!", lv_color_hex(0x22bb33));
+            }
         }
     }
 }

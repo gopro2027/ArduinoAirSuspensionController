@@ -14,6 +14,12 @@
 class Alert;
 struct SimplePoint;
 
+struct DialogData
+{
+    int type;
+    std::function<void()> callback;
+};
+
 class Scr
 {
 public:
@@ -29,12 +35,17 @@ public:
     lv_obj_t *ui_lblPressureRearPassenger;
     lv_obj_t *ui_lblPressureTank;
     int prevPressures[5];
+    lv_obj_t *mb_dialog;
+    DialogData dialogData;
+    bool deleteMessageBoxNextFrame;
 
     Scr(lv_image_dsc_t navbarImage, bool showPressures);
     virtual void runTouchInput(SimplePoint pos, bool down);
     virtual void init();
     virtual void loop();
     void updatePressureValues();
+    void showMsgBox(const char *title, const char *yesText, const char *noText, std::function<void()> onYes);
+    bool isMsgBoxDisplayed();
 };
 
 #endif
