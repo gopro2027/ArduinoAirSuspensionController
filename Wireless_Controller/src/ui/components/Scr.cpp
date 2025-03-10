@@ -102,32 +102,42 @@ bool Scr::isMsgBoxDisplayed()
     return this->mb_dialog != NULL;
 }
 
-void Scr::showMsgBox(const char *title, const char *yesText, const char *noText, std::function<void()> onYes)
+void Scr::showMsgBox(const char *title, const char *text, const char *yesText, const char *noText, std::function<void()> onYes)
 {
     this->mb_dialog = lv_msgbox_create(this->scr);
-    lv_msgbox_add_title(this->mb_dialog, title);
 
     this->dialogData.callback = onYes;
     this->dialogData.type = 0; // not used
 
+    if (title != NULL)
+    {
+        lv_msgbox_add_title(this->mb_dialog, title);
+    }
+    if (text != NULL)
+    {
+        lv_msgbox_add_text(this->mb_dialog, text);
+    }
     if (yesText != NULL)
     {
         lv_obj_t *yesbtn = lv_msgbox_add_footer_button(this->mb_dialog, yesText);
         lv_obj_add_event_cb(yesbtn, dialog_clicked_function, LV_EVENT_CLICKED, (void *)&this->dialogData);
-        lv_obj_set_style_bg_color(yesbtn, lv_color_hex(0xBB86FC), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(yesbtn, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);
     }
     if (noText != NULL)
     {
         lv_obj_t *nobtn = lv_msgbox_add_footer_button(this->mb_dialog, noText);
-        lv_obj_set_style_bg_color(nobtn, lv_color_hex(0x9C4DCC), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(nobtn, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN | LV_STATE_DEFAULT);
     }
     // lv_msgbox_add_close_button(this->mb_dialog); // x button crashes it due to our implementation... I'm guessing it is trying to delete ittself after we have already deleted it? we don't really need it and ui looks better without it anyways.
 
     lv_obj_set_width(this->mb_dialog, DISPLAY_WIDTH - 20);
 
-    lv_obj_set_style_bg_color(this->mb_dialog, lv_color_hex(0x5A4673), LV_PART_MAIN | LV_STATE_DEFAULT);                       // darker, bg of main
-    lv_obj_set_style_bg_color(lv_msgbox_get_header(this->mb_dialog), lv_color_hex(0x9C4DCC), LV_PART_MAIN | LV_STATE_DEFAULT); // halway darkness, header
-    lv_obj_set_style_border_color(this->mb_dialog, lv_color_hex(0xBB86FC), LV_PART_MAIN | LV_STATE_DEFAULT);                   // light purple, border
+    lv_obj_set_style_bg_color(this->mb_dialog, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT); // darker, bg of main
+    if (lv_msgbox_get_header(this->mb_dialog) != NULL)
+    {
+        lv_obj_set_style_bg_color(lv_msgbox_get_header(this->mb_dialog), lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN | LV_STATE_DEFAULT); // halway darkness, header
+    }
+    lv_obj_set_style_border_color(this->mb_dialog, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT); // light purple, border
 }
 
 void Scr::loop()

@@ -141,9 +141,12 @@ void ScrPresets::hideSelectors()
     lv_obj_add_flag(btnPreset4, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(btnPreset5, LV_OBJ_FLAG_HIDDEN);
 };
-int currentPreset = 3;
 void ScrPresets::setPreset(int num)
 {
+    if (currentPreset == num)
+    {
+        this->showPresetDialog();
+    }
     currentPreset = num;
     hideSelectors();
     switch (num)
@@ -169,16 +172,22 @@ void ScrPresets::setPreset(int num)
         lv_obj_remove_flag(btnPreset5, LV_OBJ_FLAG_HIDDEN);
         break;
     }
+    requestPreset();
+}
 
-    // request preset data (not really used at the moment but may be in the future)
-    PresetPacket pkt(currentPreset - 1, 0, 0, 0, 0);
-    sendRestPacket(&pkt);
+void ScrPresets::showPresetDialog()
+{
+    static char text[60];
+    static char title[10];
+    snprintf(text, sizeof(text), "fp: %i, rp: %i, fd: %i, rd: %i", profilePressures[currentPreset - 1][WHEEL_FRONT_PASSENGER], profilePressures[currentPreset - 1][WHEEL_REAR_PASSENGER], profilePressures[currentPreset - 1][WHEEL_FRONT_DRIVER], profilePressures[currentPreset - 1][WHEEL_REAR_DRIVER]);
+    snprintf(title, sizeof(title), "Preset %i", currentPreset);
+    this->showMsgBox(title, text, NULL, "OK", []() -> void {});
 }
 
 void ScrPresets::runTouchInput(SimplePoint pos, bool down)
 {
-    Scr::runTouchInput(pos, down); // Note: moved to the bottom (as opposed to at the top of the function) so the message box is removed after the code above is ran (so it doesn't select a preset when you click confirm/cancel)
-    if (down == false)             // just released on button
+    Scr::runTouchInput(pos, down);
+    if (down == false) // just released on button
     {
         if (!this->isMsgBoxDisplayed())
         {
@@ -206,12 +215,14 @@ void ScrPresets::runTouchInput(SimplePoint pos, bool down)
             {
                 static char buf[40];
                 snprintf(buf, sizeof(buf), "Save current height to preset %i?", currentPreset);
-                this->showMsgBox(buf, "Confirm", "Cancel", []() -> void
+                this->showMsgBox(buf, NULL, "Confirm", "Cancel", []() -> void
                                  {
-                                    Serial.println("save preset");
-                                    SaveCurrentPressuresToProfilePacket pkt(currentPreset - 1);
-                                    sendRestPacket(&pkt);
-                                    showDialog("Saved Preset!", lv_color_hex(0xBB86FC)); });
+                                     Serial.println("save preset");
+                                     SaveCurrentPressuresToProfilePacket pkt(currentPreset - 1);
+                                     sendRestPacket(&pkt);
+                                     showDialog("Saved Preset!", lv_color_hex(THEME_COLOR_LIGHT));
+                                     requestPreset(); // update data not that it's saved
+                                 });
             }
             if (sr_contains(preset_load, pos))
             {

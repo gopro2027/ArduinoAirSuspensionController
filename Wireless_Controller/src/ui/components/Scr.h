@@ -44,7 +44,7 @@ public:
     virtual void init();
     virtual void loop();
     void updatePressureValues();
-    void showMsgBox(const char *title, const char *yesText, const char *noText, std::function<void()> onYes);
+    void showMsgBox(const char *title, const char *text, const char *yesText, const char *noText, std::function<void()> onYes);
     bool isMsgBoxDisplayed();
 };
 

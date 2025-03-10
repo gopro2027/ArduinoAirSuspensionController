@@ -101,6 +101,10 @@
 /* Use new BLE with latest features or old classic bluetooth with the classic android app */
 #define USE_BLE true
 
+#define THEME_COLOR_DARK 0x5A4673
+#define THEME_COLOR_MEDIUM 0x9C4DCC
+#define THEME_COLOR_LIGHT 0xBB86FC
+
 /* DO NOT CHANGE ANY PAST THIS LINE */
 #define WHEEL_FRONT_PASSENGER 0
 #define WHEEL_REAR_PASSENGER 1
