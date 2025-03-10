@@ -133,7 +133,7 @@ void ScrSettings::init()
     lv_obj_remove_style_all(qrCodeParent);
     // lv_obj_set_style_bg_opa(qrCodeParent, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_size(qrCodeParent, DISPLAY_WIDTH, 100);
-    // lv_obj_set_style_bg_color(qrCodeParent, lv_color_hex(0xBB86FC), LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_bg_color(qrCodeParent, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);
     // lv_obj_set_x(qrCodeParent, DISPLAY_WIDTH - 100 / 2);
     // lv_obj_set_align(qrCodeParent, LV_ALIGN_TOP_MID);
 

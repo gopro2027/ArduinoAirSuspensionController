@@ -95,7 +95,10 @@
 			"esp_lcd_panel_io_additions.h": "c",
 			"esp_lcd.h": "c",
 			"esp_lcd_panel_io.h": "c",
-			"radiooption.h": "c"
+			"radiooption.h": "c",
+			"condition_variable": "cpp",
+			"list": "cpp",
+			"mutex": "cpp"
 		}
 	}
 }
