@@ -76,6 +76,8 @@ extern int currentPressures[5];
 extern uint16_t statusBittset;
 extern int profilePressures[5][4];
 extern bool profileUpdated;
+extern int currentPreset;
+void requestPreset();
 extern ConfigValuesPacket util_configValues;
 void sendConfigValuesPacket(bool saveToManifold);
 void onBLEConnectionCompleted();

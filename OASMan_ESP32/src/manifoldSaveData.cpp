@@ -20,13 +20,15 @@ void beginSaveData()
     _SaveData.compressorOnPSI.load("compressorOnPSI", COMPRESSOR_ON_BELOW_PSI);
     _SaveData.compressorOffPSI.load("compressorOffPSI", COMPRESSOR_MAX_PSI);
     _SaveData.pressureSensorMax.load("pressureSensorMax", pressuretransducermaxPSI);
+    _SaveData.bagVolumePercentage.load("bagVolumePercentage", 100);
     for (int i = 0; i < MAX_PROFILE_COUNT; i++)
     {
         for (int j = 0; j < 4; j++)
         {
             // first create a custom name for it. This would probably be better off done as different namespaces or something but idc
-            snprintf(_SaveData.profile[i].pressure[j].name, sizeof(_SaveData.profile[i].pressure[j].name), "profile%i|%i", i, j);
-            _SaveData.profile[i].pressure[j].load(_SaveData.profile[i].pressure[j].name, 50);
+            char buf[15];
+            snprintf(buf, sizeof(buf), "profile%i|%i", i, j);
+            _SaveData.profile[i].pressure[j].load(buf, 50);
         }
     }
 }
@@ -79,6 +81,7 @@ createSaveFuncInt(systemShutoffTimeM, uint32_t); // may have to change
 createSaveFuncInt(compressorOnPSI, uint8_t);
 createSaveFuncInt(compressorOffPSI, uint8_t);
 createSaveFuncInt(pressureSensorMax, uint16_t);
+createSaveFuncInt(bagVolumePercentage, uint16_t);
 
 float getHeightSensorMax()
 {

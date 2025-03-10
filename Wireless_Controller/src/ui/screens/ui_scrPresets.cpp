@@ -141,9 +141,12 @@ void ScrPresets::hideSelectors()
     lv_obj_add_flag(btnPreset4, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(btnPreset5, LV_OBJ_FLAG_HIDDEN);
 };
-int currentPreset = 3;
 void ScrPresets::setPreset(int num)
 {
+    if (currentPreset == num)
+    {
+        this->showPresetDialog();
+    }
     currentPreset = num;
     hideSelectors();
     switch (num)
@@ -169,10 +172,17 @@ void ScrPresets::setPreset(int num)
         lv_obj_remove_flag(btnPreset5, LV_OBJ_FLAG_HIDDEN);
         break;
     }
+    requestPreset();
+}
 
-    // request preset data (not really used at the moment but may be in the future)
-    PresetPacket pkt(currentPreset - 1, 0, 0, 0, 0);
-    sendRestPacket(&pkt);
+void ScrPresets::showPresetDialog()
+{
+    static char text[100];
+    static char title[10];
+    // This is honestly quite shit
+    snprintf(text, sizeof(text), "  fd: %i                        fp: %i\n  rd: %i                        rp: %i", profilePressures[currentPreset - 1][WHEEL_FRONT_DRIVER], profilePressures[currentPreset - 1][WHEEL_FRONT_PASSENGER], profilePressures[currentPreset - 1][WHEEL_REAR_DRIVER], profilePressures[currentPreset - 1][WHEEL_REAR_PASSENGER]);
+    snprintf(title, sizeof(title), "Preset %i", currentPreset);
+    this->showMsgBox(title, text, NULL, "OK", []() -> void {});
 }
 
 void ScrPresets::runTouchInput(SimplePoint pos, bool down)
@@ -180,39 +190,48 @@ void ScrPresets::runTouchInput(SimplePoint pos, bool down)
     Scr::runTouchInput(pos, down);
     if (down == false) // just released on button
     {
-        if (cr_contains(ctr_preset_1, pos))
+        if (!this->isMsgBoxDisplayed())
         {
-            setPreset(1);
-        }
-        if (cr_contains(ctr_preset_2, pos))
-        {
-            setPreset(2);
-        }
-        if (cr_contains(ctr_preset_3, pos))
-        {
-            setPreset(3);
-        }
-        if (cr_contains(ctr_preset_4, pos))
-        {
-            setPreset(4);
-        }
-        if (cr_contains(ctr_preset_5, pos))
-        {
-            setPreset(5);
-        }
-        if (sr_contains(preset_save, pos))
-        {
-            Serial.println("save preset");
-            SaveCurrentPressuresToProfilePacket pkt(currentPreset - 1);
-            sendRestPacket(&pkt);
-            showDialog("Saved Preset!", lv_color_hex(0xBB86FC));
-        }
-        if (sr_contains(preset_load, pos))
-        {
-            Serial.println("load preset");
-            AirupQuickPacket pkt(currentPreset - 1);
-            sendRestPacket(&pkt);
-            showDialog("Loaded Preset!", lv_color_hex(0x22bb33));
+            if (cr_contains(ctr_preset_1, pos))
+            {
+                setPreset(1);
+            }
+            if (cr_contains(ctr_preset_2, pos))
+            {
+                setPreset(2);
+            }
+            if (cr_contains(ctr_preset_3, pos))
+            {
+                setPreset(3);
+            }
+            if (cr_contains(ctr_preset_4, pos))
+            {
+                setPreset(4);
+            }
+            if (cr_contains(ctr_preset_5, pos))
+            {
+                setPreset(5);
+            }
+            if (sr_contains(preset_save, pos))
+            {
+                static char buf[40];
+                snprintf(buf, sizeof(buf), "Save current height to preset %i?", currentPreset);
+                this->showMsgBox(buf, NULL, "Confirm", "Cancel", []() -> void
+                                 {
+                                     Serial.println("save preset");
+                                     SaveCurrentPressuresToProfilePacket pkt(currentPreset - 1);
+                                     sendRestPacket(&pkt);
+                                     showDialog("Saved Preset!", lv_color_hex(THEME_COLOR_LIGHT));
+                                     requestPreset(); // update data not that it's saved
+                                 });
+            }
+            if (sr_contains(preset_load, pos))
+            {
+                Serial.println("load preset");
+                AirupQuickPacket pkt(currentPreset - 1);
+                sendRestPacket(&pkt);
+                showDialog("Loaded Preset!", lv_color_hex(0x22bb33));
+            }
         }
     }
 }

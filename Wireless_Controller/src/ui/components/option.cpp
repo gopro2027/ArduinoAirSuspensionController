@@ -53,7 +53,7 @@ void Option::indentText(int extraX)
     lv_obj_remove_style_all(this->bar);
     lv_obj_set_style_bg_opa(this->bar, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_size(this->bar, 1, OPTION_ROW_HEIGHT);
-    lv_obj_set_style_bg_color(this->bar, lv_color_hex(0xBB86FC), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(this->bar, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_x(this->bar, MARGIN);
 }
 void ui_clicked_radioOff(lv_event_t *e)
@@ -156,8 +156,8 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         // lv_textarea_set_cursor_hidden(ta, true);
         // lv_obj_set_event_cb(this->rightHandObj, ta_event_handler);
 
-        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(0xBB86FC), LV_PART_MAIN | LV_STATE_DEFAULT);     // bg
-        lv_obj_set_style_border_color(this->rightHandObj, lv_color_hex(0x5A4673), LV_PART_MAIN | LV_STATE_DEFAULT); // border
+        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);    // bg
+        lv_obj_set_style_border_color(this->rightHandObj, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT); // border
 
         lv_obj_set_style_radius(this->rightHandObj, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
         // lv_obj_set_style_border_width(this->rightHandObj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);

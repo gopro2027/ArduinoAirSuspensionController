@@ -337,7 +337,7 @@ void ble_notify()
     if (runNotifications)
     {
         uint16_t statusBittset = 0;
-        if (millis() < getCompressor()->isFrozen())
+        if (getCompressor()->isFrozen())
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::COMPRESSOR_FROZEN);
         }
@@ -475,6 +475,10 @@ void runReceivedPacket(BTOasPacket *packet)
     case BTOasIdentifier::MAINTAINPRESSURE:
         setmaintainPressure(((MaintainPressurePacket *)packet)->getBoolean());
         break;
+    case BTOasIdentifier::COMPRESSORSTATUS:
+        // TODO: THIS MIGHT HAVE THREADING ISSUES BUT IDK
+        getCompressor()->enableDisableOverride(((CompressorStatusPacket *)packet)->getBoolean());
+        break;
     case BTOasIdentifier::GETCONFIGVALUES:
     {
         ConfigValuesPacket *recpkt = (ConfigValuesPacket *)packet;
@@ -485,8 +489,9 @@ void runReceivedPacket(BTOasPacket *packet)
             setcompressorOnPSI(*recpkt->_compressorOnPSI());
             setcompressorOffPSI(*recpkt->_compressorOffPSI());
             setpressureSensorMax(*recpkt->_pressureSensorMax());
+            setbagVolumePercentage(*recpkt->_bagVolumePercentage());
         }
-        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax());
+        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage());
         restCharacteristic->setValue(pkt.tx(), BTOAS_PACKET_SIZE);
         restCharacteristic->notify();
         break;

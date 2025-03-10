@@ -33,7 +33,8 @@ enum BTOasIdentifier
     FALLONSHUTDOWN = 20,
     GETCONFIGVALUES = 21,
     AUTHPACKET = 22,
-    HEIGHTSENSORMODE = 23
+    HEIGHTSENSORMODE = 23,
+    COMPRESSORSTATUS = 24
 };
 
 enum StatusPacketBittset
@@ -190,6 +191,10 @@ struct MaintainPressurePacket : BooleanPacket
 {
     MaintainPressurePacket(bool enable);
 };
+struct CompressorStatusPacket : BooleanPacket
+{
+    CompressorStatusPacket(bool enable);
+};
 struct RebootPacket : BTOasPacket
 {
     RebootPacket();
@@ -200,13 +205,14 @@ struct StartwebPacket : BTOasPacket
 };
 struct ConfigValuesPacket : BTOasPacket
 {
-    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax);
+    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage);
     bool *_setValues();
     uint8_t *_bagMaxPressure();
     uint32_t *_systemShutoffTimeM();
     uint8_t *_compressorOnPSI();
     uint8_t *_compressorOffPSI();
     uint16_t *_pressureSensorMax();
+    uint16_t *_bagVolumePercentage();
 };
 struct AuthPacket : BTOasPacket
 {
