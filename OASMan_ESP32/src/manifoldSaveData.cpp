@@ -26,8 +26,9 @@ void beginSaveData()
         for (int j = 0; j < 4; j++)
         {
             // first create a custom name for it. This would probably be better off done as different namespaces or something but idc
-            snprintf(_SaveData.profile[i].pressure[j].name, sizeof(_SaveData.profile[i].pressure[j].name), "profile%i|%i", i, j);
-            _SaveData.profile[i].pressure[j].load(_SaveData.profile[i].pressure[j].name, 50);
+            char buf[15];
+            snprintf(buf, sizeof(buf), "profile%i|%i", i, j);
+            _SaveData.profile[i].pressure[j].load(buf, 50);
         }
     }
 }
