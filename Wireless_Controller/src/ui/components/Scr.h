@@ -37,7 +37,7 @@ public:
     int prevPressures[5];
     lv_obj_t *mb_dialog;
     DialogData dialogData;
-    bool deleteMessageBoxNextFrame;
+    bool deleteMessageBoxNextFrame; // want to make sure message box is still shown for the full duration of the current frame that it is deleted on, else the clicks on the dialog closing it will also register on the screen possibly triggering other buttons. Will delete it immediately at beginning of next frame
 
     Scr(lv_image_dsc_t navbarImage, bool showPressures);
     virtual void runTouchInput(SimplePoint pos, bool down);
