@@ -177,9 +177,10 @@ void ScrPresets::setPreset(int num)
 
 void ScrPresets::showPresetDialog()
 {
-    static char text[60];
+    static char text[100];
     static char title[10];
-    snprintf(text, sizeof(text), "fp: %i, rp: %i, fd: %i, rd: %i", profilePressures[currentPreset - 1][WHEEL_FRONT_PASSENGER], profilePressures[currentPreset - 1][WHEEL_REAR_PASSENGER], profilePressures[currentPreset - 1][WHEEL_FRONT_DRIVER], profilePressures[currentPreset - 1][WHEEL_REAR_DRIVER]);
+    // This is honestly quite shit
+    snprintf(text, sizeof(text), "  fd: %i                        fp: %i\n  rd: %i                        rp: %i", profilePressures[currentPreset - 1][WHEEL_FRONT_DRIVER], profilePressures[currentPreset - 1][WHEEL_FRONT_PASSENGER], profilePressures[currentPreset - 1][WHEEL_REAR_DRIVER], profilePressures[currentPreset - 1][WHEEL_REAR_PASSENGER]);
     snprintf(title, sizeof(title), "Preset %i", currentPreset);
     this->showMsgBox(title, text, NULL, "OK", []() -> void {});
 }
