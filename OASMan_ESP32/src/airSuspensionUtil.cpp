@@ -196,6 +196,8 @@ void notifyKeepAlive()
     lastTimeLive = millis();
 }
 
+bool forceShutoff = false;
+
 #ifdef ACCESSORY_WIRE_FUNCTIONALITY
 
 InputType *accessoryWire;
@@ -234,14 +236,17 @@ void accessoryWireLoop()
             }
         }
     }
-    if (isKeepAliveTimerExpired())
+    if (isKeepAliveTimerExpired() || forceShutoff)
     {
+        Serial.println("Shutting down");
         outputKeepESPAlive->digitalWrite(LOW); // acc wire has been off for some time, shut down system
+        delay(500);
     }
     else
     {
         outputKeepESPAlive->digitalWrite(HIGH);
     }
+    forceShutoff = false;
 }
 
 #else

@@ -174,6 +174,10 @@ RebootPacket::RebootPacket()
 {
     this->cmd = REBOOT;
 }
+TurnOffPacket::TurnOffPacket()
+{
+    this->cmd = TURNOFF;
+}
 StartwebPacket::StartwebPacket()
 {
     this->cmd = STARTWEB;
