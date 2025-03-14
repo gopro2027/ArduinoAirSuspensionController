@@ -34,6 +34,12 @@ void ScrSettings::init()
                 sendRestPacket(&pkt);
                 log_i("Pressed compressor status %i", ((bool)data)); });
 
+    new Option(this->optionsContainer, OptionType::ON_OFF, "Attempt Turn Off", defaultCharVal, [](void *data)
+               { 
+                TurnOffPacket pkt;
+                sendRestPacket(&pkt);
+                log_i("Pressed turn off"); });
+
     new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "Basic settings");
     this->ui_maintainprssure = new Option(this->optionsContainer, OptionType::ON_OFF, "Maintain pressure", defaultCharVal, [](void *data)
