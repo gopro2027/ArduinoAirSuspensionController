@@ -10,6 +10,8 @@
 #include "airSuspensionUtil.h"
 #include "tasks/tasks.h"
 
+InputType *pressureInputs[5];
+
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
@@ -29,12 +31,25 @@ void setup()
 
     delay(20);
 
-    wheel[WHEEL_FRONT_PASSENGER] = new Wheel(manifold->get(FRONT_PASSENGER_IN), manifold->get(FRONT_PASSENGER_OUT), pressureInputFrontPassenger, levelInputFrontPassenger, WHEEL_FRONT_PASSENGER);
-    wheel[WHEEL_REAR_PASSENGER] = new Wheel(manifold->get(REAR_PASSENGER_IN), manifold->get(REAR_PASSENGER_OUT), pressureInputRearPassenger, levelInputRearPassenger, WHEEL_REAR_PASSENGER);
-    wheel[WHEEL_FRONT_DRIVER] = new Wheel(manifold->get(FRONT_DRIVER_IN), manifold->get(FRONT_DRIVER_OUT), pressureInputFrontDriver, levelInputFrontDriver, WHEEL_FRONT_DRIVER);
-    wheel[WHEEL_REAR_DRIVER] = new Wheel(manifold->get(REAR_DRIVER_IN), manifold->get(REAR_DRIVER_OUT), pressureInputRearDriver, levelInputRearDriver, WHEEL_REAR_DRIVER);
+    pressureInputs[0] = pressureSensorInput0;
+    pressureInputs[1] = pressureSensorInput1;
+    pressureInputs[2] = pressureSensorInput2;
+    pressureInputs[3] = pressureSensorInput3;
+    pressureInputs[4] = pressureSensorInput4;
 
-    compressor = new Compressor(compressorRelayPin, pressureInputTank);
+    wheel[WHEEL_FRONT_PASSENGER] = new Wheel(manifold->get(FRONT_PASSENGER_IN), manifold->get(FRONT_PASSENGER_OUT), pressureInputs[getpressureInputFrontPassenger()], levelInputFrontPassenger, WHEEL_FRONT_PASSENGER);
+    wheel[WHEEL_REAR_PASSENGER] = new Wheel(manifold->get(REAR_PASSENGER_IN), manifold->get(REAR_PASSENGER_OUT), pressureInputs[getpressureInputRearPassenger()], levelInputRearPassenger, WHEEL_REAR_PASSENGER);
+    wheel[WHEEL_FRONT_DRIVER] = new Wheel(manifold->get(FRONT_DRIVER_IN), manifold->get(FRONT_DRIVER_OUT), pressureInputs[getpressureInputFrontDriver()], levelInputFrontDriver, WHEEL_FRONT_DRIVER);
+    wheel[WHEEL_REAR_DRIVER] = new Wheel(manifold->get(REAR_DRIVER_IN), manifold->get(REAR_DRIVER_OUT), pressureInputs[getpressureInputRearDriver()], levelInputRearDriver, WHEEL_REAR_DRIVER);
+
+    compressor = new Compressor(compressorRelayPin, pressureInputs[getpressureInputTank()]);
+
+    if (getlearnPressureSensors())
+    {
+        // learnPressureSensorsRoutine();
+        // ESP.restart(); // reboot this bih
+        setlearnPressureSensors(false);
+    }
 
     accessoryWireSetup();
 

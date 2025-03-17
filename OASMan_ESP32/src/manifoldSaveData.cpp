@@ -13,6 +13,15 @@ void beginSaveData()
     _SaveData.baseProfile.load("baseProfile", 2);
     _SaveData.raiseOnPressure.load("raiseOnPressure", false);
     _SaveData.internalReboot.load("internalReboot", false);
+    _SaveData.learnPressureSensors.load("learnPressureSensors", false);
+
+    // pressure sensor values
+    _SaveData.pressureInputFrontPassenger.load("PIFP", 0);
+    _SaveData.pressureInputRearPassenger.load("PIRP", 1);
+    _SaveData.pressureInputFrontDriver.load("PIFD", 2);
+    _SaveData.pressureInputRearDriver.load("PIRD", 3);
+    _SaveData.pressureInputTank.load("PIT", 4);
+
     // things moves from inside the user config
     _SaveData.bagMaxPressure.load("bagMaxPressure", MAX_PRESSURE_SAFETY);
     _SaveData.blePasskey.load("blePasskey", BLE_PASSKEY);
@@ -73,6 +82,14 @@ createSaveFuncInt(heightSensorMode, bool);
 createSaveFuncInt(baseProfile, byte);
 createSaveFuncInt(raiseOnPressure, bool);
 createSaveFuncInt(internalReboot, bool);
+createSaveFuncInt(learnPressureSensors, bool);
+
+// pressure sensor values
+createSaveFuncInt(pressureInputFrontPassenger, byte);
+createSaveFuncInt(pressureInputRearPassenger, byte);
+createSaveFuncInt(pressureInputFrontDriver, byte);
+createSaveFuncInt(pressureInputRearDriver, byte);
+createSaveFuncInt(pressureInputTank, byte);
 
 // values moved from the user defines file
 createSaveFuncInt(bagMaxPressure, uint8_t);
