@@ -3,6 +3,7 @@
 
 #pragma region variables
 
+InputType *pressureInputs[5];
 Manifold *manifold;
 Compressor *compressor;
 Wheel *wheel[4];
@@ -259,5 +260,14 @@ void accessoryWireLoop()
     vehicleOn = true;
 }
 #endif
+
+#pragma endregion
+
+#pragma region pressure sensor learn
+
+void learnPressureSensorsRoutine()
+{
+    // manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_OUT).
+}
 
 #pragma endregion

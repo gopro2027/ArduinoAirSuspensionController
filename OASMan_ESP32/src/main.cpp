@@ -10,8 +10,6 @@
 #include "airSuspensionUtil.h"
 #include "tasks/tasks.h"
 
-InputType *pressureInputs[5];
-
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
@@ -46,9 +44,9 @@ void setup()
 
     if (getlearnPressureSensors())
     {
-        // learnPressureSensorsRoutine();
-        // ESP.restart(); // reboot this bih
         setlearnPressureSensors(false);
+        learnPressureSensorsRoutine();
+        ESP.restart(); // reboot this bih
     }
 
     accessoryWireSetup();
