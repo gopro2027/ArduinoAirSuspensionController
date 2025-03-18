@@ -28,7 +28,7 @@ public:
     // void unpauseValvesForBlockingTaskCompleted();
 };
 
-Solenoid *getSolenoidFromIndex(int solenoid);
+// Solenoid *getSolenoidFromIndex(int solenoid);
 
 extern Manifold *getManifold(); // defined in airSuspensionUtil.h
 extern Wheel *getWheel(int i);

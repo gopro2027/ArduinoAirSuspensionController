@@ -178,13 +178,13 @@ class CharacteristicCallback : public BLECharacteristicCallbacks
                         {
                             Serial.print("Opening ");
                             Serial.println(i);
-                            getSolenoidFromIndex(i)->open();
+                            getManifold()->get(i)->open();
                         }
                         else
                         {
                             Serial.print("Closing ");
                             Serial.println(i);
-                            getSolenoidFromIndex(i)->close();
+                            getManifold()->get(i)->close();
                         }
                     }
                 }

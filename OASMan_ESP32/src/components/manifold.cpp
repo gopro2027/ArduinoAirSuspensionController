@@ -33,17 +33,17 @@ Solenoid **Manifold::getAll()
 }
 
 // TODO: Get rid of this function in the future. It's an abstract match between the two things. Not great
-Solenoid *getSolenoidFromIndex(int solenoid)
-{
-    if (solenoid % 2)
-    {
-        return getWheel(solenoid / 2)->getOutSolenoid();
-    }
-    else
-    {
-        return getWheel(solenoid / 2)->getInSolenoid();
-    }
-}
+// Solenoid *getSolenoidFromIndex(int solenoid)
+// {
+//     if (solenoid % 2)
+//     {
+//         return getWheel(solenoid / 2)->getOutSolenoid();
+//     }
+//     else
+//     {
+//         return getWheel(solenoid / 2)->getInSolenoid();
+//     }
+// }
 
 // // these are depricated/unused. Pause/unpause all valves
 // void Manifold::pauseValvesForBlockingTask()
