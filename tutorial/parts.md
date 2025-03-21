@@ -37,6 +37,7 @@ Here are the parts required to build the system.
 | --------- | ------- | ------- | ------- | ------- |
 | Relay | 1 | ![image](https://github.com/user-attachments/assets/d14dc4ea-0366-496f-81c5-a614b326eb65) | [amazon](https://www.amazon.com/gp/product/B07T35K8S2) | You also may want a relay to control the compressor (Please double check your requirements for the compressor relay and amps!!!!! Requirements vary depending on your compressor setup, which is out of the scope of OAS-Man. OAS-Man only supplies the signal of when to turn on the compressor, not the full power.) |
 
+<!--
 ### (Outdated) PCB Board v2.0 required parts
 | Part Name  | qty | image | Link | info |
 | --------- | ------- | ------- | ------- | ------- |
@@ -48,3 +49,4 @@ Here are the parts required to build the system.
 | PTF-77 Fuse Holder and 5x20 3a fuse |   1      | ![image](https://github.com/user-attachments/assets/6d67dbb4-81c1-4b15-9bf6-52c54b36e47f) | [lcsc holder](https://www.lcsc.com/product-detail/Fuseholders_XFCN-PTF-77_C717030.html)<br> [lcsc fuse](https://www.lcsc.com/product-detail/Disposable-fuses_Reomax-STC1300_C5381727.html) | Purchase from lcsc with the resistors and maybe the diodes too. You can skip the fuse holder and solder in the fuse directly if you prefer. Or skip entirely, solder in a wire, and wire a fuse externally. | 
 | 1/4w 12x 10K, 11x 150R, 1x 1K, 1x 2K |   Assorted      | ![image](https://github.com/user-attachments/assets/7492bb33-a26f-439b-a489-2b17d04ce9f2) | [lcsc 10k](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-10K-1-ST52_C2903232.html)<br> [lcsc 150R](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-150-1-ST52_C2903242.html)<br> [lcsc 1K](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-1K-1-ST52_C2903245.html)<br> [lcsc 2K](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-2K-1-ST52_C2903278.html) | 1/4w, 1% resistors (blue), purchase 100 of each from lcsc for cheap | 
 | 1N4007 diode |    13     | ![image](https://github.com/user-attachments/assets/daae6c1d-b7ca-4330-b604-794b2f88379b) | [ebay](https://www.ebay.com/itm/235235061574) [aliexpress](https://pl.aliexpress.com/item/1005006003747959.html) [lcsc](https://www.lcsc.com/product-detail/Diodes-General-Purpose_Yangzhou-Yangjie-Elec-Tech-1N4007_C2986225.html) | Linked is a pack of 100 | 
+-->
