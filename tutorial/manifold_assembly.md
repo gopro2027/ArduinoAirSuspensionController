@@ -14,7 +14,7 @@ On the manifold:<br>port 1 goes to front passenger (right)<br>port 2 goes to rea
 The ports on the opposite side will correspond to the pressure sensors for the same bags.<br>
 Please see the annotated diagram for a full breakdown<br>
 
-![diagram](/photos/esp32/ValvetableAndManifold/ebay_manifold_diagram.png)<br>
+![diagram](https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/main/photos/esp32/ValvetableAndManifold/ebay_manifold_diagram.png)<br>
 ![3d render](https://github.com/user-attachments/assets/d2d7824f-42e0-421b-8ad5-1d28122957a1)
 ![physical pic](https://github.com/user-attachments/assets/8e0fe6bb-de3b-4c31-9984-bb5e53541474)
 
