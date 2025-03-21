@@ -27,33 +27,33 @@ The 3 top wires go in the same order on a 3 pin jst connector, and the 6 bottom 
 So the wiring harness is split up into 2 jst connectors, because it's a 2x6 connector but 3 of the pins are not used.<br>
 So on the one half with the 3 pins in a row and 3 unused pins, we will connect them to a 3 pin jst connector in the same order (no crossed wires) as so:<br>
 <br>
-![3 pin on manifold harness](/photos/esp32/ValvetableAndManifold/3pins.jpeg)<br>
+![3 pin on manifold harness](https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/main/photos/esp32/ValvetableAndManifold/3pins.jpeg)<br>
 <br>
 Please note the orientation of the connectors so that you don't accidentally have the order flipped. You want to make sure the connector on the board connects to the wires in the same order and not upside down. If you follow exactly as the pictures on this page show, you should be fine.<br>
 You can double check all of the wiring by cross referencing the information supplied in the images following and labels on the PCB.<br>
 The other half of the harness is 6 pins in a row, so we will connect all 6 to a 6 pin jst connector, also in the same order with no wires crossed. Again making sure to not have the connector upside down in respect to how you have it soldered on the board.<br>
 <br>
-![6 pin on manifold harness](/photos/esp32/ValvetableAndManifold/6pins.jpeg)<br>
+![6 pin on manifold harness](https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/main/photos/esp32/ValvetableAndManifold/6pins.jpeg)<br>
 <br>
 You can see for example how the #6 pin on the pinout is connected to the spot that will plug into the RDO on the PCB from the image shown next.<br>
 If attached as shown in the video, they should connect to the board with the other side of the jst connector in this orientation:<br>
 <br>
-![valvetable jst orientation on board](/photos/esp32/ValvetableAndManifold/board_jst_placement.png)<br>
+![valvetable jst orientation on board](https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/main/photos/esp32/ValvetableAndManifold/board_jst_placement.png)<br>
 <br>
 <br>
 Here is the full pinout of wiring harness that comes with the manifold for a full cross reference:<br>
 <sub>* Note that this is looking into the connector from the female side, with the holes</sub><br>
 <br>
-![manifold connector wiring cross reference](/photos/esp32/ValvetableAndManifold/pcb_valvetable_pinout.png)<br>
+![manifold connector wiring cross reference](https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/main/photos/esp32/ValvetableAndManifold/pcb_valvetable_pinout.png)<br>
 <br>
 And here is my annotated documentation that may also be of use for a double check:<br>
 <sub>* Note that this is looking into the connector from the male side, with the wires</sub><br>
 <br>
-![manifold documentation annotated](/photos/esp32/ValvetableAndManifold/ebay_manifold_diagram.png)<br>
+![manifold documentation annotated](https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/main/photos/esp32/ValvetableAndManifold/ebay_manifold_diagram.png)<br>
 <br>
 The final result will look something like this:<br>
 <br>
-![wiring harness final result](/photos/esp32/ValvetableAndManifold/manifold_final_wiring.jpg)<br>
+![wiring harness final result](https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/main/photos/esp32/ValvetableAndManifold/manifold_final_wiring.jpg)<br>
 <br>
 After completing all the jst connectors, I put hot glue on the ends of them to keep the wires from being stressed too much when moved around and assembled:<br>
 ![20241210_125036](https://github.com/user-attachments/assets/10d32557-2c95-4b84-b409-b76db983f35b)<br>
