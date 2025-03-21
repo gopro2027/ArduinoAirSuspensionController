@@ -11,6 +11,7 @@
 extern Manifold *manifold;
 extern Compressor *compressor;
 extern Wheel *wheel[4];
+extern bool forceShutoff;
 
 #if USE_ADS == true
 extern Adafruit_ADS1115 ADS1115A;

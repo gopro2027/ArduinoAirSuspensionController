@@ -456,6 +456,10 @@ void runReceivedPacket(BTOasPacket *packet)
         setinternalReboot(true);
         Serial.println(F("Rebooting..."));
         break;
+    case BTOasIdentifier::TURNOFF:
+        Serial.println(F("Turning off..."));
+        forceShutoff = true;
+        break;
     case BTOasIdentifier::CALIBRATE:
         Serial.println(F("calibrate does nothign lmao"));
         break;

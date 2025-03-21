@@ -34,7 +34,8 @@ enum BTOasIdentifier
     GETCONFIGVALUES = 21,
     AUTHPACKET = 22,
     HEIGHTSENSORMODE = 23,
-    COMPRESSORSTATUS = 24
+    COMPRESSORSTATUS = 24,
+    TURNOFF = 25
 };
 
 enum StatusPacketBittset
@@ -198,6 +199,10 @@ struct CompressorStatusPacket : BooleanPacket
 struct RebootPacket : BTOasPacket
 {
     RebootPacket();
+};
+struct TurnOffPacket : BTOasPacket
+{
+    TurnOffPacket();
 };
 struct StartwebPacket : BTOasPacket
 {
