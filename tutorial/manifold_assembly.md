@@ -1,6 +1,6 @@
 # Manifold Assemmbly
 
-Get the 3d prints to print from [here](/3d%20Prints)<br>
+Get the 3d prints to print from [here](https://github.com/gopro2027/ArduinoAirSuspensionController/tree/main/3d%20Prints)<br>
 There are 2 versions, Tall and Short. The tall version is standard with good room for everything to fit well inside of it. The short is 2cm shorter, does not fit the lcd screen, and is there just because, but is not particularly recommended. Required to put something like foam padding between the pcb and the manifold if you use the short version.<br>
 Print them in a plastic with medium-high heat resistance such as PETG or ABS<br>
 Print the lid upside down.<br>
