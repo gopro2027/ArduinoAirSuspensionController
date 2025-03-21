@@ -8,7 +8,7 @@ For the hat please choose the version with or without the screen. Print upright<
 The base prints upright<br>
 <br>
 You can attach the screen to the 3d printed hat with m2 screws. More info below.<br>
-You can attach the pcb board to the 3d printed lid with m3 screws. <sub>Note that one of the screw holes was placed too close to 2 of the resistors on the top left accidentally, but they are connected there so it is fine to have them touch.</sub><br>
+You can attach the pcb board to the 3d printed lid with m3 screws.<br>
 <br>
 On the manifold:<br>port 1 goes to front passenger (right)<br>port 2 goes to rear passenger (right)<br>port 3 goes to front driver (left)<br>port 4 goes to rear driver (left)<br>
 The ports on the opposite side will correspond to the pressure sensors for the same bags.<br>
