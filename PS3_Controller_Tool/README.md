@@ -1,8 +1,14 @@
 # PS3 Controller Setup
 
-If you plan to use a ps3 controller, use the sixaxis pair tool to change your mac address of your PS3 controller to your ESP32's mac address (Tip: You can get the mac from the bluetooth page of the android app!)<br>
+If you plan to use a ps3 controller, use the sixaxis pair tool to change your mac address of your PS3 controller to your ESP32's mac address<br>
+You can use a phone app called nRF Connect to obtain the mac address of the system<br>
+<br>
+![Screenshot_20250322_171036_nRF Connect (2)](https://github.com/user-attachments/assets/0a26b60f-f8ef-4f27-9dff-c2e1ca890823)<br>
+<br>
 ![example](https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/refs/heads/main/PS3_Controller_Tool/SixaxisPairTool_rename_example.png)<br>
-If using the legacy android app, the PS3 controller must be connected before the app is connected in order to function properly! You can have both connected at the same time as long as you connect the controller first.<br>
+<a href="https://github.com/gopro2027/ArduinoAirSuspensionController/raw/refs/heads/main/PS3_Controller_Tool/SixaxisPairToolSetup-0.3.1.exe">Download Sixaxis Pair Tool here</a><br>
+<br>
+If using the legacy android app (unlikely), the PS3 controller must be connected before the app is connected in order to function properly! You can have both connected at the same time as long as you connect the controller first.<br>
 <br>
 Controls:<br>
 **L1 + R1**: enable/disable the controller (enabled by default)<br>
