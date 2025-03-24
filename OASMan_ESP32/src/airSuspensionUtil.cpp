@@ -265,9 +265,91 @@ void accessoryWireLoop()
 
 #pragma region pressure sensor learn
 
-void learnPressureSensorsRoutine()
+namespace PressureSensorCalibration
 {
-    // manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_OUT).
+
+    void getPinPressures(int pressures[5])
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            pressures[i] = readPinPressure(pressureInputs[i], false);
+        }
+    }
+
+    bool isAnyBagMaxxed(int pressures[5])
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            if (pressures[i] > 100)
+                return true;
+        }
+        return false;
+    }
+
+    int getHighestPressure(int pressures[5])
+    {
+        int highestIndex = 0;
+        int highestNum = pressures[0];
+        for (int i = 1; i < 5; i++)
+        {
+            if (pressures[i] > highestNum)
+            {
+                highestIndex = i;
+                highestNum = pressures[i];
+            }
+        }
+        return highestIndex;
+    }
+
+    void learnPressureSensorsRoutine()
+    {
+        // Assume pressure sensor value is correct. ie default 232.
+        int IDX_FRONT_PASSENGER;
+        int IDX_REAR_PASSENGER;
+        int IDX_FRONT_DRIVER;
+        int IDX_REAR_DRIVER;
+        int IDX_TANK;
+
+        // STEP 1: Air out all bags
+        manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_OUT)->open();
+        manifold->get(SOLENOID_INDEX::REAR_PASSENGER_OUT)->open();
+        manifold->get(SOLENOID_INDEX::FRONT_DRIVER_OUT)->open();
+        manifold->get(SOLENOID_INDEX::REAR_DRIVER_OUT)->open();
+        delay(20 * 1000);
+        manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_OUT)->close();
+        manifold->get(SOLENOID_INDEX::REAR_PASSENGER_OUT)->close();
+        manifold->get(SOLENOID_INDEX::FRONT_DRIVER_OUT)->close();
+        manifold->get(SOLENOID_INDEX::REAR_DRIVER_OUT)->close();
+
+        int pressures[5];
+        getPinPressures(pressures);
+
+        // STEP 2: Fill up tank with compressor until we get 100 as our reading or for 30 seconds
+        // first check if we already have one pressure that is full (aka tank is already full)
+        if (!isAnyBagMaxxed(pressures))
+        {
+            compressor->getOverrideSolenoid()->open();
+            unsigned long startTime = millis();
+            while (millis() < startTime + 30 * 1000)
+            {
+                getPinPressures(pressures);
+                // check tank pressure just in case it's already full
+                if (isAnyBagMaxxed(pressures))
+                {
+                    // turn off compressor if any are over 100
+                    compressor->getOverrideSolenoid()->close();
+                }
+                delay(5);
+            }
+            compressor->getOverrideSolenoid()->close();
+        }
+
+        // STEP 3: Tank sensor is the sensor with the highest pressure
+        IDX_TANK = getHighestPressure(pressures);
+
+        // STEP 4: Do routine for each bag
+        // TODO: Finish this and then implement the controller side/bluetooth
+    }
 }
 
 #pragma endregion

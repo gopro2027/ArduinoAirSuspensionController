@@ -45,7 +45,7 @@ void setup()
     if (getlearnPressureSensors())
     {
         setlearnPressureSensors(false);
-        learnPressureSensorsRoutine();
+        PressureSensorCalibration::learnPressureSensorsRoutine();
         ESP.restart(); // reboot this bih
     }
 

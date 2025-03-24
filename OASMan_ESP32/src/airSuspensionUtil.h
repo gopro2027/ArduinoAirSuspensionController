@@ -39,6 +39,9 @@ void accessoryWireLoop();
 void notifyKeepAlive();
 bool isVehicleOn();
 bool isKeepAliveTimerExpired();
-void learnPressureSensorsRoutine();
+namespace PressureSensorCalibration
+{
+    void learnPressureSensorsRoutine();
+}
 
 #endif

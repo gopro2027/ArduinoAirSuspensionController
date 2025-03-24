@@ -151,3 +151,8 @@ void Compressor::loop()
         }
     }
 }
+
+Solenoid *Compressor::getOverrideSolenoid()
+{
+    return &this->s_trigger;
+}

@@ -98,14 +98,10 @@ int InputType::digitalRead()
     }
 }
 
-int InputType::analogRead(bool skipVoltageAdjustment)
+int InputType::analogRead()
 {
     if (this->input_type == NORMAL)
     {
-        // reading max of 3.3v (5v through the 1.5 voltage divider)
-        if (skipVoltageAdjustment)
-        {
-        }
 
         // unlike analogRead, analogReadMilliVolts gives a proper reading
         return ::analogReadMilliVolts(this->pin) * 1.24090909091f; // map millivoltage to line between (0,0),(3.3,4095) to simulate analogRead

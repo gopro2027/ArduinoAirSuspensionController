@@ -37,6 +37,7 @@ public:
     bool isOn();
     void enableDisableOverride(bool enable);
     void updateFreezeTimer(unsigned long curTime);
+    Solenoid *getOverrideSolenoid();
 };
 extern Compressor *getCompressor();                            // defined in airSuspensionUtil.h
 extern bool isVehicleOn();                                     // defined in airSuspensionUtil.h
