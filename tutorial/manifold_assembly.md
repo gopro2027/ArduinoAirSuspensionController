@@ -11,6 +11,10 @@ You can attach the screen to the 3d printed hat with m2 screws. More info below.
 You can attach the pcb board to the 3d printed lid with m3 screws.<br>
 <br>
 On the manifold:<br>port 1 goes to front passenger (right)<br>port 2 goes to rear passenger (right)<br>port 3 goes to front driver (left)<br>port 4 goes to rear driver (left)<br>
+
+![20250325_124822](https://github.com/user-attachments/assets/c4aa9cad-d5dc-4b14-9ad2-f6295fd0ce19)
+
+
 The ports on the opposite side will correspond to the pressure sensors for the same bags. **Note:** If you are unsure which pressure sensor goes to which, just install them in any order and run the pressure sensor detection upon first startup.<br>
 Please see the annotated diagram for a full breakdown<br>
 
