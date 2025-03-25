@@ -1,5 +1,5 @@
 # PS3 Controller Setup
-# Setup:
+### Setup:
 If you plan to use a ps3 controller, use the sixaxis pair tool to change your mac address of your PS3 controller to your ESP32's mac address<br>
 You can use a phone app called nRF Connect to obtain the mac address of the system<br>
 <br>
@@ -12,7 +12,7 @@ If using the legacy android app (unlikely), the PS3 controller must be connected
 <br>
 Additional information that explains why the ps3 controller is special: <a href="https://bluepad32.readthedocs.io/en/latest/pair_ds3/">https://bluepad32.readthedocs.io/en/latest/pair_ds3/</a><br>
 <br>
-# Controls:
+### Controls:
 **L1 + R1**: enable/disable the controller (enabled by default)<br>
 **Start + Select**: turn off controller (this actually reboots the manifold which causes the controller to turn off)<br>
 <br>
