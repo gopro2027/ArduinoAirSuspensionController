@@ -26,7 +26,7 @@ If you wish to make any customizations to the code, please follow the following 
 2. Make edits.
 3. Build and test your changes to make sure it is to your liking
 4. Once you are finished with your edits, go back to github desktop and commit them to your `my_config` branch.
-# Updating to the latest updates
+### Updating to the latest updates
 1. Open github desktop
 2. Select your `my_config` branch as your current branch or `main` if you have no custom configuration
 3. Click `Fetch` in the top right
