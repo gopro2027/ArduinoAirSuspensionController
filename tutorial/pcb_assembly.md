@@ -16,14 +16,16 @@ Here is a video of me assembling my 2.0 board, if you wish to follow along:<br>
 Both the pressure and height sensors use 3 wires each. GND, 5V, and Data.<br>
 Please attach 3 pin JST connectors to each so that they align with the same wires on the PCB.<br>
 Obviously the height sensors are totally optional.<br>
+If you are using the listed 5 sensor kit and choose to not cut off the oem connector and re-pin them to 3 pin, the board supports that too, it has a special connector just for compattability with this. Just remember to run the pressure sensor detection after install to detect which sensors go to which wheels!<br>
 <br>
 
 ### Manifold Wiring Harness Assembly (Valvetable)
-The wiring was designed to be as easy as possible.
-
+#### Summary
+The wiring was designed to be as easy as we could possibly make it. The pins on the PCB are 1 to 1 with the pins on the recommended manifold's connector. However, still, this is the most difficult part of the whole project so please pay attention, especially if you are running a different manifold.<br>
+#### Brief overview
 The board mimics the wires coming out of the manifold connector. If you imagine hanging the connector above the pcb, straightening out all the wires so they don't cross, then connecting them, that is the order in which the wires need to be connected.
-
-The 3 top wires go in the same order on a 3 pin jst connector, and the 6 bottom wires go in the same order on a 6 pin jst connector. The only catch it to make sure it doesn't connect to the board upside down (aka reverse order) or you will have to cut the pins off and flip the connector over and insert them in the reverse order.<br>Simple?<br>Alright, lets get into the details...<br><br>
+The 3 top wires go in the same order on a 3 pin jst connector, and the 6 bottom wires go in the same order on a 6 pin jst connector. The only catch is to make sure you dont't accidentally put the connector upside down. <br>Simple?<br>Alright, lets get into the details...<br><br>
+#### Detailed Tutorial
 So the wiring harness is split up into 2 jst connectors, because it's a 2x6 connector but 3 of the pins are not used.<br>
 So on the one half with the 3 pins in a row and 3 unused pins, we will connect them to a 3 pin jst connector in the same order (no crossed wires) as so:<br>
 <br>
