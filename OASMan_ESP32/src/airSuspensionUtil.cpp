@@ -268,7 +268,7 @@ void accessoryWireLoop()
 namespace PressureSensorCalibration
 {
 
-    void getPinPressures(int pressures[5])
+    void getPinPressures(float pressures[5])
     {
         for (int i = 0; i < 5; i++)
         {
@@ -276,7 +276,7 @@ namespace PressureSensorCalibration
         }
     }
 
-    bool isAnyBagMaxxed(int pressures[5])
+    bool isAnyBagMaxxed(float pressures[5])
     {
         for (int i = 0; i < 5; i++)
         {
@@ -286,10 +286,10 @@ namespace PressureSensorCalibration
         return false;
     }
 
-    int getHighestPressure(int pressures[5])
+    int getHighestPressureIndex(float pressures[5])
     {
         int highestIndex = 0;
-        int highestNum = pressures[0];
+        float highestNum = pressures[0];
         for (int i = 1; i < 5; i++)
         {
             if (pressures[i] > highestNum)
@@ -299,6 +299,28 @@ namespace PressureSensorCalibration
             }
         }
         return highestIndex;
+    }
+
+    int getHighestChangedPressureIndex(float previousPressures[5])
+    {
+        float changedPressures[5];
+        getPinPressures(changedPressures);
+        for (int i = 0; i < 5; i++)
+        {
+            changedPressures[i] = changedPressures[i] - previousPressures[i];
+        }
+        return getHighestPressureIndex(changedPressures);
+    }
+
+    void doBagPressureCheck(int &saveTo, Solenoid *solenoid)
+    {
+        float startPressures[5];
+        getPinPressures(startPressures);
+        solenoid->open();
+        delay(2 * 1000); // 2 seconds probably fine
+        solenoid->open();
+        delay(500); // wait for pressures to stabilize
+        saveTo = getHighestChangedPressureIndex(startPressures);
     }
 
     void learnPressureSensorsRoutine()
@@ -321,7 +343,9 @@ namespace PressureSensorCalibration
         manifold->get(SOLENOID_INDEX::FRONT_DRIVER_OUT)->close();
         manifold->get(SOLENOID_INDEX::REAR_DRIVER_OUT)->close();
 
-        int pressures[5];
+        delay(500); // wait for pressures to stabilize
+
+        float pressures[5];
         getPinPressures(pressures);
 
         // STEP 2: Fill up tank with compressor until we get 100 as our reading or for 30 seconds
@@ -345,10 +369,24 @@ namespace PressureSensorCalibration
         }
 
         // STEP 3: Tank sensor is the sensor with the highest pressure
-        IDX_TANK = getHighestPressure(pressures);
+        IDX_TANK = getHighestPressureIndex(pressures);
 
         // STEP 4: Do routine for each bag
         // TODO: Finish this and then implement the controller side/bluetooth
+        delay(500);
+        doBagPressureCheck(IDX_FRONT_PASSENGER, manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_IN));
+        doBagPressureCheck(IDX_REAR_PASSENGER, manifold->get(SOLENOID_INDEX::REAR_PASSENGER_IN));
+        doBagPressureCheck(IDX_FRONT_DRIVER, manifold->get(SOLENOID_INDEX::FRONT_DRIVER_IN));
+        doBagPressureCheck(IDX_REAR_DRIVER, manifold->get(SOLENOID_INDEX::REAR_DRIVER_IN));
+
+        setpressureInputTank(IDX_TANK);
+        setpressureInputFrontPassenger(IDX_FRONT_PASSENGER);
+        setpressureInputRearPassenger(IDX_REAR_PASSENGER);
+        setpressureInputFrontDriver(IDX_FRONT_DRIVER);
+        setpressureInputRearDriver(IDX_REAR_DRIVER);
+
+        delay(500);
+        ESP.restart(); // reboot this bih
     }
 }
 

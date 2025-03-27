@@ -46,7 +46,6 @@ void setup()
     {
         setlearnPressureSensors(false);
         PressureSensorCalibration::learnPressureSensorsRoutine();
-        ESP.restart(); // reboot this bih
     }
 
     accessoryWireSetup();

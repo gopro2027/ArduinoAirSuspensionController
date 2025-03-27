@@ -5,6 +5,7 @@
 #ifndef BTOas_h
 #define BTOas_h
 #include <Arduino.h>
+#include <string>
 
 #include "user_defines.h"
 
