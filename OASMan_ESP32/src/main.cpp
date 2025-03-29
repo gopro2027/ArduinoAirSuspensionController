@@ -57,7 +57,7 @@ void setup()
 
 #if TEST_MODE == false
     // only want to rise on start if it was a full boot and not a quick reboot
-    if (getinternalReboot() == false)
+    if (getinternalReboot() == false && getsafetyMode() == false)
     {
         if (getriseOnStart() == true)
         {
