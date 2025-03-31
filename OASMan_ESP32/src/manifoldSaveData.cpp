@@ -14,6 +14,7 @@ void beginSaveData()
     _SaveData.raiseOnPressure.load("raiseOnPressure", false);
     _SaveData.internalReboot.load("internalReboot", false);
     _SaveData.learnPressureSensors.load("learnPressureSensors", false);
+    _SaveData.safetyMode.load("safetyMode", true);
 
     // pressure sensor values
     _SaveData.pressureInputFrontPassenger.load("PIFP", 0);
@@ -83,6 +84,7 @@ createSaveFuncInt(baseProfile, byte);
 createSaveFuncInt(raiseOnPressure, bool);
 createSaveFuncInt(internalReboot, bool);
 createSaveFuncInt(learnPressureSensors, bool);
+createSaveFuncInt(safetyMode, bool);
 
 // pressure sensor values
 createSaveFuncInt(pressureInputFrontPassenger, byte);
