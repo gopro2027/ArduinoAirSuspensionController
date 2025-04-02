@@ -9,6 +9,8 @@
 
 void ps3_controller_setup();
 void ps3_controller_loop();
+extern bool do_dance; // from tasks.cpp
+void doDance();
 
 #endif
 
