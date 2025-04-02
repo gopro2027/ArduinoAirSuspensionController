@@ -88,12 +88,19 @@ void task_wheel(void *parameters)
     }
 }
 
+bool do_dance = false;
 void task_ota(void *parameters)
 {
     delay(150);
     while (startOTAServiceRequest == false)
     {
-        delay(500);
+        // This is completely unrelated to the ota function but it is here because it is blocking and needs to be ran from it's own task and this task is basically unused so I am putting it in here rather than allocating memory for a new task.
+        if (do_dance)
+        {
+            do_dance = false;
+            doDance();
+        }
+        delay(50);
     }
     ota_setup();
     delay(150);
