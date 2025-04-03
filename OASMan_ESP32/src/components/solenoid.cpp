@@ -11,7 +11,7 @@ Solenoid::Solenoid(InputType *pin)
 }
 void Solenoid::open()
 {
-    if (this->bopen == false)
+    if (this->bopen == false || (this->pin->digitalRead() != HIGH))
     {
         this->pin->digitalWrite(HIGH);
         this->bopen = true;
@@ -19,7 +19,7 @@ void Solenoid::open()
 }
 void Solenoid::close()
 {
-    if (this->bopen == true)
+    if (this->bopen == true || (this->pin->digitalRead() != LOW))
     {
         this->pin->digitalWrite(LOW);
         this->bopen = false;
