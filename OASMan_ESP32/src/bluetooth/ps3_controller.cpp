@@ -163,7 +163,7 @@ void passUpDriverDown(int ms)
 void doDance()
 {
     Serial.println("Doing dance sequence!");
-    int timing = 750;
+    int timing = 600;
     // initialize by dropping for half the time of one side
     passUpDriverDown(timing / 2);
     for (int i = 0; i < 5; i++)
