@@ -137,7 +137,7 @@ void setup_tasks()
     xTaskCreate(
         task_compressor,
         "Compressor Control",
-        512 * 6, // 4-2-2025 hotfix attempt, increased from 4 to 6. Compressor would sometimes not turn off. Theory is thread is crashing from running out of memory, as this seems to be a common crash issue in the past. Simply out of memory
+        512 * 4,
         NULL,
         1000,
         NULL);
