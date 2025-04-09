@@ -155,6 +155,11 @@ HeightSensorModePacket::HeightSensorModePacket(bool enable)
     this->cmd = HEIGHTSENSORMODE;
     this->args32()[0].i = enable;
 }
+SafetyModePacket::SafetyModePacket(bool enable)
+{
+    this->cmd = SAFETYMODE;
+    this->args32()[0].i = enable;
+}
 RaiseOnPressureSetPacket::RaiseOnPressureSetPacket(bool enable)
 {
     this->cmd = RAISEONPRESSURESET;

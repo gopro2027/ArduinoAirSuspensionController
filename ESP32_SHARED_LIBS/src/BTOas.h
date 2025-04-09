@@ -36,7 +36,8 @@ enum BTOasIdentifier
     AUTHPACKET = 22,
     HEIGHTSENSORMODE = 23,
     COMPRESSORSTATUS = 24,
-    TURNOFF = 25
+    TURNOFF = 25,
+    SAFETYMODE = 26,
 };
 
 enum StatusPacketBittset
@@ -49,7 +50,8 @@ enum StatusPacketBittset
     MAINTAIN_PRESSURE,
     RISE_ON_START,
     AIR_OUT_ON_SHUTOFF,
-    HEIGHT_SENSOR_MODE
+    HEIGHT_SENSOR_MODE,
+    SAFETY_MODE
 };
 
 enum AuthResult
@@ -184,6 +186,10 @@ struct FallOnShutdownPacket : BooleanPacket
 struct HeightSensorModePacket : BooleanPacket
 {
     HeightSensorModePacket(bool enable);
+};
+struct SafetyModePacket : BooleanPacket
+{
+    SafetyModePacket(bool enable);
 };
 struct RaiseOnPressureSetPacket : BooleanPacket
 {
