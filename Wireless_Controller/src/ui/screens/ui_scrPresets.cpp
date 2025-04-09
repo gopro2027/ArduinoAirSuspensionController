@@ -182,7 +182,7 @@ void ScrPresets::showPresetDialog()
     // This is honestly quite shit
     snprintf(text, sizeof(text), "  fd: %i                        fp: %i\n  rd: %i                        rp: %i", profilePressures[currentPreset - 1][WHEEL_FRONT_DRIVER], profilePressures[currentPreset - 1][WHEEL_FRONT_PASSENGER], profilePressures[currentPreset - 1][WHEEL_REAR_DRIVER], profilePressures[currentPreset - 1][WHEEL_REAR_PASSENGER]);
     snprintf(title, sizeof(title), "Preset %i", currentPreset);
-    this->showMsgBox(title, text, NULL, "OK", []() -> void {});
+    this->showMsgBox(title, text, NULL, "OK", []() -> void {}, []() -> void {}, false);
 }
 
 void ScrPresets::runTouchInput(SimplePoint pos, bool down)
@@ -223,7 +223,8 @@ void ScrPresets::runTouchInput(SimplePoint pos, bool down)
                                      sendRestPacket(&pkt);
                                      showDialog("Saved Preset!", lv_color_hex(THEME_COLOR_LIGHT));
                                      requestPreset(); // update data not that it's saved
-                                 });
+                                 },
+                                 []() -> void {}, false);
             }
             if (sr_contains(preset_load, pos))
             {

@@ -58,6 +58,12 @@ void ScrSettings::init()
     //             sendRestPacket(&pkt);
     //             log_i("Pressed fallonshutdown %i", ((bool)data)); });
 
+    this->ui_safetymode = new Option(this->optionsContainer, OptionType::ON_OFF, "Safety Mode", defaultCharVal, [](void *data)
+                                     { 
+                SafetyModePacket pkt(((bool)data));
+                sendRestPacket(&pkt);
+                log_i("Pressed safetymode %i", ((bool)data)); });
+
     new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "Levelling Mode");
 
@@ -188,6 +194,8 @@ void ScrSettings::loop()
     this->ui_maintainprssure->setBooleanValue(statusBittset & (1 << StatusPacketBittset::MAINTAIN_PRESSURE));
     // this->ui_airoutonshutoff->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF));
     this->ui_heightsensormode->setSelectedOption((statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE)) != 0 ? 1 : 0);
+
+    this->ui_safetymode->setBooleanValue(statusBittset & (1 << StatusPacketBittset::SAFETY_MODE));
 
     this->ui_s2->setBooleanValue(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON));
 

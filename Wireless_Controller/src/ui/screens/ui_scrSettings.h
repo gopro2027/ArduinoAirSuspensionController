@@ -18,6 +18,7 @@ public:
     Option *ui_s5;
     Option *ui_maintainprssure;
     Option *ui_riseonstart;
+    Option *ui_safetymode;
     Option *ui_airoutonshutoff;
     RadioOption *ui_heightsensormode;
     Option *ui_config1;

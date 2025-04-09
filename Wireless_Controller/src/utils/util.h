@@ -98,6 +98,7 @@ void closeValves();
 void setupPressureLabel(lv_obj_t *parent, lv_obj_t **label, int x, int y, lv_align_t align, const char *defaultText);
 
 extern Scr *screens[3];
+extern Scr *currentScr;
 
 enum UNITS_MODE
 {
