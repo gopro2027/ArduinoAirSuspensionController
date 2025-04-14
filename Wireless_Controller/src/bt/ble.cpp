@@ -42,6 +42,19 @@ AuthResult authenticationResult = AUTHRESULT_WAITING;
 std::stack<const NimBLEAdvertisedDevice *> oasmanClientsFound;
 std::vector<ble_addr_t> authblacklist;
 
+void deletePClientIfExist()
+{
+    if (pClient != nullptr)
+    {
+        // Fixed but where scanning says it's not connected
+        pClient->cancelConnect();
+        pClient->disconnect();
+        // pClient->end();
+        BLEDevice::deleteClient(pClient);
+        pClient = nullptr;
+    }
+}
+
 bool doDisconnect = false;
 void disconnect()
 {
@@ -65,15 +78,13 @@ void disconnect()
         {
             showDialog("Disconnected!", lv_color_hex(0xFF0000), 30000);
         }
-        pClient->cancelConnect();
-        pClient->disconnect();
-        // pClient->end();
-        BLEDevice::deleteClient(pClient);
-        pClient = nullptr;
+        deletePClientIfExist();
     }
 
     log_i("disconnected... restarting");
 }
+
+ble_addr_t *authedBleAddr = nullptr;
 
 // Callback function for Notify function
 void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
@@ -113,11 +124,13 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
     }
     if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Rest.toString())
     {
+        timeoutMS = millis() + 5000;
         BTOasPacket *pkt = (BTOasPacket *)pData;
         log_i("Rest packet received: %i", pkt->cmd);
         if (pkt->cmd == AUTHPACKET)
         {
             authenticationResult = ((AuthPacket *)pkt)->getBleAuthResult();
+            authedBleAddr = (ble_addr_t *)pBLERemoteCharacteristic->getClient()->getPeerAddress().getBase();
         }
         if (authenticationResult == AuthResult::AUTHRESULT_SUCCESS)
         {
@@ -147,12 +160,11 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
 // Callback function that is called whenever a client is connected or disconnected
 class MyClientCallback : public NimBLEClientCallbacks
 {
-    ble_addr_t *lastConnected = nullptr;
 
     void onConnect(BLEClient *pclient) override
     {
         log_i("onConnect %s", pclient->toString().c_str());
-        lastConnected = (ble_addr_t *)pclient->getPeerAddress().getBase();
+
         // NimBLEDevice::injectPassKey(connInfo, BLE_PASSKEY);
         //  NimBLEDevice::startSecurity(desc);
 
@@ -163,7 +175,7 @@ class MyClientCallback : public NimBLEClientCallbacks
     {
         log_i("onDisconnect", pclient->toString().c_str());
         // make sure the one it is disconnecting from is the latest one
-        if (connected == true && lastConnected != pclient->getPeerAddress().getBase())
+        if (connected == true && authedBleAddr == pclient->getPeerAddress().getBase())
         {
             doDisconnect = true;
         }
@@ -200,7 +212,7 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     Serial.println(charUUID_Status.toString().c_str());
     Serial.print("Forming a connection to ");
     Serial.println(myDevice->getAddress().toString().c_str());
-
+    deletePClientIfExist();
     pClient = BLEDevice::createClient();
     Serial.println(" - Created client");
 
@@ -349,20 +361,6 @@ class ScanCallbacks : public NimBLEScanCallbacks
                 Serial.printf("Advertised Device found: %s\n", advertisedDevice->toString().c_str());
             }
         }
-        // if (std::find(authblacklist.begin(), authblacklist.end(), *advertisedDevice->getAddress().getBase()) == authblacklist.end())
-        // {
-
-        // }
-        // if (advertisedDevice->isAdvertisingService(NimBLEUUID("DEAD")))
-        // {
-        //     Serial.printf("Found Our Service\n");
-        //     /** stop scan before connecting */
-        //     NimBLEDevice::getScan()->stop();
-        //     /** Save the device reference in a global for the client to use*/
-        //     advDevice = advertisedDevice;
-        //     /** Ready to connect now */
-        //     doConnect = true;
-        // }
     }
 
     /** Callback to process the results of the completed scan or restart it */
@@ -379,13 +377,11 @@ public:
     }
 } scanCallbacks;
 
+bool scanError = false;
 void scan()
 {
 
-    if (pClient != nullptr)
-    {
-        pClient->cancelConnect();
-    }
+    deletePClientIfExist();
 
     // disable scan on next loop
     allowScan = false;
@@ -413,51 +409,13 @@ void scan()
     pBLEScan->setActiveScan(true);
 
     /** Start scanning for advertisers */
-    pBLEScan->start(5 * 1000);
-
-    // Old slower get results
-    // NimBLEScanResults results = pBLEScan->getResults(5 * 1000);
-    // for (int i = 0; i < results.getCount(); i++)
-    // {
-    //     const NimBLEAdvertisedDevice *device = results.getDevice(i);
-
-    //     if (device->haveServiceUUID() && device->isAdvertisingService(serviceUUID))
-    //     // if (advertisedDevice.getName() == "OASMan")
-    //     {
-    //         anyFound = true;
-    //         Serial.println("Connecting to device! ");
-    //         BLEDevice::getScan()->stop();
-    //         connected = connectToServer(device);
-    //         if (connected)
-    //         {
-    //             showDialog("Connected to manifold", lv_color_hex(0x22bb33));
-    //             onBLEConnectionCompleted();
-    //             return; // might as well return, no use in trying to connect still
-    //         }
-    //         else
-    //         {
-    //             // if (authenticationResult == AuthResult::AUTHRESULT_WAITING)
-    //             // {
-    //             //     showDialog("Wrong passkey!", lv_color_hex(0xFF0000), 30000);
-    //             // }
-    //             // else
-    //             // {
-    //             //     showDialog("Error connecting!", lv_color_hex(0xFF0000), 30000);
-    //             // }
-    //         }
-    //     }
-    // }
-
-    // if (anyFound == false && connected == false)
-    // {
-    //     showDialog("No manifold found!", lv_color_hex(0xFF0000), 30000);
-    // }
-
-    // if (connected == false)
-    // {
-    //     // failed to connect, do disconnect procedure
-    //     disconnect();
-    // }
+    bool started = pBLEScan->start(5 * 1000);
+    if (started == false)
+    {
+        // error is:
+        // Unable to scan - connection in progress.
+        scanError = true;
+    }
 }
 void ble_setup()
 {
@@ -476,16 +434,6 @@ void ble_loop()
     // with the current time since boot.
     if (connected)
     {
-        // std::string rxValue = pRemoteChar_Rest->readValue();
-        // Serial.print("Characteristic 2 (readValue): ");
-        // Serial.println(rxValue.c_str());
-
-        // String txValue = "String with random value from client: " + String(-random(1000));
-        // Serial.println("Characteristic 2 (writeValue): " + txValue);
-
-        // // Set the characteristic's value to be the array of bytes that is actually a string.
-        // pRemoteChar_Rest->writeValue(txValue.c_str(), txValue.length());
-
         BTOasPacket packet;
         bool hasPacketToSend = getBTRestPacketToSend(&packet);
         bool success = true;
@@ -539,28 +487,22 @@ void ble_loop()
                 onBLEConnectionCompleted();
                 doDisconnect = false;
             }
-            else
-            {
-                // if (authenticationResult == AuthResult::AUTHRESULT_WAITING)
-                // {
-                //     showDialog("Wrong passkey!", lv_color_hex(0xFF0000), 30000);
-                // }
-                // else
-                // {
-                //     showDialog("Error connecting!", lv_color_hex(0xFF0000), 30000);
-                // }
-            }
         }
     }
 
-    // log_i("Scan: %i", NimBLEDevice::getScan()->isScanning());
-    //  have to check connected == false again because it could have changed in the previous call
     if (connected == false && !NimBLEDevice::getScan()->isScanning() && oasmanClientsFound.empty())
     {
         log_i("Searching");
         if (scanCallbacks.anyFound == false)
         {
-            showDialog("No manifold found!", lv_color_hex(0xFF0000), 30000);
+            if (scanError)
+            {
+                showDialog("Scan error please reboot controller", lv_color_hex(0xFF0000), 3000);
+            }
+            else
+            {
+                showDialog("No manifold found!", lv_color_hex(0xFF0000), 30000);
+            }
         }
 
         Serial.println("disconnecting and rescanning");
