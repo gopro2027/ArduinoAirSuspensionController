@@ -98,7 +98,9 @@
 			"radiooption.h": "c",
 			"condition_variable": "cpp",
 			"list": "cpp",
-			"mutex": "cpp"
+			"mutex": "cpp",
+			"climits": "cpp",
+			"stack": "cpp"
 		}
 	}
 }

@@ -68,7 +68,7 @@ void safetyModeMsgBoxCheck()
         // show safety mode dialog
         static char buf[40];
         snprintf(buf, sizeof(buf), "Save current height to preset %i?", currentPreset);
-        currentScr->showMsgBox("Safety Mode is ENABLED!", "Safety mode is enabled meaning some features are disabled (your compressor). Please check your settings before disabling safety mode. This includes 'Pressure Sensor Rating PSI' and 'Calibrate Pressure Sensors' to check and reassign them if they are not plugged into the correct ports.", "View Settings", "Disable Anyway", []() -> void
+        currentScr->showMsgBox("Safety Mode is ENABLED!", "Safety mode is enabled meaning some features are disabled (your compressor & rise on start). Please check your settings before disabling safety mode. This includes 'Pressure Sensor Rating PSI' and 'Calibrate Pressure Sensors' to check and reassign them if they are not plugged into the correct ports.", "View Settings", "Disable Anyway", []() -> void
                                { 
                                     changeScreen(SCREEN_SETTINGS); 
                                     showDialog("Please check your settings!", lv_color_hex(THEME_COLOR_LIGHT)); }, []() -> void

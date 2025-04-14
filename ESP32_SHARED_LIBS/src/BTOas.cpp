@@ -104,6 +104,10 @@ AiroutPacket::AiroutPacket()
 {
     this->cmd = AIROUT;
 }
+DetectPressureSensorsPacket::DetectPressureSensorsPacket()
+{
+    this->cmd = DETECTPRESSURESENSORS;
+}
 AirsmPacket::AirsmPacket(int relativeValue)
 {
     this->cmd = AIRSM;

@@ -77,7 +77,7 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     lv_obj_remove_style_all(this->root);
     lv_obj_set_size(this->root, DISPLAY_WIDTH, OPTION_ROW_HEIGHT);
 
-    if (type != OptionType::SPACE)
+    if (type != OptionType::SPACE && type != OptionType::BUTTON)
     {
         setupPressureLabel(this->root, &this->text, MARGIN, 0, LV_ALIGN_LEFT_MID, text);
     }
@@ -117,6 +117,20 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         // set it to true so that when it sets to false it actually runs the code (hacky fix)
         this->boolValue = true;
         this->setBooleanValue(false);
+    }
+    else if (type == OptionType::BUTTON)
+    {
+        this->text = lv_button_create(this->root);
+
+        lv_obj_t *btntext = lv_label_create(this->text);
+        lv_label_set_text(btntext, text);
+
+        lv_obj_add_flag(this->text, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
+        lv_obj_add_event_cb(this->text, ui_clicked_radioOff, LV_EVENT_ALL, this);
+
+        // TODO: add decorations so its purple and such
+
+        this->indentText();
     }
     else if (type == OptionType::RADIO)
     {
@@ -192,6 +206,14 @@ void Option::setRightHandText(const char *text)
         if (strcmp(lv_textarea_get_text(this->rightHandObj), text) != 0)
         {
             lv_textarea_set_text(this->rightHandObj, text); // itoa(value.INT, strbuf, 10)
+        }
+    }
+    else if (type == OptionType::BUTTON)
+    {
+        lv_obj_t *label = lv_obj_get_child(this->text, 0);
+        if (strcmp(lv_label_get_text(label), text) != 0)
+        {
+            lv_label_set_text(label, text);
         }
     }
 }

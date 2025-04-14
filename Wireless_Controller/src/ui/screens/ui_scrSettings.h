@@ -4,6 +4,10 @@
 #include "ui/components/Scr.h"
 #include "ui/components/option.h"
 #include "ui/components/radioOption.h"
+
+#include <vector>
+#include <iostream>
+#include "NimBLEDevice.h"
 class ScrSettings : public Scr
 {
     using Scr::Scr;
@@ -14,6 +18,7 @@ public:
     Option *ui_s1;
     Option *ui_s2;
     Option *ui_s3;
+    Option *ui_rebootbutton;
     Option *ui_s4;
     Option *ui_s5;
     Option *ui_maintainprssure;
@@ -33,5 +38,6 @@ public:
 };
 
 extern ScrSettings scrSettings;
+extern std::vector<ble_addr_t> authblacklist;
 
 #endif

@@ -38,6 +38,7 @@ enum BTOasIdentifier
     COMPRESSORSTATUS = 24,
     TURNOFF = 25,
     SAFETYMODE = 26,
+    DETECTPRESSURESENSORS = 27,
 };
 
 enum StatusPacketBittset
@@ -135,6 +136,10 @@ struct AirupPacket : BTOasPacket
 struct AiroutPacket : BTOasPacket
 {
     AiroutPacket();
+};
+struct DetectPressureSensorsPacket : BTOasPacket
+{
+    DetectPressureSensorsPacket();
 };
 struct AirsmPacket : BTOasPacket
 {

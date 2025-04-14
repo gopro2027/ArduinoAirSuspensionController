@@ -21,7 +21,7 @@ BLEUUID charUUID_Rest(REST_CHARACTERISTIC_UUID);
 BLEUUID charUUID_ValveControl(VALVECONTROL_CHARACTERISTIC_UUID);
 
 static bool connected = false;
-static bool doScan = true; // default to true so it initiates a scan on start
+static bool allowScan = true; // default to true so it initiates a scan on start
 static unsigned long timeoutMS = 0;
 static bool hasReceivedStatus = false;
 BLEClient *pClient = nullptr;
@@ -39,15 +39,21 @@ BLERemoteCharacteristic *pRemoteChar_ValveControl;
 
 AuthResult authenticationResult = AUTHRESULT_WAITING;
 
+std::stack<const NimBLEAdvertisedDevice *> oasmanClientsFound;
+std::vector<ble_addr_t> authblacklist;
+
+bool doDisconnect = false;
 void disconnect()
 {
     connected = false;
 
     // cheeky call to tell it to restart scanning again i guess?
-    doScan = true;
+    allowScan = true;
 
     // make sure it waits until it received it's first status before checking status timeouts
     hasReceivedStatus = false;
+
+    NimBLEDevice::getScan()->stop();
 
     if (pClient != nullptr)
     {
@@ -77,55 +83,63 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
 {
     // Serial.print("Got a notify callback: ");
     // Serial.println(pBLERemoteCharacteristic->getUUID().toString().c_str());
-    if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Status.toString())
+    if (authenticationResult == AuthResult::AUTHRESULT_SUCCESS)
     {
-        timeoutMS = millis() + 5000;
-        hasReceivedStatus = true;
+        if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Status.toString())
+        {
+            timeoutMS = millis() + 5000;
+            hasReceivedStatus = true;
 
-        // convert received bytes to integer
-        StatusPacket *status = (StatusPacket *)pData;
-        // Serial.print("WHEEL_FRONT_PASSENGER: ");
-        // Serial.println(status->args16()[WHEEL_FRONT_PASSENGER].i);
-        // Serial.print("WHEEL_REAR_PASSENGER: ");
-        // Serial.println(status->args16()[WHEEL_REAR_PASSENGER].i);
-        // Serial.print("WHEEL_FRONT_DRIVER: ");
-        // Serial.println(status->args16()[WHEEL_FRONT_DRIVER].i);
-        // Serial.print("WHEEL_REAR_DRIVER: ");
-        // Serial.println(status->args16()[WHEEL_REAR_DRIVER].i);
-        // Serial.print("TANK: ");
-        // Serial.println(status->args16()[_TANK_INDEX].i);
+            // convert received bytes to integer
+            StatusPacket *status = (StatusPacket *)pData;
+            // Serial.print("WHEEL_FRONT_PASSENGER: ");
+            // Serial.println(status->args16()[WHEEL_FRONT_PASSENGER].i);
+            // Serial.print("WHEEL_REAR_PASSENGER: ");
+            // Serial.println(status->args16()[WHEEL_REAR_PASSENGER].i);
+            // Serial.print("WHEEL_FRONT_DRIVER: ");
+            // Serial.println(status->args16()[WHEEL_FRONT_DRIVER].i);
+            // Serial.print("WHEEL_REAR_DRIVER: ");
+            // Serial.println(status->args16()[WHEEL_REAR_DRIVER].i);
+            // Serial.print("TANK: ");
+            // Serial.println(status->args16()[_TANK_INDEX].i);
 
-        currentPressures[WHEEL_FRONT_PASSENGER] = status->args16()[WHEEL_FRONT_PASSENGER].i;
-        currentPressures[WHEEL_REAR_PASSENGER] = status->args16()[WHEEL_REAR_PASSENGER].i;
-        currentPressures[WHEEL_FRONT_DRIVER] = status->args16()[WHEEL_FRONT_DRIVER].i;
-        currentPressures[WHEEL_REAR_DRIVER] = status->args16()[WHEEL_REAR_DRIVER].i;
-        currentPressures[_TANK_INDEX] = status->args16()[_TANK_INDEX].i;
-        statusBittset = status->args16()[5].i;
+            currentPressures[WHEEL_FRONT_PASSENGER] = status->args16()[WHEEL_FRONT_PASSENGER].i;
+            currentPressures[WHEEL_REAR_PASSENGER] = status->args16()[WHEEL_REAR_PASSENGER].i;
+            currentPressures[WHEEL_FRONT_DRIVER] = status->args16()[WHEEL_FRONT_DRIVER].i;
+            currentPressures[WHEEL_REAR_DRIVER] = status->args16()[WHEEL_REAR_DRIVER].i;
+            currentPressures[_TANK_INDEX] = status->args16()[_TANK_INDEX].i;
+            statusBittset = status->args16()[5].i;
+        }
     }
     if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Rest.toString())
     {
         BTOasPacket *pkt = (BTOasPacket *)pData;
         log_i("Rest packet received: %i", pkt->cmd);
-        switch (pkt->cmd)
+        if (pkt->cmd == AUTHPACKET)
         {
-        case PRESETREPORT:
-        {
-            PresetPacket *profile = (PresetPacket *)pkt;
-
-            profilePressures[profile->getProfile()][WHEEL_FRONT_PASSENGER] = profile->args16()[WHEEL_FRONT_PASSENGER].i;
-            profilePressures[profile->getProfile()][WHEEL_REAR_PASSENGER] = profile->args16()[WHEEL_REAR_PASSENGER].i;
-            profilePressures[profile->getProfile()][WHEEL_FRONT_DRIVER] = profile->args16()[WHEEL_FRONT_DRIVER].i;
-            profilePressures[profile->getProfile()][WHEEL_REAR_DRIVER] = profile->args16()[WHEEL_REAR_DRIVER].i;
-
-            profileUpdated = true; // this should be a semaphore and just call it directly but fuck it
-            break;
-        }
-        case GETCONFIGVALUES:
-            memcpy(util_configValues.args, pkt->args, sizeof(BTOasPacket::args));
-            *util_configValues._setValues() = true;
-            break;
-        case AUTHPACKET:
             authenticationResult = ((AuthPacket *)pkt)->getBleAuthResult();
+        }
+        if (authenticationResult == AuthResult::AUTHRESULT_SUCCESS)
+        {
+            switch (pkt->cmd)
+            {
+            case PRESETREPORT:
+            {
+                PresetPacket *profile = (PresetPacket *)pkt;
+
+                profilePressures[profile->getProfile()][WHEEL_FRONT_PASSENGER] = profile->args16()[WHEEL_FRONT_PASSENGER].i;
+                profilePressures[profile->getProfile()][WHEEL_REAR_PASSENGER] = profile->args16()[WHEEL_REAR_PASSENGER].i;
+                profilePressures[profile->getProfile()][WHEEL_FRONT_DRIVER] = profile->args16()[WHEEL_FRONT_DRIVER].i;
+                profilePressures[profile->getProfile()][WHEEL_REAR_DRIVER] = profile->args16()[WHEEL_REAR_DRIVER].i;
+
+                profileUpdated = true; // this should be a semaphore and just call it directly but fuck it
+                break;
+            }
+            case GETCONFIGVALUES:
+                memcpy(util_configValues.args, pkt->args, sizeof(BTOasPacket::args));
+                *util_configValues._setValues() = true;
+                break;
+            }
         }
     }
 }
@@ -133,9 +147,12 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
 // Callback function that is called whenever a client is connected or disconnected
 class MyClientCallback : public NimBLEClientCallbacks
 {
+    ble_addr_t *lastConnected = nullptr;
+
     void onConnect(BLEClient *pclient) override
     {
-        log_i("onConnect");
+        log_i("onConnect %s", pclient->toString().c_str());
+        lastConnected = (ble_addr_t *)pclient->getPeerAddress().getBase();
         // NimBLEDevice::injectPassKey(connInfo, BLE_PASSKEY);
         //  NimBLEDevice::startSecurity(desc);
 
@@ -144,8 +161,12 @@ class MyClientCallback : public NimBLEClientCallbacks
 
     void onDisconnect(BLEClient *pclient, int reason) override
     {
-        log_i("onDisconnect");
-        disconnect();
+        log_i("onDisconnect", pclient->toString().c_str());
+        // make sure the one it is disconnecting from is the latest one
+        if (connected == true && lastConnected != pclient->getPeerAddress().getBase())
+        {
+            doDisconnect = true;
+        }
     }
     void onPassKeyEntry(NimBLEConnInfo &connInfo) override
     {
@@ -210,7 +231,6 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
         return false;
     }
     Serial.println(" - Connected to server");
-
     // delay(1000);
     // pClient->getServices();
     // delay(1000);
@@ -223,7 +243,7 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     {
         Serial.print("Failed to find our service UUID: ");
         Serial.println(serviceUUID.toString().c_str());
-        pClient->disconnect();
+        // pClient->disconnect();
         return false;
     }
     Serial.println(" - Found our service");
@@ -261,14 +281,15 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
         }
         if (authenticationResult == AuthResult::AUTHRESULT_FAIL)
         {
+            // authblacklist.push_back(*pClient->getPeerAddress().getBase());
             Serial.println("Auth failed");
-            pClient->disconnect();
+            // pClient->disconnect();
             return false;
         }
         if (millis() > authEnd)
         {
             Serial.println("Auth timed out");
-            pClient->disconnect();
+            // pClient->disconnect();
             return false;
         }
         delay(10);
@@ -295,66 +316,148 @@ bool connectCharacteristic(BLERemoteService *pRemoteService, BLERemoteCharacteri
     return true;
 }
 
+// Taken from here https://github.com/h2zero/NimBLE-Arduino/blob/master/examples/NimBLE_Client/NimBLE_Client.ino#L55
+/** Define a class to handle the callbacks when scan events are received */
+void clearOasmanClientsFound()
+{
+    while (!oasmanClientsFound.empty())
+    {
+        oasmanClientsFound.pop();
+    }
+}
+class ScanCallbacks : public NimBLEScanCallbacks
+{
+    void onResult(const NimBLEAdvertisedDevice *advertisedDevice) override
+    {
+        // check if advertiseddevice has previously failed auth and don't attempt to connect to it again if it is
+        if (advertisedDevice->haveServiceUUID() && advertisedDevice->isAdvertisingService(serviceUUID))
+        // if (advertisedDevice.getName() == "OASMan")
+        {
+            log_i("Found oasman device: %s", advertisedDevice->toString().c_str());
+            bool found = false;
+            const ble_addr_t *fd = advertisedDevice->getAddress().getBase();
+            for (ble_addr_t addr : authblacklist)
+            {
+                if (ble_addr_cmp(&addr, fd))
+                {
+                    found = true;
+                }
+            }
+            if (!found)
+            {
+                oasmanClientsFound.push(advertisedDevice);
+                Serial.printf("Advertised Device found: %s\n", advertisedDevice->toString().c_str());
+            }
+        }
+        // if (std::find(authblacklist.begin(), authblacklist.end(), *advertisedDevice->getAddress().getBase()) == authblacklist.end())
+        // {
+
+        // }
+        // if (advertisedDevice->isAdvertisingService(NimBLEUUID("DEAD")))
+        // {
+        //     Serial.printf("Found Our Service\n");
+        //     /** stop scan before connecting */
+        //     NimBLEDevice::getScan()->stop();
+        //     /** Save the device reference in a global for the client to use*/
+        //     advDevice = advertisedDevice;
+        //     /** Ready to connect now */
+        //     doConnect = true;
+        // }
+    }
+
+    /** Callback to process the results of the completed scan or restart it */
+    void onScanEnd(const NimBLEScanResults &scanResults, int reason) override
+    {
+        // This function flat out doesn't work (or at least not in any way useful...)
+    }
+
+public:
+    boolean anyFound = false;
+    void init()
+    {
+        anyFound = false;
+    }
+} scanCallbacks;
+
 void scan()
 {
 
+    if (pClient != nullptr)
+    {
+        pClient->cancelConnect();
+    }
+
     // disable scan on next loop
-    doScan = false;
+    allowScan = false;
 
     // Retrieve a Scanner and set the callback we want to use to be informed when we
     // have detected a new device.  Specify that we want active scanning and start the
     // scan to run for 5 seconds.
+
     BLEScan *pBLEScan = BLEDevice::getScan();
     BLEDevice::setSecurityPasskey(BLE_PASSKEY);
     // NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
     // NimBLEDevice::setSecurityAuth(BLE_SM_PAIR_AUTHREQ_BOND | BLE_SM_PAIR_AUTHREQ_MITM | BLE_SM_PAIR_AUTHREQ_SC);
     //  BLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY);
+    scanCallbacks.init();
+    pBLEScan->setScanCallbacks(&scanCallbacks, false);
 
-    boolean anyFound = false;
+    /** Set scan interval (how often) and window (how long) in milliseconds */
+    pBLEScan->setInterval(100);
+    pBLEScan->setWindow(100);
 
-    // pBLEScan->setScanCallbacks(new MyAdvertisedDeviceCallbacks()); // TODO: Consider using this callback instead
-    NimBLEScanResults results = pBLEScan->getResults(5 * 1000);
-    for (int i = 0; i < results.getCount(); i++)
-    {
-        const NimBLEAdvertisedDevice *device = results.getDevice(i);
+    /**
+     * Active scan will gather scan response data from advertisers
+     *  but will use more energy from both devices
+     */
+    pBLEScan->setActiveScan(true);
 
-        if (device->haveServiceUUID() && device->isAdvertisingService(serviceUUID))
-        // if (advertisedDevice.getName() == "OASMan")
-        {
-            anyFound = true;
-            Serial.println("Connecting to device! ");
-            BLEDevice::getScan()->stop();
-            connected = connectToServer(device);
-            if (connected)
-            {
-                showDialog("Connected to manifold", lv_color_hex(0x22bb33));
-                onBLEConnectionCompleted();
-                return; // might as well return, no use in trying to connect still
-            }
-            else
-            {
-                // if (authenticationResult == AuthResult::AUTHRESULT_WAITING)
-                // {
-                //     showDialog("Wrong passkey!", lv_color_hex(0xFF0000), 30000);
-                // }
-                // else
-                // {
-                //     showDialog("Error connecting!", lv_color_hex(0xFF0000), 30000);
-                // }
-            }
-        }
-    }
+    /** Start scanning for advertisers */
+    pBLEScan->start(5 * 1000);
 
-    if (anyFound == false && connected == false)
-    {
-        showDialog("No manifold found!", lv_color_hex(0xFF0000), 30000);
-    }
+    // Old slower get results
+    // NimBLEScanResults results = pBLEScan->getResults(5 * 1000);
+    // for (int i = 0; i < results.getCount(); i++)
+    // {
+    //     const NimBLEAdvertisedDevice *device = results.getDevice(i);
 
-    if (connected == false)
-    {
-        // failed to connect, do disconnect procedure
-        disconnect();
-    }
+    //     if (device->haveServiceUUID() && device->isAdvertisingService(serviceUUID))
+    //     // if (advertisedDevice.getName() == "OASMan")
+    //     {
+    //         anyFound = true;
+    //         Serial.println("Connecting to device! ");
+    //         BLEDevice::getScan()->stop();
+    //         connected = connectToServer(device);
+    //         if (connected)
+    //         {
+    //             showDialog("Connected to manifold", lv_color_hex(0x22bb33));
+    //             onBLEConnectionCompleted();
+    //             return; // might as well return, no use in trying to connect still
+    //         }
+    //         else
+    //         {
+    //             // if (authenticationResult == AuthResult::AUTHRESULT_WAITING)
+    //             // {
+    //             //     showDialog("Wrong passkey!", lv_color_hex(0xFF0000), 30000);
+    //             // }
+    //             // else
+    //             // {
+    //             //     showDialog("Error connecting!", lv_color_hex(0xFF0000), 30000);
+    //             // }
+    //         }
+    //     }
+    // }
+
+    // if (anyFound == false && connected == false)
+    // {
+    //     showDialog("No manifold found!", lv_color_hex(0xFF0000), 30000);
+    // }
+
+    // if (connected == false)
+    // {
+    //     // failed to connect, do disconnect procedure
+    //     disconnect();
+    // }
 }
 void ble_setup()
 {
@@ -411,10 +514,71 @@ void ble_loop()
             disconnect();
         }
     }
-    else // if (doScan)
+    else if (allowScan)
     {
         scan();
     }
+
+    if (!oasmanClientsFound.empty())
+    {
+        const NimBLEAdvertisedDevice *advertisedDevice = oasmanClientsFound.top();
+        oasmanClientsFound.pop();
+
+        if (connected == false)
+        {
+
+            scanCallbacks.anyFound = true;
+            Serial.println("Connecting to device! ");
+
+            connected = connectToServer(advertisedDevice);
+            if (connected)
+            {
+                NimBLEDevice::getScan()->stop();
+                clearOasmanClientsFound();
+                showDialog("Connected to manifold", lv_color_hex(0x22bb33));
+                onBLEConnectionCompleted();
+                doDisconnect = false;
+            }
+            else
+            {
+                // if (authenticationResult == AuthResult::AUTHRESULT_WAITING)
+                // {
+                //     showDialog("Wrong passkey!", lv_color_hex(0xFF0000), 30000);
+                // }
+                // else
+                // {
+                //     showDialog("Error connecting!", lv_color_hex(0xFF0000), 30000);
+                // }
+            }
+        }
+    }
+
+    // log_i("Scan: %i", NimBLEDevice::getScan()->isScanning());
+    //  have to check connected == false again because it could have changed in the previous call
+    if (connected == false && !NimBLEDevice::getScan()->isScanning() && oasmanClientsFound.empty())
+    {
+        log_i("Searching");
+        if (scanCallbacks.anyFound == false)
+        {
+            showDialog("No manifold found!", lv_color_hex(0xFF0000), 30000);
+        }
+
+        Serial.println("disconnecting and rescanning");
+        // failed to connect, do disconnect procedure
+        disconnect();
+    }
+    else
+    {
+
+        // log_i("Not finished scanning: connected: %i scanning: %i size: %i", connected, NimBLEDevice::getScan()->isScanning(), oasmanClientsFound.size());
+    }
+
+    // moving the disconnect from the other thread callback into here as it seems to cause issues
+    if (doDisconnect)
+    {
+        disconnect();
+    }
+    doDisconnect = false;
 
     delay(10);
 }

@@ -456,6 +456,10 @@ void runReceivedPacket(BTOasPacket *packet)
     case BTOasIdentifier::SAFETYMODE:
         setsafetyMode(((SafetyModePacket *)packet)->getBoolean());
         break;
+    case BTOasIdentifier::DETECTPRESSURESENSORS:
+        setlearnPressureSensors(true);
+        setinternalReboot(true);
+        break;
     case BTOasIdentifier::RAISEONPRESSURESET:
         setraiseOnPressure(((RaiseOnPressureSetPacket *)packet)->getBoolean());
         break;
