@@ -125,6 +125,9 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_obj_t *btntext = lv_label_create(this->text);
         lv_label_set_text(btntext, text);
 
+        lv_obj_set_style_bg_color(this->text, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);    // bg
+        lv_obj_set_style_border_color(this->text, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT); // border
+
         lv_obj_add_flag(this->text, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
         lv_obj_add_event_cb(this->text, ui_clicked_radioOff, LV_EVENT_ALL, this);
 
