@@ -42,6 +42,7 @@ void radioCB(void *data)
 
 RadioOption::RadioOption(lv_obj_t *parent, const char **text, int _size, option_event_cb_t _event_cb, int _selected)
 {
+    this->selected = -1;
     this->size = _size;
     this->options = (Option **)malloc(sizeof(Option *) * size);
 
