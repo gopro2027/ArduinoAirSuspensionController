@@ -125,7 +125,14 @@ int InputType::analogRead()
 
         return value;
 #else
-        return random(3686); // value of max psi on esp32
+        static int i = 500;
+        i += 40;
+        if (i > 3686)
+        {
+            i = 500;
+        }
+        return i;
+        // return random(3686); // value of max psi on esp32
 #endif
     }
 }

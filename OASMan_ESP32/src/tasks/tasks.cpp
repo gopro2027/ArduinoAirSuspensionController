@@ -148,7 +148,7 @@ void setup_tasks()
         xTaskCreate(
             task_wheel,
             "Wheel Task",
-            512 * 3,
+            512 * 4,
             getWheel(i),
             1000,
             NULL);

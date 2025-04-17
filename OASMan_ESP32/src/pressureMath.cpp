@@ -109,3 +109,117 @@ int main()
 //                                                                                                                                                                                                                                                To use this code,
 //     replace the `calculateProcessValue()` function in the `TankController` class with your own
 //     implementation of measuring the process value based on the pressure measurements from the sensors.
+
+#if fulltauexample
+#include <stdio.h>
+#include <math.h>
+
+// --- Calibrated Constants ---
+
+// From your test:
+// Initial: P_A0 = 180 psi, P_B0 = 100 psi => D = 80
+// After 1 sec: P_A = 160, P_B = 130 => implies final pressure P_f ~ 145
+// So: alpha = (P_f - P_B0) / D = (145 - 100) / 80 = 0.5625
+const double alpha = 0.5625;
+
+// From the same test and using the exponential model:
+// P_B(t) = P_f - (P_f - P_B0) * exp(-t / tau)
+// 130 = 145 - (145 - 100) * exp(-1 / tau)
+// Solving gives: tau ≈ 0.91 seconds
+const double tau = 0.91;
+
+void calculateAlphaTau()
+{
+    int P_A0 = 180; // our max tank psi
+    int P_B0 = 0;   // aired out bag
+    int P_D = P_A0 - P_B0;
+
+    // SUDOCODE open valve of bag for 1 second
+    int T = 1;
+    int P_B1 = 70; // read value
+
+    int alpha = (P_B1 - P_B0) / P_D;
+}
+
+// --- Function to calculate time to reach target pressure ---
+double calculate_fill_time(double P_B0, double P_goal, double D)
+{
+    // Prevent invalid calculations
+    if (D <= 0 || P_goal >= (P_B0 + alpha * D))
+    {
+        return 0.0; // Already at or above target, or invalid input
+    }
+
+    // Estimate final pressure based on alpha
+    double P_f = P_B0 + alpha * D;
+
+    // Apply exponential model to solve for time
+    double T = -tau * log((P_f - P_goal) / (alpha * D));
+
+    return T;
+}
+
+// --- Example usage ---
+int main()
+{
+    double P_B0 = 100.0;   // Initial pressure in tank B (psi)
+    double P_goal = 135.0; // Target pressure in tank B (psi)
+    double D = 80.0;       // Initial pressure difference (P_A - P_B)
+
+    double time_needed = calculate_fill_time(P_B0, P_goal, D);
+    printf("Open solenoid for %.3f seconds\n", time_needed);
+
+    return 0;
+}
+
+#endif
+
+#if pidcodenumbertwo
+
+#include <stdio.h>
+
+// --- PID constants (tune these!) ---
+const double Kp = 0.05;
+const double Ki = 0.01;
+const double Kd = 0.02;
+
+// --- PID state ---
+// double integral = 0.0;
+// double prev_error = 0.0;
+
+// --- PID function to compute new valve open time ---
+double compute_pid_time(double goal, double current_pressure, double delta_t, double &integral, double &prev_error)
+{
+    double error = goal - current_pressure;
+
+    // Update integral and derivative
+    integral += error * delta_t;
+    double derivative = (error - prev_error) / delta_t;
+
+    // PID output
+    double T = Kp * error + Ki * integral + Kd * derivative;
+
+    // Save error for next step
+    prev_error = error;
+
+    // Clamp T to valid range (e.g. 0 to 5 seconds)
+    if (T < 0.0)
+        T = 0.0;
+    if (T > 0.5)
+        T = 0.5;
+
+    return T;
+}
+
+// start with lastOpenTime = 1.0
+double startIteratePressurePID(double goal, double bag_current, double lastOpenTime, double &integral, double &prev_error)
+{
+
+    // First valve open time guess
+    double T = compute_pid_time(goal, bag_current, lastOpenTime, integral, prev_error);
+
+    // printf("Open solenoid for %.3f seconds\n", T);
+    return T;
+}
+
+#endif
