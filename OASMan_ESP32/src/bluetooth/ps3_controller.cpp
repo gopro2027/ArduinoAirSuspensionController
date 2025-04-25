@@ -776,7 +776,7 @@ void ps3_controller_loop()
     if (Ps3.data.button.select && Ps3.data.button.start)
     {
         Serial.println("Pressing both the select and start buttons");
-        ESP.restart();
+        setinternalReboot(true);
     }
 
     // printJoystick(leftMode);

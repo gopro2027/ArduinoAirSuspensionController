@@ -25,12 +25,12 @@ private:
     float pressureValue;
     float levelValue;
 
-    Solenoid s_AirIn;
-    Solenoid s_AirOut;
+    Solenoid *s_AirIn;
+    Solenoid *s_AirOut;
 
 public:
     Wheel();
-    Wheel(InputType *solenoidInPin, InputType *solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum);
+    Wheel(Solenoid *solenoidInPin, Solenoid *solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum);
     void initPressureGoal(int newPressure, bool quick = false);
     void loop();
     void readInputs();

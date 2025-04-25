@@ -178,13 +178,13 @@ class CharacteristicCallback : public BLECharacteristicCallbacks
                         {
                             Serial.print("Opening ");
                             Serial.println(i);
-                            getSolenoidFromIndex(i)->open();
+                            getManifold()->get(i)->open();
                         }
                         else
                         {
                             Serial.print("Closing ");
                             Serial.println(i);
-                            getSolenoidFromIndex(i)->close();
+                            getManifold()->get(i)->close();
                         }
                     }
                 }
@@ -373,6 +373,10 @@ void ble_notify()
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE);
         }
+        if (getsafetyMode())
+        {
+            statusBittset = statusBittset | (1 << StatusPacketBittset::SAFETY_MODE);
+        }
         StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue(), getCompressor()->getTankPressure(), statusBittset);
 
         statusCharacteristic->setValue(statusPacket.tx(), BTOAS_PACKET_SIZE);
@@ -448,6 +452,13 @@ void runReceivedPacket(BTOasPacket *packet)
         break;
     case BTOasIdentifier::HEIGHTSENSORMODE:
         setheightSensorMode(((HeightSensorModePacket *)packet)->getBoolean());
+        break;
+    case BTOasIdentifier::SAFETYMODE:
+        setsafetyMode(((SafetyModePacket *)packet)->getBoolean());
+        break;
+    case BTOasIdentifier::DETECTPRESSURESENSORS:
+        setlearnPressureSensors(true);
+        setinternalReboot(true);
         break;
     case BTOasIdentifier::RAISEONPRESSURESET:
         setraiseOnPressure(((RaiseOnPressureSetPacket *)packet)->getBoolean());

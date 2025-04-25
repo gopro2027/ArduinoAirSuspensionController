@@ -23,7 +23,7 @@ public:
     InputType(int pin, int pinModeInputOutput);
     InputType(int pin, Adafruit_ADS1115 *adc);
     int digitalRead();
-    int analogRead(bool skipVoltageAdjustment = false);
+    int analogRead();
     void digitalWrite(int value);
     void analogWrite(int value);
 };

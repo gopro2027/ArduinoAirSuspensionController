@@ -20,6 +20,15 @@ public:
     Preferencable baseProfile;     // byte
     Preferencable raiseOnPressure; // byte
     Preferencable internalReboot;  // byte
+    Preferencable learnPressureSensors;
+    Preferencable safetyMode;
+
+    Preferencable pressureInputFrontPassenger;
+    Preferencable pressureInputRearPassenger;
+    Preferencable pressureInputFrontDriver;
+    Preferencable pressureInputRearDriver;
+    Preferencable pressureInputTank;
+
     Preferencable maintainPressure;
     Preferencable airOutOnShutoff;
     Preferencable heightSensorMode;
@@ -49,6 +58,15 @@ headerDefineSaveFunc(heightSensorMode, bool);
 headerDefineSaveFunc(baseProfile, byte);
 headerDefineSaveFunc(raiseOnPressure, bool);
 headerDefineSaveFunc(internalReboot, bool);
+headerDefineSaveFunc(learnPressureSensors, bool);
+headerDefineSaveFunc(safetyMode, bool);
+
+// pressure sensor values
+headerDefineSaveFunc(pressureInputFrontPassenger, byte);
+headerDefineSaveFunc(pressureInputRearPassenger, byte);
+headerDefineSaveFunc(pressureInputFrontDriver, byte);
+headerDefineSaveFunc(pressureInputRearDriver, byte);
+headerDefineSaveFunc(pressureInputTank, byte);
 
 // values moved from the user defines file
 headerDefineSaveFunc(bagMaxPressure, uint8_t);

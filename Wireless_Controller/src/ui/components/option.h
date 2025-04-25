@@ -24,7 +24,8 @@ enum OptionType
     HEADER,
     ON_OFF,
     RADIO,
-    KEYBOARD_INPUT_NUMBER
+    KEYBOARD_INPUT_NUMBER,
+    BUTTON
 };
 
 union OptionValue

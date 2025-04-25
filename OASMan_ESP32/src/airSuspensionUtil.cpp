@@ -3,6 +3,7 @@
 
 #pragma region variables
 
+InputType *pressureInputs[5];
 Manifold *manifold;
 Compressor *compressor;
 Wheel *wheel[4];
@@ -259,5 +260,134 @@ void accessoryWireLoop()
     vehicleOn = true;
 }
 #endif
+
+#pragma endregion
+
+#pragma region pressure sensor learn
+
+namespace PressureSensorCalibration
+{
+
+    void getPinPressures(float pressures[5])
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            pressures[i] = readPinPressure(pressureInputs[i], false);
+        }
+    }
+
+    bool isAnyBagMaxxed(float pressures[5])
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            if (pressures[i] > 100)
+                return true;
+        }
+        return false;
+    }
+
+    int getHighestPressureIndex(float pressures[5])
+    {
+        int highestIndex = 0;
+        float highestNum = pressures[0];
+        for (int i = 1; i < 5; i++)
+        {
+            if (pressures[i] > highestNum)
+            {
+                highestIndex = i;
+                highestNum = pressures[i];
+            }
+        }
+        return highestIndex;
+    }
+
+    int getHighestChangedPressureIndex(float previousPressures[5])
+    {
+        float changedPressures[5];
+        getPinPressures(changedPressures);
+        for (int i = 0; i < 5; i++)
+        {
+            changedPressures[i] = changedPressures[i] - previousPressures[i];
+        }
+        return getHighestPressureIndex(changedPressures);
+    }
+
+    void doBagPressureCheck(int &saveTo, Solenoid *solenoid)
+    {
+        float startPressures[5];
+        getPinPressures(startPressures);
+        solenoid->open();
+        delay(2 * 1000); // 2 seconds probably fine
+        solenoid->open();
+        delay(500); // wait for pressures to stabilize
+        saveTo = getHighestChangedPressureIndex(startPressures);
+    }
+
+    void learnPressureSensorsRoutine()
+    {
+        // Assume pressure sensor value is correct. ie default 232.
+        int IDX_FRONT_PASSENGER;
+        int IDX_REAR_PASSENGER;
+        int IDX_FRONT_DRIVER;
+        int IDX_REAR_DRIVER;
+        int IDX_TANK;
+
+        // STEP 1: Air out all bags
+        manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_OUT)->open();
+        manifold->get(SOLENOID_INDEX::REAR_PASSENGER_OUT)->open();
+        manifold->get(SOLENOID_INDEX::FRONT_DRIVER_OUT)->open();
+        manifold->get(SOLENOID_INDEX::REAR_DRIVER_OUT)->open();
+        delay(20 * 1000);
+        manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_OUT)->close();
+        manifold->get(SOLENOID_INDEX::REAR_PASSENGER_OUT)->close();
+        manifold->get(SOLENOID_INDEX::FRONT_DRIVER_OUT)->close();
+        manifold->get(SOLENOID_INDEX::REAR_DRIVER_OUT)->close();
+
+        delay(500); // wait for pressures to stabilize
+
+        float pressures[5];
+        getPinPressures(pressures);
+
+        // STEP 2: Fill up tank with compressor until we get 100 as our reading or for 30 seconds
+        // first check if we already have one pressure that is full (aka tank is already full)
+        if (!isAnyBagMaxxed(pressures))
+        {
+            compressor->getOverrideSolenoid()->open();
+            unsigned long startTime = millis();
+            while (millis() < startTime + 30 * 1000)
+            {
+                getPinPressures(pressures);
+                // check tank pressure just in case it's already full
+                if (isAnyBagMaxxed(pressures))
+                {
+                    // turn off compressor if any are over 100
+                    compressor->getOverrideSolenoid()->close();
+                }
+                delay(5);
+            }
+            compressor->getOverrideSolenoid()->close();
+        }
+
+        // STEP 3: Tank sensor is the sensor with the highest pressure
+        IDX_TANK = getHighestPressureIndex(pressures);
+
+        // STEP 4: Do routine for each bag
+        // TODO: Finish this and then implement the controller side/bluetooth
+        delay(500);
+        doBagPressureCheck(IDX_FRONT_PASSENGER, manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_IN));
+        doBagPressureCheck(IDX_REAR_PASSENGER, manifold->get(SOLENOID_INDEX::REAR_PASSENGER_IN));
+        doBagPressureCheck(IDX_FRONT_DRIVER, manifold->get(SOLENOID_INDEX::FRONT_DRIVER_IN));
+        doBagPressureCheck(IDX_REAR_DRIVER, manifold->get(SOLENOID_INDEX::REAR_DRIVER_IN));
+
+        setpressureInputTank(IDX_TANK);
+        setpressureInputFrontPassenger(IDX_FRONT_PASSENGER);
+        setpressureInputRearPassenger(IDX_REAR_PASSENGER);
+        setpressureInputFrontDriver(IDX_FRONT_DRIVER);
+        setpressureInputRearDriver(IDX_REAR_DRIVER);
+
+        delay(500);
+        ESP.restart(); // reboot this bih
+    }
+}
 
 #pragma endregion

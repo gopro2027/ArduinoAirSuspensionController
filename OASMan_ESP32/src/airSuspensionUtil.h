@@ -8,6 +8,7 @@
 #include "manifoldSaveData.h"
 #include "sampleReading.tcc"
 
+extern InputType *pressureInputs[5];
 extern Manifold *manifold;
 extern Compressor *compressor;
 extern Wheel *wheel[4];
@@ -38,5 +39,9 @@ void accessoryWireLoop();
 void notifyKeepAlive();
 bool isVehicleOn();
 bool isKeepAliveTimerExpired();
+namespace PressureSensorCalibration
+{
+    void learnPressureSensorsRoutine();
+}
 
 #endif

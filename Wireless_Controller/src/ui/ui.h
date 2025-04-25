@@ -31,6 +31,7 @@ typedef enum
 void ui_init(void);
 void changeScreen(SCREEN screen);
 void screenLoop();
+void safetyModeMsgBoxCheck();
 
 extern SCREEN currentScreen;
 

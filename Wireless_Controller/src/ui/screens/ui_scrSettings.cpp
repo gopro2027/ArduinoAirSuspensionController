@@ -34,11 +34,19 @@ void ScrSettings::init()
                 sendRestPacket(&pkt);
                 log_i("Pressed compressor status %i", ((bool)data)); });
 
-    new Option(this->optionsContainer, OptionType::ON_OFF, "Attempt Turn Off", defaultCharVal, [](void *data)
-               { 
-                TurnOffPacket pkt;
-                sendRestPacket(&pkt);
-                log_i("Pressed turn off"); });
+    this->ui_rebootbutton = new Option(this->optionsContainer, OptionType::BUTTON, "Reboot/Turn Off", defaultCharVal, [](void *data)
+                                       { 
+                                        if (statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON)) {
+                                            RebootPacket pkt;
+                                            sendRestPacket(&pkt);
+                                            log_i("Pressed reboot");
+                                            showDialog("Rebooting...", lv_color_hex(0xFFFF00));
+                                        } else {
+                                            TurnOffPacket pkt;
+                                            sendRestPacket(&pkt);
+                                            log_i("Pressed turn off");
+                                            showDialog("Shutting down", lv_color_hex(0xFFFF00));
+                                        } });
 
     new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "Basic settings");
@@ -57,6 +65,19 @@ void ScrSettings::init()
     //             FallOnShutdownPacket pkt(((bool)data));
     //             sendRestPacket(&pkt);
     //             log_i("Pressed fallonshutdown %i", ((bool)data)); });
+
+    this->ui_safetymode = new Option(this->optionsContainer, OptionType::ON_OFF, "Safety Mode", defaultCharVal, [](void *data)
+                                     { 
+                SafetyModePacket pkt(((bool)data));
+                sendRestPacket(&pkt);
+                log_i("Pressed safetymode %i", ((bool)data)); });
+
+    new Option(this->optionsContainer, OptionType::BUTTON, "Detect Pressure Sensors", defaultCharVal, [](void *data)
+               {
+                    DetectPressureSensorsPacket pkt;
+                    sendRestPacket(&pkt);
+                    log_i("Pressed detected pressure sensors");
+                    showDialog("Doing calibration routine", lv_color_hex(0xFFFF00)); });
 
     new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "Levelling Mode");
@@ -99,6 +120,8 @@ void ScrSettings::init()
         if (isConnectedToManifold()) {
             AuthPacket pkt(getblePasskey(), AuthResult::AUTHRESULT_UPDATEKEY); // save on manifold
             sendRestPacket(&pkt); 
+        } else {
+            authblacklist.clear();
         }
         alertValueUpdated(); });
 
@@ -182,12 +205,22 @@ void ScrSettings::loop()
     this->ui_s1->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_FROZEN) ? "Yes" : "No");
     // this->ui_s2->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON) ? "On" : "Off");
     this->ui_s3->setRightHandText(statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON) ? "On" : "Off");
+    if (statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON))
+    {
+        this->ui_rebootbutton->setRightHandText("Reboot");
+    }
+    else
+    {
+        this->ui_rebootbutton->setRightHandText("Shut Down");
+    }
     // this->ui_s4->setRightHandText(statusBittset & (1 << TIMER_STATUS_EXPIRED) ? "Yes" : "No");
     // this->ui_s5->setRightHandText(statusBittset & (1 << CLOCK) ? "1" : "0");
     this->ui_riseonstart->setBooleanValue(statusBittset & (1 << StatusPacketBittset::RISE_ON_START));
     this->ui_maintainprssure->setBooleanValue(statusBittset & (1 << StatusPacketBittset::MAINTAIN_PRESSURE));
     // this->ui_airoutonshutoff->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF));
     this->ui_heightsensormode->setSelectedOption((statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE)) != 0 ? 1 : 0);
+
+    this->ui_safetymode->setBooleanValue(statusBittset & (1 << StatusPacketBittset::SAFETY_MODE));
 
     this->ui_s2->setBooleanValue(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON));
 

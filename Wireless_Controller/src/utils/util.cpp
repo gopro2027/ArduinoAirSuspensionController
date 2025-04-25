@@ -67,6 +67,7 @@ void sendConfigValuesPacket(bool saveToManifold)
 }
 
 Scr *screens[3];
+Scr *currentScr = NULL;
 
 #pragma region bluetooth packets
 
