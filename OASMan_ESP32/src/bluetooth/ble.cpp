@@ -274,7 +274,7 @@ void ble_create_characteristics(BLEService *pService)
 
     valveControlCharacteristic = pService->createCharacteristic(
         VALVECONTROL_CHARACTERISTIC_UUID,
-        BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE_NR); // NR meaning no response from the server ?
+        BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE); // used to be PROPERTY_WRITE_NR
 
     // statusCharacteristic->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
     // restCharacteristic->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
