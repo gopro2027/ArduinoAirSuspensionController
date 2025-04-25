@@ -104,6 +104,14 @@ AiroutPacket::AiroutPacket()
 {
     this->cmd = AIROUT;
 }
+DetectPressureSensorsPacket::DetectPressureSensorsPacket()
+{
+    this->cmd = DETECTPRESSURESENSORS;
+}
+CalibratePacket::CalibratePacket()
+{
+    this->cmd = CALIBRATE;
+}
 AirsmPacket::AirsmPacket(int relativeValue)
 {
     this->cmd = AIRSM;
@@ -155,6 +163,11 @@ HeightSensorModePacket::HeightSensorModePacket(bool enable)
     this->cmd = HEIGHTSENSORMODE;
     this->args32()[0].i = enable;
 }
+SafetyModePacket::SafetyModePacket(bool enable)
+{
+    this->cmd = SAFETYMODE;
+    this->args32()[0].i = enable;
+}
 RaiseOnPressureSetPacket::RaiseOnPressureSetPacket(bool enable)
 {
     this->cmd = RAISEONPRESSURESET;
@@ -173,6 +186,10 @@ CompressorStatusPacket::CompressorStatusPacket(bool enable)
 RebootPacket::RebootPacket()
 {
     this->cmd = REBOOT;
+}
+TurnOffPacket::TurnOffPacket()
+{
+    this->cmd = TURNOFF;
 }
 StartwebPacket::StartwebPacket()
 {

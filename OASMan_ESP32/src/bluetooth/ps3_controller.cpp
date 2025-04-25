@@ -22,6 +22,33 @@ enum OpenClose
     v_open
 };
 
+// From Ps3Controller.data.button aka ps3_button_t
+enum ps3_button_offsets
+{
+    ps3_select,
+    ps3_l3,
+    ps3_r3,
+    ps3_start,
+
+    ps3_up,
+    ps3_right,
+    ps3_down,
+    ps3_left,
+
+    ps3_l2,
+    ps3_r2,
+    ps3_l1,
+    ps3_r1,
+
+    ps3_triangle,
+    ps3_circle,
+    ps3_cross,
+    ps3_square,
+
+    ps3_ps,
+    PS3_BUTTON_COUNT
+};
+
 JoystickMode leftMode = j_none;
 JoystickMode rightMode = j_none;
 
@@ -89,6 +116,98 @@ bool circlePressed = false;
 bool upPressed = false;
 bool downPressed = false;
 
+#define bitfieldto32(field) (*(int *)&field)
+#define isbitfieldset(field, idx) ((bitfieldto32(field) & (1 << idx)) >> idx)
+uint8_t konamiIndex = 0;
+uint8_t konamiCompletions = 0;
+uint8_t konamiCode[] = {
+    ps3_button_offsets::ps3_up,
+    ps3_button_offsets::ps3_up,
+    ps3_button_offsets::ps3_down,
+    ps3_button_offsets::ps3_down,
+    ps3_button_offsets::ps3_left,
+    ps3_button_offsets::ps3_right,
+    ps3_button_offsets::ps3_left,
+    ps3_button_offsets::ps3_right,
+    ps3_button_offsets::ps3_circle,
+    ps3_button_offsets::ps3_cross};
+
+void driverUpPassDown(int ms)
+{
+    // driver goes up, passenger goes down
+    Serial.println("Driver up passenger down");
+    getWheel(WHEEL_FRONT_DRIVER)->getInSolenoid()->open();
+    getWheel(WHEEL_REAR_DRIVER)->getInSolenoid()->open();
+    getWheel(WHEEL_FRONT_PASSENGER)->getOutSolenoid()->open();
+    getWheel(WHEEL_REAR_PASSENGER)->getOutSolenoid()->open();
+    delay(ms);
+    getWheel(WHEEL_FRONT_DRIVER)->getInSolenoid()->close();
+    getWheel(WHEEL_REAR_DRIVER)->getInSolenoid()->close();
+    getWheel(WHEEL_FRONT_PASSENGER)->getOutSolenoid()->close();
+    getWheel(WHEEL_REAR_PASSENGER)->getOutSolenoid()->close();
+}
+void passUpDriverDown(int ms)
+{
+    // passenger goes up, driver goes down
+    Serial.println("Passenger up driver down");
+    getWheel(WHEEL_FRONT_DRIVER)->getOutSolenoid()->open();
+    getWheel(WHEEL_REAR_DRIVER)->getOutSolenoid()->open();
+    getWheel(WHEEL_FRONT_PASSENGER)->getInSolenoid()->open();
+    getWheel(WHEEL_REAR_PASSENGER)->getInSolenoid()->open();
+    delay(ms);
+    getWheel(WHEEL_FRONT_DRIVER)->getOutSolenoid()->close();
+    getWheel(WHEEL_REAR_DRIVER)->getOutSolenoid()->close();
+    getWheel(WHEEL_FRONT_PASSENGER)->getInSolenoid()->close();
+    getWheel(WHEEL_REAR_PASSENGER)->getInSolenoid()->close();
+}
+void doDance()
+{
+    Serial.println("Doing dance sequence!");
+    int timing = 600;
+    // initialize by dropping for half the time of one side
+    passUpDriverDown(timing / 2);
+    for (int i = 0; i < 5; i++)
+    {
+        driverUpPassDown(timing);
+        passUpDriverDown(timing);
+    }
+
+    Serial.println("Loading profile 2");
+    // TODO: make base profile work (look in other spots in app for this)
+    // go to the 2nd profile since that is default right now for ride height.
+    loadProfileAirUpQuick(2);
+}
+
+void updateKonami()
+{
+    for (int idx = 0; idx < ps3_button_offsets::PS3_BUTTON_COUNT; idx++)
+    {
+        if (isbitfieldset(Ps3.event.button_up, idx))
+        {
+            if (konamiCode[konamiIndex] == idx)
+            {
+                konamiIndex++;
+                Serial.println(konamiIndex);
+                if (konamiIndex == (sizeof(konamiCode) / sizeof(*konamiCode)))
+                {
+                    Serial.println("Konami code complete!");
+                    konamiCompletions++;
+                    Ps3.setRumble(100.0, 5000);
+                    konamiIndex = 0;
+                    if (konamiCompletions > 1)
+                    {
+                        do_dance = true;
+                    }
+                }
+            }
+            else
+            {
+                konamiIndex = 0;
+            }
+        }
+    }
+}
+
 // This function is really conveluted, but it seems to fix the issue with sometimes the rumble getting cut off in some way by other updates
 bool skipNextPlayerUpate = false;
 void feedback()
@@ -103,6 +222,8 @@ void feedback()
 
 void notify()
 {
+
+    updateKonami();
 
     if (Ps3.data.button.r1 && Ps3.data.button.l1)
     {
@@ -126,77 +247,77 @@ void notify()
 
     // Old controllers go bad and the bluetooth starts to act up. I noticed when they act up they don't often go above analog value of 20, but still trigger Ps3.event.button_down. Implemented the same thing but must be greater than 50 to trigger
 
-    if (abs(Ps3.event.analog_changed.button.up))
-    {
-        bool prev = upPressed;
-        upPressed = Ps3.data.analog.button.up > 50;
-        if (upPressed && prev != upPressed)
-        {
-            Serial.println("[Dpad Up] Air up");
-            airUp();
-            feedback();
-        }
-    }
+    // if (abs(Ps3.event.analog_changed.button.up))
+    // {
+    //     bool prev = upPressed;
+    //     upPressed = Ps3.data.analog.button.up > 50;
+    //     if (upPressed && prev != upPressed)
+    //     {
+    //         Serial.println("[Dpad Up] Air up");
+    //         airUp();
+    //         feedback();
+    //     }
+    // }
 
-    if (abs(Ps3.event.analog_changed.button.down))
-    {
-        bool prev = downPressed;
-        downPressed = Ps3.data.analog.button.down > 50;
-        if (downPressed && prev != downPressed)
-        {
-            Serial.println("[Dpad Down] Air out");
-            airOut();
-            feedback();
-        }
-    }
+    // if (abs(Ps3.event.analog_changed.button.down))
+    // {
+    //     bool prev = downPressed;
+    //     downPressed = Ps3.data.analog.button.down > 50;
+    //     if (downPressed && prev != downPressed)
+    //     {
+    //         Serial.println("[Dpad Down] Air out");
+    //         airOut();
+    //         feedback();
+    //     }
+    // }
 
-    if (abs(Ps3.event.analog_changed.button.cross))
-    {
-        bool prev = crossPressed;
-        crossPressed = Ps3.data.analog.button.cross > 50;
-        if (crossPressed && prev != crossPressed)
-        {
-            Serial.println("[X] Profile 1");
-            loadProfileAirUpQuick(0);
-            feedback();
-        }
-    }
+    // if (abs(Ps3.event.analog_changed.button.cross))
+    // {
+    //     bool prev = crossPressed;
+    //     crossPressed = Ps3.data.analog.button.cross > 50;
+    //     if (crossPressed && prev != crossPressed)
+    //     {
+    //         Serial.println("[X] Profile 1");
+    //         loadProfileAirUpQuick(0);
+    //         feedback();
+    //     }
+    // }
 
-    if (abs(Ps3.event.analog_changed.button.square))
-    {
-        bool prev = squarePressed;
-        squarePressed = Ps3.data.analog.button.square > 50;
-        if (squarePressed && prev != squarePressed)
-        {
-            Serial.println("[Square] Profile 2");
-            loadProfileAirUpQuick(1);
-            feedback();
-        }
-    }
+    // if (abs(Ps3.event.analog_changed.button.square))
+    // {
+    //     bool prev = squarePressed;
+    //     squarePressed = Ps3.data.analog.button.square > 50;
+    //     if (squarePressed && prev != squarePressed)
+    //     {
+    //         Serial.println("[Square] Profile 2");
+    //         loadProfileAirUpQuick(1);
+    //         feedback();
+    //     }
+    // }
 
-    if (abs(Ps3.event.analog_changed.button.triangle))
-    {
-        bool prev = trianglePressed;
-        trianglePressed = Ps3.data.analog.button.triangle > 50;
-        if (trianglePressed && prev != trianglePressed)
-        {
-            Serial.println("[Triangle] Profile 3");
-            loadProfileAirUpQuick(2);
-            feedback();
-        }
-    }
+    // if (abs(Ps3.event.analog_changed.button.triangle))
+    // {
+    //     bool prev = trianglePressed;
+    //     trianglePressed = Ps3.data.analog.button.triangle > 50;
+    //     if (trianglePressed && prev != trianglePressed)
+    //     {
+    //         Serial.println("[Triangle] Profile 3");
+    //         loadProfileAirUpQuick(2);
+    //         feedback();
+    //     }
+    // }
 
-    if (abs(Ps3.event.analog_changed.button.circle))
-    {
-        bool prev = circlePressed;
-        circlePressed = Ps3.data.analog.button.circle > 50;
-        if (circlePressed && prev != circlePressed)
-        {
-            Serial.println("[Circle] Profile 4");
-            loadProfileAirUpQuick(3);
-            feedback();
-        }
-    }
+    // if (abs(Ps3.event.analog_changed.button.circle))
+    // {
+    //     bool prev = circlePressed;
+    //     circlePressed = Ps3.data.analog.button.circle > 50;
+    //     if (circlePressed && prev != circlePressed)
+    //     {
+    //         Serial.println("[Circle] Profile 4");
+    //         loadProfileAirUpQuick(3);
+    //         feedback();
+    //     }
+    // }
 
     // //--- Digital cross/square/triangle/circle button events ---
     // if (Ps3.event.button_down.cross)
@@ -655,7 +776,7 @@ void ps3_controller_loop()
     if (Ps3.data.button.select && Ps3.data.button.start)
     {
         Serial.println("Pressing both the select and start buttons");
-        ESP.restart();
+        setinternalReboot(true);
     }
 
     // printJoystick(leftMode);

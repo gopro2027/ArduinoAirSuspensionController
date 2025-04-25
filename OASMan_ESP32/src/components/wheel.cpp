@@ -8,13 +8,14 @@ struct PressureGoalValveTiming
 };
 
 // Must put in sorted order of largest to smallest
+// So I added *2 because at least in the corvette which i imagine is a fairly standard car, 200% worked great in testing so i may as well make it the default
 PressureGoalValveTiming valveTiming[] = {
-    {100, 500, false},
-    {50, 250, false},
-    {25, 125, false},
-    {10, 50, false}, // if current psi outside range of goalPressure +- 10psi, open valves for 75ms until +- 10psi achieved
-    {5, 20, false},  // if current psi outside range of goalPressure +- 5psi, open valves for 20ms until +- 6psi achieved
-    {0, 5, true},    // if current psi outside range of goalPressure +- 0psi (aka psi is not yet exactly goalPressure), open valves for 5ms until exact goal pressure is achieved. Will not be used in quick mode
+    {100, 500 * 2, false},
+    {50, 250 * 2, false},
+    {25, 125 * 2, false},
+    {10, 50 * 2, false}, // if current psi outside range of goalPressure +- 10psi, open valves for 75ms until +- 10psi achieved
+    {5, 20 * 2, false},  // if current psi outside range of goalPressure +- 5psi, open valves for 20ms until +- 6psi achieved
+    {0, 5 * 2, true},    // if current psi outside range of goalPressure +- 0psi (aka psi is not yet exactly goalPressure), open valves for 5ms until exact goal pressure is achieved. Will not be used in quick mode
 };
 #define VALVE_TIMING_LIST_COUNT (sizeof(valveTiming) / sizeof(PressureGoalValveTiming))
 
@@ -50,13 +51,13 @@ int calculateValveOpenTimeMS(int pressureDifferenceAbsolute, bool quickMode)
 
 Wheel::Wheel() {}
 
-Wheel::Wheel(InputType *solenoidInPin, InputType *solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum)
+Wheel::Wheel(Solenoid *solenoidInPin, Solenoid *solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum)
 {
     this->pressurePin = pressurePin;
     this->levelSensorPin = levelSensorPin;
     this->thisWheelNum = thisWheelNum;
-    this->s_AirIn = Solenoid(solenoidInPin);
-    this->s_AirOut = Solenoid(solenoidOutPin);
+    this->s_AirIn = solenoidInPin;
+    this->s_AirOut = solenoidOutPin;
     this->pressureValue = 0;
     this->pressureGoal = 0;
     this->routineStartTime = 0;
@@ -66,12 +67,12 @@ Wheel::Wheel(InputType *solenoidInPin, InputType *solenoidOutPin, InputType *pre
 
 Solenoid *Wheel::getInSolenoid()
 {
-    return &this->s_AirIn;
+    return this->s_AirIn;
 }
 
 Solenoid *Wheel::getOutSolenoid()
 {
-    return &this->s_AirOut;
+    return this->s_AirOut;
 }
 
 InputType *Wheel::getPressurePin()
@@ -140,7 +141,7 @@ float Wheel::getSelectedInputValue()
 
 bool Wheel::isActive()
 {
-    return this->s_AirIn.isOpen() || this->s_AirOut.isOpen();
+    return this->s_AirIn->isOpen() || this->s_AirOut->isOpen();
 }
 
 void Wheel::initPressureGoal(int newPressure, bool quick)
@@ -177,6 +178,63 @@ void Wheel::initPressureGoal(int newPressure, bool quick)
 // height sensor: AA-ROT-120 https://www.aliexpress.us/item/3256807527882480.html https://www.amazon.com/Height-Sensor-Suspension-Leveling-AA-ROT-120/dp/B08DJ3HX1B https://www.aliexpress.us/item/3256806751644782.html
 // Output voltage UA:0.5-4.5
 
+// 300 and 700 works quite well but way too long of times
+// 100 and 400 appeared to not be quite enough for an accurate reading. It bounced a lot going from 20 to 90 and undershot, and also going from 90 to 20 it didn't calculate accurately either
+#define VALVE_OPEN_TIME 200
+#define VALVE_STABILIZE_TIME 500
+// does 1 quick burst to figure out the rest of the values we want
+double Wheel::calculatePressureTimingReal(Solenoid *valve)
+{
+    int pressureDifABS = abs(this->pressureGoal - this->getSelectedInputValue());
+    if (pressureDifABS < 15)
+    {
+        return calculateValveOpenTimeMS(pressureDifABS, this->quickMode);
+    }
+    double pressures[2];
+    double times[2];
+    // grab initial value first
+    this->readInputs();
+    pressures[0] = this->getSelectedInputValue(); // 0
+    times[0] = 0;                                 // 0
+
+    // open valve for set time and grab value so we have a graph now so we can estimate the pressure since the graphs are mostly linear
+
+    valve->open();
+    delay(VALVE_OPEN_TIME); // too low and we risk innacurate values due to flow timing ect it's not perfect. lower values are less time to stabilize after
+    valve->close();
+    delay(VALVE_STABILIZE_TIME); // ts jiggles so increased from 150 to 300
+    this->readInputs();
+    pressures[1] = this->getSelectedInputValue(); // 50
+    times[1] = VALVE_OPEN_TIME;                   // 1
+
+    // we can just flip the x and y (time and pressure) so we instead log a typical quadratic equation and then also since our x value is now pressure, which does appear to map correctly, we can just plug in our pressure into the equation and we don't have to use the quadratic formula to solve for y.
+
+    // formula: y-y1=m(x-x1) & m=(y-y1)/(x-x1) & y=mx+b & b=y-mx
+    // m = (1 - 0) / (50 - 0) = 0.02
+    double m = (times[1] - times[0]) / (pressures[1] - pressures[0]);
+    // b = 0 - 0.02 * 0 = 0
+    double b = times[0] - m * pressures[0];
+
+    // Formula: f(pressureGoal) - f(currentPressure)
+    // Proof:
+    // f(currentPressure) = times[1]
+    // f(currentPressure) = (m * pressures[1] + b)
+    // times[1] = (m * pressures[1] + b) = (0.02 * 50 + 0) = 1
+    // timeDif = (0.02 * 100 + 0) - 1 = 1 which matches simulation graph for air up! https://www.reddit.com/r/askmath/comments/1k5kysw/what_type_of_line_is_this_and_how_can_i_make_a/
+    double timeDif = (m * pressureGoal + b) - times[1];
+
+    // if value is negative, we must have overshot. returning a negative value will be ignored and valve won't open and that will be just fine
+
+    // if value is more than 5000 just assume something is wrong and use the old method
+    if (timeDif > 5000)
+    {
+        // wack value... do it the old way
+        return calculateValveOpenTimeMS(abs(this->pressureGoal - this->getSelectedInputValue()), this->quickMode);
+    }
+
+    return timeDif;
+}
+
 // logic https://www.figma.com/board/YOKnd1caeojOlEjpdfY5NF/Untitled?node-id=0-1&node-type=canvas&t=p1SyY3R7azjm1PKs-0
 void Wheel::loop()
 {
@@ -202,15 +260,15 @@ void Wheel::loop()
             {
                 // Decide which valve to use
                 Solenoid *valve;
-                if (this->pressureGoal > this->getSelectedInputValue())
+                if (pressureDif >= 0)
                 {
-                    valve = &this->s_AirIn;
-                    this->s_AirOut.close();
+                    valve = this->s_AirIn;
+                    this->s_AirOut->close();
                 }
                 else
                 {
-                    valve = &this->s_AirOut;
-                    this->s_AirIn.close();
+                    valve = this->s_AirOut;
+                    this->s_AirIn->close();
                 }
 
                 if (!getheightSensorMode())
@@ -220,13 +278,19 @@ void Wheel::loop()
                     // Choose time to open for
                     int valveTime = calculateValveOpenTimeMS(pressureDifABS, this->quickMode);
 
-                    // Open valve for calculated time
-                    valve->open();
-                    delay(valveTime);
-                    valve->close();
+                    // right now not going to use this because it doesn't seem to work super well up air up. Results in super low values. Need to do more testing
+                    // int valveTime = this->calculatePressureTimingReal(valve);
 
-                    // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
-                    delay(150);
+                    if (valveTime > 0)
+                    {
+                        // Open valve for calculated time
+                        valve->open();
+                        delay(valveTime);
+                        valve->close();
+
+                        // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
+                        delay(150);
+                    }
                 }
                 else
                 {
@@ -242,7 +306,7 @@ void Wheel::loop()
             }
         }
         // close both after (only applies for level sensor logic)
-        this->s_AirIn.close();
-        this->s_AirOut.close();
+        this->s_AirIn->close();
+        this->s_AirOut->close();
     }
 }

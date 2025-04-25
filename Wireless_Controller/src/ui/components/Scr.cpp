@@ -78,7 +78,10 @@ void Scr::runTouchInput(SimplePoint pos, bool down)
     {
         if (this->mb_dialog != NULL)
         {
-            this->deleteMessageBoxNextFrame = true;
+            if (this->mb_force_button_press == false)
+            {
+                this->deleteMessageBoxNextFrame = true;
+            }
         }
     }
 }
@@ -90,6 +93,8 @@ void dialog_clicked_function(lv_event_t *e)
     DialogData *dialogData = (DialogData *)lv_event_get_user_data(e);
     if (event_code == LV_EVENT_CLICKED)
     {
+        currentScr->deleteMessageBoxNextFrame = true; // This should really call this scr instead but i don't appear to have any way to know which one to access hmm... so just using the global currentScr instead
+        resetTouchInputFrame();
         if (dialogData->callback != NULL)
         {
             dialogData->callback();
@@ -102,12 +107,17 @@ bool Scr::isMsgBoxDisplayed()
     return this->mb_dialog != NULL;
 }
 
-void Scr::showMsgBox(const char *title, const char *text, const char *yesText, const char *noText, std::function<void()> onYes)
+void Scr::showMsgBox(const char *title, const char *text, const char *yesText, const char *noText, std::function<void()> onYes, std::function<void()> onNo, bool forceButtonPress)
 {
+    resetTouchInputFrame();
     this->mb_dialog = lv_msgbox_create(this->scr);
+    this->mb_force_button_press = forceButtonPress;
 
-    this->dialogData.callback = onYes;
-    this->dialogData.type = 0; // not used
+    this->dialogDataYes.callback = onYes;
+    this->dialogDataYes.type = 0; // not used
+
+    this->dialogDataNo.callback = onNo;
+    this->dialogDataNo.type = 0; // not used
 
     if (title != NULL)
     {
@@ -120,15 +130,22 @@ void Scr::showMsgBox(const char *title, const char *text, const char *yesText, c
     if (yesText != NULL)
     {
         lv_obj_t *yesbtn = lv_msgbox_add_footer_button(this->mb_dialog, yesText);
-        lv_obj_add_event_cb(yesbtn, dialog_clicked_function, LV_EVENT_CLICKED, (void *)&this->dialogData);
+        lv_obj_set_flex_grow(yesbtn, 1);
+        lv_obj_add_event_cb(yesbtn, dialog_clicked_function, LV_EVENT_CLICKED, (void *)&this->dialogDataYes);
         lv_obj_set_style_bg_color(yesbtn, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_align(yesbtn, LV_ALIGN_TOP_LEFT);
     }
     if (noText != NULL)
     {
         lv_obj_t *nobtn = lv_msgbox_add_footer_button(this->mb_dialog, noText);
+        lv_obj_set_flex_grow(nobtn, 1);
+        lv_obj_add_event_cb(nobtn, dialog_clicked_function, LV_EVENT_CLICKED, (void *)&this->dialogDataNo);
         lv_obj_set_style_bg_color(nobtn, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_align(nobtn, LV_ALIGN_BOTTOM_LEFT);
     }
-    // lv_msgbox_add_close_button(this->mb_dialog); // x button crashes it due to our implementation... I'm guessing it is trying to delete ittself after we have already deleted it? we don't really need it and ui looks better without it anyways.
+    // lv_obj_t *footer = lv_msgbox_get_footer(this->mb_dialog);
+    // lv_obj_set_flex_grow(footer, 1);
+    //  lv_msgbox_add_close_button(this->mb_dialog); // x button crashes it due to our implementation... I'm guessing it is trying to delete ittself after we have already deleted it? we don't really need it and ui looks better without it anyways.
 
     lv_obj_set_width(this->mb_dialog, DISPLAY_WIDTH - 20);
 

@@ -130,6 +130,7 @@ void loop()
         // screen code
         screenLoop();
         dialogLoop();
+        safetyModeMsgBoxCheck();
     }
 
     // Update the ticker

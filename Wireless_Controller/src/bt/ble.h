@@ -7,6 +7,9 @@
 #include "NimBLEDevice.h"
 // #include "BLEScan.h"
 
+#include <stack>
+#include <iostream>
+
 #include <BTOas.h>
 #include <user_defines.h>
 

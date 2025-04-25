@@ -45,9 +45,15 @@
 #define solenoidRearDriverInPin new InputType(18, OUTPUT)
 #define solenoidRearDriverOutPin new InputType(17, OUTPUT)
 
+/* Pressure Sensor Inputs. Why are the ads pin nums in this specific order? Oh the world may never know */
+#define pressureSensorInput0 new InputType(0, &ADS1115A) // ADSA/0   Previous: D36/VP/A4   Default: pressureInputFrontPassenger
+#define pressureSensorInput1 new InputType(3, &ADS1115A) // ADSA/3   Previous: D35/A3      Default: pressureInputRearPassenger
+#define pressureSensorInput2 new InputType(2, &ADS1115A) // ADSA/2   Previous: D34/A2      Default: pressureInputFrontDriver
+#define pressureSensorInput3 new InputType(1, &ADS1115A) // ADSA/1   Previous: D39/VN/A7   Default: pressureInputRearDriver
+#define pressureSensorInput4 new InputType(32, INPUT)    // D32/A0, pressure sensor        Default: pressureInputTank
+
 /* Compressor/tank */
 #define compressorRelayPin new InputType(13, OUTPUT) // D13, solenoid
-#define pressureInputTank new InputType(32, INPUT)   // D32/A0, pressure sensor
 
 /* Accessory Wire */
 #define outputKeepAlivePin new InputType(12, OUTPUT) // D12, output high while accessory input is low to keep input on. Should always output high while accessory is on. Output low when accessory is low to turn off system.
@@ -58,12 +64,6 @@
 // For example: Mine will read 220psi when the actual pressure is 180psi
 #define COMPRESSOR_ON_BELOW_PSI 140
 #define COMPRESSOR_MAX_PSI 180
-
-/* Pressure sensor pins */
-#define pressureInputFrontPassenger new InputType(0, &ADS1115A) // ADSA/0   Previous: D36/VP/A4
-#define pressureInputRearPassenger new InputType(3, &ADS1115A)  // ADSA/3   Previous: D35/A3
-#define pressureInputFrontDriver new InputType(2, &ADS1115A)    // ADSA/2   Previous: D34/A2
-#define pressureInputRearDriver new InputType(1, &ADS1115A)     // ADSA/1   Previous: D39/VN/A7
 
 /* Level sensor pins */
 #define levelInputFrontPassenger new InputType(0, &ADS1115B) // ADSB/0

@@ -7,7 +7,10 @@ Solenoid::Solenoid() {}
 Solenoid::Solenoid(InputType *pin)
 {
     this->pin = pin;
+
+    // default solenoid to low state... this is important after a software reboot, it could be stuck as HIGH because it is not automatically reset to LOW
     this->bopen = false;
+    this->pin->digitalWrite(LOW);
 }
 void Solenoid::open()
 {

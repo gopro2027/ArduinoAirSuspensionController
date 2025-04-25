@@ -9,7 +9,7 @@
 class Manifold
 {
 private:
-    InputType *solenoidList[SOLENOID_COUNT];
+    Solenoid *solenoidList[SOLENOID_COUNT];
     int wheelSolenoidMask = 0;
 
 public:
@@ -22,13 +22,13 @@ public:
              InputType *fdo,
              InputType *rdi,
              InputType *rdo);
-    InputType *get(int solenoid);
-    InputType **getAll();
-    void pauseValvesForBlockingTask();
-    void unpauseValvesForBlockingTaskCompleted();
+    Solenoid *get(int solenoid);
+    Solenoid **getAll();
+    // void pauseValvesForBlockingTask();
+    // void unpauseValvesForBlockingTaskCompleted();
 };
 
-Solenoid *getSolenoidFromIndex(int solenoid);
+// Solenoid *getSolenoidFromIndex(int solenoid);
 
 extern Manifold *getManifold(); // defined in airSuspensionUtil.h
 extern Wheel *getWheel(int i);
