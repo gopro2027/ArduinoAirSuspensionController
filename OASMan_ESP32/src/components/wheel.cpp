@@ -180,51 +180,59 @@ void Wheel::initPressureGoal(int newPressure, bool quick)
 
 // 300 and 700 works quite well but way too long of times
 // 100 and 400 appeared to not be quite enough for an accurate reading. It bounced a lot going from 20 to 90 and undershot, and also going from 90 to 20 it didn't calculate accurately either
-#define VALVE_OPEN_TIME 150
+#define VALVE_OPEN_TIME 200
 #define VALVE_STABILIZE_TIME 500
 // does 1 quick burst to figure out the rest of the values we want
 double Wheel::calculatePressureTimingReal(Solenoid *valve)
 {
-    int pressureDif = this->pressureGoal - this->getSelectedInputValue();
-    int pressureDifABS = abs(pressureDif);
-    double valveTime = calculateValveOpenTimeMS(pressureDifABS, this->quickMode);
+    int pressureDifABS = abs(this->pressureGoal - this->getSelectedInputValue());
     if (pressureDifABS < 15)
     {
-        return valveTime;
+        return calculateValveOpenTimeMS(pressureDifABS, this->quickMode);
     }
     double pressures[2];
     double times[2];
     // grab initial value first
     this->readInputs();
-    pressures[0] = this->getSelectedInputValue();
-    times[0] = 0;
+    pressures[0] = this->getSelectedInputValue(); // 0
+    times[0] = 0;                                 // 0
 
-    // run 2 more times for 50 seconds each to get 3 points to make a graph (changed 2 just a simple line)
+    // open valve for set time and grab value so we have a graph now so we can estimate the pressure since the graphs are mostly linear
 
     valve->open();
     delay(VALVE_OPEN_TIME); // too low and we risk innacurate values due to flow timing ect it's not perfect. lower values are less time to stabilize after
     valve->close();
     delay(VALVE_STABILIZE_TIME); // ts jiggles so increased from 150 to 300
     this->readInputs();
-    pressures[1] = this->getSelectedInputValue();
-    times[1] = VALVE_OPEN_TIME * 2;
+    pressures[1] = this->getSelectedInputValue(); // 50
+    times[1] = VALVE_OPEN_TIME;                   // 1
 
     // we can just flip the x and y (time and pressure) so we instead log a typical quadratic equation and then also since our x value is now pressure, which does appear to map correctly, we can just plug in our pressure into the equation and we don't have to use the quadratic formula to solve for y.
 
     // formula: y-y1=m(x-x1) & m=(y-y1)/(x-x1) & y=mx+b & b=y-mx
-    double m = (times[1] - times[0] / pressures[1] - pressures[0]);
+    // m = (1 - 0) / (50 - 0) = 0.02
+    double m = (times[1] - times[0]) / (pressures[1] - pressures[0]);
+    // b = 0 - 0.02 * 0 = 0
     double b = times[0] - m * pressures[0];
 
-    // times[1] = (m * pressures[1] + b)
-    double time = abs((m * pressureGoal + b) - times[1]);
+    // Formula: f(pressureGoal) - f(currentPressure)
+    // Proof:
+    // f(currentPressure) = times[1]
+    // f(currentPressure) = (m * pressures[1] + b)
+    // times[1] = (m * pressures[1] + b) = (0.02 * 50 + 0) = 1
+    // timeDif = (0.02 * 100 + 0) - 1 = 1 which matches simulation graph for air up! https://www.reddit.com/r/askmath/comments/1k5kysw/what_type_of_line_is_this_and_how_can_i_make_a/
+    double timeDif = (m * pressureGoal + b) - times[1];
 
-    if (time > 5000)
+    // if value is negative, we must have overshot. returning a negative value will be ignored and valve won't open and that will be just fine
+
+    // if value is more than 5000 just assume something is wrong and use the old method
+    if (timeDif > 5000)
     {
         // wack value... do it the old way
         return calculateValveOpenTimeMS(abs(this->pressureGoal - this->getSelectedInputValue()), this->quickMode);
     }
 
-    return time;
+    return timeDif;
 }
 
 // logic https://www.figma.com/board/YOKnd1caeojOlEjpdfY5NF/Untitled?node-id=0-1&node-type=canvas&t=p1SyY3R7azjm1PKs-0
@@ -268,8 +276,10 @@ void Wheel::loop()
                     // Pressure sensor logic. You can't read the pressure accurately with the valve open. Essentially must open the valve for a guesstimate amount of time, then close it, then you are able to read the pressure.
 
                     // Choose time to open for
-                    // int valveTime = calculateValveOpenTimeMS(pressureDifABS, this->quickMode);
-                    int valveTime = this->calculatePressureTimingReal(valve);
+                    int valveTime = calculateValveOpenTimeMS(pressureDifABS, this->quickMode);
+
+                    // right now not going to use this because it doesn't seem to work super well up air up. Results in super low values. Need to do more testing
+                    // int valveTime = this->calculatePressureTimingReal(valve);
 
                     if (valveTime > 0)
                     {
