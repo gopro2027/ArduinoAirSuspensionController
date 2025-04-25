@@ -1,3 +1,7 @@
+#include "pressureMath.h"
+
+#if pressure_math_remove_this_line_initial_pid_code
+
 // >> > Please implement PID controller to flow the air from 1 tank to a smaller tank to a specific PSI value in C++ Here's an example of how you can implement a PID controller in C++ for controlling airflow from one tank to another based on a target pressure.This code assumes that the input and output signals are measured using sensors.
 
 // ```cpp
@@ -8,8 +12,6 @@
 https://github.com/Dlloydev/QuickPID
 https://github.com/Dlloydev/sTune
  */
-
-#if pressure_math_remove_this_line
 
 #include <iostream>
 #include <cmath>
@@ -94,9 +96,6 @@ int main()
 
     return 0;
 }
-
-#endif
-
 // ```
 
 //     This code defines two classes : `PIDController` and `TankController`.The `PIDController` class implements a PID
@@ -109,6 +108,8 @@ int main()
 //                                                                                                                                                                                                                                                To use this code,
 //     replace the `calculateProcessValue()` function in the `TankController` class with your own
 //     implementation of measuring the process value based on the pressure measurements from the sensors.
+
+#endif
 
 #if fulltauexample
 #include <stdio.h>
@@ -222,4 +223,62 @@ double startIteratePressurePID(double goal, double bag_current, double lastOpenT
     return T;
 }
 
+#endif
+
+// #define PARABOLA_MATH
+#ifdef parabolaLearn
+
+void calc_parabola_vertex(double x1, double y1, double x2, double y2, double x3, double y3, double &A, double &B, double &C)
+{
+    // Adapted and modifed to get the unknowns for defining a parabola:
+    // http://stackoverflow.com/questions/717762/how-to-calculate-the-vertex-of-a-parabola-given-three-points
+    double denom = (x1 - x2) * (x1 - x3) * (x2 - x3);
+    if (abs(denom) < 0.0001)
+        return;
+    A = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / denom;
+    B = (x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1) + x1 * x1 * (y2 - y3)) / denom;
+    C = (x2 * x3 * (x2 - x3) * y1 + x3 * x1 * (x3 - x1) * y2 + x1 * x2 * (x1 - x2) * y3) / denom;
+}
+
+double calc_parabola_y(double A, double B, double C, double x_val)
+{
+    return (A * (x_val * x_val)) + (B * x_val) + C;
+}
+
+// x is pressures, y is times
+void calculateAverageOfSamples(double *x, double *y, int sz, double &A, double &B, double &C)
+{
+    A = 0;
+    B = 0;
+    C = 0;
+    for (int i = 0; i < sz - 2; i++)
+    {
+        double tA, tB, tC;
+        tA = tB = tC = 0;
+        calc_parabola_vertex(x[i], y[i], x[i + 1], y[i + 1], x[i + 2], y[i + 2], tA, tB, tC);
+        A = ((A * i) + tA) / (i + 1);
+        B = ((B * i) + tB) / (i + 1);
+        C = ((C * i) + tC) / (i + 1);
+    }
+}
+
+// int main()
+// {
+//     const int sz = 10;
+//     double pressures[sz];
+//     double times[sz];
+//     // fill with simulated test data from  y=0.2x^{2}
+//     for (int i = 0; i < sz; i++)
+//     {
+//         pressures[i] = i * (140 / sz); // 140 is a decent max value to fill to
+//         times[i] = calc_parabola_y(0.2, 0, 0, pressures[i]);
+//     }
+//     double A, B, C;
+//     A = B = C = 0;
+//     calculateAverageOfSamples(pressures, times, sz, A, B, C);
+//     std::cout << "A: " << A << std::endl;
+//     std::cout << "B: " << B << std::endl;
+//     std::cout << "C: " << C << std::endl;
+//     return 0;
+// }
 #endif

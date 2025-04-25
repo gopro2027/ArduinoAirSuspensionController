@@ -15,6 +15,12 @@ void setup()
     Serial.begin(SERIAL_BAUD_RATE);
     beginSaveData();
 
+#ifdef parabolaLearn
+    // setupSpiffs();
+    //  updateParabola(true, parabola_default_value, parabola_default_value, parabola_default_value);
+    //  updateParabola(false, parabola_default_value, parabola_default_value, parabola_default_value);
+#endif
+
     delay(200); // wait for voltage stabilize
 
     setupADCReadMutex();

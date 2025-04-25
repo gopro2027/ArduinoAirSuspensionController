@@ -109,6 +109,7 @@ bool Scr::isMsgBoxDisplayed()
 
 void Scr::showMsgBox(const char *title, const char *text, const char *yesText, const char *noText, std::function<void()> onYes, std::function<void()> onNo, bool forceButtonPress)
 {
+    resetTouchInputFrame();
     this->mb_dialog = lv_msgbox_create(this->scr);
     this->mb_force_button_press = forceButtonPress;
 

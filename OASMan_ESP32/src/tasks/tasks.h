@@ -14,5 +14,8 @@
 #endif
 
 void setup_tasks();
+#ifdef parabolaLearn
+void start_parabolaLearnTask();
+#endif
 
 #endif

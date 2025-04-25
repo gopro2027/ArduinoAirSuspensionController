@@ -108,6 +108,10 @@ DetectPressureSensorsPacket::DetectPressureSensorsPacket()
 {
     this->cmd = DETECTPRESSURESENSORS;
 }
+CalibratePacket::CalibratePacket()
+{
+    this->cmd = CALIBRATE;
+}
 AirsmPacket::AirsmPacket(int relativeValue)
 {
     this->cmd = AIRSM;

@@ -111,6 +111,36 @@ void task_ota(void *parameters)
     }
 }
 
+#ifdef parabolaLearn
+void task_parabolaLearn(void *parameters)
+{
+    learnParabolaSetup();
+    for (;;)
+    {
+        if (learnParabolaLoop())
+        {
+            Serial.println("Finished parabola learn!");
+            setinternalReboot(true);
+            ESP.restart();
+            return;
+        }
+        delay(100);
+    }
+}
+
+void start_parabolaLearnTask()
+{
+    //  Parabola Task
+    xTaskCreate(
+        task_parabolaLearn,
+        "parabolalearn",
+        512 * 4,
+        NULL,
+        1000,
+        NULL);
+}
+#endif
+
 void setup_tasks()
 {
     //  Bluetooth Task

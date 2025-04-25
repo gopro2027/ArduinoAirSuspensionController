@@ -178,24 +178,11 @@ void Wheel::initPressureGoal(int newPressure, bool quick)
 // height sensor: AA-ROT-120 https://www.aliexpress.us/item/3256807527882480.html https://www.amazon.com/Height-Sensor-Suspension-Leveling-AA-ROT-120/dp/B08DJ3HX1B https://www.aliexpress.us/item/3256806751644782.html
 // Output voltage UA:0.5-4.5
 
-void calc_parabola_vertex(double x1, double y1, double x2, double y2, double x3, double y3, double &A, double &B, double &C)
-{
-    // Adapted and modifed to get the unknowns for defining a parabola:
-    // http://stackoverflow.com/questions/717762/how-to-calculate-the-vertex-of-a-parabola-given-three-points
-    double denom = (x1 - x2) * (x1 - x3) * (x2 - x3);
-    if (abs(denom) < 0.0001)
-        return;
-    A = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / denom;
-    B = (x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1) + x1 * x1 * (y2 - y3)) / denom;
-    C = (x2 * x3 * (x2 - x3) * y1 + x3 * x1 * (x3 - x1) * y2 + x1 * x2 * (x1 - x2) * y3) / denom;
-}
-
-double calc_parabola_y(double A, double B, double C, double x_val)
-{
-    return (A * (x_val * x_val)) + (B * x_val) + C;
-}
-
-// does 2 quick bursts to figure out the rest of the values we want
+// 300 and 700 works quite well but way too long of times
+// 100 and 400 appeared to not be quite enough for an accurate reading. It bounced a lot going from 20 to 90 and undershot, and also going from 90 to 20 it didn't calculate accurately either
+#define VALVE_OPEN_TIME 150
+#define VALVE_STABILIZE_TIME 500
+// does 1 quick burst to figure out the rest of the values we want
 double Wheel::calculatePressureTimingReal(Solenoid *valve)
 {
     int pressureDif = this->pressureGoal - this->getSelectedInputValue();
@@ -205,74 +192,39 @@ double Wheel::calculatePressureTimingReal(Solenoid *valve)
     {
         return valveTime;
     }
-    double pressures[3];
-    double times[3];
+    double pressures[2];
+    double times[2];
     // grab initial value first
     this->readInputs();
     pressures[0] = this->getSelectedInputValue();
     times[0] = 0;
-    // run 2 more times for 50 seconds each to get 3 points to make a graph
-    for (int i = 1; i < 3; i++)
-    {
-        valve->open();
-        delay(100); // too low and we risk innacurate values due to flow timing ect it's not perfect. lower values are less time to stabilize after
-        valve->close();
-        delay(200); // ts jiggles so increased from 150 to 300
-        this->readInputs();
-        pressures[i] = this->getSelectedInputValue();
-        times[i] = times[i - 1] + 150;
-    }
 
-    // This was my attempt to calculate it with time on the x axis but then I realized it actually would form a sideways parabola aka a logarithmic function like y = a * log(x - b) + c
-    // Unfortunately to solve for 3 points on that it is very difficult. It is also annoying to have to use the quadratic formula to solve for y
-    // double A, B, C;
-    // calc_parabola_vertex(times[0], pressures[0], times[1], pressures[1], times[2], pressures[2], A, B, C);
-    // double y = this->pressureGoal;
-    // double Cadj = C - y;
-    // double discriminant = B * B - 4 * A * Cadj;
+    // run 2 more times for 50 seconds each to get 3 points to make a graph (changed 2 just a simple line)
 
-    // // if A is 0, can't divide by 0. If discriminant is less than 0 that means the resulting number is complex aka we asked for a y value that is not contained in the parabola
-    // if ((A < 0.0001 && A > -0.0001) || discriminant < 0)
-    // {
-    //     valveTime;
-    // }
-    // double root1 = (-B + std::sqrt(discriminant)) / (2 * A);
-    // double root2 = (-B - std::sqrt(discriminant)) / (2 * A);
-    // // if both are less than zero, then there is no solution (in practice this is probably never going to happen since our three x values are on the positive side of the x axis)
-    // if (root1 < 0 && root2 < 0)
-    // {
-    //     return valveTime;
-    // }
-    // double root = (root1 < 0) ? root2 : root1;
-    // double timeToGoal = root - times[2];
-    // return timeToGoal;
+    valve->open();
+    delay(VALVE_OPEN_TIME); // too low and we risk innacurate values due to flow timing ect it's not perfect. lower values are less time to stabilize after
+    valve->close();
+    delay(VALVE_STABILIZE_TIME); // ts jiggles so increased from 150 to 300
+    this->readInputs();
+    pressures[1] = this->getSelectedInputValue();
+    times[1] = VALVE_OPEN_TIME * 2;
 
-    // instead... we can just flip the x and y (time and pressure) so we instead log a typical quadratic equation and then also since our x value is now pressure, which does appear to map correctly, we can just plug in our pressure into the equation and we don't have to use the quadratic formula to solve for y.
-    double A, B, C;
-    A = B = C = 0;
-    calc_parabola_vertex(pressures[0], times[0], pressures[1], times[1], pressures[2], times[2], A, B, C);
-    double result = calc_parabola_y(A, B, C, this->pressureGoal) - times[2];
-    if (result < 0)
-    {
-        // i think this would mean we overshot the goal value so go ahead and return 0 so the valve doesn't open
-        return 0;
-    }
-    else if (result > 5000)
+    // we can just flip the x and y (time and pressure) so we instead log a typical quadratic equation and then also since our x value is now pressure, which does appear to map correctly, we can just plug in our pressure into the equation and we don't have to use the quadratic formula to solve for y.
+
+    // formula: y-y1=m(x-x1) & m=(y-y1)/(x-x1) & y=mx+b & b=y-mx
+    double m = (times[1] - times[0] / pressures[1] - pressures[0]);
+    double b = times[0] - m * pressures[0];
+
+    // times[1] = (m * pressures[1] + b)
+    double time = abs((m * pressureGoal + b) - times[1]);
+
+    if (time > 5000)
     {
         // wack value... do it the old way
         return calculateValveOpenTimeMS(abs(this->pressureGoal - this->getSelectedInputValue()), this->quickMode);
     }
-    // Serial.print("Result: ");
-    // Serial.print(result);
-    // Serial.print(" A: ");
-    // Serial.print(A);
-    // Serial.print(" B: ");
-    // Serial.print(B);
-    // Serial.print(" C: ");
-    // Serial.println(C);
 
-    // log_i("A: %d B: %d C: %d Result: %d", A, B, C, result);
-    return result;
+    return time;
 }
 
 // logic https://www.figma.com/board/YOKnd1caeojOlEjpdfY5NF/Untitled?node-id=0-1&node-type=canvas&t=p1SyY3R7azjm1PKs-0
@@ -300,7 +252,7 @@ void Wheel::loop()
             {
                 // Decide which valve to use
                 Solenoid *valve;
-                if (this->pressureGoal > this->getSelectedInputValue())
+                if (pressureDif >= 0)
                 {
                     valve = this->s_AirIn;
                     this->s_AirOut->close();
