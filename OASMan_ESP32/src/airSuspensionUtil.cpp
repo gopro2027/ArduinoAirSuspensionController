@@ -216,7 +216,7 @@ int vehicleOnCounter = 0;
 bool hasJustShutoff = true;
 void accessoryWireLoop()
 {
-    sampleReading(vehicleOn, accessoryWire->digitalRead() == LOW, vehicleOnHistory, vehicleOnCounter, accessoryWireSampleSize);
+    sampleReading(vehicleOn, accessoryWire->digitalRead() == HIGH, vehicleOnHistory, vehicleOnCounter, accessoryWireSampleSize);
     if (isVehicleOn())
     {
         // accessory wire is supplying 12v (car on)
