@@ -472,7 +472,12 @@ void runReceivedPacket(BTOasPacket *packet)
         forceShutoff = true;
         break;
     case BTOasIdentifier::CALIBRATE:
-        Serial.println(F("calibrate does nothign lmao"));
+#ifdef parabolaLearn
+        Serial.println("Starting parabola calibration task");
+        start_parabolaLearnTask();
+#else
+        Serial.println("Feature unfinished");
+#endif
         break;
     case BTOasIdentifier::STARTWEB:
         Serial.println(F("Starting OTA..."));

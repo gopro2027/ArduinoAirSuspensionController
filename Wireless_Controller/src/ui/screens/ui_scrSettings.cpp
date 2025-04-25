@@ -35,18 +35,22 @@ void ScrSettings::init()
                 log_i("Pressed compressor status %i", ((bool)data)); });
 
     this->ui_rebootbutton = new Option(this->optionsContainer, OptionType::BUTTON, "Reboot/Turn Off", defaultCharVal, [](void *data)
-                                       { 
-                                        if (statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON)) {
-                                            RebootPacket pkt;
-                                            sendRestPacket(&pkt);
-                                            log_i("Pressed reboot");
-                                            showDialog("Rebooting...", lv_color_hex(0xFFFF00));
-                                        } else {
-                                            TurnOffPacket pkt;
-                                            sendRestPacket(&pkt);
-                                            log_i("Pressed turn off");
-                                            showDialog("Shutting down", lv_color_hex(0xFFFF00));
-                                        } });
+                                       { currentScr->showMsgBox("Reboot/Turn Off?", NULL, "Confirm", "Cancel", []() -> void
+                                                                {
+                                                                if (statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON))
+                                                                {
+                                                                    RebootPacket pkt;
+                                                                    sendRestPacket(&pkt);
+                                                                    log_i("Pressed reboot");
+                                                                    showDialog("Rebooting...", lv_color_hex(0xFFFF00));
+                                                                }
+                                                                else
+                                                                {
+                                                                    TurnOffPacket pkt;
+                                                                    sendRestPacket(&pkt);
+                                                                    log_i("Pressed turn off");
+                                                                    showDialog("Shutting down", lv_color_hex(0xFFFF00));
+                                                                } }, []() -> void {}, false); });
 
     new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "Basic settings");
@@ -73,11 +77,20 @@ void ScrSettings::init()
                 log_i("Pressed safetymode %i", ((bool)data)); });
 
     new Option(this->optionsContainer, OptionType::BUTTON, "Detect Pressure Sensors", defaultCharVal, [](void *data)
-               {
-                    DetectPressureSensorsPacket pkt;
+               { currentScr->showMsgBox("Detect Pressure Sensors?", "WARNING: YOUR CAR WILL BE AIRED OUT!!!! This routine will auto learn which pressure sensors go to which wheels.", "Confirm", "Cancel", []() -> void
+                                        {
+                                                                    DetectPressureSensorsPacket pkt;
                     sendRestPacket(&pkt);
                     log_i("Pressed detected pressure sensors");
-                    showDialog("Doing calibration routine", lv_color_hex(0xFFFF00)); });
+                    showDialog("Doing detection routine", lv_color_hex(0xFFFF00)); }, []() -> void {}, false); });
+
+    // new Option(this->optionsContainer, OptionType::BUTTON, "Learn System Calibration", defaultCharVal, [](void *data)
+    //            { currentScr->showMsgBox("Learn System Calibration?", "WARNING: YOUR CAR WILL BE AIRED OUT!!!! This routine will take some values to give you smoother presets. Your compressor will fill to full and then take some values.", "Confirm", "Cancel", []() -> void
+    //                                     {
+    //                 CalibratePacket pkt;
+    //                sendRestPacket(&pkt);
+    //                log_i("Pressed learn system calibration");
+    //                showDialog("Doing calibration routine", lv_color_hex(0xFFFF00)); }, []() -> void {}, false); });
 
     new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "Levelling Mode");

@@ -141,6 +141,10 @@ struct DetectPressureSensorsPacket : BTOasPacket
 {
     DetectPressureSensorsPacket();
 };
+struct CalibratePacket : BTOasPacket
+{
+    CalibratePacket();
+};
 struct AirsmPacket : BTOasPacket
 {
     AirsmPacket(int relativeValue);

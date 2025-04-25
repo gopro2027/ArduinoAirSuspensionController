@@ -18,6 +18,7 @@
 #include "airSuspensionUtil.h"
 #include <BTOas.h>
 #include "components/manifold.h"
+#include "tasks/tasks.h"
 
 void ble_setup();
 void ble_loop();

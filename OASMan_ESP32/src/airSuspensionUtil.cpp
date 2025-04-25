@@ -263,6 +263,41 @@ void accessoryWireLoop()
 
 #pragma endregion
 
+void downAllBags(int time)
+{
+    manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_OUT)->open();
+    manifold->get(SOLENOID_INDEX::REAR_PASSENGER_OUT)->open();
+    manifold->get(SOLENOID_INDEX::FRONT_DRIVER_OUT)->open();
+    manifold->get(SOLENOID_INDEX::REAR_DRIVER_OUT)->open();
+    delay(time);
+    manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_OUT)->close();
+    manifold->get(SOLENOID_INDEX::REAR_PASSENGER_OUT)->close();
+    manifold->get(SOLENOID_INDEX::FRONT_DRIVER_OUT)->close();
+    manifold->get(SOLENOID_INDEX::REAR_DRIVER_OUT)->close();
+}
+
+void upAllBags(int time)
+{
+    manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_IN)->open();
+    manifold->get(SOLENOID_INDEX::REAR_PASSENGER_IN)->open();
+    manifold->get(SOLENOID_INDEX::FRONT_DRIVER_IN)->open();
+    manifold->get(SOLENOID_INDEX::REAR_DRIVER_IN)->open();
+    delay(time);
+    manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_IN)->close();
+    manifold->get(SOLENOID_INDEX::REAR_PASSENGER_IN)->close();
+    manifold->get(SOLENOID_INDEX::FRONT_DRIVER_IN)->close();
+    manifold->get(SOLENOID_INDEX::REAR_DRIVER_IN)->close();
+}
+
+double averageBags()
+{
+    getWheel(WHEEL_FRONT_PASSENGER)->readInputs();
+    getWheel(WHEEL_REAR_PASSENGER)->readInputs();
+    getWheel(WHEEL_FRONT_DRIVER)->readInputs();
+    getWheel(WHEEL_REAR_DRIVER)->readInputs();
+    return (double)(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue() + getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue() + getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue() + getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue()) / 4.0;
+}
+
 #pragma region pressure sensor learn
 
 namespace PressureSensorCalibration
@@ -333,15 +368,7 @@ namespace PressureSensorCalibration
         int IDX_TANK;
 
         // STEP 1: Air out all bags
-        manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_OUT)->open();
-        manifold->get(SOLENOID_INDEX::REAR_PASSENGER_OUT)->open();
-        manifold->get(SOLENOID_INDEX::FRONT_DRIVER_OUT)->open();
-        manifold->get(SOLENOID_INDEX::REAR_DRIVER_OUT)->open();
-        delay(20 * 1000);
-        manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_OUT)->close();
-        manifold->get(SOLENOID_INDEX::REAR_PASSENGER_OUT)->close();
-        manifold->get(SOLENOID_INDEX::FRONT_DRIVER_OUT)->close();
-        manifold->get(SOLENOID_INDEX::REAR_DRIVER_OUT)->close();
+        downAllBags(20 * 1000);
 
         delay(500); // wait for pressures to stabilize
 
@@ -375,8 +402,8 @@ namespace PressureSensorCalibration
         // TODO: Finish this and then implement the controller side/bluetooth
         delay(500);
         doBagPressureCheck(IDX_FRONT_PASSENGER, manifold->get(SOLENOID_INDEX::FRONT_PASSENGER_IN));
+        doBagPressureCheck(IDX_FRONT_DRIVER, manifold->get(SOLENOID_INDEX::FRONT_DRIVER_IN)); // this used to be the 3rd one but i changed it to the second because generally we want to air up the front first to avoid cracking a splitter
         doBagPressureCheck(IDX_REAR_PASSENGER, manifold->get(SOLENOID_INDEX::REAR_PASSENGER_IN));
-        doBagPressureCheck(IDX_FRONT_DRIVER, manifold->get(SOLENOID_INDEX::FRONT_DRIVER_IN));
         doBagPressureCheck(IDX_REAR_DRIVER, manifold->get(SOLENOID_INDEX::REAR_DRIVER_IN));
 
         setpressureInputTank(IDX_TANK);
@@ -390,4 +417,107 @@ namespace PressureSensorCalibration
     }
 }
 
+#pragma endregion
+
+#pragma region parabolaLearn
+#ifdef parabolaLearn
+// #include "SPIFFS.h"
+// void setupSpiffs()
+// {
+//     if (!SPIFFS.begin(true))
+//     {
+//         Serial.println("An Error has occurred while mounting SPIFFS");
+//         return;
+//     }
+
+//     File file = SPIFFS.open("/log.txt", FILE_READ);
+//     if (!file)
+//     {
+//         Serial.println("There was an error opening the file for writing");
+//         return;
+//     }
+//     Serial.println("Log.txt data:");
+//     Serial.println(file.readString());
+//     Serial.println("LOG EOL");
+
+//     file.close();
+// }
+void learnParabolaSetup()
+{
+
+    getCompressor()->enableDisableOverride(true); // make sure compressor is on
+    // STEP 1: Air out all bags
+    downAllBags(20 * 1000);
+
+    // getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(20);
+    // getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(20);
+    // getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(20);
+    // getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(20);
+    // while (isAnyWheelActive())
+    // {
+    //     delay(20);
+    // }
+
+    delay(500); // wait for pressures to stabilize
+}
+
+void doParabolaRoutineOneWay(bool up)
+{
+    // file.print(up ? "UP: " : "DOWN: ");
+    const int sz = 10;
+    double pressures[sz];
+    double times[sz];
+
+    times[0] = 0;
+    pressures[0] = averageBags();
+    char buf[30];
+    const int valve_timing = 200;
+    for (int i = 1; i < sz; i++)
+    {
+        if (up)
+        {
+            upAllBags(valve_timing);
+        }
+        else
+        {
+            downAllBags(valve_timing);
+        }
+
+        delay(500); // wait for pressures to stabilize
+        times[i] = i * valve_timing;
+        pressures[i] = averageBags();
+
+        snprintf(buf, sizeof(buf), "(%d,%d),", (int)(pressures[i]), (int)(times[i]));
+        // file.print(buf);
+    }
+    // file.print("\n");
+
+    double A, B, C;
+    A = B = C = 0;
+    // calculateAverageOfSamples(pressures, times, sz, A, B, C);
+    // updateParabola(up, A, B, C);
+}
+
+// returns if it completed or not
+bool learnParabolaLoop()
+{
+    if (getCompressor()->isOn())
+    {
+        return false; // not done filling up yet!
+    }
+
+    Serial.println("Running parabola routine!");
+
+    // File file = SPIFFS.open("/log.txt", FILE_APPEND);
+
+    // do up parabola
+    delay(500);
+    doParabolaRoutineOneWay(true);
+    delay(500);
+    doParabolaRoutineOneWay(false);
+    // file.print("\n");
+    // file.close();
+    return true;
+}
+#endif
 #pragma endregion

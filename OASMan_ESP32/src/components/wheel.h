@@ -28,6 +28,8 @@ private:
     Solenoid *s_AirIn;
     Solenoid *s_AirOut;
 
+    double calculatePressureTimingReal(Solenoid *valve);
+
 public:
     Wheel();
     Wheel(Solenoid *solenoidInPin, Solenoid *solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum);
