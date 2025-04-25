@@ -8,9 +8,13 @@
 #include "manifoldSaveData.h"
 #include "sampleReading.tcc"
 
+// #define parabolaLearn
+
+extern InputType *pressureInputs[5];
 extern Manifold *manifold;
 extern Compressor *compressor;
 extern Wheel *wheel[4];
+extern bool forceShutoff;
 
 #if USE_ADS == true
 extern Adafruit_ADS1115 ADS1115A;
@@ -37,5 +41,13 @@ void accessoryWireLoop();
 void notifyKeepAlive();
 bool isVehicleOn();
 bool isKeepAliveTimerExpired();
-
+namespace PressureSensorCalibration
+{
+    void learnPressureSensorsRoutine();
+}
+#ifdef parabolaLearn
+bool learnParabolaLoop();
+void learnParabolaSetup();
+void setupSpiffs();
+#endif
 #endif

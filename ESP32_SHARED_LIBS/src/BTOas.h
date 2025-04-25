@@ -5,6 +5,7 @@
 #ifndef BTOas_h
 #define BTOas_h
 #include <Arduino.h>
+#include <string>
 
 #include "user_defines.h"
 
@@ -32,7 +33,12 @@ enum BTOasIdentifier
     MAINTAINPRESSURE = 19,
     FALLONSHUTDOWN = 20,
     GETCONFIGVALUES = 21,
-    AUTHPACKET = 22
+    AUTHPACKET = 22,
+    HEIGHTSENSORMODE = 23,
+    COMPRESSORSTATUS = 24,
+    TURNOFF = 25,
+    SAFETYMODE = 26,
+    DETECTPRESSURESENSORS = 27,
 };
 
 enum StatusPacketBittset
@@ -45,7 +51,8 @@ enum StatusPacketBittset
     MAINTAIN_PRESSURE,
     RISE_ON_START,
     AIR_OUT_ON_SHUTOFF,
-
+    HEIGHT_SENSOR_MODE,
+    SAFETY_MODE
 };
 
 enum AuthResult
@@ -130,6 +137,14 @@ struct AiroutPacket : BTOasPacket
 {
     AiroutPacket();
 };
+struct DetectPressureSensorsPacket : BTOasPacket
+{
+    DetectPressureSensorsPacket();
+};
+struct CalibratePacket : BTOasPacket
+{
+    CalibratePacket();
+};
 struct AirsmPacket : BTOasPacket
 {
     AirsmPacket(int relativeValue);
@@ -177,6 +192,14 @@ struct FallOnShutdownPacket : BooleanPacket
 {
     FallOnShutdownPacket(bool enable);
 };
+struct HeightSensorModePacket : BooleanPacket
+{
+    HeightSensorModePacket(bool enable);
+};
+struct SafetyModePacket : BooleanPacket
+{
+    SafetyModePacket(bool enable);
+};
 struct RaiseOnPressureSetPacket : BooleanPacket
 {
     RaiseOnPressureSetPacket(bool enable);
@@ -185,9 +208,17 @@ struct MaintainPressurePacket : BooleanPacket
 {
     MaintainPressurePacket(bool enable);
 };
+struct CompressorStatusPacket : BooleanPacket
+{
+    CompressorStatusPacket(bool enable);
+};
 struct RebootPacket : BTOasPacket
 {
     RebootPacket();
+};
+struct TurnOffPacket : BTOasPacket
+{
+    TurnOffPacket();
 };
 struct StartwebPacket : BTOasPacket
 {
@@ -195,13 +226,14 @@ struct StartwebPacket : BTOasPacket
 };
 struct ConfigValuesPacket : BTOasPacket
 {
-    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax);
+    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage);
     bool *_setValues();
     uint8_t *_bagMaxPressure();
     uint32_t *_systemShutoffTimeM();
     uint8_t *_compressorOnPSI();
     uint8_t *_compressorOffPSI();
     uint16_t *_pressureSensorMax();
+    uint16_t *_bagVolumePercentage();
 };
 struct AuthPacket : BTOasPacket
 {

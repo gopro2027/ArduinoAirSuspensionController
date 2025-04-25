@@ -17,6 +17,9 @@ void Scr::init()
     this->scr = lv_obj_create(NULL);
     lv_obj_remove_flag(this->scr, LV_OBJ_FLAG_SCROLLABLE); /// Flags
 
+    this->mb_dialog = NULL;
+    this->deleteMessageBoxNextFrame = false;
+
     // background color
     this->rect_bg = lv_obj_create(this->scr);
     lv_obj_remove_style_all(this->rect_bg);
@@ -37,11 +40,12 @@ void Scr::init()
     if (this->showPressures)
     {
         // air pressures at top
-        const int xPadding = 45;
-        setupPressureLabel(this->scr, &this->ui_lblPressureFrontDriver, xPadding, 10, LV_ALIGN_TOP_LEFT, "0");
-        setupPressureLabel(this->scr, &this->ui_lblPressureRearDriver, xPadding, 40, LV_ALIGN_TOP_LEFT, "0");
-        setupPressureLabel(this->scr, &this->ui_lblPressureFrontPassenger, -xPadding, 10, LV_ALIGN_TOP_RIGHT, "0");
-        setupPressureLabel(this->scr, &this->ui_lblPressureRearPassenger, -xPadding, 40, LV_ALIGN_TOP_RIGHT, "0");
+        const int xPadding = 72; // pixels from center to end up centered above left/right buttons
+        // for some reas the text is not letting me specify something like "top right" then centering the text over that coordinate. Instead we must use top mid so that it is centered on ittself (ie grows both left and right with width chantge) and then set the offset of that from center.
+        setupPressureLabel(this->scr, &this->ui_lblPressureFrontDriver, -xPadding, 10, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureRearDriver, -xPadding, 40, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureFrontPassenger, xPadding, 10, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureRearPassenger, xPadding, 40, LV_ALIGN_TOP_MID, "0");
         setupPressureLabel(this->scr, &this->ui_lblPressureTank, 0, 10, LV_ALIGN_TOP_MID, "0");
     }
 }
@@ -53,24 +57,114 @@ void Scr::runTouchInput(SimplePoint pos, bool down)
     {
         if (isKeyboardHidden())
         {
-            if (sr_contains(navbarbtn_home, pos))
+            if (!isMsgBoxDisplayed())
             {
-                changeScreen(SCREEN_HOME);
+                if (sr_contains(navbarbtn_home, pos))
+                {
+                    changeScreen(SCREEN_HOME);
+                }
+                if (sr_contains(navbarbtn_presets, pos))
+                {
+                    changeScreen(SCREEN_PRESETS);
+                }
+                if (sr_contains(navbarbtn_settings, pos))
+                {
+                    changeScreen(SCREEN_SETTINGS);
+                }
             }
-            if (sr_contains(navbarbtn_presets, pos))
+        }
+    }
+    else
+    {
+        if (this->mb_dialog != NULL)
+        {
+            if (this->mb_force_button_press == false)
             {
-                changeScreen(SCREEN_PRESETS);
-            }
-            if (sr_contains(navbarbtn_settings, pos))
-            {
-                changeScreen(SCREEN_SETTINGS);
+                this->deleteMessageBoxNextFrame = true;
             }
         }
     }
 }
 
+void dialog_clicked_function(lv_event_t *e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    lv_obj_t *target = (lv_obj_t *)lv_event_get_target(e);
+    DialogData *dialogData = (DialogData *)lv_event_get_user_data(e);
+    if (event_code == LV_EVENT_CLICKED)
+    {
+        currentScr->deleteMessageBoxNextFrame = true; // This should really call this scr instead but i don't appear to have any way to know which one to access hmm... so just using the global currentScr instead
+        resetTouchInputFrame();
+        if (dialogData->callback != NULL)
+        {
+            dialogData->callback();
+        }
+    }
+}
+
+bool Scr::isMsgBoxDisplayed()
+{
+    return this->mb_dialog != NULL;
+}
+
+void Scr::showMsgBox(const char *title, const char *text, const char *yesText, const char *noText, std::function<void()> onYes, std::function<void()> onNo, bool forceButtonPress)
+{
+    resetTouchInputFrame();
+    this->mb_dialog = lv_msgbox_create(this->scr);
+    this->mb_force_button_press = forceButtonPress;
+
+    this->dialogDataYes.callback = onYes;
+    this->dialogDataYes.type = 0; // not used
+
+    this->dialogDataNo.callback = onNo;
+    this->dialogDataNo.type = 0; // not used
+
+    if (title != NULL)
+    {
+        lv_msgbox_add_title(this->mb_dialog, title);
+    }
+    if (text != NULL)
+    {
+        lv_msgbox_add_text(this->mb_dialog, text);
+    }
+    if (yesText != NULL)
+    {
+        lv_obj_t *yesbtn = lv_msgbox_add_footer_button(this->mb_dialog, yesText);
+        lv_obj_set_flex_grow(yesbtn, 1);
+        lv_obj_add_event_cb(yesbtn, dialog_clicked_function, LV_EVENT_CLICKED, (void *)&this->dialogDataYes);
+        lv_obj_set_style_bg_color(yesbtn, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_align(yesbtn, LV_ALIGN_TOP_LEFT);
+    }
+    if (noText != NULL)
+    {
+        lv_obj_t *nobtn = lv_msgbox_add_footer_button(this->mb_dialog, noText);
+        lv_obj_set_flex_grow(nobtn, 1);
+        lv_obj_add_event_cb(nobtn, dialog_clicked_function, LV_EVENT_CLICKED, (void *)&this->dialogDataNo);
+        lv_obj_set_style_bg_color(nobtn, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_align(nobtn, LV_ALIGN_BOTTOM_LEFT);
+    }
+    // lv_obj_t *footer = lv_msgbox_get_footer(this->mb_dialog);
+    // lv_obj_set_flex_grow(footer, 1);
+    //  lv_msgbox_add_close_button(this->mb_dialog); // x button crashes it due to our implementation... I'm guessing it is trying to delete ittself after we have already deleted it? we don't really need it and ui looks better without it anyways.
+
+    lv_obj_set_width(this->mb_dialog, DISPLAY_WIDTH - 20);
+
+    lv_obj_set_style_bg_color(this->mb_dialog, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT); // darker, bg of main
+    if (lv_msgbox_get_header(this->mb_dialog) != NULL)
+    {
+        lv_obj_set_style_bg_color(lv_msgbox_get_header(this->mb_dialog), lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN | LV_STATE_DEFAULT); // halway darkness, header
+    }
+    lv_obj_set_style_border_color(this->mb_dialog, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT); // light purple, border
+}
+
 void Scr::loop()
 {
+    if (this->deleteMessageBoxNextFrame)
+    {
+        lv_msgbox_close(this->mb_dialog);
+        this->mb_dialog = NULL;
+        this->deleteMessageBoxNextFrame = false;
+    }
     SimplePoint tp = {touchX(), touchY()};
     if (isJustPressed())
     {
@@ -84,13 +178,17 @@ void Scr::loop()
     this->alert->loop();
 }
 
-void updatePressure(Scr *scr, lv_obj_t *obj, int index)
+void updatePressure(Scr *scr, lv_obj_t *obj, int index, bool isHeightSensorPercentage)
 {
     if (scr->prevPressures[index] != currentPressures[index])
     {
-        if (getunitsMode() == UNITS_MODE::PSI)
+        if (isHeightSensorPercentage)
         {
-            lv_label_set_text_fmt(obj, "%u", currentPressures[index]);
+            lv_label_set_text_fmt(obj, "%u%%", currentPressures[index]);
+        }
+        else if (getunitsMode() == UNITS_MODE::PSI)
+        {
+            lv_label_set_text_fmt(obj, "%u PSI", currentPressures[index]);
         }
         else
         { // UNITS_MODE::BAR but %f doesn't work
@@ -99,7 +197,7 @@ void updatePressure(Scr *scr, lv_obj_t *obj, int index)
             val = val * 100; // move decimal over 2
             int b = (int)val % 100;
             int a = ((int)val - b) / 100;
-            lv_label_set_text_fmt(obj, "%i.%i", a, b);
+            lv_label_set_text_fmt(obj, "%i.%i Bar", a, b);
         }
         scr->prevPressures[index] = currentPressures[index];
     }
@@ -109,10 +207,11 @@ void Scr::updatePressureValues()
 {
     if (this->showPressures)
     {
-        updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER);
-        updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER);
-        updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER);
-        updatePressure(this, this->ui_lblPressureRearDriver, WHEEL_REAR_DRIVER);
-        updatePressure(this, this->ui_lblPressureTank, _TANK_INDEX);
+        bool hs = statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE);
+        updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER, hs);
+        updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER, hs);
+        updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER, hs);
+        updatePressure(this, this->ui_lblPressureRearDriver, WHEEL_REAR_DRIVER, hs);
+        updatePressure(this, this->ui_lblPressureTank, _TANK_INDEX, false);
     }
 }

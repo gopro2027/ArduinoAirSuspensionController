@@ -9,13 +9,13 @@ void sendHeartbeat()
 {
     bt.print(F(PASSWORD));
     bt.print(F("PRES"));
-    bt.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getPressure()));
+    bt.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue()));
     bt.print(F("|"));
-    bt.print(int(getWheel(WHEEL_REAR_PASSENGER)->getPressure()));
+    bt.print(int(getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue()));
     bt.print(F("|"));
-    bt.print(int(getWheel(WHEEL_FRONT_DRIVER)->getPressure()));
+    bt.print(int(getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue()));
     bt.print(F("|"));
-    bt.print(int(getWheel(WHEEL_REAR_DRIVER)->getPressure()));
+    bt.print(int(getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue()));
     bt.print(F("|"));
     bt.print(int(getCompressor()->getTankPressure()));
     bt.print(F("\n"));

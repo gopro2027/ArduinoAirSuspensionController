@@ -25,10 +25,33 @@ void ScrSettings::init()
     defaultCharVal.STRING = test; //{.STRING = test}
     new Option(this->optionsContainer, OptionType::HEADER, "Status");
     this->ui_s1 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Compressor Frozen:", defaultCharVal);
-    this->ui_s2 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Compressor Status:", defaultCharVal);
     this->ui_s3 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "ACC Status:", defaultCharVal);
     // this->ui_s4 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Timer Expired:", defaultCharVal);
     // this->ui_s5 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Clock:", defaultCharVal);
+    this->ui_s2 = new Option(this->optionsContainer, OptionType::ON_OFF, "Compressor Status", defaultCharVal, [](void *data)
+                             { 
+                CompressorStatusPacket pkt(((bool)data));
+                sendRestPacket(&pkt);
+                log_i("Pressed compressor status %i", ((bool)data)); });
+
+    this->ui_rebootbutton = new Option(this->optionsContainer, OptionType::BUTTON, "Reboot/Turn Off", defaultCharVal, [](void *data)
+                                       { currentScr->showMsgBox("Reboot/Turn Off?", NULL, "Confirm", "Cancel", []() -> void
+                                                                {
+                                                                if (statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON))
+                                                                {
+                                                                    RebootPacket pkt;
+                                                                    sendRestPacket(&pkt);
+                                                                    log_i("Pressed reboot");
+                                                                    showDialog("Rebooting...", lv_color_hex(0xFFFF00));
+                                                                }
+                                                                else
+                                                                {
+                                                                    TurnOffPacket pkt;
+                                                                    sendRestPacket(&pkt);
+                                                                    log_i("Pressed turn off");
+                                                                    showDialog("Shutting down", lv_color_hex(0xFFFF00));
+                                                                } }, []() -> void {}, false); });
+
     new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "Basic settings");
     this->ui_maintainprssure = new Option(this->optionsContainer, OptionType::ON_OFF, "Maintain pressure", defaultCharVal, [](void *data)
@@ -41,11 +64,44 @@ void ScrSettings::init()
                 RiseOnStartPacket pkt(((bool)data));
                 sendRestPacket(&pkt);
                 log_i("Pressed riseonstart %i", ((bool)data)); });
-    this->ui_airoutonshutoff = new Option(this->optionsContainer, OptionType::ON_OFF, "Fall on shutdown", defaultCharVal, [](void *data)
-                                          { 
-                FallOnShutdownPacket pkt(((bool)data));
+    // this->ui_airoutonshutoff = new Option(this->optionsContainer, OptionType::ON_OFF, "Fall on shutdown", defaultCharVal, [](void *data)
+    //                                       {
+    //             FallOnShutdownPacket pkt(((bool)data));
+    //             sendRestPacket(&pkt);
+    //             log_i("Pressed fallonshutdown %i", ((bool)data)); });
+
+    this->ui_safetymode = new Option(this->optionsContainer, OptionType::ON_OFF, "Safety Mode", defaultCharVal, [](void *data)
+                                     { 
+                SafetyModePacket pkt(((bool)data));
                 sendRestPacket(&pkt);
-                log_i("Pressed fallonshutdown %i", ((bool)data)); });
+                log_i("Pressed safetymode %i", ((bool)data)); });
+
+    new Option(this->optionsContainer, OptionType::BUTTON, "Detect Pressure Sensors", defaultCharVal, [](void *data)
+               { currentScr->showMsgBox("Detect Pressure Sensors?", "WARNING: YOUR CAR WILL BE AIRED OUT!!!! This routine will auto learn which pressure sensors go to which wheels.", "Confirm", "Cancel", []() -> void
+                                        {
+                                                                    DetectPressureSensorsPacket pkt;
+                    sendRestPacket(&pkt);
+                    log_i("Pressed detected pressure sensors");
+                    showDialog("Doing detection routine", lv_color_hex(0xFFFF00)); }, []() -> void {}, false); });
+
+    // new Option(this->optionsContainer, OptionType::BUTTON, "Learn System Calibration", defaultCharVal, [](void *data)
+    //            { currentScr->showMsgBox("Learn System Calibration?", "WARNING: YOUR CAR WILL BE AIRED OUT!!!! This routine will take some values to give you smoother presets. Your compressor will fill to full and then take some values.", "Confirm", "Cancel", []() -> void
+    //                                     {
+    //                 CalibratePacket pkt;
+    //                sendRestPacket(&pkt);
+    //                log_i("Pressed learn system calibration");
+    //                showDialog("Doing calibration routine", lv_color_hex(0xFFFF00)); }, []() -> void {}, false); });
+
+    new Option(this->optionsContainer, OptionType::SPACE, "");
+    new Option(this->optionsContainer, OptionType::HEADER, "Levelling Mode");
+
+    const char *levelTypeRadioText[2] = {"Pressure Sensor", "Level Sensor"};
+    option_event_cb_t levelTypeRadioCB = [](void *data)
+    {
+        HeightSensorModePacket pkt(((bool)data));
+        sendRestPacket(&pkt);
+    };
+    this->ui_heightsensormode = new RadioOption(this->optionsContainer, levelTypeRadioText, 2, levelTypeRadioCB);
 
     new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "Units");
@@ -54,6 +110,13 @@ void ScrSettings::init()
     option_event_cb_t unitsRadioCB = [](void *data)
     { setunitsMode((int)data); };
     new RadioOption(this->optionsContainer, unitsRadioText, 2, unitsRadioCB, getunitsMode());
+
+    new Option(this->optionsContainer, OptionType::SPACE, "");
+    new Option(this->optionsContainer, OptionType::HEADER, "Controller Settings");
+
+    new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Dim Screen (Minutes)", {.INT = getscreenDimTimeM()}, [](void *data)
+               { log_i("Pressed %i", ((uint32_t)data));
+        setscreenDimTimeM((uint32_t)data); });
 
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
     new Option(this->optionsContainer, OptionType::HEADER, "Config");
@@ -70,6 +133,8 @@ void ScrSettings::init()
         if (isConnectedToManifold()) {
             AuthPacket pkt(getblePasskey(), AuthResult::AUTHRESULT_UPDATEKEY); // save on manifold
             sendRestPacket(&pkt); 
+        } else {
+            authblacklist.clear();
         }
         alertValueUpdated(); });
 
@@ -97,6 +162,12 @@ void ScrSettings::init()
         sendConfigValuesPacket(true);
     alertValueUpdated(); });
 
+    this->ui_config6 = new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Bag Volume Percentage", {.INT = 0}, [](void *data)
+                                  { log_i("Pressed %i", ((uint32_t)data)); 
+        *util_configValues._bagVolumePercentage() = (uint32_t)data;
+        sendConfigValuesPacket(true);
+    alertValueUpdated(); });
+
     // add space before qr code
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
 
@@ -104,7 +175,7 @@ void ScrSettings::init()
     lv_obj_remove_style_all(qrCodeParent);
     // lv_obj_set_style_bg_opa(qrCodeParent, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_size(qrCodeParent, DISPLAY_WIDTH, 100);
-    // lv_obj_set_style_bg_color(qrCodeParent, lv_color_hex(0xBB86FC), LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_bg_color(qrCodeParent, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);
     // lv_obj_set_x(qrCodeParent, DISPLAY_WIDTH - 100 / 2);
     // lv_obj_set_align(qrCodeParent, LV_ALIGN_TOP_MID);
 
@@ -120,13 +191,15 @@ void ScrSettings::init()
     //  lv_obj_center(this->ui_qrcode);
     //  lv_obj_set_y(this->ui_qrcode, DISPLAY_HEIGHT - 10);
 
-    // test values
+    new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
 
-    // setupPressureLabel(this->optionsContainer, &this->ui_s1, 0, 15 * 0, LV_ALIGN_TOP_MID, "0");
-    // setupPressureLabel(this->optionsContainer, &this->ui_s2, 0, 15 * 1, LV_ALIGN_TOP_MID, "0");
-    // setupPressureLabel(this->optionsContainer, &this->ui_s3, 0, 15 * 2, LV_ALIGN_TOP_MID, "0");
-    // setupPressureLabel(this->optionsContainer, &this->ui_s4, 0, 15 * 3, LV_ALIGN_TOP_MID, "0");
-    // setupPressureLabel(this->optionsContainer, &this->ui_s5, 0, 15 * 4, LV_ALIGN_TOP_MID, "0");
+    OptionValue versionValue;
+#ifdef OFFICIAL_RELEASE
+    versionValue.STRING = EVALUATE_AND_STRINGIFY(RELEASE_VERSION);
+#else
+    versionValue.STRING = "DEVELOPMENT";
+#endif
+    new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Version:", versionValue);
 
     // add space at end of list
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
@@ -143,13 +216,26 @@ void ScrSettings::loop()
 {
     Scr::loop();
     this->ui_s1->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_FROZEN) ? "Yes" : "No");
-    this->ui_s2->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON) ? "On" : "Off");
+    // this->ui_s2->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON) ? "On" : "Off");
     this->ui_s3->setRightHandText(statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON) ? "On" : "Off");
+    if (statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON))
+    {
+        this->ui_rebootbutton->setRightHandText("Reboot");
+    }
+    else
+    {
+        this->ui_rebootbutton->setRightHandText("Shut Down");
+    }
     // this->ui_s4->setRightHandText(statusBittset & (1 << TIMER_STATUS_EXPIRED) ? "Yes" : "No");
     // this->ui_s5->setRightHandText(statusBittset & (1 << CLOCK) ? "1" : "0");
     this->ui_riseonstart->setBooleanValue(statusBittset & (1 << StatusPacketBittset::RISE_ON_START));
     this->ui_maintainprssure->setBooleanValue(statusBittset & (1 << StatusPacketBittset::MAINTAIN_PRESSURE));
-    this->ui_airoutonshutoff->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF));
+    // this->ui_airoutonshutoff->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF));
+    this->ui_heightsensormode->setSelectedOption((statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE)) != 0 ? 1 : 0);
+
+    this->ui_safetymode->setBooleanValue(statusBittset & (1 << StatusPacketBittset::SAFETY_MODE));
+
+    this->ui_s2->setBooleanValue(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON));
 
     if (*util_configValues._setValues())
     {
@@ -160,5 +246,6 @@ void ScrSettings::loop()
         this->ui_config3->setRightHandText(itoa(*util_configValues._compressorOnPSI(), buf, 10));
         this->ui_config4->setRightHandText(itoa(*util_configValues._compressorOffPSI(), buf, 10));
         this->ui_config5->setRightHandText(itoa(*util_configValues._pressureSensorMax(), buf, 10));
+        this->ui_config6->setRightHandText(itoa(*util_configValues._bagVolumePercentage(), buf, 10));
     }
 }

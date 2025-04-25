@@ -45,12 +45,17 @@
 #define solenoidRearDriverInPin new InputType(18, OUTPUT)
 #define solenoidRearDriverOutPin new InputType(17, OUTPUT)
 
+/* Pressure Sensor Inputs. Why are the ads pin nums in this specific order? Oh the world may never know */
+#define pressureSensorInput0 new InputType(0, &ADS1115A) // ADSA/0   Previous: D36/VP/A4   Default: pressureInputFrontPassenger
+#define pressureSensorInput1 new InputType(3, &ADS1115A) // ADSA/3   Previous: D35/A3      Default: pressureInputRearPassenger
+#define pressureSensorInput2 new InputType(2, &ADS1115A) // ADSA/2   Previous: D34/A2      Default: pressureInputFrontDriver
+#define pressureSensorInput3 new InputType(1, &ADS1115A) // ADSA/1   Previous: D39/VN/A7   Default: pressureInputRearDriver
+#define pressureSensorInput4 new InputType(32, INPUT)    // D32/A0, pressure sensor        Default: pressureInputTank
+
 /* Compressor/tank */
 #define compressorRelayPin new InputType(13, OUTPUT) // D13, solenoid
-#define pressureInputTank new InputType(32, INPUT)   // D32/A0, pressure sensor
 
 /* Accessory Wire */
-#define ENABLE_ACCESSORY_WIRE_FUNCTIONALITY false
 #define outputKeepAlivePin new InputType(12, OUTPUT) // D12, output high while accessory input is low to keep input on. Should always output high while accessory is on. Output low when accessory is low to turn off system.
 #define accessoryInput new InputType(14, INPUT)      // D14, digital in high or low. 0 = acc on, 1 = acc off (it's on a pullup resistor)
 #define SYSTEM_SHUTOFF_TIME_M 15                     // 15 minutes
@@ -60,17 +65,11 @@
 #define COMPRESSOR_ON_BELOW_PSI 140
 #define COMPRESSOR_MAX_PSI 180
 
-/* Pressure sensor pins */
-#define pressureInputFrontPassenger new InputType(0, &ADS1115A) // ADSA/0   Previous: D36/VP/A4
-#define pressureInputRearPassenger new InputType(3, &ADS1115A)  // ADSA/3   Previous: D35/A3
-#define pressureInputFrontDriver new InputType(2, &ADS1115A)    // ADSA/2   Previous: D34/A2
-#define pressureInputRearDriver new InputType(1, &ADS1115A)     // ADSA/1   Previous: D39/VN/A7
-
 /* Level sensor pins */
-#define levelInputFrontPassenger new InputType(0, ADS1115B) // ADSB/0
-#define levelInputRearPassenger new InputType(3, ADS1115B)  // ADSB/3
-#define levelInputFrontDriver new InputType(2, ADS1115B)    // ADSB/2
-#define levelInputRearDriver new InputType(1, ADS1115B)     // ADSB/1
+#define levelInputFrontPassenger new InputType(0, &ADS1115B) // ADSB/0
+#define levelInputRearPassenger new InputType(3, &ADS1115B)  // ADSB/3
+#define levelInputFrontDriver new InputType(2, &ADS1115B)    // ADSB/2
+#define levelInputRearDriver new InputType(1, &ADS1115B)     // ADSB/1
 
 /* Set to true if in any of the InputType's above you use ADS (Adafruit_ADS1115) */
 #define USE_ADS true
@@ -80,10 +79,10 @@
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
 
 /* Disable the hang if ads fails to load */
-#define ADS_MOCK_BYPASS false
+#define ADS_MOCK_BYPASS true
 
 /* For testing purposes: mock tank pressure to 200psi */
-#define TANK_PRESSURE_MOCK false
+#define TANK_PRESSURE_MOCK true
 
 /* Values for pressure calculations */
 #define pressuretransducerRunningVoltage 5.0f                                                                                                    // most pressure sensors run on 5v
@@ -97,8 +96,14 @@
 /* The amount of time the pressure routine will try to reach the goal pressure before 'giving up' (usually due to lower pressure in tank or something) Default is 10 seconds. */
 #define ROUTINE_TIMEOUT_MS 10 * 1000
 
+#define AIR_OUT_AFTER_SHUTDOWN_MS 5000
+
 /* Use new BLE with latest features or old classic bluetooth with the classic android app */
 #define USE_BLE true
+
+#define THEME_COLOR_DARK 0x5A4673
+#define THEME_COLOR_MEDIUM 0x9C4DCC
+#define THEME_COLOR_LIGHT 0xBB86FC
 
 /* DO NOT CHANGE ANY PAST THIS LINE */
 #define WHEEL_FRONT_PASSENGER 0
@@ -119,6 +124,13 @@ enum SOLENOID_INDEX
     REAR_DRIVER_OUT
 };
 #define SOLENOID_COUNT 8
+
+// platformio.ini toggleables
+
+#if defined(OFFICIAL_RELEASE)
+#define ADS_MOCK_BYPASS false
+#define TANK_PRESSURE_MOCK false
+#endif
 
 #endif
 

@@ -1,6 +1,6 @@
 # Manifold Assemmbly
 
-Get the 3d prints to print from [here](/3d%20Prints)<br>
+Get the 3d prints to print from [here](https://github.com/gopro2027/ArduinoAirSuspensionController/tree/main/3d%20Prints)<br>
 There are 2 versions, Tall and Short. The tall version is standard with good room for everything to fit well inside of it. The short is 2cm shorter, does not fit the lcd screen, and is there just because, but is not particularly recommended. Required to put something like foam padding between the pcb and the manifold if you use the short version.<br>
 Print them in a plastic with medium-high heat resistance such as PETG or ABS<br>
 Print the lid upside down.<br>
@@ -8,13 +8,17 @@ For the hat please choose the version with or without the screen. Print upright<
 The base prints upright<br>
 <br>
 You can attach the screen to the 3d printed hat with m2 screws. More info below.<br>
-You can attach the pcb board to the 3d printed lid with m3 screws. <sub>Note that one of the screw holes was placed too close to 2 of the resistors on the top left accidentally, but they are connected there so it is fine to have them touch.</sub><br>
+You can attach the pcb board to the 3d printed lid with m3 screws.<br>
 <br>
 On the manifold:<br>port 1 goes to front passenger (right)<br>port 2 goes to rear passenger (right)<br>port 3 goes to front driver (left)<br>port 4 goes to rear driver (left)<br>
-The ports on the opposite side will correspond to the pressure sensors for the same bags.<br>
+
+![20250325_124822](https://github.com/user-attachments/assets/c4aa9cad-d5dc-4b14-9ad2-f6295fd0ce19)
+
+
+The ports on the opposite side will correspond to the pressure sensors for the same bags. **Note:** If you are unsure which pressure sensor goes to which, just install them in any order and run the pressure sensor detection upon first startup.<br>
 Please see the annotated diagram for a full breakdown<br>
 
-![diagram](/photos/esp32/ValvetableAndManifold/ebay_manifold_diagram.png)<br>
+![diagram](https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/main/photos/esp32/ValvetableAndManifold/ebay_manifold_diagram.png)<br>
 ![3d render](https://github.com/user-attachments/assets/d2d7824f-42e0-421b-8ad5-1d28122957a1)
 ![physical pic](https://github.com/user-attachments/assets/8e0fe6bb-de3b-4c31-9984-bb5e53541474)
 

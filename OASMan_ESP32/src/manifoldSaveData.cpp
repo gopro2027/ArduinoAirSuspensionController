@@ -9,9 +9,20 @@ void beginSaveData()
     _SaveData.riseOnStart.load("riseOnStart", false);
     _SaveData.maintainPressure.load("maintainPressure", false);
     _SaveData.airOutOnShutoff.load("airOutOnShutoff", false);
+    _SaveData.heightSensorMode.load("heightSensorMode", false);
     _SaveData.baseProfile.load("baseProfile", 2);
     _SaveData.raiseOnPressure.load("raiseOnPressure", false);
     _SaveData.internalReboot.load("internalReboot", false);
+    _SaveData.learnPressureSensors.load("learnPressureSensors", false);
+    _SaveData.safetyMode.load("safetyMode", true);
+
+    // pressure sensor values
+    _SaveData.pressureInputFrontPassenger.load("PIFP", 0);
+    _SaveData.pressureInputRearPassenger.load("PIRP", 1);
+    _SaveData.pressureInputFrontDriver.load("PIFD", 2);
+    _SaveData.pressureInputRearDriver.load("PIRD", 3);
+    _SaveData.pressureInputTank.load("PIT", 4);
+
     // things moves from inside the user config
     _SaveData.bagMaxPressure.load("bagMaxPressure", MAX_PRESSURE_SAFETY);
     _SaveData.blePasskey.load("blePasskey", BLE_PASSKEY);
@@ -19,13 +30,15 @@ void beginSaveData()
     _SaveData.compressorOnPSI.load("compressorOnPSI", COMPRESSOR_ON_BELOW_PSI);
     _SaveData.compressorOffPSI.load("compressorOffPSI", COMPRESSOR_MAX_PSI);
     _SaveData.pressureSensorMax.load("pressureSensorMax", pressuretransducermaxPSI);
+    _SaveData.bagVolumePercentage.load("bagVolumePercentage", 100);
     for (int i = 0; i < MAX_PROFILE_COUNT; i++)
     {
         for (int j = 0; j < 4; j++)
         {
             // first create a custom name for it. This would probably be better off done as different namespaces or something but idc
-            snprintf(_SaveData.profile[i].pressure[j].name, sizeof(_SaveData.profile[i].pressure[j].name), "profile%i|%i", i, j);
-            _SaveData.profile[i].pressure[j].load(_SaveData.profile[i].pressure[j].name, 50);
+            char buf[15];
+            snprintf(buf, sizeof(buf), "profile%i|%i", i, j);
+            _SaveData.profile[i].pressure[j].load(buf, 50);
         }
     }
 }
@@ -66,9 +79,19 @@ void savePressuresToProfile(byte profileIndex, float _WHEEL_FRONT_PASSENGER, flo
 createSaveFuncInt(riseOnStart, bool);
 createSaveFuncInt(maintainPressure, bool);
 createSaveFuncInt(airOutOnShutoff, bool);
+createSaveFuncInt(heightSensorMode, bool);
 createSaveFuncInt(baseProfile, byte);
 createSaveFuncInt(raiseOnPressure, bool);
 createSaveFuncInt(internalReboot, bool);
+createSaveFuncInt(learnPressureSensors, bool);
+createSaveFuncInt(safetyMode, bool);
+
+// pressure sensor values
+createSaveFuncInt(pressureInputFrontPassenger, byte);
+createSaveFuncInt(pressureInputRearPassenger, byte);
+createSaveFuncInt(pressureInputFrontDriver, byte);
+createSaveFuncInt(pressureInputRearDriver, byte);
+createSaveFuncInt(pressureInputTank, byte);
 
 // values moved from the user defines file
 createSaveFuncInt(bagMaxPressure, uint8_t);
@@ -77,3 +100,9 @@ createSaveFuncInt(systemShutoffTimeM, uint32_t); // may have to change
 createSaveFuncInt(compressorOnPSI, uint8_t);
 createSaveFuncInt(compressorOffPSI, uint8_t);
 createSaveFuncInt(pressureSensorMax, uint16_t);
+createSaveFuncInt(bagVolumePercentage, uint16_t);
+
+float getHeightSensorMax()
+{
+    return 100.0f;
+}

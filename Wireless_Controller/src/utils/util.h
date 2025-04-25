@@ -7,6 +7,9 @@
 #include "lvgl.h"
 #include "ui/components/option.h"
 
+#define STRINGIFY(x) #x
+#define EVALUATE_AND_STRINGIFY(x) STRINGIFY(x)
+
 class Scr;
 class Option;
 
@@ -73,6 +76,8 @@ extern int currentPressures[5];
 extern uint16_t statusBittset;
 extern int profilePressures[5][4];
 extern bool profileUpdated;
+extern int currentPreset;
+void requestPreset();
 extern ConfigValuesPacket util_configValues;
 void sendConfigValuesPacket(bool saveToManifold);
 void onBLEConnectionCompleted();
@@ -93,6 +98,7 @@ void closeValves();
 void setupPressureLabel(lv_obj_t *parent, lv_obj_t **label, int x, int y, lv_align_t align, const char *defaultText);
 
 extern Scr *screens[3];
+extern Scr *currentScr;
 
 enum UNITS_MODE
 {
@@ -105,12 +111,14 @@ class SaveData
 public:
     Preferencable unitsMode;
     Preferencable blePasskey;
+    Preferencable screenDimTimeM;
 };
 
 extern SaveData _SaveData;
 void beginSaveData();
 headerDefineSaveFunc(unitsMode, int);
 headerDefineSaveFunc(blePasskey, uint32_t);
+headerDefineSaveFunc(screenDimTimeM, uint32_t);
 
 void ta_event_cb(lv_event_t *e);
 bool isKeyboardHidden();

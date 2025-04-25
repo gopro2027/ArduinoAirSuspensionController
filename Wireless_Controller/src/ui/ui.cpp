@@ -6,7 +6,7 @@
 #include "ui.h"
 #include "utils/touch_lib.h"
 
-SCREEN currentScreen;
+SCREEN currentScreen = SCREEN_NONE;
 
 void ui_init(void)
 {
@@ -43,16 +43,41 @@ void changeScreen(SCREEN screen)
         break;
     case SCREEN_HOME:
         lv_disp_load_scr(scrHome.scr);
+        currentScr = &scrHome;
         break;
     case SCREEN_PRESETS:
         lv_disp_load_scr(scrPresets.scr);
+        currentScr = &scrPresets;
         break;
     case SCREEN_SETTINGS:
         lv_disp_load_scr(scrSettings.scr);
+        currentScr = &scrSettings;
         break;
     }
 
     screenLoop(); // run one screen loop of the new screen to update things like the alert before it gets shown on screen
+}
+
+void safetyModeMsgBoxCheck()
+{
+    bool safety_mode = (statusBittset & (1 << StatusPacketBittset::SAFETY_MODE)) != 0 ? 1 : 0;
+    static bool hasShownSafetyMode = false;
+    if (safety_mode && hasShownSafetyMode == false)
+    {
+        hasShownSafetyMode = true;
+        // show safety mode dialog
+        static char buf[40];
+        snprintf(buf, sizeof(buf), "Save current height to preset %i?", currentPreset);
+        currentScr->showMsgBox("Safe Boot is ENABLED!", "Safe boot is enabled meaning some features are disabled (your compressor & rise on start). Please check your settings are correct and then disable safe boot. This includes 'Pressure Sensor Rating PSI' and 'Calibrate Pressure Sensors' to check and reassign them if they are not plugged into the correct ports.", "View Settings", "Disable Anyway", []() -> void
+                               { 
+                                    changeScreen(SCREEN_SETTINGS); 
+                                    showDialog("Please check your settings!", lv_color_hex(THEME_COLOR_LIGHT)); }, []() -> void
+                               {
+                                   Serial.println("Disabling safety mode");
+                                   SafetyModePacket pkt(false);
+                                   sendRestPacket(&pkt);
+                                   showDialog("Safety mode disabled!", lv_color_hex(0xFF0000)); }, true);
+    }
 }
 
 void screenLoop()

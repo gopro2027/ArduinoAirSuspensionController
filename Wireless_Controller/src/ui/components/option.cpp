@@ -1,5 +1,5 @@
 #include "option.h"
-lv_style_t stylepointer;
+lv_style_t headerStyle;
 static bool styleCreated = false;
 LV_IMG_DECLARE(imgOn);
 LV_IMG_DECLARE(imgOff);
@@ -14,12 +14,12 @@ void createStyle()
     if (styleCreated == false)
     {
         // create style
-        lv_style_init(&stylepointer);
-        // lv_style_set_bg_color(&stylepointer, lv_color_grey());
-        // lv_style_set_bg_opa(&stylepointer, LV_OPA_50);
-        // lv_style_set_border_width(&stylepointer, 2);
-        // lv_style_set_border_color(&stylepointer, lv_color_black());
-        lv_style_set_text_font(&stylepointer, &lv_font_montserrat_26);
+        lv_style_init(&headerStyle);
+        // lv_style_set_bg_color(&headerStyle, lv_color_grey());
+        // lv_style_set_bg_opa(&headerStyle, LV_OPA_50);
+        // lv_style_set_border_width(&headerStyle, 2);
+        // lv_style_set_border_color(&headerStyle, lv_color_black());
+        lv_style_set_text_font(&headerStyle, &lv_font_montserrat_20);
 
         styleCreated = true;
     }
@@ -53,7 +53,7 @@ void Option::indentText(int extraX)
     lv_obj_remove_style_all(this->bar);
     lv_obj_set_style_bg_opa(this->bar, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_size(this->bar, 1, OPTION_ROW_HEIGHT);
-    lv_obj_set_style_bg_color(this->bar, lv_color_hex(0xBB86FC), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(this->bar, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_x(this->bar, MARGIN);
 }
 void ui_clicked_radioOff(lv_event_t *e)
@@ -77,7 +77,7 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     lv_obj_remove_style_all(this->root);
     lv_obj_set_size(this->root, DISPLAY_WIDTH, OPTION_ROW_HEIGHT);
 
-    if (type != OptionType::SPACE)
+    if (type != OptionType::SPACE && type != OptionType::BUTTON)
     {
         setupPressureLabel(this->root, &this->text, MARGIN, 0, LV_ALIGN_LEFT_MID, text);
     }
@@ -88,7 +88,7 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     }
     else if (type == OptionType::HEADER)
     {
-        lv_obj_add_style(this->text, &stylepointer, LV_PART_MAIN);
+        lv_obj_add_style(this->text, &headerStyle, LV_PART_MAIN);
     }
     else if (type == OptionType::ON_OFF)
     {
@@ -118,6 +118,23 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         this->boolValue = true;
         this->setBooleanValue(false);
     }
+    else if (type == OptionType::BUTTON)
+    {
+        this->text = lv_button_create(this->root);
+
+        lv_obj_t *btntext = lv_label_create(this->text);
+        lv_label_set_text(btntext, text);
+
+        lv_obj_set_style_bg_color(this->text, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);    // bg
+        lv_obj_set_style_border_color(this->text, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT); // border
+
+        lv_obj_add_flag(this->text, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
+        lv_obj_add_event_cb(this->text, ui_clicked_radioOff, LV_EVENT_ALL, this);
+
+        // TODO: add decorations so its purple and such
+
+        this->indentText();
+    }
     else if (type == OptionType::RADIO)
     {
         this->indentText(MARGIN + 16); // lots of indent for the radio
@@ -142,7 +159,6 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     else if (type == OptionType::KEYBOARD_INPUT_NUMBER)
     {
         this->indentText();
-        // setupPressureLabel(this->root, &this->rightHandObj, -MARGIN, 0, LV_ALIGN_RIGHT_MID, itoa(value.INT, strbuf, 10));
         const int textAreaWidth = 70;
         const int textMaxWidth = DISPLAY_WIDTH - (MARGIN * 2 + MARGIN + textAreaWidth) - 6;
         lv_obj_set_width(this->text, textMaxWidth); // space between the start position and the text input
@@ -157,8 +173,8 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         // lv_textarea_set_cursor_hidden(ta, true);
         // lv_obj_set_event_cb(this->rightHandObj, ta_event_handler);
 
-        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(0xBB86FC), LV_PART_MAIN | LV_STATE_DEFAULT);     // bg
-        lv_obj_set_style_border_color(this->rightHandObj, lv_color_hex(0x5A4673), LV_PART_MAIN | LV_STATE_DEFAULT); // border
+        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);    // bg
+        lv_obj_set_style_border_color(this->rightHandObj, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT); // border
 
         lv_obj_set_style_radius(this->rightHandObj, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
         // lv_obj_set_style_border_width(this->rightHandObj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -193,6 +209,14 @@ void Option::setRightHandText(const char *text)
         if (strcmp(lv_textarea_get_text(this->rightHandObj), text) != 0)
         {
             lv_textarea_set_text(this->rightHandObj, text); // itoa(value.INT, strbuf, 10)
+        }
+    }
+    else if (type == OptionType::BUTTON)
+    {
+        lv_obj_t *label = lv_obj_get_child(this->text, 0);
+        if (strcmp(lv_label_get_text(label), text) != 0)
+        {
+            lv_label_set_text(label, text);
         }
     }
 }

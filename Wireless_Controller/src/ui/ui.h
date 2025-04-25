@@ -21,6 +21,7 @@
 
 typedef enum
 {
+    SCREEN_NONE,
     SCREEN_MAIN,
     SCREEN_HOME,
     SCREEN_PRESETS,
@@ -30,6 +31,7 @@ typedef enum
 void ui_init(void);
 void changeScreen(SCREEN screen);
 void screenLoop();
+void safetyModeMsgBoxCheck();
 
 extern SCREEN currentScreen;
 

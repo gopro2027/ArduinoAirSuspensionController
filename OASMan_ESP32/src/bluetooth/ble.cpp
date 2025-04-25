@@ -178,13 +178,13 @@ class CharacteristicCallback : public BLECharacteristicCallbacks
                         {
                             Serial.print("Opening ");
                             Serial.println(i);
-                            getSolenoidFromIndex(i)->open();
+                            getManifold()->get(i)->open();
                         }
                         else
                         {
                             Serial.print("Closing ");
                             Serial.println(i);
-                            getSolenoidFromIndex(i)->close();
+                            getManifold()->get(i)->close();
                         }
                     }
                 }
@@ -337,7 +337,7 @@ void ble_notify()
     if (runNotifications)
     {
         uint16_t statusBittset = 0;
-        if (millis() < getCompressor()->isFrozen())
+        if (getCompressor()->isFrozen())
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::COMPRESSOR_FROZEN);
         }
@@ -369,7 +369,15 @@ void ble_notify()
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF);
         }
-        StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getPressure(), getWheel(WHEEL_REAR_PASSENGER)->getPressure(), getWheel(WHEEL_FRONT_DRIVER)->getPressure(), getWheel(WHEEL_REAR_DRIVER)->getPressure(), getCompressor()->getTankPressure(), statusBittset);
+        if (getheightSensorMode())
+        {
+            statusBittset = statusBittset | (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE);
+        }
+        if (getsafetyMode())
+        {
+            statusBittset = statusBittset | (1 << StatusPacketBittset::SAFETY_MODE);
+        }
+        StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue(), getCompressor()->getTankPressure(), statusBittset);
 
         statusCharacteristic->setValue(statusPacket.tx(), BTOAS_PACKET_SIZE);
         statusCharacteristic->notify(); // we don't do this on the other characteristic thats why it has to be read manually TODO: THIS CRASHED AT ONE POINT????????? HAVING TROUBLE READING THE BLE VALUE. TRY RUNNING IN VERBOSE MODE AND SET IT TO IDLE FOR A LONG TIME TO DEBUG
@@ -402,7 +410,7 @@ void runReceivedPacket(BTOasPacket *packet)
         break;
     case BTOasIdentifier::SAVECURRENTPRESSURESTOPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
         Serial.println("Calling Save Current Pressures To Profile!");
-        savePressuresToProfile(((SaveCurrentPressuresToProfilePacket *)packet)->getProfileIndex(), getWheel(WHEEL_FRONT_PASSENGER)->getPressure(), getWheel(WHEEL_REAR_PASSENGER)->getPressure(), getWheel(WHEEL_FRONT_DRIVER)->getPressure(), getWheel(WHEEL_REAR_DRIVER)->getPressure());
+        savePressuresToProfile(((SaveCurrentPressuresToProfilePacket *)packet)->getProfileIndex(), getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue());
         break;
     case BTOasIdentifier::READPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
         readProfile(((ReadProfilePacket *)packet)->getProfileIndex());
@@ -442,6 +450,16 @@ void runReceivedPacket(BTOasPacket *packet)
     case BTOasIdentifier::FALLONSHUTDOWN:
         setairOutOnShutoff(((FallOnShutdownPacket *)packet)->getBoolean());
         break;
+    case BTOasIdentifier::HEIGHTSENSORMODE:
+        setheightSensorMode(((HeightSensorModePacket *)packet)->getBoolean());
+        break;
+    case BTOasIdentifier::SAFETYMODE:
+        setsafetyMode(((SafetyModePacket *)packet)->getBoolean());
+        break;
+    case BTOasIdentifier::DETECTPRESSURESENSORS:
+        setlearnPressureSensors(true);
+        setinternalReboot(true);
+        break;
     case BTOasIdentifier::RAISEONPRESSURESET:
         setraiseOnPressure(((RaiseOnPressureSetPacket *)packet)->getBoolean());
         break;
@@ -449,8 +467,17 @@ void runReceivedPacket(BTOasPacket *packet)
         setinternalReboot(true);
         Serial.println(F("Rebooting..."));
         break;
+    case BTOasIdentifier::TURNOFF:
+        Serial.println(F("Turning off..."));
+        forceShutoff = true;
+        break;
     case BTOasIdentifier::CALIBRATE:
-        Serial.println(F("calibrate does nothign lmao"));
+#ifdef parabolaLearn
+        Serial.println("Starting parabola calibration task");
+        start_parabolaLearnTask();
+#else
+        Serial.println("Feature unfinished");
+#endif
         break;
     case BTOasIdentifier::STARTWEB:
         Serial.println(F("Starting OTA..."));
@@ -468,6 +495,10 @@ void runReceivedPacket(BTOasPacket *packet)
     case BTOasIdentifier::MAINTAINPRESSURE:
         setmaintainPressure(((MaintainPressurePacket *)packet)->getBoolean());
         break;
+    case BTOasIdentifier::COMPRESSORSTATUS:
+        // TODO: THIS MIGHT HAVE THREADING ISSUES BUT IDK
+        getCompressor()->enableDisableOverride(((CompressorStatusPacket *)packet)->getBoolean());
+        break;
     case BTOasIdentifier::GETCONFIGVALUES:
     {
         ConfigValuesPacket *recpkt = (ConfigValuesPacket *)packet;
@@ -478,8 +509,9 @@ void runReceivedPacket(BTOasPacket *packet)
             setcompressorOnPSI(*recpkt->_compressorOnPSI());
             setcompressorOffPSI(*recpkt->_compressorOffPSI());
             setpressureSensorMax(*recpkt->_pressureSensorMax());
+            setbagVolumePercentage(*recpkt->_bagVolumePercentage());
         }
-        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax());
+        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage());
         restCharacteristic->setValue(pkt.tx(), BTOAS_PACKET_SIZE);
         restCharacteristic->notify();
         break;

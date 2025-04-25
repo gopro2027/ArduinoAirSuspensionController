@@ -1,4 +1,4 @@
-### Controller assembly
+# Controller assembly
 Not much assembly required.<br>
 Print out the case in a material like PETG. I recommend using a carbon fiber texture board personally for aesthetics.<br>
 Purchase your ESP32-2432S032C and battery. If you get the wrong cable on the battery, my ESP32-2432S032C came with the correct battery cable so yours probably will too. Solder that one on.<br>

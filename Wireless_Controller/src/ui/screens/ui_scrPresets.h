@@ -20,6 +20,7 @@ public:
     lv_obj_t *btnPreset5;
     void init();
     void runTouchInput(SimplePoint pos, bool down);
+    void showPresetDialog();
     void loop();
     void setPreset(int num);
     void hideSelectors();

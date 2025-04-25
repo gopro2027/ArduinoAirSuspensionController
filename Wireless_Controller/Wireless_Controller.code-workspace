@@ -85,7 +85,22 @@
 			"option.h": "c",
 			"bitset": "cpp",
 			"regex": "cpp",
-			"preferencable.h": "c"
+			"preferencable.h": "c",
+			"esp_lcd_panel_vendor.h": "c",
+			"esp_lcd_touch.h": "c",
+			"gpio.h": "c",
+			"sdkconfig.h": "c",
+			"esp_lcd_panel_rgb.h": "c",
+			"lcd_types.h": "c",
+			"esp_lcd_panel_io_additions.h": "c",
+			"esp_lcd.h": "c",
+			"esp_lcd_panel_io.h": "c",
+			"radiooption.h": "c",
+			"condition_variable": "cpp",
+			"list": "cpp",
+			"mutex": "cpp",
+			"climits": "cpp",
+			"stack": "cpp"
 		}
 	}
 }

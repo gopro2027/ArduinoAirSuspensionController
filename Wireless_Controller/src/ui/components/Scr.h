@@ -14,6 +14,12 @@
 class Alert;
 struct SimplePoint;
 
+struct DialogData
+{
+    int type;
+    std::function<void()> callback;
+};
+
 class Scr
 {
 public:
@@ -29,12 +35,19 @@ public:
     lv_obj_t *ui_lblPressureRearPassenger;
     lv_obj_t *ui_lblPressureTank;
     int prevPressures[5];
+    lv_obj_t *mb_dialog;
+    DialogData dialogDataYes;
+    DialogData dialogDataNo;
+    bool deleteMessageBoxNextFrame; // want to make sure message box is still shown for the full duration of the current frame that it is deleted on, else the clicks on the dialog closing it will also register on the screen possibly triggering other buttons. Will delete it immediately at beginning of next frame
+    bool mb_force_button_press;
 
     Scr(lv_image_dsc_t navbarImage, bool showPressures);
     virtual void runTouchInput(SimplePoint pos, bool down);
     virtual void init();
     virtual void loop();
     void updatePressureValues();
+    void showMsgBox(const char *title, const char *text, const char *yesText, const char *noText, std::function<void()> onYes, std::function<void()> onNo, bool forceButtonPress);
+    bool isMsgBoxDisplayed();
 };
 
 #endif

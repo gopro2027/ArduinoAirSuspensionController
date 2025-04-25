@@ -26,7 +26,7 @@ public:
     option_event_cb_t onSelect;
 
     RadioOption(lv_obj_t *parent, const char **text, int _size, option_event_cb_t _event_cb, int _selected = 0);
-    void setSelectedOption(int _selected);
+    void setSelectedOption(int _selected, bool callOnSelect = false);
     int getSelectedOption();
     int getOptionIndex(Option *option);
 };

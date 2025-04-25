@@ -104,6 +104,14 @@ AiroutPacket::AiroutPacket()
 {
     this->cmd = AIROUT;
 }
+DetectPressureSensorsPacket::DetectPressureSensorsPacket()
+{
+    this->cmd = DETECTPRESSURESENSORS;
+}
+CalibratePacket::CalibratePacket()
+{
+    this->cmd = CALIBRATE;
+}
 AirsmPacket::AirsmPacket(int relativeValue)
 {
     this->cmd = AIRSM;
@@ -150,6 +158,16 @@ FallOnShutdownPacket::FallOnShutdownPacket(bool enable)
     this->cmd = FALLONSHUTDOWN;
     this->args32()[0].i = enable;
 }
+HeightSensorModePacket::HeightSensorModePacket(bool enable)
+{
+    this->cmd = HEIGHTSENSORMODE;
+    this->args32()[0].i = enable;
+}
+SafetyModePacket::SafetyModePacket(bool enable)
+{
+    this->cmd = SAFETYMODE;
+    this->args32()[0].i = enable;
+}
 RaiseOnPressureSetPacket::RaiseOnPressureSetPacket(bool enable)
 {
     this->cmd = RAISEONPRESSURESET;
@@ -160,9 +178,18 @@ MaintainPressurePacket::MaintainPressurePacket(bool enable)
     this->cmd = MAINTAINPRESSURE;
     this->args32()[0].i = enable;
 }
+CompressorStatusPacket::CompressorStatusPacket(bool enable)
+{
+    this->cmd = COMPRESSORSTATUS;
+    this->args32()[0].i = enable;
+}
 RebootPacket::RebootPacket()
 {
     this->cmd = REBOOT;
+}
+TurnOffPacket::TurnOffPacket()
+{
+    this->cmd = TURNOFF;
 }
 StartwebPacket::StartwebPacket()
 {
@@ -192,7 +219,7 @@ int SetAirheightPacket::getPressure()
 {
     return this->args32()[1].i;
 }
-ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax)
+ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage)
 {
     this->cmd = GETCONFIGVALUES;
     *this->_systemShutoffTimeM() = systemShutoffTimeM;
@@ -200,6 +227,7 @@ ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, u
     *this->_compressorOnPSI() = compressorOnPSI;
     *this->_compressorOffPSI() = compressorOffPSI;
     *this->_pressureSensorMax() = pressureSensorMax;
+    *this->_bagVolumePercentage() = bagVolumePercentage;
     *this->_setValues() = setValues;
 }
 uint32_t *ConfigValuesPacket::_systemShutoffTimeM()
@@ -210,21 +238,25 @@ uint16_t *ConfigValuesPacket::_pressureSensorMax()
 {
     return (uint16_t *)&(this->args16()[2].i);
 }
+uint16_t *ConfigValuesPacket::_bagVolumePercentage()
+{
+    return (uint16_t *)&(this->args16()[3].i);
+}
 uint8_t *ConfigValuesPacket::_bagMaxPressure()
 {
-    return (uint8_t *)&(this->args8()[6 + 0].i);
+    return (uint8_t *)&(this->args8()[8 + 0].i);
 }
 uint8_t *ConfigValuesPacket::_compressorOnPSI()
 {
-    return (uint8_t *)&(this->args8()[6 + 1].i);
+    return (uint8_t *)&(this->args8()[8 + 1].i);
 }
 uint8_t *ConfigValuesPacket::_compressorOffPSI()
 {
-    return (uint8_t *)&(this->args8()[6 + 2].i);
+    return (uint8_t *)&(this->args8()[8 + 2].i);
 }
 bool *ConfigValuesPacket::_setValues()
 {
-    return (bool *)&(this->args8()[6 + 3].i);
+    return (bool *)&(this->args8()[8 + 3].i);
 }
 
 AuthPacket::AuthPacket(uint32_t blePasskey, AuthResult authResult)
