@@ -1,11 +1,11 @@
 # Open Air Suspension Management (OAS-Man)
-![image](https://github.com/user-attachments/assets/2990d62f-51a5-47d8-a54a-e71efa27a2cd)
+[![image](https://github.com/user-attachments/assets/2990d62f-51a5-47d8-a54a-e71efa27a2cd)](https://oasman.dev) 
 <!---![image](https://github.com/user-attachments/assets/ea535981-4f51-4782-8f93-9eb1126dc81b)-->
 
 
 ###  [ <img src="https://github.com/user-attachments/assets/d6edf30f-0ae1-477c-ac8e-d6a4e7444bd0" alt="discord icon" width="40"/> Please click here to join the Discord server](https://discord.gg/pUf7FmHKpg) 
-###  [ <img src="https://github.com/user-attachments/assets/82590a11-25d7-4a6f-9b23-a3656df55c48" alt="update icon" width="40"/> Click here for the oasman installer/update page](https://oasman.dev)
-###  [ <img src="https://github.com/user-attachments/assets/04ea84f8-5977-46fa-a044-c5cdf82e4bf3" alt="tutorial icon" width="40"/> Click here to view the comprehensive build tutorial and documentation!](/tutorial/README.md)
+###  [ <img src="https://github.com/user-attachments/assets/04ea84f8-5977-46fa-a044-c5cdf82e4bf3" alt="tutorial icon" width="40"/> Click here to view the comprehensive build tutorial and documentation!](https://oasman.dev)
+###  [ <img src="https://github.com/user-attachments/assets/82590a11-25d7-4a6f-9b23-a3656df55c48" alt="update icon" width="40"/> Click here for the oasman installer/update page](https://oasman.dev/oasman/flash)
 
 ### Important Info To Potential Creators:
 Please join the discord for more specific information before you built it!<br>
@@ -63,8 +63,8 @@ This github repo includes an android app<sup>1</sup> and arduino code along with
 5. Circuit board single switch off, on the double switch make the top one on and bottom one off (this will power the arduino by 5v from the buck converter. 12 is bottom switch if you want to use that instead but you can ignore it)
 -->
 ![OAS-Man Final v2](https://github.com/user-attachments/assets/7cc1af3d-1113-4094-8ff5-7ee16f282eb0)
-![wireless_contoller](https://github.com/user-attachments/assets/ef3c085b-e8ef-4365-bd6b-093a90eec54d)
+<!--![wireless_contoller](https://github.com/user-attachments/assets/ef3c085b-e8ef-4365-bd6b-093a90eec54d)
 ![manifold](https://github.com/user-attachments/assets/d93784e5-7e5e-4bb0-891a-8a2a8e4d4da0)
-![app_airsuspension](https://user-images.githubusercontent.com/7937950/236578835-0e3a208d-48cf-48e8-a882-4479f1afe35c.png)
+![app_airsuspension](https://user-images.githubusercontent.com/7937950/236578835-0e3a208d-48cf-48e8-a882-4479f1afe35c.png)-->
 <!--![car_airsuspension](https://user-images.githubusercontent.com/7937950/236578918-bfa39ad6-a3b5-4d52-b36a-be34e8c608af.png)-->
-![oasman mascot car](https://github.com/user-attachments/assets/aef9e896-0be0-4203-92d2-81836c27fd5d)
+<!--![oasman mascot car](https://github.com/user-attachments/assets/aef9e896-0be0-4203-92d2-81836c27fd5d)-->

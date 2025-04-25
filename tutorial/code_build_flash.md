@@ -1,17 +1,17 @@
 
 
-### ESP32 Flashing Steps
-# Quick Flashing
-You can quickly and easily flash your main board and wireless controller through your web browser [here gopro2027.github.io/oasman/](https://gopro2027.github.io/oasman/) <br>
+# ESP32 Flashing Steps
+### Quick Flashing
+You can quickly and easily flash your main board and wireless controller through your web browser [here oasman.dev](https://oasman.dev/oasman/flash) <br>
 If you wish to make any customizations to the code, please follow the following information below.
-# Cloning the project code
+### Cloning the project code
 1. Use git to clone the project normally. It is recommended you clone it and not download it, so that you can get future updates easily.
 2. Here is what I recommend if you would like to easily clone the project, and what I will reference in the rest of this documentation:
     1. Dowload and install [github desktop](https://desktop.github.com/download/)
     2. Sign in to your github account
     3. Click clone project and clone `https://github.com/gopro2027/ArduinoAirSuspensionController.git`
     4. You can now choose branches, make your own local branches, pull updates, ect, all from within the GUI of github desktop
-# Building and flashing
+### Building and flashing
 1. Download and install [visual studio code](https://code.visualstudio.com/)
 2. In visual studio code go to extensions (4 cubes icon on lefthand bar) and install "PlatformIO IDE"
 3. Open PlatformIO by clicking the alien icon on the lefthand bar and making sure it fully installs
@@ -21,12 +21,12 @@ If you wish to make any customizations to the code, please follow the following 
 5. Build the project and test for errors:
     1. look in the top right corner and you should see a checkmark that says 'Build' when you hover over it. Click that and verify for no errors.
 6. Install the project onto your esp32 by clicking the dropdown arrow next to the build button and choosing "Upload"
-# Editing the code
+### Editing the code
 1. In github desktop, create a new branch and call it `my_config` or whatever you want
 2. Make edits.
 3. Build and test your changes to make sure it is to your liking
 4. Once you are finished with your edits, go back to github desktop and commit them to your `my_config` branch.
-# Updating to the latest updates
+### Updating to the latest updates
 1. Open github desktop
 2. Select your `my_config` branch as your current branch or `main` if you have no custom configuration
 3. Click `Fetch` in the top right
