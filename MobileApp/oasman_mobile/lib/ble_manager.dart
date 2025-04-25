@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -5,8 +7,12 @@ import 'package:permission_handler/permission_handler.dart';
 class BLEManager extends ChangeNotifier {
   final FlutterBluePlus flutterBlue = FlutterBluePlus(); // BLE instance
   BluetoothDevice? connectedDevice; // Currently connected device
-  BluetoothCharacteristic? writeCharacteristic; // Characteristic for writing data
-  BluetoothCharacteristic? notifyCharacteristic; // Characteristic for notifications
+  BluetoothCharacteristic?
+      restCharacteristic; // Characteristic for writing data
+  BluetoothCharacteristic?
+      statusCharacteristic; // Characteristic for notifications
+  BluetoothCharacteristic?
+      valveControlCharacteristic; // Characteristic for notifications
   List<BluetoothDevice> devicesList = []; // List of discovered devices
 
   Map<String, String> pressureValues = {
@@ -16,6 +22,39 @@ class BLEManager extends ChangeNotifier {
     "rearRight": "-",
     "tankPressure": "-",
   };
+
+  int valveControlValue = 0; // uint32
+  int getValveControlValue() {
+    return valveControlValue;
+  }
+
+  void setValveBit(int bit) {
+    valveControlValue = valveControlValue | (1 << bit);
+    writeValveValue(valveControlValue);
+  }
+
+  void closeValves() {
+    valveControlValue = 0;
+    writeValveValue(valveControlValue);
+  }
+
+  Future<void> writeValveValue(int value) async {
+    if (valveControlCharacteristic != null) {
+      try {
+        if (valveControlCharacteristic!.properties.write) {
+          await valveControlCharacteristic!
+              .write([value], withoutResponse: false);
+          print("Command sent successfully: \$command");
+        } else {
+          print("Write characteristic does not support write operations.");
+        }
+      } catch (e) {
+        print("Error sending command: \$e");
+      }
+    } else {
+      print("No write characteristic available.");
+    }
+  }
 
   bool isScanning = false;
 
@@ -92,8 +131,8 @@ class BLEManager extends ChangeNotifier {
         print("Error disconnecting: \$e");
       } finally {
         connectedDevice = null;
-        writeCharacteristic = null;
-        notifyCharacteristic = null;
+        restCharacteristic = null;
+        statusCharacteristic = null;
         notifyListeners();
       }
     }
@@ -104,19 +143,29 @@ class BLEManager extends ChangeNotifier {
     try {
       List<BluetoothService> services = await device.discoverServices();
       for (BluetoothService service in services) {
-        for (BluetoothCharacteristic characteristic in service.characteristics) {
-          if (characteristic.uuid.toString().toLowerCase() == "f573f13f-b38e-415e-b8f0-59a6a19a4e02") {
-            writeCharacteristic = characteristic;
+        for (BluetoothCharacteristic characteristic
+            in service.characteristics) {
+          if (characteristic.uuid.toString().toLowerCase() ==
+              "f573f13f-b38e-415e-b8f0-59a6a19a4e02") {
+            restCharacteristic = characteristic;
             print("Write characteristic found: \${characteristic.uuid}");
           }
 
-          if (characteristic.properties.notify) {
-            notifyCharacteristic = characteristic;
+          if (characteristic.uuid.toString().toLowerCase() ==
+              "66fda100-8972-4ec7-971c-3fd30b3072ac") {
+            statusCharacteristic = characteristic;
             await characteristic.setNotifyValue(true);
             characteristic.value.listen((value) {
               _handleIncomingData(value);
             });
             print("Notify characteristic found: \${characteristic.uuid}");
+          }
+
+          if (characteristic.uuid.toString().toLowerCase() ==
+              "e225a15a-e816-4e9d-99b7-c384f91f273b") {
+            valveControlCharacteristic = characteristic;
+            print(
+                "Valve control characteristic found: \${characteristic.uuid}");
           }
         }
       }
@@ -129,10 +178,11 @@ class BLEManager extends ChangeNotifier {
 
   /// Send a command to the connected device
   Future<void> sendCommand(String command) async {
-    if (writeCharacteristic != null) {
+    if (restCharacteristic != null) {
       try {
-        if (writeCharacteristic!.properties.write) {
-          await writeCharacteristic!.write(command.codeUnits, withoutResponse: false);
+        if (restCharacteristic!.properties.write) {
+          await restCharacteristic!
+              .write(command.codeUnits, withoutResponse: false);
           print("Command sent successfully: \$command");
         } else {
           print("Write characteristic does not support write operations.");
