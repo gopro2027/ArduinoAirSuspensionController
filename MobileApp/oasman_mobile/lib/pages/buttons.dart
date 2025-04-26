@@ -157,7 +157,12 @@ class _ButtonsPageState extends State<ButtonsPage> {
                                   setState(() {
                                     _selectedPreset = i;
                                   });
-                                  bleManager.sendCommand("PRESET_$i");
+
+                                  _handleCommand(
+                                      context,
+                                      bleManager.buildRestPacket(
+                                          7 /*AIRUPQUICK*/, [BLEInt(i - 1)]));
+                                  //bleManager.sendCommand("PRESET_$i");
                                   print('Preset $i Command Sent');
                                 } else {
                                   showDialog(
@@ -193,9 +198,9 @@ class _ButtonsPageState extends State<ButtonsPage> {
     );
   }
 
-  void _handleCommand(BuildContext context, String command) {
+  void _handleCommand(BuildContext context, List<int> command) {
     if (bleManager.connectedDevice != null) {
-      bleManager.sendCommand(command);
+      bleManager.sendRestCommand(command);
       print('$command Command Sent');
     } else {
       showDialog(

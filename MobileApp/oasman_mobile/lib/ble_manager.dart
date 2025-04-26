@@ -1,28 +1,41 @@
+import 'dart:async';
 import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:oasman_mobile/bluetooth.dart';
+import 'package:oasman_mobile/pages/popup/invalidkey.dart';
 import 'package:permission_handler/permission_handler.dart';
 import "dart:typed_data";
 
-class Short {
-  Short(this.value);
+class BLEByte {
+  BLEByte(this.value);
   int value;
 
-  Short from(int value) {
-    return Short(value);
+  BLEByte from(int value) {
+    return BLEByte(value);
+  }
+
+  int toByte() => value;
+}
+
+class BLEShort {
+  BLEShort(this.value);
+  int value;
+
+  BLEShort from(int value) {
+    return BLEShort(value);
   }
 
   int toShort() => value;
 }
 
-class Int {
-  Int(this.value);
+class BLEInt {
+  BLEInt(this.value);
   int value;
 
-  Int from(int value) {
-    return Int(value);
+  BLEInt from(int value) {
+    return BLEInt(value);
   }
 
   int toInt() => value;
@@ -37,7 +50,11 @@ class BLEManager extends ChangeNotifier {
       statusCharacteristic; // Characteristic for notifications
   BluetoothCharacteristic?
       valveControlCharacteristic; // Characteristic for notifications
+  StreamSubscription<List<int>>? restStream;
+  StreamSubscription<List<int>>? statusStream;
+
   List<BluetoothDevice> devicesList = []; // List of discovered devices
+  int passkey = 202777;
 
   Map<String, String> pressureValues = {
     "frontLeft": "-",
@@ -128,7 +145,8 @@ class BLEManager extends ChangeNotifier {
   }
 
   /// Connect to a selected device
-  Future<void> connectToDevice(BluetoothDevice device) async {
+  Future<void> connectToDevice(
+      BluetoothDevice device, BuildContext context) async {
     try {
       print("Connecting to device: ${device.name} (${device.id})");
       await device.connect(autoConnect: false);
@@ -136,7 +154,7 @@ class BLEManager extends ChangeNotifier {
       connectedDevice = device;
       notifyListeners();
 
-      await discoverServices(device);
+      await discoverServices(device, context);
 
       print("Successfully connected to ${device.name} (${device.id})");
     } catch (e) {
@@ -150,6 +168,9 @@ class BLEManager extends ChangeNotifier {
     if (connectedDevice != null) {
       try {
         await connectedDevice!.disconnect();
+        restStream?.cancel();
+        statusStream?.cancel();
+
         print("Disconnected from device: ${connectedDevice!.name}");
       } catch (e) {
         print("Error disconnecting: $e");
@@ -163,10 +184,10 @@ class BLEManager extends ChangeNotifier {
   }
 
 // uses our versions of short and int
-  Uint8List int32BigEndianBytes(Int value) =>
+  Uint8List int32BigEndianBytes(BLEInt value) =>
       Uint8List(4)..buffer.asByteData().setInt32(0, value.toInt(), Endian.big);
 
-  Uint8List int16BigEndianBytes(Short value) => Uint8List(2)
+  Uint8List int16BigEndianBytes(BLEShort value) => Uint8List(2)
     ..buffer.asByteData().setInt16(0, value.toShort(), Endian.big);
 
   List<int> buildRestPacket(int cmd, List<Object> data) {
@@ -179,7 +200,7 @@ class BLEManager extends ChangeNotifier {
 
     int carrier = 4;
     for (Object obj in data) {
-      if (obj is Int) {
+      if (obj is BLEInt) {
         Uint8List intbytes = int32BigEndianBytes(obj);
         ret.add(intbytes[3]); //(obj >> 24) & 0xFF;
         ret.add(intbytes[2]); //(obj >> 16) & 0xFF;
@@ -187,7 +208,7 @@ class BLEManager extends ChangeNotifier {
         ret.add(intbytes[0]); //obj & 0xFF;
         carrier = carrier + 4;
       }
-      if (obj is Short) {
+      if (obj is BLEShort) {
         Uint8List shortbytes = int16BigEndianBytes(obj);
         ret.add(shortbytes[1]);
         ret.add(shortbytes[0]);
@@ -197,13 +218,14 @@ class BLEManager extends ChangeNotifier {
     return ret;
   }
 
-  Future<void> authCheck(BluetoothDevice device) async {
+  Future<void> authCheck() async {
     sendRestCommand(buildRestPacket(22 /*AUTHPACKET id*/,
-        [Int(202777), Short(0 /*AuthResult::AUTHRESULT_WAITING*/)]));
+        [BLEInt(passkey), BLEInt(0 /*AuthResult::AUTHRESULT_WAITING*/)]));
   }
 
   /// Discover services and characteristics
-  Future<void> discoverServices(BluetoothDevice device) async {
+  Future<void> discoverServices(
+      BluetoothDevice device, BuildContext context) async {
     try {
       List<BluetoothService> services = await device.discoverServices();
       for (BluetoothService service in services) {
@@ -212,11 +234,12 @@ class BLEManager extends ChangeNotifier {
           if (characteristic.uuid.toString().toLowerCase() ==
               "f573f13f-b38e-415e-b8f0-59a6a19a4e02") {
             restCharacteristic = characteristic;
-            characteristic.value.listen((value) {
-              _handleIncomingRestData(value);
+            await characteristic.setNotifyValue(true);
+            restStream = characteristic.onValueReceived.listen((value) {
+              _handleIncomingRestData(value, context);
             });
             print("doing auth check");
-            await authCheck(device);
+            await authCheck();
             print("Write characteristic found: ${characteristic.uuid}");
           }
 
@@ -224,7 +247,7 @@ class BLEManager extends ChangeNotifier {
               "66fda100-8972-4ec7-971c-3fd30b3072ac") {
             statusCharacteristic = characteristic;
             await characteristic.setNotifyValue(true);
-            characteristic.value.listen((value) {
+            statusStream = characteristic.onValueReceived.listen((value) {
               _handleIncomingData(value);
             });
             print("Notify characteristic found: ${characteristic.uuid}");
@@ -267,21 +290,29 @@ class BLEManager extends ChangeNotifier {
     }
   }
 
-  void _handleIncomingRestData(List<int> data) {
+  void _handleIncomingRestData(List<int> data, BuildContext context) {
     try {
-      if (data.length >= 16) {
-        final packetId = _decodeInt32(data, 0);
-
-        if (packetId == 22) {
-          print("Received auth result");
-          print(_decodeInt32(data, 1).toString());
+      //if (data.length >= 16) {
+      final packetId = _decodeInt32(data, 0);
+      print("Received data: $data");
+      print("Rest Packet ID: $packetId");
+      if (packetId == 22) {
+        print("Received auth result");
+        //print(_decodeInt32(data, 4).toString());
+        //print(_decodeInt32(data, 8).toString());
+        if (_decodeInt32(data, 8) == 2 /*AuthResult::AUTHRESULT_FAIL*/) {
+          disconnectDevice();
+          showDialog(
+            context: context,
+            builder: (_) => const InvalidPasskeyPopup(),
+          );
         }
-
-        print("Rest Packet ID: $packetId");
-        notifyListeners();
-      } else {
-        print("Received data is too short: $data");
       }
+
+      notifyListeners();
+      //} else {
+      //print("Received data is too short: $data");
+      //}
     } catch (e) {
       print("Error handling incoming data: $e");
     }

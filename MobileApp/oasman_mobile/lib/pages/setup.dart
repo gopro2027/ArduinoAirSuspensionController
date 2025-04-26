@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'header.dart';
 import 'package:provider/provider.dart';
 import '../provider/unit_provider.dart';
+import '../ble_manager.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -11,6 +12,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  late BLEManager bleManager;
   String inputType = 'Buttons';
   bool maintainPressure = true;
   bool riseOnStart = true;
@@ -22,41 +24,97 @@ class _SettingsPageState extends State<SettingsPage> {
   double solenoidPsi = 5.0;
   String readoutType = 'Height sensors';
   String units = 'Psi';
+  String passkeyText = '202777';
 
- @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: const Color(0xFF121212),
-    body: Column(
-      children: [
-      
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    bleManager = Provider.of<BLEManager>(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF121212),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildBluetoothSection(),
+                  _buildInputTypeSection(),
+                  _buildBasicSettingsSection(),
+                  _buildDropDownWhenOffSection(),
+                  _buildLiftUpWhenOnSection(),
+                  _buildSolenoidsSection(),
+                  _buildReadoutTypeSection(),
+                  _buildTankPressureSection(),
+                  _buildDutyCycleSection(),
+                  _buildUnitsSection(context),
+                  _buildSystemSection(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBluetoothSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'BLE Settings',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+              ),
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildInputTypeSection(),
-                _buildBasicSettingsSection(),
-                _buildDropDownWhenOffSection(),
-                _buildLiftUpWhenOnSection(),
-                _buildSolenoidsSection(),
-                _buildReadoutTypeSection(),
-                _buildTankPressureSection(),
-                _buildDutyCycleSection(),
-                _buildUnitsSection(context),
-                _buildSystemSection(),
+                _buildKeyboardInputRow(
+                  "Passkey",
+                  passkeyText,
+                  (value) {
+                    try {
+                      bleManager.passkey = int.parse(value);
+                      setState(() {
+                        passkeyText = value;
+                      });
+                    } catch (e) {
+                      print(e);
+                      bleManager.passkey = 202777;
+                      setState(() {
+                        // not really working ugh
+                        passkeyText = "202777";
+                      });
+                    }
+                  },
+                ),
               ],
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
-
-  
   Widget _buildInputTypeSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24.0),
@@ -76,7 +134,7 @@ Widget build(BuildContext context) {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             decoration: BoxDecoration(
               border: Border(
-                left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
               ),
             ),
             child: Column(
@@ -93,7 +151,7 @@ Widget build(BuildContext context) {
                       inputType = value!;
                     });
                   },
-                  activeColor: Color(0xFFBB86FC) ,
+                  activeColor: Color(0xFFBB86FC),
                 ),
                 RadioListTile<String>(
                   title: Text(
@@ -107,7 +165,7 @@ Widget build(BuildContext context) {
                       inputType = value!;
                     });
                   },
-                  activeColor: Color(0xFFBB86FC) ,
+                  activeColor: Color(0xFFBB86FC),
                 ),
               ],
             ),
@@ -136,7 +194,7 @@ Widget build(BuildContext context) {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             decoration: BoxDecoration(
               border: Border(
-                left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
               ),
             ),
             child: Column(
@@ -200,16 +258,17 @@ Widget build(BuildContext context) {
                     dropDownWhenOff = value;
                   });
                 },
-                activeColor: Color(0xFFBB86FC) ,
+                activeColor: Color(0xFFBB86FC),
               ),
             ],
           ),
           if (dropDownWhenOff)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
               decoration: BoxDecoration(
                 border: Border(
-                  left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+                  left: BorderSide(color: Color(0xFFBB86FC), width: 2),
                 ),
               ),
               child: Row(
@@ -222,7 +281,7 @@ Widget build(BuildContext context) {
                   Row(
                     children: [
                       IconButton(
-                        icon: Icon(Icons.remove, color: Color(0xFFBB86FC) ),
+                        icon: Icon(Icons.remove, color: Color(0xFFBB86FC)),
                         onPressed: () {
                           setState(() {
                             if (dropDownDelay > 0) dropDownDelay--;
@@ -234,7 +293,7 @@ Widget build(BuildContext context) {
                         style: TextStyle(color: Colors.white, fontSize: 16),
                       ),
                       IconButton(
-                        icon: Icon(Icons.add, color: Color(0xFFBB86FC) ),
+                        icon: Icon(Icons.add, color: Color(0xFFBB86FC)),
                         onPressed: () {
                           setState(() {
                             dropDownDelay++;
@@ -275,16 +334,17 @@ Widget build(BuildContext context) {
                     liftUpWhenOn = value;
                   });
                 },
-                activeColor: Color(0xFFBB86FC) ,
+                activeColor: Color(0xFFBB86FC),
               ),
             ],
           ),
           if (liftUpWhenOn)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
               decoration: BoxDecoration(
                 border: Border(
-                  left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+                  left: BorderSide(color: Color(0xFFBB86FC), width: 2),
                 ),
               ),
               child: Row(
@@ -297,7 +357,7 @@ Widget build(BuildContext context) {
                   Row(
                     children: [
                       IconButton(
-                        icon: Icon(Icons.remove, color: Color(0xFFBB86FC) ),
+                        icon: Icon(Icons.remove, color: Color(0xFFBB86FC)),
                         onPressed: () {
                           setState(() {
                             if (liftUpDelay > 0) liftUpDelay--;
@@ -309,7 +369,7 @@ Widget build(BuildContext context) {
                         style: TextStyle(color: Colors.white, fontSize: 16),
                       ),
                       IconButton(
-                        icon: Icon(Icons.add, color: Color(0xFFBB86FC) ),
+                        icon: Icon(Icons.add, color: Color(0xFFBB86FC)),
                         onPressed: () {
                           setState(() {
                             liftUpDelay++;
@@ -345,7 +405,7 @@ Widget build(BuildContext context) {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             decoration: BoxDecoration(
               border: Border(
-                left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
               ),
             ),
             child: Column(
@@ -377,11 +437,12 @@ Widget build(BuildContext context) {
                     ElevatedButton(
                       onPressed: () {},
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFBB86FC) ,
+                        backgroundColor: Color(0xFFBB86FC),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8.0),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                       ),
                       child: const Text(
                         'Calibrate',
@@ -397,7 +458,7 @@ Widget build(BuildContext context) {
                       ),
                       child: const Text(
                         'Remove calibration',
-                        style: TextStyle(color: Color(0xFFBB86FC) ),
+                        style: TextStyle(color: Color(0xFFBB86FC)),
                       ),
                     ),
                   ],
@@ -429,7 +490,7 @@ Widget build(BuildContext context) {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             decoration: BoxDecoration(
               border: Border(
-                left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
               ),
             ),
             child: Column(
@@ -446,7 +507,7 @@ Widget build(BuildContext context) {
                       readoutType = value!;
                     });
                   },
-                  activeColor: Color(0xFFBB86FC) ,
+                  activeColor: Color(0xFFBB86FC),
                 ),
                 RadioListTile<String>(
                   title: Text(
@@ -460,7 +521,7 @@ Widget build(BuildContext context) {
                       readoutType = value!;
                     });
                   },
-                  activeColor: Color(0xFFBB86FC) ,
+                  activeColor: Color(0xFFBB86FC),
                 ),
               ],
             ),
@@ -489,17 +550,18 @@ Widget build(BuildContext context) {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             decoration: BoxDecoration(
               border: Border(
-                left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
               ),
             ),
             child: ElevatedButton(
               onPressed: () {},
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFBB86FC) ,
+                backgroundColor: Color(0xFFBB86FC),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8.0),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
               child: const Text(
                 'Set tank pressure',
@@ -512,7 +574,8 @@ Widget build(BuildContext context) {
     );
   }
 
-  Widget _buildAdjustableRow(String label, double value, String unit, ValueChanged<double> onChanged) {
+  Widget _buildAdjustableRow(
+      String label, double value, String unit, ValueChanged<double> onChanged) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -527,7 +590,7 @@ Widget build(BuildContext context) {
           Row(
             children: [
               IconButton(
-                icon: Icon(Icons.remove, color: Color(0xFFBB86FC) ),
+                icon: Icon(Icons.remove, color: Color(0xFFBB86FC)),
                 onPressed: () {
                   if (value > 0) {
                     onChanged(value - 1);
@@ -539,12 +602,40 @@ Widget build(BuildContext context) {
                 style: TextStyle(color: Colors.white, fontSize: 16),
               ),
               IconButton(
-                icon: Icon(Icons.add, color: Color(0xFFBB86FC) ),
+                icon: Icon(Icons.add, color: Color(0xFFBB86FC)),
                 onPressed: () {
                   onChanged(value + 1);
                 },
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKeyboardInputRow(
+      String label, String value, ValueChanged<String> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ),
+          Expanded(
+            child: TextFormField(
+              initialValue: value,
+              onChanged: onChanged,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Enter your manifold passkey',
+              ),
+            ),
           ),
         ],
       ),
@@ -562,161 +653,158 @@ Widget build(BuildContext context) {
             style: TextStyle(color: Colors.white, fontSize: 16),
           ),
           Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: Color(0xFFBB86FC) 
-          ),
+              value: value,
+              onChanged: onChanged,
+              activeColor: Color(0xFFBB86FC)),
         ],
       ),
     );
   }
 }
-  Widget _buildDutyCycleSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Duty cycle',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+
+Widget _buildDutyCycleSection() {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 24.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Duty cycle',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(color: Color(0xFFBB86FC), width: 2),
             ),
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+          child: ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFFBB86FC),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
               ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFBB86FC) ,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: const Text(
-                'Set Duty cycle',
-                style: TextStyle(color: Colors.black),
-              ),
+            child: const Text(
+              'Set Duty cycle',
+              style: TextStyle(color: Colors.black),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
-    
-  Widget _buildUnitsSection(BuildContext context) {
-    return Consumer<UnitProvider>(
-      builder: (context, unitProvider, child) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Units',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+Widget _buildUnitsSection(BuildContext context) {
+  return Consumer<UnitProvider>(
+    builder: (context, unitProvider, child) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Units',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            RadioListTile<String>(
+              title: const Text('Psi', style: TextStyle(color: Colors.white)),
+              value: 'Psi',
+              groupValue: unitProvider.unit,
+              onChanged: (value) {
+                unitProvider.setUnit(value!);
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('Bar', style: TextStyle(color: Colors.white)),
+              value: 'Bar',
+              groupValue: unitProvider.unit,
+              onChanged: (value) {
+                unitProvider.setUnit(value!);
+              },
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildSystemSection() {
+  String system = '2 point';
+
+  return StatefulBuilder(
+    builder: (BuildContext context, StateSetter setState) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'System',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: Color(0xFFBB86FC), width: 2),
                 ),
               ),
-              RadioListTile<String>(
-                title: const Text('Psi', style: TextStyle(color: Colors.white)),
-                value: 'Psi',
-                groupValue: unitProvider.unit,
-                onChanged: (value) {
-                  unitProvider.setUnit(value!);
-                },
-              ),
-              RadioListTile<String>(
-                title: const Text('Bar', style: TextStyle(color: Colors.white)),
-                value: 'Bar',
-                groupValue: unitProvider.unit,
-                onChanged: (value) {
-                  unitProvider.setUnit(value!);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-    Widget _buildSystemSection() {
-    String system = '2 point';
-
-    return StatefulBuilder(
-      builder: (BuildContext context, StateSetter setState) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'System',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: Color(0xFFBB86FC) , width: 2),
+              child: Column(
+                children: [
+                  RadioListTile<String>(
+                    title: Text(
+                      '4 point',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    value: '4 point',
+                    groupValue: system,
+                    onChanged: (value) {
+                      setState(() {
+                        system = value!;
+                      });
+                    },
+                    activeColor: Color(0xFFBB86FC),
                   ),
-                ),
-                child: Column(
-                  children: [
-                    RadioListTile<String>(
-                      title: Text(
-                        '4 point',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      value: '4 point',
-                      groupValue: system,
-                      onChanged: (value) {
-                        setState(() {
-                          system = value!;
-                        });
-                      },
-                      activeColor: Color(0xFFBB86FC) ,
+                  RadioListTile<String>(
+                    title: Text(
+                      '2 point',
+                      style: TextStyle(color: Colors.white),
                     ),
-                    RadioListTile<String>(
-                      title: Text(
-                        '2 point',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      value: '2 point',
-                      groupValue: system,
-                      onChanged: (value) {
-                        setState(() {
-                          system = value!;
-                        });
-                      },
-                      activeColor: Color(0xFFBB86FC) ,
-                    ),
-                  ],
-                ),
+                    value: '2 point',
+                    groupValue: system,
+                    onChanged: (value) {
+                      setState(() {
+                        system = value!;
+                      });
+                    },
+                    activeColor: Color(0xFFBB86FC),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
