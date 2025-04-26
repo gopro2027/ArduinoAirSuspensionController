@@ -11,6 +11,17 @@ class ButtonsPage extends StatefulWidget {
   _ButtonsPageState createState() => _ButtonsPageState();
 }
 
+enum SOLENOID_INDEX {
+  FRONT_PASSENGER_IN,
+  FRONT_PASSENGER_OUT,
+  REAR_PASSENGER_IN,
+  REAR_PASSENGER_OUT,
+  FRONT_DRIVER_IN,
+  FRONT_DRIVER_OUT,
+  REAR_DRIVER_IN,
+  REAR_DRIVER_OUT
+}
+
 class _ButtonsPageState extends State<ButtonsPage> {
   late BLEManager bleManager;
   int _selectedPreset = -1;
@@ -36,8 +47,6 @@ class _ButtonsPageState extends State<ButtonsPage> {
               child: IntrinsicHeight(
                 child: Column(
                   children: [
-                    const Header(),
-
                     // Control Buttons Section
                     Expanded(
                       child: Padding(
@@ -49,23 +58,42 @@ class _ButtonsPageState extends State<ButtonsPage> {
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
                                 OvalControlButton(
-                                  iconUp: Icons.keyboard_arrow_up,
-                                  iconDown: Icons.keyboard_arrow_down,
-                                  onUpPressed: () => _handleCommand(context, "LEFT_FRONT_UP"),
-                                  onDownPressed: () => _handleCommand(context, "LEFT_FRONT_DOWN"),
-                                ),
+                                    iconUp: Icons.keyboard_arrow_up,
+                                    iconDown: Icons.keyboard_arrow_down,
+                                    onUpPressed: () => openValve(context,
+                                        SOLENOID_INDEX.FRONT_DRIVER_IN.index),
+                                    onDownPressed: () => openValve(context,
+                                        SOLENOID_INDEX.FRONT_DRIVER_OUT.index),
+                                    onReleasedButton: () =>
+                                        closeValves(context)),
                                 OvalControlButton(
                                   iconUp: Icons.keyboard_double_arrow_up,
                                   iconDown: Icons.keyboard_double_arrow_down,
                                   isLarge: true,
-                                  onUpPressed: () => _handleCommand(context, "8888"),
-                                  onDownPressed: () => _handleCommand(context, "FRONT_DOWN"),
+                                  onUpPressed: () => {
+                                    openValve(context,
+                                        SOLENOID_INDEX.FRONT_DRIVER_IN.index),
+                                    openValve(context,
+                                        SOLENOID_INDEX.FRONT_PASSENGER_IN.index)
+                                  },
+                                  onDownPressed: () => {
+                                    openValve(context,
+                                        SOLENOID_INDEX.FRONT_DRIVER_OUT.index),
+                                    openValve(
+                                        context,
+                                        SOLENOID_INDEX
+                                            .FRONT_PASSENGER_OUT.index)
+                                  },
+                                  onReleasedButton: () => closeValves(context),
                                 ),
                                 OvalControlButton(
                                   iconUp: Icons.keyboard_arrow_up,
                                   iconDown: Icons.keyboard_arrow_down,
-                                  onUpPressed: () => _handleCommand(context, "RIGHT_FRONT_UP"),
-                                  onDownPressed: () => _handleCommand(context, "RIGHT_FRONT_DOWN"),
+                                  onUpPressed: () => openValve(context,
+                                      SOLENOID_INDEX.FRONT_PASSENGER_IN.index),
+                                  onDownPressed: () => openValve(context,
+                                      SOLENOID_INDEX.FRONT_PASSENGER_OUT.index),
+                                  onReleasedButton: () => closeValves(context),
                                 ),
                               ],
                             ),
@@ -76,21 +104,38 @@ class _ButtonsPageState extends State<ButtonsPage> {
                                 OvalControlButton(
                                   iconUp: Icons.keyboard_arrow_up,
                                   iconDown: Icons.keyboard_arrow_down,
-                                  onUpPressed: () => _handleCommand(context, "LEFT_BACK_UP"),
-                                  onDownPressed: () => _handleCommand(context, "LEFT_BACK_DOWN"),
+                                  onUpPressed: () => openValve(context,
+                                      SOLENOID_INDEX.REAR_DRIVER_IN.index),
+                                  onDownPressed: () => openValve(context,
+                                      SOLENOID_INDEX.REAR_DRIVER_OUT.index),
+                                  onReleasedButton: () => closeValves(context),
                                 ),
                                 OvalControlButton(
                                   iconUp: Icons.keyboard_double_arrow_up,
                                   iconDown: Icons.keyboard_double_arrow_down,
                                   isLarge: true,
-                                  onUpPressed: () => _handleCommand(context, "BACK_UP"),
-                                  onDownPressed: () => _handleCommand(context, "BACK_DOWN"),
+                                  onUpPressed: () => {
+                                    openValve(context,
+                                        SOLENOID_INDEX.REAR_DRIVER_IN.index),
+                                    openValve(context,
+                                        SOLENOID_INDEX.REAR_PASSENGER_IN.index)
+                                  },
+                                  onDownPressed: () => {
+                                    openValve(context,
+                                        SOLENOID_INDEX.REAR_DRIVER_OUT.index),
+                                    openValve(context,
+                                        SOLENOID_INDEX.REAR_PASSENGER_OUT.index)
+                                  },
+                                  onReleasedButton: () => closeValves(context),
                                 ),
                                 OvalControlButton(
                                   iconUp: Icons.keyboard_arrow_up,
                                   iconDown: Icons.keyboard_arrow_down,
-                                  onUpPressed: () => _handleCommand(context, "RIGHT_BACK_UP"),
-                                  onDownPressed: () => _handleCommand(context, "RIGHT_BACK_DOWN"),
+                                  onUpPressed: () => openValve(context,
+                                      SOLENOID_INDEX.REAR_PASSENGER_IN.index),
+                                  onDownPressed: () => openValve(context,
+                                      SOLENOID_INDEX.REAR_PASSENGER_OUT.index),
+                                  onReleasedButton: () => closeValves(context),
                                 ),
                               ],
                             ),
@@ -112,7 +157,12 @@ class _ButtonsPageState extends State<ButtonsPage> {
                                   setState(() {
                                     _selectedPreset = i;
                                   });
-                                  bleManager.sendCommand("PRESET_$i");
+
+                                  _handleCommand(
+                                      context,
+                                      bleManager.buildRestPacket(
+                                          7 /*AIRUPQUICK*/, [BLEInt(i - 1)]));
+                                  //bleManager.sendCommand("PRESET_$i");
                                   print('Preset $i Command Sent');
                                 } else {
                                   showDialog(
@@ -148,10 +198,34 @@ class _ButtonsPageState extends State<ButtonsPage> {
     );
   }
 
-  void _handleCommand(BuildContext context, String command) {
+  void _handleCommand(BuildContext context, List<int> command) {
     if (bleManager.connectedDevice != null) {
-      bleManager.sendCommand(command);
+      bleManager.sendRestCommand(command);
       print('$command Command Sent');
+    } else {
+      showDialog(
+        context: context,
+        builder: (_) => const NoBluetoothPopup(),
+      );
+    }
+  }
+
+  void openValve(BuildContext context, int bit) {
+    if (bleManager.connectedDevice != null) {
+      bleManager.setValveBit(bit);
+      print('Valve set');
+    } else {
+      showDialog(
+        context: context,
+        builder: (_) => const NoBluetoothPopup(),
+      );
+    }
+  }
+
+  void closeValves(BuildContext context) {
+    if (bleManager.connectedDevice != null) {
+      bleManager.closeValves();
+      print('Valve cleared');
     } else {
       showDialog(
         context: context,
@@ -167,15 +241,16 @@ class OvalControlButton extends StatelessWidget {
   final bool isLarge;
   final VoidCallback? onUpPressed;
   final VoidCallback? onDownPressed;
+  final VoidCallback? onReleasedButton;
 
-  const OvalControlButton({
-    super.key,
-    required this.iconUp,
-    required this.iconDown,
-    this.isLarge = false,
-    this.onUpPressed,
-    this.onDownPressed,
-  });
+  const OvalControlButton(
+      {super.key,
+      required this.iconUp,
+      required this.iconDown,
+      this.isLarge = false,
+      this.onUpPressed,
+      this.onDownPressed,
+      this.onReleasedButton});
 
   @override
   Widget build(BuildContext context) {
@@ -200,11 +275,13 @@ class OvalControlButton extends StatelessWidget {
             icon: iconUp,
             alignment: Alignment.topCenter,
             onPressed: onUpPressed,
+            onReleased: onReleasedButton,
           ),
           ControlButton(
             icon: iconDown,
             alignment: Alignment.bottomCenter,
             onPressed: onDownPressed,
+            onReleased: onReleasedButton,
           ),
         ],
       ),
@@ -218,6 +295,7 @@ class ControlButton extends StatelessWidget {
   final double? iconSize;
   final AlignmentGeometry alignment;
   final VoidCallback? onPressed;
+  final VoidCallback? onReleased;
 
   const ControlButton({
     super.key,
@@ -226,12 +304,18 @@ class ControlButton extends StatelessWidget {
     this.iconSize,
     this.alignment = Alignment.center,
     this.onPressed,
+    this.onReleased,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onPressed,
+      onTapDown: (_) {
+        onPressed!();
+      },
+      onTapUp: (_) {
+        onReleased!();
+      },
       child: Container(
         width: isLarge ? 40 : 40,
         height: isLarge ? 40 : 40,
