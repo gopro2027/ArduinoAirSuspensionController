@@ -1,4 +1,4 @@
-#include "pressureMath.h"
+//#include "pressureMath.h"
 
 #if pressure_math_remove_this_line_initial_pid_code
 
@@ -281,4 +281,363 @@ void calculateAverageOfSamples(double *x, double *y, int sz, double &A, double &
 //     std::cout << "C: " << C << std::endl;
 //     return 0;
 // }
+#endif
+
+//#define ai_pressure
+#ifdef ai_pressure
+
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <random>
+#include <math.h>
+
+// https://www.reddit.com/r/askmath/comments/1k5kysw/comment/mok9n9f/?context=3
+// https://www.reddit.com/media?url=https%3A%2F%2Fpreview.redd.it%2Fwhat-type-of-line-is-this-and-how-can-i-make-a-formula-from-v0-f6d6iwzbniwe1.png%3Fwidth%3D640%26format%3Dpng%26auto%3Dwebp%26s%3Df9708852f49211a61e9ed69150bda683acbd733d 
+double airOutSimulationFormula(double pressure) {
+    return -3.170644334432285*std::log(pressure)+16.465020074051143;
+}
+
+double simulateRealWorldTest(double startPressure, double goalPressure) {
+    return airOutSimulationFormula(goalPressure) - airOutSimulationFormula(startPressure);
+}
+
+double simulateRealWorldTestRandomly(double startPressure, double goalPressure) {
+    std::uniform_real_distribution<double> unif(-1,1);
+    std::default_random_engine re;
+    double a_random_double = unif(re);
+    return simulateRealWorldTest(startPressure, goalPressure) + a_random_double;
+}
+
+#define MAX_GENE_VAL 10.0
+
+// Define a structure to represent an individual (chromosome)
+struct Individual {
+    std::vector<double> genes;
+    double fitness;
+
+    Individual(int numGenes) : genes(numGenes), fitness(0) {}
+};
+
+double getEstimatedTimeToOpenValve(const std::vector<double>& genes, double startPressure, double goalPressure) {
+    double sum = 0;
+    for (double gene : genes) {
+        sum += gene * ((startPressure-goalPressure) / 180);
+    }
+    return sum;
+}
+
+
+
+// Function to calculate fitness (example: maximize sum of genes)
+double calculateFitness(const std::vector<double>& genes, double startPressure, double goalPressure) {
+    // double goalTimeDif = simulateRealWorldTest(startPressure,goalPressure); // perfect case real world goal, this would be the value we experimentally got based on the previously c
+    
+    // double geneCalculatedTime = 0;
+
+
+    // double sum = 0;
+    // for (double gene : genes) {
+    //     sum += gene - goalTimeDif;
+    // }
+    // return sum;
+
+    // would typically be gotten from real test data
+    std::uniform_real_distribution<double> unif(-10,10);
+    std::default_random_engine re;
+    double a_random_double = unif(re);
+    double actualAchievedPressure = goalPressure + a_random_double;
+
+    return goalPressure - actualAchievedPressure;
+}
+
+// Function to perform crossover (single-point crossover)
+std::pair<Individual, Individual> crossover(const Individual& parent1, const Individual& parent2) {
+    int crossoverPoint = rand() % parent1.genes.size();
+    Individual child1(parent1.genes.size());
+    Individual child2(parent2.genes.size());
+
+    for (int i = 0; i < parent1.genes.size(); ++i) {
+        if (i < crossoverPoint) {
+            child1.genes[i] = parent1.genes[i];
+            child2.genes[i] = parent2.genes[i];
+            // std::cout << "Fn3 " <<  child1.fitness << std::endl;
+            // std::cout << "Fn4 " <<  child2.fitness << std::endl;
+        } else {
+            child1.genes[i] = parent2.genes[i];
+            child2.genes[i] = parent1.genes[i];
+        }
+    }
+    // std::cout << "Fn3 " <<  child1.fitness << std::endl;
+    // std::cout << "Fn4 " <<  child2.fitness << std::endl;
+    return std::make_pair(child1, child2);
+}
+
+// Function to perform mutation (randomly change a gene)
+void mutate(Individual& individual, float mutationRate) {
+    for (int i = 0; i < individual.genes.size(); ++i) {
+        if (static_cast<double>(rand()) / RAND_MAX < mutationRate) {
+            individual.genes[i] = (static_cast<double>(rand()) / RAND_MAX) * MAX_GENE_VAL;//rand() % 10; // Assuming genes are in range 0-9
+        }
+    }
+}
+
+void evaluateFitness(std::vector<Individual> &population, double startPressure, double goalPressure) {
+    // Evaluate fitness
+    for (Individual& individual : population) {
+        individual.fitness = calculateFitness(individual.genes, startPressure,goalPressure); // need to change this to use goal value ect
+    }
+}
+
+int main() {
+    int populationSize = 1;
+    int numGenes = 10;
+    int numGenerations = 100;
+    float mutationRate = 0.01;
+
+    // Initialize population
+    std::vector<Individual> population;
+    for (int i = 0; i < populationSize; ++i) {
+        Individual individual(numGenes);
+        for (int j = 0; j < numGenes; ++j) {
+            individual.genes[j] = (static_cast<double>(rand()) / RAND_MAX) * MAX_GENE_VAL; // Random genes in range 0-9
+            //std::cout << individual.genes[j] << std::endl;
+        }
+        population.push_back(individual);
+    }
+
+    evaluateFitness(population, 100, 30);
+
+    // Run the genetic algorithm
+    for (int generation = 0; generation < numGenerations; ++generation) {
+
+        // Selection (tournament selection)
+        std::vector<Individual> newPopulation;
+        for (int i = 0; i < populationSize; ++i) {
+            int index1 = rand() % populationSize;
+            int index2 = rand() % populationSize;
+            //Individual winner = (population[index1].fitness > population[index2].fitness) ? population[index1] : population[index2];
+            Individual winner = (abs(population[index1].fitness) - abs(population[index2].fitness)) > 0 ? population[index2] : population[index1]; // get the one that is closer to 0 because the fitness in our case is the err (diff) from 0
+            newPopulation.push_back(winner);
+        }
+
+        // Crossover and Mutation
+        for (int i = 0; i < populationSize; i += 2) {
+             if(i + 1 < populationSize) {
+                std::pair<Individual, Individual> children = crossover(newPopulation[i], newPopulation[i + 1]);
+                mutate(children.first, mutationRate);
+                mutate(children.second, mutationRate);
+                // std::cout << "Fn " << newPopulation[i].fitness << std::endl;
+                // std::cout << "Fn2 " <<  children.first.fitness << std::endl;
+                newPopulation[i] = children.first;
+                newPopulation[i + 1] = children.second;
+             }
+        }
+        
+        population = newPopulation;
+
+        evaluateFitness(population, 100, 30);
+
+        // Print best fitness of current generation
+        double bestFitness = 0;
+        for (const Individual& individual : population) {
+            bestFitness = std::max(bestFitness, individual.fitness);
+        }
+        std::cout << "Generation " << generation + 1 << " Best Fitness: " << bestFitness << std::endl;
+    }
+
+    return 0;
+}
+
+#endif
+
+
+//#define gradient_decent
+#ifdef gradient_decent
+
+#include <iostream>
+#include <cmath>
+#include <functional>
+
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <random>
+#include <math.h>
+
+// https://www.reddit.com/r/askmath/comments/1k5kysw/comment/mok9n9f/?context=3
+// https://www.reddit.com/media?url=https%3A%2F%2Fpreview.redd.it%2Fwhat-type-of-line-is-this-and-how-can-i-make-a-formula-from-v0-f6d6iwzbniwe1.png%3Fwidth%3D640%26format%3Dpng%26auto%3Dwebp%26s%3Df9708852f49211a61e9ed69150bda683acbd733d 
+// returns time
+double airOutSimulationFormula(double pressure) {
+    return -3.170644334432285*std::log(pressure)+16.465020074051143;
+}
+
+// returns pressure
+double airOutSimulationFormulaSwapped(double time) {
+    return std::exp((time-16.465020074051143)/-3.170644334432285);
+}
+
+// double simulateRealWorldTest(double startPressure, double goalPressure) {
+//     return airOutSimulationFormula(goalPressure) - airOutSimulationFormula(startPressure);
+// }
+
+// double simulateRealWorldTestRandomly(double startPressure, double goalPressure) {
+//     std::uniform_real_distribution<double> unif(-1,1);
+//     std::default_random_engine re;
+//     double a_random_double = unif(re);
+//     return simulateRealWorldTest(startPressure, goalPressure) + a_random_double;
+// }
+
+double currentPressureForMysterFunction = 0;
+
+// Placeholder for the mystery function. Replace with actual implementation.
+// for mock implementation must set currentPressureForMysterFunction to current pressure beforehand!
+// returns new pressure
+double mystery_function(double t) {
+    // First we plug in current pressure into our representation formula to get the 'current time it's already at' then we add on the valve open time t then plug it back in to get the proposed real value pressure result from opening the valve for time t
+    double newPressure = airOutSimulationFormulaSwapped(airOutSimulationFormula(currentPressureForMysterFunction)+t);
+    
+    currentPressureForMysterFunction = newPressure;
+
+    return newPressure;
+}
+
+// Iterative function to estimate time
+double estimate_time(double start, double goal, int max_iterations = 100, double tolerance = 1e-6) {
+    double t = start;
+    double learning_rate = 0.1; // Tune this as needed
+
+    for (int i = 0; i < max_iterations; ++i) {
+        double result = mystery_function(t);
+        double error = goal - result;
+
+        if (std::abs(error) < tolerance) {
+            break; // Converged
+        }
+
+        // Adjust time based on error — this is a heuristic update
+        // Use direction of error and scale with learning rate
+        double gradient = (mystery_function(t + 1e-4) - result) / 1e-4;
+        if (std::abs(gradient) < 1e-8) gradient = 1; // avoid division by near-zero
+
+        t += learning_rate * error / gradient;
+    }
+
+    return t;
+}
+
+int main() {
+    double start = 100;
+    double goal = 25.0; // Want mystery_function(t) ≈ 25
+
+    // must set this value for our mock data to work properly
+    currentPressureForMysterFunction = start;
+
+    double estimated_time = estimate_time(start, goal, 2);
+    
+    std::cout << "Estimated time: " << estimated_time << std::endl;
+    std::cout << "Function result: " << mystery_function(estimated_time) << std::endl;
+}
+
+#endif
+
+
+#define ai_pressure_1
+#ifdef ai_pressure_1
+
+#define test_run
+// g++ src/pressureMath.cpp
+// a.exe
+#ifdef test_run
+#include <iostream>
+#include <vector>
+#include <tuple>
+#include <cmath>
+#endif
+
+double normalize(double value, double min, double max) {
+    return (value - min) / (max - min);
+}
+
+struct Model {
+    // Weights for each input
+    double w1 = 0.1, w2 = 0.1, w3 = 0.1, b = 0.0;
+    double learning_rate = 0.1;
+
+    void loadWeights(double _w1, double _w2, double _w3, double _b) {
+        w1 = _w1;
+        w2 = _w2;
+        w3 = _w3;
+        b = _b;
+    }
+
+    // Predict time from inputs
+    double predict(double start_pressure, double end_pressure, double tank_pressure) const {
+        start_pressure = normalize(start_pressure,0,200);
+        end_pressure = normalize(end_pressure,0,200);
+        tank_pressure = normalize(tank_pressure,0,200);
+        return w1 * start_pressure + w2 * end_pressure + w3 * tank_pressure + b;
+    }
+
+    // Train the model with one sample
+    void train(double start_pressure, double end_pressure, double tank_pressure, double actual_time) {
+        double pred = predict(start_pressure, end_pressure, tank_pressure);
+        double error = pred - actual_time;
+
+        #ifdef test_run
+        std::cout << "pred: " << pred << " actual: " << actual_time << std::endl;
+        #endif
+
+        // Gradient descent updates
+        w1 -= learning_rate * error * normalize(start_pressure,0,200);
+        w2 -= learning_rate * error * normalize(end_pressure,0,200);
+        w3 -= learning_rate * error * normalize(tank_pressure,0,200);
+        b  -= learning_rate * error;
+    }
+
+    #ifdef test_run
+    // Optionally: add method to print weights for debugging
+    void print_weights() const {
+        std::cout << "Weights: w1=" << w1 << ", w2=" << w2 
+                  << ", w3=" << w3 << ", b=" << b << std::endl;
+    }
+    #endif
+};
+
+#ifdef test_run
+int main() {
+    Model model;
+
+    // Example training data: {start_pressure, end_pressure, tank_pressure, actual_time}
+    std::vector<std::tuple<double, double, double, double>> training_data = {
+        {30.0, 100.0, 180.0, 3},
+        //{100.0, 90.0, 170.0, 0.2},
+        {90.0, 130.0, 160.0, 2.5},
+        //{130.0, 30.0, 175.0, 4.1},
+        {30.0, 90.0, 170.0, 3.1},
+        {50.0, 90.0, 170.0, 2.3},
+        {85.0, 115.0, 165.0, 2.8},
+        {85.0, 130.0, 140.0, 5}
+    };
+
+    // Train for several epochs
+    for (int epoch = 0; epoch < 500; ++epoch) {
+        for (const auto& [start, end, tank, time] : training_data) {
+            std::cout << tank;
+            //for (int epoch = 0; epoch < 200; ++epoch) {
+                model.train(start, end, tank, time);
+            //}
+        }
+    }
+
+    // Test prediction
+    double predicted_time = model.predict(30, 100, 180);
+    double predicted_time2 = model.predict(50, 130, 80);
+    //double predicted_time2 = model.predict(std::get<0>(training_data[0]), std::get<1>(training_data[0]), std::get<2>(training_data[0]));
+
+    std::cout << "Predicted time: " << predicted_time << std::endl;
+    std::cout << "Predicted time 2: " << predicted_time2 << std::endl;
+    model.print_weights(); // Optional: see the learned weights
+}
+#endif
 #endif
