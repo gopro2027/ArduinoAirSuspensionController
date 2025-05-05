@@ -1,4 +1,4 @@
-//#include "pressureMath.h"
+#include "pressureMath.h"
 
 #if pressure_math_remove_this_line_initial_pid_code
 
@@ -542,10 +542,9 @@ int main() {
 #endif
 
 
-#define ai_pressure_1
+
 #ifdef ai_pressure_1
 
-#define test_run
 // g++ src/pressureMath.cpp
 // a.exe
 #ifdef test_run
@@ -555,84 +554,151 @@ int main() {
 #include <cmath>
 #endif
 
-double normalize(double value, double min, double max) {
-    return (value - min) / (max - min);
+
+double normalize(double x, double min, double max) {
+    return (x - min) / (max - min);
 }
 
-struct Model {
-    // Weights for each input
-    double w1 = 0.1, w2 = 0.1, w3 = 0.1, b = 0.0;
-    double learning_rate = 0.1;
+double denormalize(double x, double min, double max) {
+    return x * (max - min) + min;
+}
 
-    void loadWeights(double _w1, double _w2, double _w3, double _b) {
-        w1 = _w1;
-        w2 = _w2;
-        w3 = _w3;
-        b = _b;
-    }
+void AIModel::loadWeights(double _w1, double _w2, double _w3,double _w4,double _w5, double _b) {
+    w1 = _w1;//start_pressure
+    w2 = _w2;//end_pressure
+    w3 = _w3;//tank_pressure
+    w4 = _w4;//Pressure difference: delta_p = end_pressure - start_pressure
+    w5 = _w5;//Ratio: start_pressure / tank_pressure or log versions
+    b = _b;
+}
 
-    // Predict time from inputs
-    double predict(double start_pressure, double end_pressure, double tank_pressure) const {
-        start_pressure = normalize(start_pressure,0,200);
-        end_pressure = normalize(end_pressure,0,200);
-        tank_pressure = normalize(tank_pressure,0,200);
-        return w1 * start_pressure + w2 * end_pressure + w3 * tank_pressure + b;
-    }
+// Predict time from inputs
+double AIModel::predict(double start_pressure, double end_pressure, double tank_pressure, double delta_p, double ratio) {
+    //delta_p can be pre-normalized since it's based off of pre-existing values
+    //ratio is naturally normalized between 0 and 1 due to the nature of the values
+    start_pressure = normalize(start_pressure,0,200);
+    end_pressure = normalize(end_pressure,0,200);
+    tank_pressure = normalize(tank_pressure,0,200);
+    return w1 * start_pressure + w2 * end_pressure + w3 * tank_pressure + w4 * delta_p + w5 * ratio + b;
+}
 
-    // Train the model with one sample
-    void train(double start_pressure, double end_pressure, double tank_pressure, double actual_time) {
-        double pred = predict(start_pressure, end_pressure, tank_pressure);
-        double error = pred - actual_time;
+double AIModel::predictDeNormalized(double start_pressure, double end_pressure, double tank_pressure) {
+    double delta_p = normalize(end_pressure - start_pressure,-200,200);
+    double ratio = start_pressure / tank_pressure;// no need to normalize, always between 0 and 1
+    return denormalize(predict(start_pressure, end_pressure, tank_pressure, delta_p, ratio), 0, 5000);
+}
 
-        #ifdef test_run
-        std::cout << "pred: " << pred << " actual: " << actual_time << std::endl;
-        #endif
+// Train the model with one sample
+void AIModel::train(double start_pressure, double end_pressure, double tank_pressure, double actual_time) {
+    double delta_p = normalize(end_pressure - start_pressure,-200,200);
+    double ratio = start_pressure / tank_pressure;// no need to normalize, always between 0 and 1
 
-        // Gradient descent updates
-        w1 -= learning_rate * error * normalize(start_pressure,0,200);
-        w2 -= learning_rate * error * normalize(end_pressure,0,200);
-        w3 -= learning_rate * error * normalize(tank_pressure,0,200);
-        b  -= learning_rate * error;
-    }
+    double pred = predict(start_pressure, end_pressure, tank_pressure, delta_p, ratio);
+    double error = pred - normalize(actual_time,0,5000); //use normalized version here so that the values made by the predict are normalized
 
     #ifdef test_run
-    // Optionally: add method to print weights for debugging
-    void print_weights() const {
-        std::cout << "Weights: w1=" << w1 << ", w2=" << w2 
-                  << ", w3=" << w3 << ", b=" << b << std::endl;
-    }
+    std::cout << "pred: " << denormalize(pred, 0, 5000) << " actual: " << actual_time << std::endl;
     #endif
-};
+
+    // Gradient descent updates
+    w1 -= learning_rate * error * normalize(start_pressure,0,200);
+    w2 -= learning_rate * error * normalize(end_pressure,0,200);
+    w3 -= learning_rate * error * normalize(tank_pressure,0,200);
+    w4 -= learning_rate * error * delta_p;
+    w5 -= learning_rate * error * ratio;
+    b  -= learning_rate * error;
+}
+
+// Optionally: add method to print weights for debugging
+void AIModel::print_weights() {
+    #ifdef test_run
+    std::cout << "Weights: w1=" << w1 << ", w2=" << w2 
+                << ", w3=" << w3 << ", w4=" << w4 << ", w5=" << w5 <<", b=" << b << std::endl;
+    #else
+    Serial.print("Weights: ");
+    Serial.print("w1=");
+    Serial.print(w1,5);
+    Serial.print(" w2=");
+    Serial.print(w2,5);
+    Serial.print(" w3=");
+    Serial.print(w3,5);
+    Serial.print(" w4=");
+    Serial.print(w4,5);
+    Serial.print(" w5=");
+    Serial.print(w5,5);
+    Serial.print(" b=");
+    Serial.print(b,5);
+    Serial.println();
+
+    Serial.print("y = ");
+    Serial.print(w1,5);
+    Serial.print("*i + ");
+    Serial.print(w2,5);
+    Serial.print("*j + ");
+    Serial.print(w3,5);
+    Serial.print("*k + ");
+    Serial.print(w4,5);
+    Serial.print("*l + ");
+    Serial.print(w5,5);
+    Serial.print("*m + ");
+    Serial.print(b,5);
+    Serial.println();
+
+    Serial.print("loadWeights(");
+    Serial.print(w1,5);
+    Serial.print(",");
+    Serial.print(w2,5);
+    Serial.print(",");
+    Serial.print(w3,5);
+    Serial.print(",");
+    Serial.print(w4,5);
+    Serial.print(",");
+    Serial.print(w5,5);
+    Serial.print(",");
+    Serial.print(b,5);
+    Serial.println(");");
+    
+    #endif
+
+}
+
 
 #ifdef test_run
 int main() {
-    Model model;
+    bool type = false;
+    AIModel model;
+    if (type) {
+        // Example training data: {start_pressure, end_pressure, tank_pressure, actual_time}
+        std::vector<std::tuple<double, double, double, double>> training_data = {
+            {30.0, 100.0, 180.0, 3*1000},
+            //{100.0, 90.0, 170.0, 0.2},
+            {90.0, 130.0, 160.0, 2.5*1000},
+            //{130.0, 30.0, 175.0, 4.1},
+            {30.0, 90.0, 170.0, 3.1*1000},
+            {50.0, 90.0, 170.0, 2.3*1000},
+            {85.0, 115.0, 165.0, 2.8*1000},
+            {85.0, 130.0, 140.0, 5*1000}
+        };
 
-    // Example training data: {start_pressure, end_pressure, tank_pressure, actual_time}
-    std::vector<std::tuple<double, double, double, double>> training_data = {
-        {30.0, 100.0, 180.0, 3},
-        //{100.0, 90.0, 170.0, 0.2},
-        {90.0, 130.0, 160.0, 2.5},
-        //{130.0, 30.0, 175.0, 4.1},
-        {30.0, 90.0, 170.0, 3.1},
-        {50.0, 90.0, 170.0, 2.3},
-        {85.0, 115.0, 165.0, 2.8},
-        {85.0, 130.0, 140.0, 5}
-    };
-
-    // Train for several epochs
-    for (int epoch = 0; epoch < 500; ++epoch) {
-        for (const auto& [start, end, tank, time] : training_data) {
-            std::cout << tank;
-            //for (int epoch = 0; epoch < 200; ++epoch) {
-                model.train(start, end, tank, time);
-            //}
+        // Train for several epochs
+        for (int epoch = 0; epoch < 500; ++epoch) {
+            for (const auto& [start, end, tank, time] : training_data) {
+                std::cout << tank;
+                //for (int epoch = 0; epoch < 200; ++epoch) {
+                    model.train(start, end, tank, time);
+                //}
+            }
         }
+
+        
+    } else {
+        model.loadWeights(0.08092,0.08144,-0.12231,0.08132,0.06793,-0.03788);
+        //model.loadWeights(0.09092,0.09152,-0.01490,-0.00902,0.08862,-0.01865);
     }
 
     // Test prediction
-    double predicted_time = model.predict(30, 100, 180);
-    double predicted_time2 = model.predict(50, 130, 80);
+    double predicted_time = model.predictDeNormalized(50, 120, 180);
+    double predicted_time2 = model.predictDeNormalized(50, 130, 180);
     //double predicted_time2 = model.predict(std::get<0>(training_data[0]), std::get<1>(training_data[0]), std::get<2>(training_data[0]));
 
     std::cout << "Predicted time: " << predicted_time << std::endl;

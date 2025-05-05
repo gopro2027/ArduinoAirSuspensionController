@@ -281,6 +281,17 @@ void Wheel::loop()
                     // right now not going to use this because it doesn't seem to work super well up air up. Results in super low values. Need to do more testing
                     // int valveTime = this->calculatePressureTimingReal(valve);
 
+                    bool up = pressureDif >= 0;
+                    uint64_t aiCount = getAiCount(up);
+                    double start_pressure = this->getSelectedInputValue();
+                    double end_pressure = this->pressureGoal;
+                    double tank_pressure = getCompressor()->getTankPressure();
+
+
+                    if (aiCount > 500) {
+                        valveTime = getAiPredictionTime(up, start_pressure, end_pressure, tank_pressure);
+                    }
+
                     if (valveTime > 0)
                     {
                         // Open valve for calculated time
@@ -288,8 +299,16 @@ void Wheel::loop()
                         delay(valveTime);
                         valve->close();
 
-                        // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
-                        delay(150);
+                        // only want to train on valve times greater than 50ms
+                        if (valveTime > 10) {
+                            // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
+                            delay(250);
+                            this->readInputs();
+                            end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
+                            trainAiModel(up, start_pressure, end_pressure, tank_pressure, valveTime);
+                        } else {
+                            delay(100); // smaller delay time when doing small movementss
+                        }
                     }
                 }
                 else

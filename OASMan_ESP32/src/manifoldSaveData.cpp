@@ -41,6 +41,70 @@ void beginSaveData()
             _SaveData.profile[i].pressure[j].load(buf, 50);
         }
     }
+
+    _SaveData.upModel.weights[0].loadDouble("upmod0", 0.1);
+    _SaveData.upModel.weights[1].loadDouble("upmod1", 0.1);
+    _SaveData.upModel.weights[2].loadDouble("upmod2", -0.1);
+    _SaveData.upModel.weights[3].loadDouble("upmod3", 0.1);
+    _SaveData.upModel.weights[4].loadDouble("upmod4", 0.1);
+    _SaveData.upModel.weights[5].loadDouble("upmod5", 0.0);
+    _SaveData.upModel.count.load("upmodcount",0);
+
+    _SaveData.downModel.weights[0].loadDouble("downmod0", 0.1);
+    _SaveData.downModel.weights[1].loadDouble("downmod1", 0.1);
+    _SaveData.downModel.weights[2].loadDouble("downmod2", 0.0);
+    _SaveData.downModel.weights[3].loadDouble("downmod3", 0.0);
+    _SaveData.downModel.weights[4].loadDouble("downmod4", 0.1);
+    _SaveData.downModel.weights[5].loadDouble("downmod5", 0.0);
+    _SaveData.downModel.count.load("downmodcount",0);
+
+    _SaveData.upModel.loadModel();
+    _SaveData.downModel.loadModel();
+
+    //Reset ai models
+    // _SaveData.upModel.weights[0].setDouble(0.1);
+    // _SaveData.upModel.weights[1].setDouble(0.1);
+    // _SaveData.upModel.weights[2].setDouble(-0.1);
+    // _SaveData.upModel.weights[3].setDouble(0.1);
+    // _SaveData.upModel.weights[4].setDouble(0.1);
+    // _SaveData.upModel.weights[5].setDouble(0.0);
+
+    // _SaveData.downModel.weights[0].setDouble(0.1);
+    // _SaveData.downModel.weights[1].setDouble(0.1);
+    // _SaveData.downModel.weights[2].setDouble(0.0);
+    // _SaveData.downModel.weights[3].setDouble(0.0);
+    // _SaveData.downModel.weights[4].setDouble(0.1);
+    // _SaveData.downModel.weights[5].setDouble(0.0);
+   
+    // _SaveData.upModel.count.set(0);
+    // _SaveData.downModel.count.set(0);
+}
+
+AIModelPreference *getAIModelPreference(bool up) {
+    AIModelPreference *model;
+    if (up) {
+        model = &_SaveData.upModel;
+    } else {
+        model = &_SaveData.downModel;
+    }
+    return model;
+}
+
+void trainAiModel(bool up, double start_pressure, double end_pressure, double tank_pressure, double actual_time) {
+    AIModelPreference *model = getAIModelPreference(up);
+    model->model.train(start_pressure, end_pressure, tank_pressure, actual_time);
+    model->count.set(model->count.get().i+1);
+    model->saveWeights();
+}
+
+double getAiPredictionTime(bool up, double start_pressure, double end_pressure, double tank_pressure) {
+    AIModelPreference *model = getAIModelPreference(up);
+    return model->model.predictDeNormalized(start_pressure, end_pressure, tank_pressure);
+}
+
+uint64_t getAiCount(bool up) {
+    AIModelPreference *model = getAIModelPreference(up);
+    return model->count.get().i;
 }
 
 void readProfile(byte profileIndex)
