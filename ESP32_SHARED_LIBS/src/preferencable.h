@@ -26,6 +26,9 @@ public:
     }
 };
 
+void saveBytes(const char *name, const void *bytes, size_t len);
+size_t readBytes(const char *name, void *buf, size_t maxLen);
+
 #define createSaveFuncInt(VARNAME, _TYPE) \
     _TYPE get##VARNAME()                  \
     {                                     \

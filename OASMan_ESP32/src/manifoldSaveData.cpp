@@ -4,6 +4,48 @@ SaveData _SaveData;
 byte currentProfile[4];
 bool sendProfileBT = false;
 
+struct PressureLearnSaveStruct {
+    char start_pressure;
+    char goal_pressure;
+    short tank_pressure;
+    uint32_t timeMS;
+    void print() {
+        Serial.printf("{0x%X, 0x%X, 0x%X, 0x%X}", start_pressure, goal_pressure, tank_pressure, timeMS);
+    }
+};
+
+int upDataIndex = 0;
+PressureLearnSaveStruct upData[450];
+int downDataIndex = 0;
+PressureLearnSaveStruct downData[450];
+static SemaphoreHandle_t upDataMutex;
+//static SemaphoreHandle_t downDataMutex;
+
+const char *getLogFileName(bool up) {
+    if (up) {
+        return "UpDatat";
+    } else {
+        return "DownDatat";
+    }
+}
+
+void initDataFile(bool up) {
+    Serial.print(getLogFileName(up));
+    Serial.print(" (");
+
+    PressureLearnSaveStruct *pls = up ? upData : downData;
+    int size = up ? upDataIndex : downDataIndex;
+    Serial.print(size);
+    Serial.println("):");
+
+
+    for (int i = 0; i < size; i++) {
+        pls[i].print();
+        Serial.print(", ");
+    }
+    Serial.println();
+}
+
 void beginSaveData()
 {
     _SaveData.riseOnStart.load("riseOnStart", false);
@@ -61,6 +103,21 @@ void beginSaveData()
     _SaveData.upModel.loadModel();
     _SaveData.downModel.loadModel();
 
+    upDataIndex = readBytes(getLogFileName(true), upData, 450 * sizeof(PressureLearnSaveStruct)) / sizeof(PressureLearnSaveStruct);
+    downDataIndex = readBytes(getLogFileName(false), downData, 450 * sizeof(PressureLearnSaveStruct)) / sizeof(PressureLearnSaveStruct);
+
+    for (int i = 0; i < 10; i++)
+        Serial.println("");
+    Serial.println("BEGIN IMPORTANT DATA FOR PRO");
+    initDataFile(true);
+    initDataFile(false);
+    Serial.println("END IMPORTANT DATA FOR PRO");
+    for (int i = 0; i < 10; i++)
+        Serial.println("");
+
+    upDataMutex = xSemaphoreCreateMutex();
+    //downDataMutex = xSemaphoreCreateMutex();
+
     //Reset ai models
     // _SaveData.upModel.weights[0].setDouble(0.1);
     // _SaveData.upModel.weights[1].setDouble(0.1);
@@ -80,6 +137,30 @@ void beginSaveData()
     // _SaveData.downModel.count.set(0);
 }
 
+void appendPressureDataToFile(bool up,char start_pressure, char goal_pressure, short tank_pressure, uint32_t timeMS) {
+
+    SemaphoreHandle_t *semaphore = &upDataMutex;//up ? &upDataMutex : &downDataMutex;
+    while (xSemaphoreTake(*semaphore, 1) != pdTRUE)
+    {
+        delay(1);
+    }
+
+    PressureLearnSaveStruct *pls = up ? upData : downData;
+    int *size = up ? &upDataIndex : &downDataIndex;
+
+    if (*size < 450) {
+        pls[*size].start_pressure = start_pressure;
+        pls[*size].goal_pressure = goal_pressure;
+        pls[*size].tank_pressure = tank_pressure;
+        pls[*size].timeMS = timeMS;
+        *size = *size + 1;
+
+        saveBytes(getLogFileName(up),up?upData:downData,(*size)*sizeof(PressureLearnSaveStruct));
+    }
+
+    xSemaphoreGive(*semaphore);
+}
+
 AIModelPreference *getAIModelPreference(bool up) {
     AIModelPreference *model;
     if (up) {
@@ -93,8 +174,15 @@ AIModelPreference *getAIModelPreference(bool up) {
 void trainAiModel(bool up, double start_pressure, double end_pressure, double tank_pressure, double actual_time) {
     AIModelPreference *model = getAIModelPreference(up);
     model->model.train(start_pressure, end_pressure, tank_pressure, actual_time);
+
+    SemaphoreHandle_t *semaphore = &upDataMutex;//up ? &upDataMutex : &downDataMutex;
+    while (xSemaphoreTake(*semaphore, 1) != pdTRUE)
+    {
+        delay(1);
+    }
     model->count.set(model->count.get().i+1);
     model->saveWeights();
+    xSemaphoreGive(*semaphore);
 }
 
 double getAiPredictionTime(bool up, double start_pressure, double end_pressure, double tank_pressure) {

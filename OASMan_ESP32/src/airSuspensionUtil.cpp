@@ -420,28 +420,9 @@ namespace PressureSensorCalibration
 #pragma endregion
 
 #pragma region parabolaLearn
+
+
 #ifdef parabolaLearn
-// #include "SPIFFS.h"
-// void setupSpiffs()
-// {
-//     if (!SPIFFS.begin(true))
-//     {
-//         Serial.println("An Error has occurred while mounting SPIFFS");
-//         return;
-//     }
-
-//     File file = SPIFFS.open("/log.txt", FILE_READ);
-//     if (!file)
-//     {
-//         Serial.println("There was an error opening the file for writing");
-//         return;
-//     }
-//     Serial.println("Log.txt data:");
-//     Serial.println(file.readString());
-//     Serial.println("LOG EOL");
-
-//     file.close();
-// }
 void learnParabolaSetup()
 {
 

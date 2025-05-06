@@ -289,7 +289,7 @@ void Wheel::loop()
 
 
                     if (aiCount > 500) {
-                        valveTime = getAiPredictionTime(up, start_pressure, end_pressure, tank_pressure);
+                        //valveTime = getAiPredictionTime(up, start_pressure, end_pressure, tank_pressure);
                     }
 
                     if (valveTime > 0)
@@ -306,8 +306,9 @@ void Wheel::loop()
                             this->readInputs();
                             end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
                             trainAiModel(up, start_pressure, end_pressure, tank_pressure, valveTime);
+                            appendPressureDataToFile(up, start_pressure, end_pressure, tank_pressure, valveTime);
                         } else {
-                            delay(100); // smaller delay time when doing small movementss
+                            delay(150); // smaller delay time when doing small movementss
                         }
                     }
                 }

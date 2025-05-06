@@ -15,8 +15,8 @@ void setup()
     Serial.begin(SERIAL_BAUD_RATE);
     beginSaveData();
 
-#ifdef parabolaLearn
-    // setupSpiffs();
+    //appendPressureDataToFile(true, 25,26,27,28);
+    #ifdef parabolaLearn
     //  updateParabola(true, parabola_default_value, parabola_default_value, parabola_default_value);
     //  updateParabola(false, parabola_default_value, parabola_default_value, parabola_default_value);
 #endif

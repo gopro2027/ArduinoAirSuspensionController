@@ -48,6 +48,5 @@ namespace PressureSensorCalibration
 #ifdef parabolaLearn
 bool learnParabolaLoop();
 void learnParabolaSetup();
-void setupSpiffs();
 #endif
 #endif
