@@ -65,7 +65,15 @@
 			"forward_list": "cpp",
 			"list": "cpp",
 			"regex": "cpp",
-			"valarray": "cpp"
+			"valarray": "cpp",
+			"bitset": "cpp",
+			"complex": "cpp",
+			"condition_variable": "cpp",
+			"csetjmp": "cpp",
+			"set": "cpp",
+			"future": "cpp",
+			"mutex": "cpp",
+			"typeindex": "cpp"
 		}
 	}
 }

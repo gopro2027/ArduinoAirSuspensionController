@@ -5,12 +5,21 @@ byte currentProfile[4];
 bool sendProfileBT = false;
 
 struct PressureLearnSaveStruct {
-    char start_pressure;
-    char goal_pressure;
-    short tank_pressure;
+    uint8_t start_pressure;
+    uint8_t goal_pressure;
+    uint16_t tank_pressure;
     uint32_t timeMS;
     void print() {
-        Serial.printf("{0x%X, 0x%X, 0x%X, 0x%X}", start_pressure, goal_pressure, tank_pressure, timeMS);
+        // Serial.printf("{0x%X, 0x%X, 0x%X, 0x%X}", start_pressure, goal_pressure, tank_pressure, timeMS);
+        Serial.print("{");
+        Serial.print((int)start_pressure);
+        Serial.print(", ");
+        Serial.print((int)goal_pressure);
+        Serial.print(", ");
+        Serial.print(tank_pressure);
+        Serial.print(", ");
+        Serial.print(timeMS);
+        Serial.print("}");
     }
 };
 
@@ -109,6 +118,7 @@ void beginSaveData()
     for (int i = 0; i < 10; i++)
         Serial.println("");
     Serial.println("BEGIN IMPORTANT DATA FOR PRO");
+    Serial.println(sizeof(PressureLearnSaveStruct));
     initDataFile(true);
     initDataFile(false);
     Serial.println("END IMPORTANT DATA FOR PRO");
@@ -137,7 +147,18 @@ void beginSaveData()
     // _SaveData.downModel.count.set(0);
 }
 
-void appendPressureDataToFile(bool up,char start_pressure, char goal_pressure, short tank_pressure, uint32_t timeMS) {
+void appendPressureDataToFile(bool up,uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS) {
+
+    // quick check to make sure it actually went in the right direction.... idk why it was messing up sometimes
+    if (up) {
+        if ((int)goal_pressure - (int)start_pressure < 0) {
+            return;
+        }
+    } else {
+        if ((int)start_pressure - (int)goal_pressure < 0) {
+            return;
+        }
+    }
 
     SemaphoreHandle_t *semaphore = &upDataMutex;//up ? &upDataMutex : &downDataMutex;
     while (xSemaphoreTake(*semaphore, 1) != pdTRUE)

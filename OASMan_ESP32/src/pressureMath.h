@@ -21,7 +21,7 @@ class AIModel {
     double predict(double start_pressure, double end_pressure, double tank_pressure, double delta_p, double ratio);
 public:
     // Weights for each input
-    double w1 = 0.1, w2 = 0.1, w3 = 0.1,w4 = 0.1,w5 = 0.1, b = 0.0;
+    double w1 = 0.1, w2 = 0.1, w3 = -0.1,w4 = 0.1,w5 = 0.1, b = 0.0;
     void loadWeights(double _w1, double _w2, double _w3,double _w4,double _w5, double _b);
     double predictDeNormalized(double start_pressure, double end_pressure, double tank_pressure);
     void train(double start_pressure, double end_pressure, double tank_pressure, double actual_time);

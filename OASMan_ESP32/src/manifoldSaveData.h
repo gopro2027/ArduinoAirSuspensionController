@@ -80,7 +80,7 @@ void trainAiModel(bool up, double start_pressure, double end_pressure, double ta
 double getAiPredictionTime(bool up, double start_pressure, double end_pressure, double tank_pressure);
 uint64_t getAiCount(bool up);
 
-void appendPressureDataToFile(bool up,char start_pressure, char goal_pressure, short tank_pressure, uint32_t timeMS);
+void appendPressureDataToFile(bool up,uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
 
 headerDefineSaveFunc(riseOnStart, bool);
 headerDefineSaveFunc(maintainPressure, bool);

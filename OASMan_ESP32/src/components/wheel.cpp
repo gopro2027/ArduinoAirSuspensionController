@@ -260,7 +260,8 @@ void Wheel::loop()
             {
                 // Decide which valve to use
                 Solenoid *valve;
-                if (pressureDif >= 0)
+                bool up = pressureDif >= 0;
+                if (up)
                 {
                     valve = this->s_AirIn;
                     this->s_AirOut->close();
@@ -281,7 +282,7 @@ void Wheel::loop()
                     // right now not going to use this because it doesn't seem to work super well up air up. Results in super low values. Need to do more testing
                     // int valveTime = this->calculatePressureTimingReal(valve);
 
-                    bool up = pressureDif >= 0;
+                    
                     uint64_t aiCount = getAiCount(up);
                     double start_pressure = this->getSelectedInputValue();
                     double end_pressure = this->pressureGoal;
@@ -300,7 +301,7 @@ void Wheel::loop()
                         valve->close();
 
                         // only want to train on valve times greater than 50ms
-                        if (valveTime > 10) {
+                        if (valveTime >= 100) {
                             // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
                             delay(250);
                             this->readInputs();
