@@ -243,6 +243,8 @@ void Wheel::loop()
     if (this->flagStartPressureGoalRoutine)
     {
         this->flagStartPressureGoalRoutine = false;
+        const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
+        int iteration = 0;
         for (;;)
         {
             // 10 second timeout in case tank doesn't have a whole lot of air or something
@@ -283,15 +285,16 @@ void Wheel::loop()
                     // int valveTime = this->calculatePressureTimingReal(valve);
 
                     
-                    uint64_t aiCount = getAiCount(up);
                     double start_pressure = this->getSelectedInputValue();
                     double end_pressure = this->pressureGoal;
                     double tank_pressure = getCompressor()->getTankPressure();
 
-
-                    if (aiCount > 500) {
-                        //valveTime = getAiPredictionTime(up, start_pressure, end_pressure, tank_pressure);
+                    if (canUseAiPrediction(up)) {
+                        valveTime = getAiPredictionTime(up, start_pressure, end_pressure, tank_pressure);
                     }
+
+                    // To help prevent ocellations, decrease it slightly each iteration
+                    valveTime = valveTime / std::pow(oscillation, iteration);
 
                     if (valveTime > 0)
                     {
@@ -300,17 +303,15 @@ void Wheel::loop()
                         delay(valveTime);
                         valve->close();
 
-                        // only want to train on valve times greater than 50ms
-                        if (valveTime >= 100) {
-                            // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
-                            delay(250);
-                            this->readInputs();
-                            end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
-                            trainAiModel(up, start_pressure, end_pressure, tank_pressure, valveTime);
-                            appendPressureDataToFile(up, start_pressure, end_pressure, tank_pressure, valveTime);
-                        } else {
-                            delay(150); // smaller delay time when doing small movementss
-                        }
+                        
+                        // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
+                        delay(150);
+                        this->readInputs();
+                        end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
+                        appendPressureDataToFile(up, start_pressure, end_pressure, tank_pressure, valveTime);
+                    } else {
+                        // calculated valve time is 0 so just break out of loop
+                        break;
                     }
                 }
                 else

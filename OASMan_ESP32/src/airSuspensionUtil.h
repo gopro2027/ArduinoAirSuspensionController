@@ -49,4 +49,8 @@ namespace PressureSensorCalibration
 bool learnParabolaLoop();
 void learnParabolaSetup();
 #endif
+
+void trainAIModels();
+double getAiPredictionTime(bool up, double start_pressure, double end_pressure, double tank_pressure);
+bool canUseAiPrediction(bool up);
 #endif

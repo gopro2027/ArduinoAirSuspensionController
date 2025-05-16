@@ -16,11 +16,19 @@ void endNamespace()
     preferences.end();
 }
 
+void deletePreference(const char *name) {
+    openNamespace(SAVEDATA_NAMESPACE, false);
+    preferences.remove(name);
+    endNamespace();
+}
+
+
 void saveBytes(const char *name, const void *bytes, size_t len) {
     openNamespace(SAVEDATA_NAMESPACE, false);
     preferences.putBytes(name, bytes, len);
     endNamespace();
 }
+
 
 size_t readBytes(const char *name, void *buf, size_t maxLen) {
     openNamespace(SAVEDATA_NAMESPACE, true);

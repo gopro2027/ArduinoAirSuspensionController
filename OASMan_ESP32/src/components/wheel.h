@@ -44,4 +44,7 @@ public:
 };
 
 float readPinPressure(InputType *pin, bool heightMode);
+
+extern bool canUseAiPrediction(bool up);
+extern double getAiPredictionTime(bool up, double start_pressure, double end_pressure, double tank_pressure);
 #endif

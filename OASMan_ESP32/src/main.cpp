@@ -13,9 +13,16 @@
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
+    Serial.println(F("Startup!"));
+    
     beginSaveData();
 
-    //appendPressureDataToFile(true, 140,170,190,1056);
+    trainAIModels();
+
+    // for (int i = 0; i < 450*2; i++) {
+    //     appendPressureDataToFile(false, 0,0,0,0);
+    //     appendPressureDataToFile(true, 0,0,0,0);
+    // }
     #ifdef parabolaLearn
     //  updateParabola(true, parabola_default_value, parabola_default_value, parabola_default_value);
     //  updateParabola(false, parabola_default_value, parabola_default_value, parabola_default_value);
@@ -25,7 +32,6 @@ void setup()
 
     setupADCReadMutex();
 
-    Serial.println(F("Startup!"));
 
     setupManifold();
 

@@ -17,11 +17,13 @@ void calculateAverageOfSamples(double *x, double *y, int sz, double &A, double &
 
 #ifdef ai_pressure_1
 class AIModel {
-    double learning_rate = 0.001;
+    double learning_rate = 0.05;
     double predict(double start_pressure, double end_pressure, double tank_pressure, double delta_p, double ratio);
 public:
     // Weights for each input
     double w1 = 0.1, w2 = 0.1, w3 = -0.1,w4 = 0.1,w5 = 0.1, b = 0.0;
+    bool useWeight4 = false;
+    bool useWeight5 = false;
     void loadWeights(double _w1, double _w2, double _w3,double _w4,double _w5, double _b);
     double predictDeNormalized(double start_pressure, double end_pressure, double tank_pressure);
     void train(double start_pressure, double end_pressure, double tank_pressure, double actual_time);

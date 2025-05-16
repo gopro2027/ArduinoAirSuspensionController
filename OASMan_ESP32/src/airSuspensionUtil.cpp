@@ -502,3 +502,49 @@ bool learnParabolaLoop()
 }
 #endif
 #pragma endregion
+
+#pragma region training
+
+AIModel upModel;
+AIModel downModel;
+void trainAIModels()
+{
+
+    // First load some default values based off info I grabbed from some corvette testing
+    // I am using the first 4 weights because I think that makes the most logical sense to include all those. The 5th weight (ratio) I don't think is so great
+    upModel.loadWeights(-0.34525, 0.45432, -0.076937, 0.40201, 0.1, -0.19555);
+    downModel.loadWeights(0.76399, -0.66687, 0.070163, -0.5265, 0.1, 0.17787);
+    upModel.useWeight4 = true;
+    upModel.useWeight5 = false;
+    downModel.useWeight4 = true;
+    downModel.useWeight5 = false;
+
+    Serial.println(F("Training AI"));
+    unsigned long t = millis();
+    for (int epoch = 0; epoch < 1000; ++epoch) {
+        for (int i = 0; i < getUpDataLength(); i++) {
+            upModel.train(getUpData()[i].start_pressure, getUpData()[i].goal_pressure, getUpData()[i].tank_pressure, getUpData()[i].timeMS);
+        }
+        for (int i = 0; i < getDownDataLength(); i++) {
+            downModel.train(getDownData()[i].start_pressure, getDownData()[i].goal_pressure, getDownData()[i].tank_pressure, getDownData()[i].timeMS);
+        }
+    }
+    unsigned long total = millis() - t;
+    Serial.print("Time for training: ");
+    Serial.println(total);
+}
+
+double getAiPredictionTime(bool up, double start_pressure, double end_pressure, double tank_pressure) {
+    AIModel *model = up ? &upModel : &downModel;
+    return model->predictDeNormalized(start_pressure, end_pressure, tank_pressure);
+}
+
+bool canUseAiPrediction(bool up) {
+    if (up) {
+        return getUpDataLength() > AI_PREDICTION_USAGE_THRESHOLD;
+    } else {
+        return getDownDataLength() > AI_PREDICTION_USAGE_THRESHOLD;
+    }
+}
+
+#pragma endregion
