@@ -564,82 +564,68 @@ double denormalize(double x, double min, double max) {
     return x * (max - min) + min;
 }
 
-void AIModel::loadWeights(double _w1, double _w2, double _w3,double _w4,double _w5, double _b) {
-    w1 = _w1;//start_pressure
-    w2 = _w2;//end_pressure
-    w3 = _w3;//tank_pressure
-    w4 = _w4;//Pressure difference: delta_p = end_pressure - start_pressure
-    w5 = _w5;//Ratio: start_pressure / tank_pressure or log versions
+void AIModel::loadWeights(double _w1, double _w2, double _b) {
+    w1 = _w1;
+    w2 = _w2;
     b = _b;
 }
 
 // Predict time from inputs
-double AIModel::predict(double start_pressure, double end_pressure, double tank_pressure, double delta_p, double ratio) {
-    //delta_p can be pre-normalized since it's based off of pre-existing values
-    //ratio is naturally normalized between 0 and 1 due to the nature of the values
+double AIModel::predict(double start_pressure, double end_pressure, double tank_pressure) {
     start_pressure = normalize(start_pressure,0,200);
     end_pressure = normalize(end_pressure,0,200);
     tank_pressure = normalize(tank_pressure,0,200);
-    double result = w1 * start_pressure + w2 * end_pressure + w3 * tank_pressure + b;
-    if (useWeight4) {
-        result += w4 * delta_p;
-    }
-    if (useWeight5) {
-        result += w5 * ratio;
-    }
+    double x = log(tank_pressure / (tank_pressure - end_pressure));
+    double delta_p = end_pressure - start_pressure;
+
+    double result = w1 * x + w2 * delta_p + b;
 
     return result;
 }
 
+void AIModel::calculateDescent(double error, double start_pressure, double end_pressure, double tank_pressure) {
+    // Gradient descent updates
+    start_pressure = normalize(start_pressure,0,200);
+    end_pressure = normalize(end_pressure,0,200);
+    tank_pressure = normalize(tank_pressure,0,200);
+    double x = log(tank_pressure / (tank_pressure - end_pressure));
+    double delta_p = end_pressure - start_pressure;
+
+    w1 -= learning_rate * error * x;
+    w2 -= learning_rate * error * delta_p;
+    b  -= learning_rate * error;
+}
+
 double AIModel::predictDeNormalized(double start_pressure, double end_pressure, double tank_pressure) {
-    double delta_p = normalize(end_pressure - start_pressure,-200,200);
-    double ratio = start_pressure / tank_pressure;// no need to normalize, always between 0 and 1
-    return denormalize(predict(start_pressure, end_pressure, tank_pressure, delta_p, ratio), 0, 5000);
+    return denormalize(predict(start_pressure, end_pressure, tank_pressure), 0, 5000);
 }
 
 // Train the model with one sample
 void AIModel::train(double start_pressure, double end_pressure, double tank_pressure, double actual_time) {
-    double delta_p = normalize(end_pressure - start_pressure,-200,200);
-    double ratio = start_pressure / tank_pressure;// no need to normalize, always between 0 and 1
 
-    double pred = predict(start_pressure, end_pressure, tank_pressure, delta_p, ratio);
+    double pred = predict(start_pressure, end_pressure, tank_pressure);
     double error = pred - normalize(actual_time,0,5000); //use normalized version here so that the values made by the predict are normalized
     
-
-    #ifdef test_run
-    //std::cout << "pred: " << denormalize(pred, 0, 5000) << " actual: " << actual_time << std::endl;
-    #endif
-
-    // Gradient descent updates
-    w1 -= learning_rate * error * normalize(start_pressure,0,200);
-    w2 -= learning_rate * error * normalize(end_pressure,0,200);
-    w3 -= learning_rate * error * normalize(tank_pressure,0,200);
-    if (useWeight4) {
-        w4 -= learning_rate * error * delta_p;
-    }
-    if (useWeight5) {
-        w5 -= learning_rate * error * ratio;
-    }
-    b  -= learning_rate * error;
+    calculateDescent(error, start_pressure, end_pressure, tank_pressure);
 }
 
 // Optionally: add method to print weights for debugging
 void AIModel::print_weights() {
     #ifdef test_run
-    std::cout << std::setprecision (5) << "Weights: w1=" << w1 << ", w2=" << w2 
-               << ", w3=" << w3 << ", w4=" << w4 << ", w5=" << w5 <<", b=" << b << std::endl;
+    std::cout << std::setprecision (5) << "Weights: w1=" << w1 << ", w2=" << w2  <<", b=" << b << std::endl;
+               //<< ", w3=" << w3 << ", w4=" << w4 << ", w5=" << w5 <<", b=" << b << std::endl;
     #else
     Serial.print("Weights: ");
     Serial.print("w1=");
     Serial.print(w1,5);
     Serial.print(" w2=");
     Serial.print(w2,5);
-    Serial.print(" w3=");
-    Serial.print(w3,5);
-    Serial.print(" w4=");
-    Serial.print(w4,5);
-    Serial.print(" w5=");
-    Serial.print(w5,5);
+    // Serial.print(" w3=");
+    // Serial.print(w3,5);
+    // Serial.print(" w4=");
+    // Serial.print(w4,5);
+    // Serial.print(" w5=");
+    // Serial.print(w5,5);
     Serial.print(" b=");
     Serial.print(b,5);
     Serial.println();
@@ -649,12 +635,12 @@ void AIModel::print_weights() {
     Serial.print("*i + ");
     Serial.print(w2,5);
     Serial.print("*j + ");
-    Serial.print(w3,5);
-    Serial.print("*k + ");
-    Serial.print(w4,5);
-    Serial.print("*l + ");
-    Serial.print(w5,5);
-    Serial.print("*m + ");
+    // Serial.print(w3,5);
+    // Serial.print("*k + ");
+    // Serial.print(w4,5);
+    // Serial.print("*l + ");
+    // Serial.print(w5,5);
+    // Serial.print("*m + ");
     Serial.print(b,5);
     Serial.println();
 
@@ -663,12 +649,12 @@ void AIModel::print_weights() {
     Serial.print(",");
     Serial.print(w2,5);
     Serial.print(",");
-    Serial.print(w3,5);
-    Serial.print(",");
-    Serial.print(w4,5);
-    Serial.print(",");
-    Serial.print(w5,5);
-    Serial.print(",");
+    // Serial.print(w3,5);
+    // Serial.print(",");
+    // Serial.print(w4,5);
+    // Serial.print(",");
+    // Serial.print(w5,5);
+    // Serial.print(",");
     Serial.print(b,5);
     Serial.println(");");
     
@@ -713,7 +699,7 @@ int main() {
 
         // Train for several epochs
         //int i = 0;
-        for (int epoch = 0; epoch < 1000*10*10; ++epoch) {
+        for (int epoch = 0; epoch < 1000*10; ++epoch) {
             for (const auto& [start, end, tank, time] : training_data) {
                 //for (int epoch = 0; epoch < 1000*10*10; ++epoch) {
                 //if (time >= 100) {
@@ -742,7 +728,7 @@ int main() {
     testPredict(model,64, 128, 140);
     std::cout << std::endl;
     testPredict(model,0, 64, 90);
-    testPredict(model,64, 128, 90);
+    testPredict(model,20, 119, 120);
     std::cout << std::endl;
 
     testPredict(model,100, 130, 170);

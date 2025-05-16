@@ -17,6 +17,8 @@ void setup()
     
     beginSaveData();
 
+    //clearPressureData();
+
     trainAIModels();
 
     // for (int i = 0; i < 450*2; i++) {

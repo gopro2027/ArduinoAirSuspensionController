@@ -512,16 +512,16 @@ void trainAIModels()
 
     // First load some default values based off info I grabbed from some corvette testing
     // I am using the first 4 weights because I think that makes the most logical sense to include all those. The 5th weight (ratio) I don't think is so great
-    upModel.loadWeights(-0.34525, 0.45432, -0.076937, 0.40201, 0.1, -0.19555);
-    downModel.loadWeights(0.76399, -0.66687, 0.070163, -0.5265, 0.1, 0.17787);
-    upModel.useWeight4 = true;
-    upModel.useWeight5 = false;
-    downModel.useWeight4 = true;
-    downModel.useWeight5 = false;
+    // upModel.loadWeights(-0.34525, 0.45432, -0.076937, 0.40201, 0.1, -0.19555);
+    // downModel.loadWeights(0.76399, -0.66687, 0.070163, -0.5265, 0.1, 0.17787);
+    // upModel.useWeight4 = true;
+    // upModel.useWeight5 = false;
+    // downModel.useWeight4 = true;
+    // downModel.useWeight5 = false;
 
     Serial.println(F("Training AI"));
     unsigned long t = millis();
-    for (int epoch = 0; epoch < 1000; ++epoch) {
+    for (int epoch = 0; epoch < 1000*10; ++epoch) {
         for (int i = 0; i < getUpDataLength(); i++) {
             upModel.train(getUpData()[i].start_pressure, getUpData()[i].goal_pressure, getUpData()[i].tank_pressure, getUpData()[i].timeMS);
         }

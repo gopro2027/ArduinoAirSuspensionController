@@ -104,6 +104,8 @@ PressureLearnSaveStruct *getDownData();
 int getUpDataLength();
 int getDownDataLength();
 
+void clearPressureData();
+
 void appendPressureDataToFile(bool up,uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
 
 headerDefineSaveFunc(riseOnStart, bool);
