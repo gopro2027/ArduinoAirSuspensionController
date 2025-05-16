@@ -522,11 +522,15 @@ void trainAIModels()
     Serial.println(F("Training AI"));
     unsigned long t = millis();
     for (int epoch = 0; epoch < 1000*10; ++epoch) {
-        for (int i = 0; i < getUpDataLength(); i++) {
-            upModel.train(getUpData()[i].start_pressure, getUpData()[i].goal_pressure, getUpData()[i].tank_pressure, getUpData()[i].timeMS);
+        if (canUseAiPrediction(true)) {
+            for (int i = 0; i < getUpDataLength(); i++) {
+                upModel.train(getUpData()[i].start_pressure, getUpData()[i].goal_pressure, getUpData()[i].tank_pressure, getUpData()[i].timeMS);
+            }
         }
-        for (int i = 0; i < getDownDataLength(); i++) {
-            downModel.train(getDownData()[i].start_pressure, getDownData()[i].goal_pressure, getDownData()[i].tank_pressure, getDownData()[i].timeMS);
+        if (canUseAiPrediction(false)) {
+            for (int i = 0; i < getDownDataLength(); i++) {
+                downModel.train(getDownData()[i].start_pressure, getDownData()[i].goal_pressure, getDownData()[i].tank_pressure, getDownData()[i].timeMS);
+            }
         }
     }
     unsigned long total = millis() - t;
