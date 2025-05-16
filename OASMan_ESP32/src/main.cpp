@@ -22,8 +22,9 @@ void setup()
     trainAIModels();
 
     // for (int i = 0; i < 450*2; i++) {
-    //     appendPressureDataToFile(false, 0,0,0,0);
-    //     appendPressureDataToFile(true, 0,0,0,0);
+    //     for (int j = 0; j < 4; j++) {
+    //         appendPressureDataToFile((SOLENOID_AI_INDEX)j, 0,0,0,0);
+    //     }
     // }
     #ifdef parabolaLearn
     //  updateParabola(true, parabola_default_value, parabola_default_value, parabola_default_value);
