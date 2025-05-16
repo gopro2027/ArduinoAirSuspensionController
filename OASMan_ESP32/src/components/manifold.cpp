@@ -11,14 +11,14 @@ Manifold::Manifold(InputType *fpi,
                    InputType *rdi,
                    InputType *rdo)
 {
-    this->solenoidList[FRONT_PASSENGER_IN] = new Solenoid(fpi);
-    this->solenoidList[FRONT_PASSENGER_OUT] = new Solenoid(fpo);
-    this->solenoidList[REAR_PASSENGER_IN] = new Solenoid(rpi);
-    this->solenoidList[REAR_PASSENGER_OUT] = new Solenoid(rpo);
-    this->solenoidList[FRONT_DRIVER_IN] = new Solenoid(fdi);
-    this->solenoidList[FRONT_DRIVER_OUT] = new Solenoid(fdo);
-    this->solenoidList[REAR_DRIVER_IN] = new Solenoid(rdi);
-    this->solenoidList[REAR_DRIVER_OUT] = new Solenoid(rdo);
+    this->solenoidList[FRONT_PASSENGER_IN] = new Solenoid(fpi, SOLENOID_AI_INDEX::AI_MODEL_UP_FRONT);
+    this->solenoidList[FRONT_PASSENGER_OUT] = new Solenoid(fpo, SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT);
+    this->solenoidList[REAR_PASSENGER_IN] = new Solenoid(rpi, SOLENOID_AI_INDEX::AI_MODEL_UP_REAR);
+    this->solenoidList[REAR_PASSENGER_OUT] = new Solenoid(rpo, SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR);
+    this->solenoidList[FRONT_DRIVER_IN] = new Solenoid(fdi, SOLENOID_AI_INDEX::AI_MODEL_UP_FRONT);
+    this->solenoidList[FRONT_DRIVER_OUT] = new Solenoid(fdo, SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT);
+    this->solenoidList[REAR_DRIVER_IN] = new Solenoid(rdi, SOLENOID_AI_INDEX::AI_MODEL_UP_REAR);
+    this->solenoidList[REAR_DRIVER_OUT] = new Solenoid(rdo, SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR);
     this->wheelSolenoidMask = 0;
 }
 

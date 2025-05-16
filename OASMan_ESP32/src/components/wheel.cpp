@@ -289,8 +289,8 @@ void Wheel::loop()
                     double end_pressure = this->pressureGoal;
                     double tank_pressure = getCompressor()->getTankPressure();
 
-                    if (canUseAiPrediction(up)) {
-                        valveTime = getAiPredictionTime(up, start_pressure, end_pressure, tank_pressure);
+                    if (canUseAiPrediction(valve->getAIIndex())) {
+                        valveTime = getAiPredictionTime(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure);
                     }
 
                     // To help prevent ocellations, decrease it slightly each iteration
@@ -308,7 +308,7 @@ void Wheel::loop()
                         delay(150);
                         this->readInputs();
                         end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
-                        appendPressureDataToFile(up, start_pressure, end_pressure, tank_pressure, valveTime);
+                        appendPressureDataToFile(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime);
                     } else {
                         // calculated valve time is 0 so just break out of loop
                         break;

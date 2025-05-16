@@ -15,26 +15,21 @@ public:
     Preferencable pressure[4]; // byte
 };
 
-// class AIModelPreference {
-//     public:
-//     Preferencable weights[6];//doubles
-//     Preferencable count;//int
-//     AIModel model;
-//     void loadModel() {
-//         model.loadWeights(weights[0].get().d,weights[1].get().d,weights[2].get().d,weights[3].get().d,weights[4].get().d,weights[5].get().d);
-//         model.print_weights();
-//         Serial.print("Model count: ");
-//         Serial.println(count.get().i);
-//     }
-//     void saveWeights() {
-//         weights[0].setDouble(model.w1);
-//         weights[1].setDouble(model.w2);
-//         weights[2].setDouble(model.w3);
-//         weights[3].setDouble(model.w4);
-//         weights[4].setDouble(model.w5);
-//         weights[5].setDouble(model.b);
-//     }
-// };
+class AIModelPreference {
+    public:
+    Preferencable weights[3];//doubles
+    Preferencable isReadyToUse;//bool
+    AIModel model;
+    void loadModel() {
+        model.loadWeights(weights[0].get().d,weights[1].get().d,weights[2].get().d);
+        model.print_weights();
+    }
+    void saveWeights() {
+        weights[0].setDouble(model.w1);
+        weights[1].setDouble(model.w2);
+        weights[2].setDouble(model.b);
+    }
+};
 
 class SaveData
 {
@@ -63,8 +58,7 @@ public:
     Preferencable pressureSensorMax;
     Preferencable bagVolumePercentage;
     Profile profile[MAX_PROFILE_COUNT];
-    // AIModelPreference upModel;
-    // AIModelPreference downModel;
+    AIModelPreference aiModels[4];
 };
 
 struct PressureLearnSaveStruct {
@@ -95,18 +89,14 @@ void readProfile(byte profileIndex);
 void writeProfile(byte profileIndex);
 void savePressuresToProfile(byte profileIndex, float _WHEEL_FRONT_PASSENGER, float _WHEEL_REAR_PASSENGER, float _WHEEL_FRONT_DRIVER, float _WHEEL_REAR_DRIVER);
 
-// void trainAiModel(bool up, double start_pressure, double end_pressure, double tank_pressure, double actual_time);
-// double getAiPredictionTime(bool up, double start_pressure, double end_pressure, double tank_pressure);
-// uint64_t getAiCount(bool up);
-
-PressureLearnSaveStruct *getUpData();
-PressureLearnSaveStruct *getDownData();
-int getUpDataLength();
-int getDownDataLength();
+PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX aiIndex);
+int getLearnDataLength(SOLENOID_AI_INDEX aiIndex);
 
 void clearPressureData();
 
-void appendPressureDataToFile(bool up,uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
+void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex,uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
+
+AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex);
 
 headerDefineSaveFunc(riseOnStart, bool);
 headerDefineSaveFunc(maintainPressure, bool);

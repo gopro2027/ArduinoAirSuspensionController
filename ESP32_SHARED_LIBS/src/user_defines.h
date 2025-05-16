@@ -7,7 +7,7 @@
 
 #define MAX_PRESSURE_SAFETY 200
 
-#define AI_PREDICTION_USAGE_THRESHOLD 200
+#define AI_PREDICTION_USAGE_THRESHOLD 100
 
 /* Bags generally do not like to sit at exactly 0psi. Please choose which pressure is desired for air out */
 /* Not really used anymore, just using presets! Only kept here as legacy for og app */
@@ -124,6 +124,14 @@ enum SOLENOID_INDEX
     FRONT_DRIVER_OUT,
     REAR_DRIVER_IN,
     REAR_DRIVER_OUT
+};
+enum SOLENOID_AI_INDEX
+{
+    AI_MODEL_UP_FRONT,
+    AI_MODEL_UP_REAR,
+    AI_MODEL_DOWN_FRONT,
+    AI_MODEL_DOWN_REAR,
+    AI_MODEL_UNDEFINED
 };
 #define SOLENOID_COUNT 8
 

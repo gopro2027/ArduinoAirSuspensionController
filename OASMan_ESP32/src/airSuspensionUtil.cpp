@@ -505,8 +505,6 @@ bool learnParabolaLoop()
 
 #pragma region training
 
-AIModel upModel;
-AIModel downModel;
 void trainAIModels()
 {
 
@@ -519,36 +517,41 @@ void trainAIModels()
     // downModel.useWeight4 = true;
     // downModel.useWeight5 = false;
 
+    AIModel aiModelsTemp[4];
+
     Serial.println(F("Training AI"));
     unsigned long t = millis();
     for (int epoch = 0; epoch < 1000*10; ++epoch) {
-        if (canUseAiPrediction(true)) {
-            for (int i = 0; i < getUpDataLength(); i++) {
-                upModel.train(getUpData()[i].start_pressure, getUpData()[i].goal_pressure, getUpData()[i].tank_pressure, getUpData()[i].timeMS);
-            }
-        }
-        if (canUseAiPrediction(false)) {
-            for (int i = 0; i < getDownDataLength(); i++) {
-                downModel.train(getDownData()[i].start_pressure, getDownData()[i].goal_pressure, getDownData()[i].tank_pressure, getDownData()[i].timeMS);
+        for (int i = 0; i < 4; i++) {
+            if (getLearnDataLength((SOLENOID_AI_INDEX)i) > AI_PREDICTION_USAGE_THRESHOLD) {
+                for (int j = 0; j < getLearnDataLength((SOLENOID_AI_INDEX)i); j++) {
+                    PressureLearnSaveStruct *pls = getLearnData((SOLENOID_AI_INDEX)i);
+                    aiModelsTemp[i].train(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].timeMS);
+                }
             }
         }
     }
     unsigned long total = millis() - t;
     Serial.print("Time for training: ");
     Serial.println(total);
-}
 
-double getAiPredictionTime(bool up, double start_pressure, double end_pressure, double tank_pressure) {
-    AIModel *model = up ? &upModel : &downModel;
-    return model->predictDeNormalized(start_pressure, end_pressure, tank_pressure);
-}
-
-bool canUseAiPrediction(bool up) {
-    if (up) {
-        return getUpDataLength() > AI_PREDICTION_USAGE_THRESHOLD;
-    } else {
-        return getDownDataLength() > AI_PREDICTION_USAGE_THRESHOLD;
+    for (int i = 0; i < 4; i++) {
+        if (getLearnDataLength((SOLENOID_AI_INDEX)i) > AI_PREDICTION_USAGE_THRESHOLD) {
+            Serial.print("Ready ai model: ");
+            Serial.println(i);
+            getAIModel((SOLENOID_AI_INDEX)i)->model.loadWeights(aiModelsTemp[i].w1, aiModelsTemp[i].w2, aiModelsTemp[i].b);
+            getAIModel((SOLENOID_AI_INDEX)i)->saveWeights();
+            getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.set(true);
+        }
     }
+}
+
+double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure) {
+    return getAIModel(aiIndex)->model.predictDeNormalized(start_pressure, end_pressure, tank_pressure);
+}
+
+bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex) {
+    return getAIModel(aiIndex)->isReadyToUse.get().i;
 }
 
 #pragma endregion
