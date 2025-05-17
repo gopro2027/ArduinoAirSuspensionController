@@ -29,6 +29,9 @@ class AIModelPreference {
         weights[1].setDouble(model.w2);
         weights[2].setDouble(model.b);
     }
+    void setReady(bool ready) {
+        isReadyToUse.set(ready);
+    }
 };
 
 class SaveData

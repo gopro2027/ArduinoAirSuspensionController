@@ -523,12 +523,15 @@ void trainAIModels()
     unsigned long t = millis();
     for (int epoch = 0; epoch < 1000*10; ++epoch) {
         for (int i = 0; i < 4; i++) {
-            if (getLearnDataLength((SOLENOID_AI_INDEX)i) > AI_PREDICTION_USAGE_THRESHOLD) {
+            if (getLearnDataLength((SOLENOID_AI_INDEX)i) >= LEARN_SAVE_COUNT) {
                 for (int j = 0; j < getLearnDataLength((SOLENOID_AI_INDEX)i); j++) {
                     PressureLearnSaveStruct *pls = getLearnData((SOLENOID_AI_INDEX)i);
                     aiModelsTemp[i].train(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].timeMS);
                 }
             }
+        }
+        if (epoch%10 == 0) {
+            delay(1); // inside a task, delay 1 so it doesn't block other things i guess. Should take about 4.5ms per loop
         }
     }
     unsigned long total = millis() - t;
@@ -536,12 +539,12 @@ void trainAIModels()
     Serial.println(total);
 
     for (int i = 0; i < 4; i++) {
-        if (getLearnDataLength((SOLENOID_AI_INDEX)i) > AI_PREDICTION_USAGE_THRESHOLD) {
+        if (getLearnDataLength((SOLENOID_AI_INDEX)i) >= LEARN_SAVE_COUNT) {
             Serial.print("Ready ai model: ");
             Serial.println(i);
             getAIModel((SOLENOID_AI_INDEX)i)->model.loadWeights(aiModelsTemp[i].w1, aiModelsTemp[i].w2, aiModelsTemp[i].b);
             getAIModel((SOLENOID_AI_INDEX)i)->saveWeights();
-            getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.set(true);
+            getAIModel((SOLENOID_AI_INDEX)i)->setReady(true);
         }
     }
 }

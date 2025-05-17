@@ -15,6 +15,7 @@ class Preferencable
 
 public:
     char name[15]; // 15 is max len. Note for future devs: I didn't add any code to make sure it is 0 terminated so be careful how you choose a name i guess
+    //char buffer[4]; 
     PreferencableValue value;
     void load(const char *name, uint64_t defaultValue);
     void set(uint64_t val);

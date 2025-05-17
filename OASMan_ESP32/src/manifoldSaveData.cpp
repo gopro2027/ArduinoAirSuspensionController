@@ -4,7 +4,6 @@ SaveData _SaveData;
 byte currentProfile[4];
 bool sendProfileBT = false;
 
-#define LEARN_SAVE_COUNT 200
 int learnDataIndex[4];
 PressureLearnSaveStruct learnData[4][LEARN_SAVE_COUNT];
 static SemaphoreHandle_t learnDataMutex;
@@ -140,6 +139,7 @@ void beginSaveData()
         snprintf(buf, sizeof(buf), "model%i|r", i);
         _SaveData.aiModels[i].isReadyToUse.load(buf, false);
         _SaveData.aiModels[i].loadModel(); // copy the values to the internal model
+        //Serial.println(getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.get().i);
     }
 
     for (int i = 0; i < 10; i++)
