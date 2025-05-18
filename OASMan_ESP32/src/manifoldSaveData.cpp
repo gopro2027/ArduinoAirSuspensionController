@@ -19,13 +19,13 @@ int getLearnDataLength(SOLENOID_AI_INDEX index) {
 const char *getLogFileName(SOLENOID_AI_INDEX index) {
     switch (index) {
         case SOLENOID_AI_INDEX::AI_MODEL_UP_FRONT:
-            return "UpDataF";
+            return "/UpDataF.dat";
         case SOLENOID_AI_INDEX::AI_MODEL_UP_REAR:
-            return "UpDataR";
+            return "/UpDataR.dat";
         case SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT:
-            return "DownDataF";
+            return "/DownDataF.dat";
         case SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR:
-            return "DownDataR";
+            return "/DownDataR.dat";
     }
 }
 
@@ -202,10 +202,10 @@ void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex,uint8_t start_pressure, 
             }
         }
 
-        while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
-        {
-            delay(1);
-        }
+        // while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
+        // {
+        //     delay(1);
+        // }
 
         PressureLearnSaveStruct *pls = getLearnData(aiIndex);
 
@@ -215,12 +215,16 @@ void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex,uint8_t start_pressure, 
             pls[*size].goal_pressure = goal_pressure;
             pls[*size].tank_pressure = tank_pressure;
             pls[*size].timeMS = timeMS;
-            *size = *size + 1;
 
-            saveBytes(getLogFileName(aiIndex),pls,(*size)*sizeof(PressureLearnSaveStruct));
+            // This is full write. Do append instead
+            //writeBytes(getLogFileName(aiIndex),pls,(*size)*sizeof(PressureLearnSaveStruct));
+
+            writeBytes(getLogFileName(aiIndex),&pls[*size],sizeof(PressureLearnSaveStruct), "a");
+
+            *size = *size + 1; // moved to after append
         }
 
-        xSemaphoreGive(learnDataMutex);
+        //xSemaphoreGive(learnDataMutex);
     }
 }
 

@@ -505,6 +505,34 @@ bool learnParabolaLoop()
 
 #pragma region training
 
+void trainSingleAIModel(SOLENOID_AI_INDEX index) {
+    AIModel aiModelsTemp;
+
+    Serial.println(F("Training AI"));
+    unsigned long t = millis();
+    for (int epoch = 0; epoch < 1000*10; ++epoch) {
+        for (int j = 0; j < getLearnDataLength(index); j++) {
+            PressureLearnSaveStruct *pls = getLearnData(index);
+            aiModelsTemp.train(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].timeMS);
+        }
+        if (epoch%10 == 0) {
+            delay(1); // inside a task, delay 1 so it doesn't block other things i guess. Should take about 4.5ms per loop
+        }
+    }
+    unsigned long total = millis() - t;
+
+    Serial.print("Ready ai model: ");
+    Serial.println(index);
+    Serial.print("Time for training: ");
+    Serial.println(total);
+
+    getAIModel(index)->model.loadWeights(aiModelsTemp.w1, aiModelsTemp.w2, aiModelsTemp.b);
+    getAIModel(index)->saveWeights();
+    getAIModel(index)->setReady(true); // set to not train again and let it know it's ready to use
+}
+
+int AIReadyBittset = 0;
+
 void trainAIModels()
 {
 
@@ -517,34 +545,13 @@ void trainAIModels()
     // downModel.useWeight4 = true;
     // downModel.useWeight5 = false;
 
-    AIModel aiModelsTemp[4];
-
-    Serial.println(F("Training AI"));
-    unsigned long t = millis();
-    for (int epoch = 0; epoch < 1000*10; ++epoch) {
-        for (int i = 0; i < 4; i++) {
-            if (getLearnDataLength((SOLENOID_AI_INDEX)i) >= LEARN_SAVE_COUNT) {
-                for (int j = 0; j < getLearnDataLength((SOLENOID_AI_INDEX)i); j++) {
-                    PressureLearnSaveStruct *pls = getLearnData((SOLENOID_AI_INDEX)i);
-                    aiModelsTemp[i].train(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].timeMS);
-                }
-            }
-        }
-        if (epoch%10 == 0) {
-            delay(1); // inside a task, delay 1 so it doesn't block other things i guess. Should take about 4.5ms per loop
-        }
-    }
-    unsigned long total = millis() - t;
-    Serial.print("Time for training: ");
-    Serial.println(total);
-
     for (int i = 0; i < 4; i++) {
-        if (getLearnDataLength((SOLENOID_AI_INDEX)i) >= LEARN_SAVE_COUNT) {
-            Serial.print("Ready ai model: ");
-            Serial.println(i);
-            getAIModel((SOLENOID_AI_INDEX)i)->model.loadWeights(aiModelsTemp[i].w1, aiModelsTemp[i].w2, aiModelsTemp[i].b);
-            getAIModel((SOLENOID_AI_INDEX)i)->saveWeights();
-            getAIModel((SOLENOID_AI_INDEX)i)->setReady(true);
+        if (getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.get().i == false) {
+            if (getLearnDataLength((SOLENOID_AI_INDEX)i) >= LEARN_SAVE_COUNT) {
+                trainSingleAIModel((SOLENOID_AI_INDEX)i);
+            }
+        } else {
+            AIReadyBittset = AIReadyBittset | (1<<i);
         }
     }
 }

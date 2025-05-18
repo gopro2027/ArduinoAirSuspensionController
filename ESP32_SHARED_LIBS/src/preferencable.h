@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <Preferences.h>
+#include <SPIFFS.h>
 
 union PreferencableValue
 {
@@ -27,8 +28,9 @@ public:
     }
 };
 
-void saveBytes(const char *name, const void *bytes, size_t len);
 size_t readBytes(const char *name, void *buf, size_t maxLen);
+
+void writeBytes(const char *name, const void *bytes, size_t len, const char *mode = "w");
 
 void deletePreference(const char *name);
 

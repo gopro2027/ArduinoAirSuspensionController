@@ -243,7 +243,8 @@ void Wheel::loop()
     if (this->flagStartPressureGoalRoutine)
     {
         this->flagStartPressureGoalRoutine = false;
-        const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
+        //const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
+        const double oscillation = 1.75;
         int iteration = 0;
         for (;;)
         {

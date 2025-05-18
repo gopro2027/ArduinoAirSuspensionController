@@ -10,10 +10,14 @@
 #include "airSuspensionUtil.h"
 #include "tasks/tasks.h"
 
+#include <SPIFFS.h>
+
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
     Serial.println(F("Startup!"));
+
+    SPIFFS.begin(true);
     
     beginSaveData();
 
@@ -21,9 +25,10 @@ void setup()
 
     //trainAIModels();
 
-    // for (int i = 0; i < 450*2; i++) {
+    // for (int i = 0; i < 20; i++) {
     //     for (int j = 0; j < 4; j++) {
-    //         appendPressureDataToFile((SOLENOID_AI_INDEX)j, 0,0,0,0);
+    //         appendPressureDataToFile((SOLENOID_AI_INDEX)j, 0,1,2,3);
+    //         delay(2);
     //     }
     // }
     #ifdef parabolaLearn
