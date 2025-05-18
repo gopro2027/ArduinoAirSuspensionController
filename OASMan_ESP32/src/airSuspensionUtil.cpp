@@ -508,7 +508,8 @@ bool learnParabolaLoop()
 void trainSingleAIModel(SOLENOID_AI_INDEX index) {
     AIModel aiModelsTemp;
 
-    Serial.println(F("Training AI"));
+    Serial.print(F("Training AI "));
+    Serial.println((int)index);
     unsigned long t = millis();
     for (int epoch = 0; epoch < 1000*10; ++epoch) {
         for (int j = 0; j < getLearnDataLength(index); j++) {
@@ -554,6 +555,8 @@ void trainAIModels()
             AIReadyBittset = AIReadyBittset | (1<<i);
         }
     }
+    Serial.print("AI training bittset: ");
+    Serial.println(AIReadyBittset);
 }
 
 double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure) {
