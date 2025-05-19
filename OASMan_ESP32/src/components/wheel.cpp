@@ -244,8 +244,9 @@ void Wheel::loop()
     {
         this->flagStartPressureGoalRoutine = false;
         //const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
-        const double oscillation = 1.75;
-        int iteration = 0;
+        //const double oscillation = 1.75;
+        const double oscillation = 1.2;
+        int iteration = -1; // - values make it skip the first generation. It won't start dividing until iteration = 1
         for (;;)
         {
             // 10 second timeout in case tank doesn't have a whole lot of air or something
@@ -295,7 +296,9 @@ void Wheel::loop()
                     }
 
                     // To help prevent ocellations, decrease it slightly each iteration
-                    valveTime = valveTime / std::pow(oscillation, iteration);
+                    if (iteration > 0) {
+                        valveTime = valveTime / std::pow(oscillation, iteration);
+                    }
 
                     if (valveTime > 0)
                     {
@@ -327,6 +330,7 @@ void Wheel::loop()
                 // Completed
                 break;
             }
+            iteration++;
         }
         // close both after (only applies for level sensor logic)
         this->s_AirIn->close();
