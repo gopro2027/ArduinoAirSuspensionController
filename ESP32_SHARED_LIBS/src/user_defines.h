@@ -59,7 +59,7 @@
 
 /* Accessory Wire */
 #define outputKeepAlivePin new InputType(12, OUTPUT) // D12, output high while accessory input is low to keep input on. Should always output high while accessory is on. Output low when accessory is low to turn off system.
-#define accessoryInput new InputType(34, INPUT)      // D34 because it's adc1 input only //D14, digital in high or low. 0 = acc on, 1 = acc off (it's on a pullup resistor)
+#define accessoryInput new InputType(35, INPUT)      // D34 because it's adc1 input only //D14, digital in high or low. 0 = acc on, 1 = acc off (it's on a pullup resistor)
 #define SYSTEM_SHUTOFF_TIME_M 15                     // 15 minutes
 
 // These will not be exact depending on how accurate your pressure sensors are.
