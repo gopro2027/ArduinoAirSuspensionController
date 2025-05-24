@@ -508,6 +508,10 @@ bool learnParabolaLoop()
 void trainSingleAIModel(SOLENOID_AI_INDEX index) {
     AIModel aiModelsTemp;
 
+    if (index == SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT || index == SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR) {
+        aiModelsTemp.up = false;
+    }
+
     Serial.print(F("Training AI "));
     Serial.println((int)index);
     unsigned long t = millis();

@@ -23,6 +23,7 @@ class AIModel {
 public:
     // Weights for each input
     double w1 = 0.1, w2 = 0.1, b = 0.0;
+    bool up = true;
     void loadWeights(double _w1, double _w2, double _b);
     double predictDeNormalized(double start_pressure, double end_pressure, double tank_pressure);
     void train(double start_pressure, double end_pressure, double tank_pressure, double actual_time);

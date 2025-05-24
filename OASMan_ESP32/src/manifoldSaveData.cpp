@@ -142,6 +142,9 @@ void beginSaveData()
         //Serial.println(getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.get().i);
     }
 
+    _SaveData.aiModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT].model.up = false;
+    _SaveData.aiModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR].model.up = false;
+
     for (int i = 0; i < 10; i++)
         Serial.println("");
     Serial.println("BEGIN IMPORTANT DATA FOR PRO");
@@ -187,6 +190,11 @@ void clearPressureData() {
 
 void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex,uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS) {
     int *size = &learnDataIndex[aiIndex];
+
+    if (abs((int)start_pressure-(int)goal_pressure) < 1) {
+        // Don't want to spam a ton of super low valve timings where the pressures basically didn't move. This happened to a tester and the result was a ton of useless repetitive data saved where we could have had more useful data.
+        return;
+    }
 
     // first initial check for size before we open the semaphore, just to prevent constantly opening a semaphore every time this is called if it's full
     if (*size < LEARN_SAVE_COUNT) {
