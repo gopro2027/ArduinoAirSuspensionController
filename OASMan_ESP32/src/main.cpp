@@ -10,13 +10,23 @@
 #include "airSuspensionUtil.h"
 #include "tasks/tasks.h"
 
+#include <SPIFFS.h>
+
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
+    Serial.println(F("Startup!"));
+
+    SPIFFS.begin(true);
+    
     beginSaveData();
 
-#ifdef parabolaLearn
-    // setupSpiffs();
+
+    //clearPressureData();
+
+    //trainAIModels();
+
+    #ifdef parabolaLearn
     //  updateParabola(true, parabola_default_value, parabola_default_value, parabola_default_value);
     //  updateParabola(false, parabola_default_value, parabola_default_value, parabola_default_value);
 #endif
@@ -25,7 +35,6 @@ void setup()
 
     setupADCReadMutex();
 
-    Serial.println(F("Startup!"));
 
     setupManifold();
 
@@ -76,6 +85,18 @@ void setup()
     setinternalReboot(false);
 
     Serial.println(F("Startup Complete"));
+
+    
+    // for (int i = 0; i < 200; i++) {
+    //     for (int j = 0; j < 2; j++) {
+    //         appendPressureDataToFile((SOLENOID_AI_INDEX)j, 0,1,2,3);
+    //         delay(2);
+    //     }
+    //     for (int j = 2; j < 4; j++) {
+    //         appendPressureDataToFile((SOLENOID_AI_INDEX)j, 2,1,3,3);
+    //         delay(2);
+    //     }
+    // }
 }
 
 void loop()

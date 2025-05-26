@@ -7,6 +7,8 @@
 
 #define MAX_PRESSURE_SAFETY 200
 
+#define LEARN_SAVE_COUNT 500
+
 /* Bags generally do not like to sit at exactly 0psi. Please choose which pressure is desired for air out */
 /* Not really used anymore, just using presets! Only kept here as legacy for og app */
 #define AIR_OUT_PRESSURE_PSI 30
@@ -57,7 +59,7 @@
 
 /* Accessory Wire */
 #define outputKeepAlivePin new InputType(12, OUTPUT) // D12, output high while accessory input is low to keep input on. Should always output high while accessory is on. Output low when accessory is low to turn off system.
-#define accessoryInput new InputType(14, INPUT)      // D14, digital in high or low. 0 = acc on, 1 = acc off (it's on a pullup resistor)
+#define accessoryInput new InputType(35, INPUT)      // D34 because it's adc1 input only //D14, digital in high or low. 0 = acc on, 1 = acc off (it's on a pullup resistor)
 #define SYSTEM_SHUTOFF_TIME_M 15                     // 15 minutes
 
 // These will not be exact depending on how accurate your pressure sensors are.
@@ -122,6 +124,14 @@ enum SOLENOID_INDEX
     FRONT_DRIVER_OUT,
     REAR_DRIVER_IN,
     REAR_DRIVER_OUT
+};
+enum SOLENOID_AI_INDEX
+{
+    AI_MODEL_UP_FRONT,
+    AI_MODEL_UP_REAR,
+    AI_MODEL_DOWN_FRONT,
+    AI_MODEL_DOWN_REAR,
+    AI_MODEL_UNDEFINED
 };
 #define SOLENOID_COUNT 8
 

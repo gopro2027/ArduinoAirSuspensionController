@@ -243,6 +243,10 @@ void Wheel::loop()
     if (this->flagStartPressureGoalRoutine)
     {
         this->flagStartPressureGoalRoutine = false;
+        //const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
+        //const double oscillation = 1.75;
+        const double oscillation = 1.2;
+        int iteration = -1; // - values make it skip the first generation. It won't start dividing until iteration = 1
         for (;;)
         {
             // 10 second timeout in case tank doesn't have a whole lot of air or something
@@ -260,7 +264,8 @@ void Wheel::loop()
             {
                 // Decide which valve to use
                 Solenoid *valve;
-                if (pressureDif >= 0)
+                bool up = pressureDif >= 0;
+                if (up)
                 {
                     valve = this->s_AirIn;
                     this->s_AirOut->close();
@@ -281,6 +286,20 @@ void Wheel::loop()
                     // right now not going to use this because it doesn't seem to work super well up air up. Results in super low values. Need to do more testing
                     // int valveTime = this->calculatePressureTimingReal(valve);
 
+                    
+                    double start_pressure = this->getSelectedInputValue();
+                    double end_pressure = this->pressureGoal;
+                    double tank_pressure = getCompressor()->getTankPressure();
+
+                    if (canUseAiPrediction(valve->getAIIndex())) {
+                        valveTime = getAiPredictionTime(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure);
+                    }
+
+                    // To help prevent ocellations, decrease it slightly each iteration
+                    if (iteration > 0) {
+                        valveTime = valveTime / std::pow(oscillation, iteration);
+                    }
+
                     if (valveTime > 0)
                     {
                         // Open valve for calculated time
@@ -288,8 +307,15 @@ void Wheel::loop()
                         delay(valveTime);
                         valve->close();
 
+                        
                         // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
                         delay(150);
+                        this->readInputs();
+                        end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
+                        appendPressureDataToFile(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime);
+                    } else {
+                        // calculated valve time is 0 so just break out of loop
+                        break;
                     }
                 }
                 else
@@ -304,6 +330,7 @@ void Wheel::loop()
                 // Completed
                 break;
             }
+            iteration++;
         }
         // close both after (only applies for level sensor logic)
         this->s_AirIn->close();

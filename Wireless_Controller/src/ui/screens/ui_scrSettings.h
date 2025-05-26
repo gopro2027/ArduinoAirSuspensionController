@@ -17,6 +17,9 @@ public:
     lv_obj_t *ui_qrcode;
     Option *ui_s1;
     Option *ui_s2;
+    Option *ui_aiReady;
+    Option *ui_aiPercentage;
+    Option *ui_aiEnabled;
     Option *ui_s3;
     Option *ui_rebootbutton;
     Option *ui_s4;

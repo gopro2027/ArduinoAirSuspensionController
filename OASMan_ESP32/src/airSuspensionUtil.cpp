@@ -420,28 +420,9 @@ namespace PressureSensorCalibration
 #pragma endregion
 
 #pragma region parabolaLearn
+
+
 #ifdef parabolaLearn
-// #include "SPIFFS.h"
-// void setupSpiffs()
-// {
-//     if (!SPIFFS.begin(true))
-//     {
-//         Serial.println("An Error has occurred while mounting SPIFFS");
-//         return;
-//     }
-
-//     File file = SPIFFS.open("/log.txt", FILE_READ);
-//     if (!file)
-//     {
-//         Serial.println("There was an error opening the file for writing");
-//         return;
-//     }
-//     Serial.println("Log.txt data:");
-//     Serial.println(file.readString());
-//     Serial.println("LOG EOL");
-
-//     file.close();
-// }
 void learnParabolaSetup()
 {
 
@@ -520,4 +501,90 @@ bool learnParabolaLoop()
     return true;
 }
 #endif
+#pragma endregion
+
+#pragma region training
+
+uint8_t AIReadyBittset = 0;
+uint8_t AIPercentage = 0;
+
+void trainSingleAIModel(SOLENOID_AI_INDEX index) {
+    AIModel aiModelsTemp;
+
+    if (index == SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT || index == SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR) {
+        aiModelsTemp.up = false;
+    }
+
+    Serial.print(F("Training AI "));
+    Serial.println((int)index);
+    unsigned long t = millis();
+    for (int epoch = 0; epoch < 1000*10; ++epoch) {
+        for (int j = 0; j < getLearnDataLength(index); j++) {
+            PressureLearnSaveStruct *pls = getLearnData(index);
+            aiModelsTemp.train(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].timeMS);
+        }
+        if (epoch%10 == 0) {
+            delay(1); // inside a task, delay 1 so it doesn't block other things i guess. Should take about 4.5ms per loop
+        }
+    }
+    unsigned long total = millis() - t;
+
+    Serial.print("Ready ai model: ");
+    Serial.println(index);
+    Serial.print("Time for training: ");
+    Serial.println(total);
+
+    getAIModel(index)->model.loadWeights(aiModelsTemp.w1, aiModelsTemp.w2, aiModelsTemp.b);
+    getAIModel(index)->saveWeights();
+    getAIModel(index)->setReady(true); // set to not train again and let it know it's ready to use
+    AIReadyBittset = AIReadyBittset | (1<<index);
+}
+
+void updateAIPercentage() {
+    int totalLen = 0;
+    for (int i = 0; i < 4; i++) {
+        int len = getLearnDataLength((SOLENOID_AI_INDEX)i);
+        totalLen += len;
+    }
+    AIPercentage = ((float)totalLen/((float)LEARN_SAVE_COUNT*4)) * 100;
+}
+
+void trainAIModels()
+{
+
+    // First load some default values based off info I grabbed from some corvette testing
+    // I am using the first 4 weights because I think that makes the most logical sense to include all those. The 5th weight (ratio) I don't think is so great
+    // upModel.loadWeights(-0.34525, 0.45432, -0.076937, 0.40201, 0.1, -0.19555);
+    // downModel.loadWeights(0.76399, -0.66687, 0.070163, -0.5265, 0.1, 0.17787);
+    // upModel.useWeight4 = true;
+    // upModel.useWeight5 = false;
+    // downModel.useWeight4 = true;
+    // downModel.useWeight5 = false;
+
+    for (int i = 0; i < 4; i++) {
+        if (getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.get().i == false) {
+            if (getLearnDataLength((SOLENOID_AI_INDEX)i) >= LEARN_SAVE_COUNT) {
+                trainSingleAIModel((SOLENOID_AI_INDEX)i);
+            }
+        } else {
+            AIReadyBittset = AIReadyBittset | (1<<i);
+        }
+    }
+    
+    Serial.print("AI training bittset: ");
+    Serial.println(AIReadyBittset);
+    updateAIPercentage();
+}
+
+double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure) {
+    return getAIModel(aiIndex)->model.predictDeNormalized(start_pressure, end_pressure, tank_pressure);
+}
+
+bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex) {
+    if (!getaiEnabled()) {
+        return false;
+    }
+    return getAIModel(aiIndex)->isReadyToUse.get().i;
+}
+
 #pragma endregion

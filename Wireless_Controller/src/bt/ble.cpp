@@ -119,7 +119,7 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
             currentPressures[WHEEL_FRONT_DRIVER] = status->args16()[WHEEL_FRONT_DRIVER].i;
             currentPressures[WHEEL_REAR_DRIVER] = status->args16()[WHEEL_REAR_DRIVER].i;
             currentPressures[_TANK_INDEX] = status->args16()[_TANK_INDEX].i;
-            statusBittset = status->args16()[5].i;
+            statusBittset = status->args32()[3].i;
         }
     }
     if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Rest.toString())

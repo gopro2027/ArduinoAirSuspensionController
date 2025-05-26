@@ -36,7 +36,7 @@ for y in range(0, requested_height):
     for x in range(0, requested_width, 8):
         arr = []
         for i in range(8):
-            arr.append('1' if image.getpixel((x+i, y)) == 0xFF else '0')
+            arr.append('0' if image.getpixel((x+i, y)) == 0xFF else '1')
         binnum = '0b'+''.join(arr)
         strbldr.append(binnum+", ")
     strbldr.append("\n")

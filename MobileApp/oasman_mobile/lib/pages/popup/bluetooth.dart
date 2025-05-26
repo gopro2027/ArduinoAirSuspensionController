@@ -21,7 +21,8 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
         final screenWidth = MediaQuery.of(context).size.width;
 
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           backgroundColor: Colors.black,
           child: ConstrainedBox(
             constraints: BoxConstraints(
@@ -37,7 +38,8 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
                     const SizedBox(height: 20),
                     Flexible(
                       child: SizedBox(
-                        height: screenHeight * 0.5, // Dynamisk højde baseret på skærmstørrelse
+                        height: screenHeight *
+                            0.5, // Dynamisk højde baseret på skærmstørrelse
                         child: bleManager.connectedDevice == null
                             ? _buildDeviceList(bleManager)
                             : _buildConnectedDevice(bleManager),
@@ -58,7 +60,8 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 24),
                         ),
                         child: const Text(
                           "Refresh",
@@ -121,7 +124,8 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
           shrinkWrap: true,
           physics: const ClampingScrollPhysics(),
           itemCount: filteredResults.length,
-          separatorBuilder: (context, index) => const Divider(color: Colors.grey),
+          separatorBuilder: (context, index) =>
+              const Divider(color: Colors.grey),
           itemBuilder: (context, index) {
             final device = filteredResults[index].device;
             return _buildDeviceTile(device, bleManager);
@@ -200,9 +204,10 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.keyboard_arrow_right, color: Color.fromARGB(255, 0, 0, 0)),
+              icon: const Icon(Icons.keyboard_arrow_right,
+                  color: Color.fromARGB(255, 0, 0, 0)),
               onPressed: () async {
-                await bleManager.connectToDevice(device);
+                await bleManager.connectToDevice(device, context);
               },
             ),
           ),

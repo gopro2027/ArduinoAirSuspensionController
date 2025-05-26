@@ -7,10 +7,37 @@
 
 #include <user_defines.h>
 
+#include "pressureMath.h"
+
 class Profile
 {
 public:
     Preferencable pressure[4]; // byte
+};
+
+class AIModelPreference {
+    public:
+    Preferencable weights[3];//doubles
+    Preferencable isReadyToUse;//bool
+    AIModel model;
+    void loadModel() {
+        model.loadWeights(weights[0].get().d,weights[1].get().d,weights[2].get().d);
+        model.print_weights();
+    }
+    void saveWeights() {
+        weights[0].setDouble(model.w1);
+        weights[1].setDouble(model.w2);
+        weights[2].setDouble(model.b);
+    }
+    void setReady(bool ready) {
+        isReadyToUse.set(ready);
+    }
+    void deletePreferences() {
+        isReadyToUse.deletePreference();
+        weights[0].deletePreference();
+        weights[1].deletePreference();
+        weights[2].deletePreference();
+    }
 };
 
 class SaveData
@@ -22,6 +49,7 @@ public:
     Preferencable internalReboot;  // byte
     Preferencable learnPressureSensors;
     Preferencable safetyMode;
+    Preferencable aiEnabled;
 
     Preferencable pressureInputFrontPassenger;
     Preferencable pressureInputRearPassenger;
@@ -40,6 +68,26 @@ public:
     Preferencable pressureSensorMax;
     Preferencable bagVolumePercentage;
     Profile profile[MAX_PROFILE_COUNT];
+    AIModelPreference aiModels[4];
+};
+
+struct PressureLearnSaveStruct {
+    uint8_t start_pressure;
+    uint8_t goal_pressure;
+    uint16_t tank_pressure;
+    uint32_t timeMS;
+    void print() {
+        // Serial.printf("{0x%X, 0x%X, 0x%X, 0x%X}", start_pressure, goal_pressure, tank_pressure, timeMS);
+        Serial.print("{");
+        Serial.print((int)start_pressure);
+        Serial.print(", ");
+        Serial.print((int)goal_pressure);
+        Serial.print(", ");
+        Serial.print(tank_pressure);
+        Serial.print(", ");
+        Serial.print(timeMS);
+        Serial.print("}");
+    }
 };
 
 extern SaveData _SaveData;
@@ -51,6 +99,15 @@ void readProfile(byte profileIndex);
 void writeProfile(byte profileIndex);
 void savePressuresToProfile(byte profileIndex, float _WHEEL_FRONT_PASSENGER, float _WHEEL_REAR_PASSENGER, float _WHEEL_FRONT_DRIVER, float _WHEEL_REAR_DRIVER);
 
+PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX aiIndex);
+int getLearnDataLength(SOLENOID_AI_INDEX aiIndex);
+
+void clearPressureData();
+
+void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex,uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
+
+AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex);
+
 headerDefineSaveFunc(riseOnStart, bool);
 headerDefineSaveFunc(maintainPressure, bool);
 headerDefineSaveFunc(airOutOnShutoff, bool);
@@ -60,6 +117,7 @@ headerDefineSaveFunc(raiseOnPressure, bool);
 headerDefineSaveFunc(internalReboot, bool);
 headerDefineSaveFunc(learnPressureSensors, bool);
 headerDefineSaveFunc(safetyMode, bool);
+headerDefineSaveFunc(aiEnabled, bool);
 
 // pressure sensor values
 headerDefineSaveFunc(pressureInputFrontPassenger, byte);
