@@ -48,7 +48,7 @@ SimpleRect preset_save = {18, 235, 91 - 18, 251 - 235};
 SimpleRect preset_load = {110, 225, 221 - 110, 256 - 225};
 
 int currentPressures[5];
-uint16_t statusBittset = 0;
+uint32_t statusBittset = 0;
 int profilePressures[5][4];
 bool profileUpdated = false;
 int currentPreset = -1;

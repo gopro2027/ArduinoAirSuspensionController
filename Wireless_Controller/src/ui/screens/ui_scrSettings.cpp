@@ -28,7 +28,7 @@ void ScrSettings::init()
     this->ui_s3 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "ACC Status:", defaultCharVal);
     // this->ui_s4 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Timer Expired:", defaultCharVal);
     // this->ui_s5 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Clock:", defaultCharVal);
-    this->ui_s2 = new Option(this->optionsContainer, OptionType::ON_OFF, "Compressor Status", defaultCharVal, [](void *data)
+    this->ui_s2 = new Option(this->optionsContainer, OptionType::ON_OFF, "Compressor Status:", defaultCharVal, [](void *data)
                              { 
                 CompressorStatusPacket pkt(((bool)data));
                 sendRestPacket(&pkt);
@@ -51,6 +51,16 @@ void ScrSettings::init()
                                                                     log_i("Pressed turn off");
                                                                     showDialog("Shutting down", lv_color_hex(0xFFFF00));
                                                                 } }, []() -> void {}, false); });
+
+    new Option(this->optionsContainer, OptionType::SPACE, "");
+    new Option(this->optionsContainer, OptionType::HEADER, "ML/AI");
+    this->ui_aiPercentage = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Learn Progress:", defaultCharVal);
+    this->ui_aiReady = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Trained:", defaultCharVal);
+    this->ui_aiEnabled = new Option(this->optionsContainer, OptionType::ON_OFF, "Enabled:", defaultCharVal, [](void *data)
+                             { 
+                AIStatusPacket pkt(((bool)data));
+                sendRestPacket(&pkt);
+                log_i("Pressed ai status %i", ((bool)data)); });
 
     new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "Basic settings");
@@ -236,10 +246,21 @@ void ScrSettings::loop()
     this->ui_safetymode->setBooleanValue(statusBittset & (1 << StatusPacketBittset::SAFETY_MODE));
 
     this->ui_s2->setBooleanValue(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON));
+    this->ui_aiEnabled->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AI_STATUS_ENABLED));
+
+    int aiPacked = statusBittset >> 21;
+    uint8_t AIReadyBittset = aiPacked & 0b1111;
+    uint8_t AIPercentage = aiPacked >> 4;
+    //Serial.println(AIReadyBittset);
+
+    char buf[40];
+    snprintf(buf,sizeof(buf),"%i%%",AIPercentage);
+    this->ui_aiPercentage->setRightHandText(buf);
+    snprintf(buf,sizeof(buf),"UF:  %c UR:  %c\nDF: %c DR: %c", (AIReadyBittset & 0b1)?'Y':'n', (AIReadyBittset & 0b10 >> 1)?'Y':'n', (AIReadyBittset & 0b100 >> 2)?'Y':'n',(AIReadyBittset & 0b1000 >> 3)?'Y':'n');
+    this->ui_aiReady->setRightHandText(buf);
 
     if (*util_configValues._setValues())
     {
-        char buf[20];
         *util_configValues._setValues() = false;
         this->ui_config1->setRightHandText(itoa(*util_configValues._bagMaxPressure(), buf, 10));
         this->ui_config2->setRightHandText(itoa(*util_configValues._systemShutoffTimeM(), buf, 10));

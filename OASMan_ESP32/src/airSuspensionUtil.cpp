@@ -505,6 +505,9 @@ bool learnParabolaLoop()
 
 #pragma region training
 
+uint8_t AIReadyBittset = 0;
+uint8_t AIPercentage = 0;
+
 void trainSingleAIModel(SOLENOID_AI_INDEX index) {
     AIModel aiModelsTemp;
 
@@ -534,9 +537,17 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index) {
     getAIModel(index)->model.loadWeights(aiModelsTemp.w1, aiModelsTemp.w2, aiModelsTemp.b);
     getAIModel(index)->saveWeights();
     getAIModel(index)->setReady(true); // set to not train again and let it know it's ready to use
+    AIReadyBittset = AIReadyBittset | (1<<index);
 }
 
-int AIReadyBittset = 0;
+void updateAIPercentage() {
+    int totalLen = 0;
+    for (int i = 0; i < 4; i++) {
+        int len = getLearnDataLength((SOLENOID_AI_INDEX)i);
+        totalLen += len;
+    }
+    AIPercentage = ((float)totalLen/((float)LEARN_SAVE_COUNT*4)) * 100;
+}
 
 void trainAIModels()
 {
@@ -559,8 +570,10 @@ void trainAIModels()
             AIReadyBittset = AIReadyBittset | (1<<i);
         }
     }
+    
     Serial.print("AI training bittset: ");
     Serial.println(AIReadyBittset);
+    updateAIPercentage();
 }
 
 double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure) {
@@ -568,6 +581,9 @@ double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, dou
 }
 
 bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex) {
+    if (!getaiEnabled()) {
+        return false;
+    }
     return getAIModel(aiIndex)->isReadyToUse.get().i;
 }
 

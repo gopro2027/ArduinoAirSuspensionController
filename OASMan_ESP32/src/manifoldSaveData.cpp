@@ -57,6 +57,7 @@ void beginSaveData()
     _SaveData.internalReboot.load("internalReboot", false);
     _SaveData.learnPressureSensors.load("learnPressureSensors", false);
     _SaveData.safetyMode.load("safetyMode", true);
+    _SaveData.aiEnabled.load("aiEnabled", true);
 
     // pressure sensor values
     _SaveData.pressureInputFrontPassenger.load("PIFP", 0);
@@ -187,7 +188,7 @@ void clearPressureData() {
     }
 }
 
-
+extern void updateAIPercentage();
 void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex,uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS) {
     int *size = &learnDataIndex[aiIndex];
 
@@ -234,6 +235,8 @@ void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex,uint8_t start_pressure, 
 
         //xSemaphoreGive(learnDataMutex);
     }
+
+    updateAIPercentage();
 }
 
 AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex) {
@@ -283,6 +286,8 @@ createSaveFuncInt(raiseOnPressure, bool);
 createSaveFuncInt(internalReboot, bool);
 createSaveFuncInt(learnPressureSensors, bool);
 createSaveFuncInt(safetyMode, bool);
+createSaveFuncInt(aiEnabled, bool);
+
 
 // pressure sensor values
 createSaveFuncInt(pressureInputFrontPassenger, byte);
