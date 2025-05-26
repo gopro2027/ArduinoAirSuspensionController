@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <Preferences.h>
+#include <SPIFFS.h>
 
 union PreferencableValue
 {
@@ -15,6 +16,7 @@ class Preferencable
 
 public:
     char name[15]; // 15 is max len. Note for future devs: I didn't add any code to make sure it is 0 terminated so be careful how you choose a name i guess
+    //char buffer[4]; 
     PreferencableValue value;
     void load(const char *name, uint64_t defaultValue);
     void set(uint64_t val);
@@ -25,6 +27,12 @@ public:
         return value;
     }
 };
+
+size_t readBytes(const char *name, void *buf, size_t maxLen);
+
+void writeBytes(const char *name, const void *bytes, size_t len, const char *mode = "w");
+
+void deletePreference(const char *name);
 
 #define createSaveFuncInt(VARNAME, _TYPE) \
     _TYPE get##VARNAME()                  \

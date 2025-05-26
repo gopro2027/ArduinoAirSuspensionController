@@ -48,6 +48,9 @@ namespace PressureSensorCalibration
 #ifdef parabolaLearn
 bool learnParabolaLoop();
 void learnParabolaSetup();
-void setupSpiffs();
 #endif
+
+void trainAIModels();
+double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure);
+bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex);
 #endif

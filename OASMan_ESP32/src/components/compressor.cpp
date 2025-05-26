@@ -27,12 +27,13 @@ float mockTankPressure = 0;
 float Compressor::getTankPressure()
 {
 #if TANK_PRESSURE_MOCK == true
-    mockTankPressure++;
-    if (mockTankPressure > 300)
-    {
-        mockTankPressure = 0;
-    }
-    return mockTankPressure;
+    // mockTankPressure++;
+    // if (mockTankPressure > 300)
+    // {
+    //     mockTankPressure = 0;
+    // }
+    // return mockTankPressure;
+    return 200;
 #else
     if (this->currentPressure < 0)
     {

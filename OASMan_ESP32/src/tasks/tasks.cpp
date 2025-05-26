@@ -141,6 +141,12 @@ void start_parabolaLearnTask()
 }
 #endif
 
+void task_trainAI(void *parameters)
+{
+    trainAIModels();
+    vTaskDelete(NULL);
+}
+
 void setup_tasks()
 {
     //  Bluetooth Task
@@ -178,7 +184,7 @@ void setup_tasks()
         xTaskCreate(
             task_wheel,
             "Wheel Task",
-            512 * 4,
+            512 * 5,
             getWheel(i),
             1000,
             NULL);
@@ -200,6 +206,15 @@ void setup_tasks()
         task_ota,
         "OTA",
         512 * 5,
+        NULL,
+        1000,
+        NULL);
+
+    //  Train AI Task
+    xTaskCreate(
+        task_trainAI,
+        "trainAI",
+        512 * 4,
         NULL,
         1000,
         NULL);

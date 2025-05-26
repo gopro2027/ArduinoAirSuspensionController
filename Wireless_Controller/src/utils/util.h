@@ -73,7 +73,7 @@ extern SimpleRect preset_save;
 extern SimpleRect preset_load;
 
 extern int currentPressures[5];
-extern uint16_t statusBittset;
+extern uint32_t statusBittset;
 extern int profilePressures[5][4];
 extern bool profileUpdated;
 extern int currentPreset;

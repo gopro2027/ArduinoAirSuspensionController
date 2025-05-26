@@ -39,6 +39,7 @@ enum BTOasIdentifier
     TURNOFF = 25,
     SAFETYMODE = 26,
     DETECTPRESSURESENSORS = 27,
+    AISTATUSENABLED = 28
 };
 
 enum StatusPacketBittset
@@ -52,7 +53,8 @@ enum StatusPacketBittset
     RISE_ON_START,
     AIR_OUT_ON_SHUTOFF,
     HEIGHT_SENSOR_MODE,
-    SAFETY_MODE
+    SAFETY_MODE,
+    AI_STATUS_ENABLED
 };
 
 enum AuthResult
@@ -104,7 +106,7 @@ void runReceivedPacket(BTOasPacket *packet);
 // Outgoing packets
 struct StatusPacket : BTOasPacket
 {
-    StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint16_t bittset);
+    StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset);
 };
 
 struct PresetPacket : BTOasPacket
@@ -211,6 +213,10 @@ struct MaintainPressurePacket : BooleanPacket
 struct CompressorStatusPacket : BooleanPacket
 {
     CompressorStatusPacket(bool enable);
+};
+struct AIStatusPacket : BooleanPacket
+{
+    AIStatusPacket(bool enable);
 };
 struct RebootPacket : BTOasPacket
 {

@@ -44,4 +44,7 @@ public:
 };
 
 float readPinPressure(InputType *pin, bool heightMode);
+
+extern bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex);
+extern double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure);
 #endif

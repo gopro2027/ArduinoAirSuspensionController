@@ -4,9 +4,10 @@
 
 Solenoid::Solenoid() {}
 
-Solenoid::Solenoid(InputType *pin)
+Solenoid::Solenoid(InputType *pin, SOLENOID_AI_INDEX aiIndex)
 {
     this->pin = pin;
+    this->aiIndex = aiIndex;
 
     // default solenoid to low state... this is important after a software reboot, it could be stuck as HIGH because it is not automatically reset to LOW
     this->bopen = false;
@@ -31,4 +32,8 @@ void Solenoid::close()
 bool Solenoid::isOpen()
 {
     return this->bopen;
+}
+SOLENOID_AI_INDEX Solenoid::getAIIndex() 
+{
+    return this->aiIndex;
 }

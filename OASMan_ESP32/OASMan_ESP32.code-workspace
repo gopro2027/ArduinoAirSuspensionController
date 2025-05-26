@@ -6,6 +6,10 @@
 	],
 	"settings": {
 		"files.associations": {
+			"*.sqlbook": "sql",
+			"*.ndjson": "jsonl",
+			"*.dbclient-js": "javascript",
+			"jinja-html": "html",
 			"new": "cpp",
 			"array": "cpp",
 			"*.tcc": "cpp",
@@ -57,7 +61,19 @@
 			"streambuf": "cpp",
 			"thread": "cpp",
 			"cinttypes": "cpp",
-			"typeinfo": "cpp"
+			"typeinfo": "cpp",
+			"forward_list": "cpp",
+			"list": "cpp",
+			"regex": "cpp",
+			"valarray": "cpp",
+			"bitset": "cpp",
+			"complex": "cpp",
+			"condition_variable": "cpp",
+			"csetjmp": "cpp",
+			"set": "cpp",
+			"future": "cpp",
+			"mutex": "cpp",
+			"typeindex": "cpp"
 		}
 	}
 }

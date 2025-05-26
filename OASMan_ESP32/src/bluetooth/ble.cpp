@@ -322,6 +322,9 @@ void ble_create_characteristics(BLEService *pService)
     valveControlCharacteristic->setCallbacks(&characteristicCallback);
 }
 
+extern uint8_t AIReadyBittset;//4
+extern uint8_t AIPercentage;//7
+
 void ble_notify()
 {
     // calculate whether or not to do stuff at a specific interval, in this case, every 1 second we want to send out a notify.
@@ -336,7 +339,7 @@ void ble_notify()
 
     if (runNotifications)
     {
-        uint16_t statusBittset = 0;
+        uint32_t statusBittset = 0;
         if (getCompressor()->isFrozen())
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::COMPRESSOR_FROZEN);
@@ -377,6 +380,18 @@ void ble_notify()
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::SAFETY_MODE);
         }
+        if (getaiEnabled())
+        {
+            statusBittset = statusBittset | (1 << StatusPacketBittset::AI_STATUS_ENABLED);
+        }
+
+        // pack these 2 values together at the top of the statusBittset
+        int aiDataPacked = (AIPercentage << 4) + AIReadyBittset; // combine at bottom
+        aiDataPacked = (aiDataPacked<<21); // move to top end (4 + 7 = 11; 32-11 = 21)
+
+        statusBittset = statusBittset | aiDataPacked;
+
+
         StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue(), getCompressor()->getTankPressure(), statusBittset);
 
         statusCharacteristic->setValue(statusPacket.tx(), BTOAS_PACKET_SIZE);
@@ -498,6 +513,9 @@ void runReceivedPacket(BTOasPacket *packet)
     case BTOasIdentifier::COMPRESSORSTATUS:
         // TODO: THIS MIGHT HAVE THREADING ISSUES BUT IDK
         getCompressor()->enableDisableOverride(((CompressorStatusPacket *)packet)->getBoolean());
+        break;
+    case BTOasIdentifier::AISTATUSENABLED:
+        setaiEnabled(((AIStatusPacket *)packet)->getBoolean());
         break;
     case BTOasIdentifier::GETCONFIGVALUES:
     {

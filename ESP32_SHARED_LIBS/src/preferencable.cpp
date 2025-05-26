@@ -16,6 +16,46 @@ void endNamespace()
     preferences.end();
 }
 
+void deletePreference(const char *name) {
+    openNamespace(SAVEDATA_NAMESPACE, false);
+    preferences.remove(name);
+    endNamespace();
+}
+
+void writeBytes(const char *name, const void *bytes, size_t len, const char *mode) {
+    File file = SPIFFS.open(name, mode, true);
+    if (!file) {
+        Serial.println("Failed to open file for writing");
+    } else {
+        for (int i = 0; i < len; i++) {
+            file.print(((char*)bytes)[i]);
+        }
+        file.close();
+    }
+}
+
+
+size_t readBytes(const char *name, void *buf, size_t maxLen) {
+    File file = SPIFFS.open(name, "r");
+    if (!file) {
+        Serial.println("Failed to open file for reading");
+        return -1;
+    } else {
+        Serial.println("Contents of test.txt:");
+        int i = 0;
+        while (file.available()) {
+            if (i == maxLen) {
+                break;
+            }
+            ((char*)buf)[i] = (char)file.read();
+            //Serial.print(((char*)buf)[i]);
+            i++;
+        }
+        file.close(); // Close the file
+        return i;
+    }
+}
+
 void Preferencable::load(const char *name, uint64_t defaultValue)
 {
     memset(this->name, 0, sizeof(this->name));     // make sure it's 0 terminated
