@@ -486,6 +486,9 @@ void runReceivedPacket(BTOasPacket *packet)
         Serial.println(F("Turning off..."));
         forceShutoff = true;
         break;
+    case BTOasIdentifier::RESETAIPKT:
+        clearPressureData();
+        break;
     case BTOasIdentifier::CALIBRATE:
 #ifdef parabolaLearn
         Serial.println("Starting parabola calibration task");

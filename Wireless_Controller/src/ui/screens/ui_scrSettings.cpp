@@ -61,6 +61,14 @@ void ScrSettings::init()
                 AIStatusPacket pkt(((bool)data));
                 sendRestPacket(&pkt);
                 log_i("Pressed ai status %i", ((bool)data)); });
+    new Option(this->optionsContainer, OptionType::BUTTON, "Reset Learned Data", defaultCharVal, [](void *data)
+                                       { currentScr->showMsgBox("Reset Learned AI data?", "Run this if ai has completed training and you are getting innacurate presets.", "Confirm", "Cancel", []() -> void
+                                                                {
+                                                                
+                                                                    ResetAIPacket pkt;
+                                                                    sendRestPacket(&pkt);
+                                                                    log_i("Pressed reset ai");
+                                                                 }, []() -> void {}, false); });
 
     new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "Basic settings");

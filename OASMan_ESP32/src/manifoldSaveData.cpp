@@ -46,6 +46,38 @@ void initDataFile(SOLENOID_AI_INDEX index) {
     Serial.println();
 }
 
+void loadAILearnedDataPreferences() {
+    // load the 4 models and learn data
+    for (int i = 0; i < 4; i++) {
+        learnDataIndex[i] = readBytes(getLogFileName((SOLENOID_AI_INDEX)i), learnData[i], LEARN_SAVE_COUNT * sizeof(PressureLearnSaveStruct)) / sizeof(PressureLearnSaveStruct);
+        char buf[15];
+        snprintf(buf, sizeof(buf), "model%i|%i", i, 0);
+        _SaveData.aiModels[i].weights[0].loadDouble(buf, 0.1);
+        snprintf(buf, sizeof(buf), "model%i|%i", i, 1);
+        _SaveData.aiModels[i].weights[1].loadDouble(buf, 0.1);
+        snprintf(buf, sizeof(buf), "model%i|%i", i, 2);
+        _SaveData.aiModels[i].weights[2].loadDouble(buf, 0.0);
+        snprintf(buf, sizeof(buf), "model%i|r", i);
+        _SaveData.aiModels[i].isReadyToUse.load(buf, false);
+        _SaveData.aiModels[i].loadModel(); // copy the values to the internal model
+        //Serial.println(getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.get().i);
+    }
+
+    _SaveData.aiModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT].model.up = false;
+    _SaveData.aiModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR].model.up = false;
+
+    for (int i = 0; i < 10; i++)
+        Serial.println("");
+    Serial.println("BEGIN IMPORTANT DATA FOR PRO");
+    Serial.println(sizeof(PressureLearnSaveStruct));
+    for (int i = 0; i < 4; i++) {
+        initDataFile((SOLENOID_AI_INDEX)i);
+    }
+    Serial.println("END IMPORTANT DATA FOR PRO");
+    for (int i = 0; i < 10; i++)
+        Serial.println("");
+}
+
 void beginSaveData()
 {
     _SaveData.riseOnStart.load("riseOnStart", false);
@@ -127,35 +159,7 @@ void beginSaveData()
     // _SaveData.downModel.model.useWeight4 = true;
     // _SaveData.downModel.model.useWeight5 = false;
 
-    // load the 4 models and learn data
-    for (int i = 0; i < 4; i++) {
-        learnDataIndex[i] = readBytes(getLogFileName((SOLENOID_AI_INDEX)i), learnData[i], LEARN_SAVE_COUNT * sizeof(PressureLearnSaveStruct)) / sizeof(PressureLearnSaveStruct);
-        char buf[15];
-        snprintf(buf, sizeof(buf), "model%i|%i", i, 0);
-        _SaveData.aiModels[i].weights[0].loadDouble(buf, 0.1);
-        snprintf(buf, sizeof(buf), "model%i|%i", i, 1);
-        _SaveData.aiModels[i].weights[1].loadDouble(buf, 0.1);
-        snprintf(buf, sizeof(buf), "model%i|%i", i, 2);
-        _SaveData.aiModels[i].weights[2].loadDouble(buf, 0.0);
-        snprintf(buf, sizeof(buf), "model%i|r", i);
-        _SaveData.aiModels[i].isReadyToUse.load(buf, false);
-        _SaveData.aiModels[i].loadModel(); // copy the values to the internal model
-        //Serial.println(getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.get().i);
-    }
-
-    _SaveData.aiModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT].model.up = false;
-    _SaveData.aiModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR].model.up = false;
-
-    for (int i = 0; i < 10; i++)
-        Serial.println("");
-    Serial.println("BEGIN IMPORTANT DATA FOR PRO");
-    Serial.println(sizeof(PressureLearnSaveStruct));
-    for (int i = 0; i < 4; i++) {
-        initDataFile((SOLENOID_AI_INDEX)i);
-    }
-    Serial.println("END IMPORTANT DATA FOR PRO");
-    for (int i = 0; i < 10; i++)
-        Serial.println("");
+    loadAILearnedDataPreferences();
 
     learnDataMutex = xSemaphoreCreateMutex();
     //downDataMutex = xSemaphoreCreateMutex();
@@ -179,13 +183,19 @@ void beginSaveData()
     // _SaveData.downModel.count.set(0);
 }
 
+extern uint8_t AIReadyBittset;
+extern uint8_t AIPercentage;
 void clearPressureData() {
     for (int i = 0; i < 4; i++) {
-        deletePreference(getLogFileName((SOLENOID_AI_INDEX)i));
+        // reset the file
+        deleteFile(getLogFileName((SOLENOID_AI_INDEX)i));
 
         // reset the models too
-        _SaveData.aiModels[i].isReadyToUse.set(false);
+        _SaveData.aiModels[i].deletePreferences();
     }
+    AIReadyBittset = 0;
+    AIPercentage = 0;
+    loadAILearnedDataPreferences();
 }
 
 extern void updateAIPercentage();

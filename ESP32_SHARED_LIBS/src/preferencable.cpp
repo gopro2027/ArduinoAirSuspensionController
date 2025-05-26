@@ -56,6 +56,10 @@ size_t readBytes(const char *name, void *buf, size_t maxLen) {
     }
 }
 
+void deleteFile(const char *name) {
+    SPIFFS.remove(name);
+}
+
 void Preferencable::load(const char *name, uint64_t defaultValue)
 {
     memset(this->name, 0, sizeof(this->name));     // make sure it's 0 terminated
@@ -113,4 +117,9 @@ void Preferencable::setDouble(double val)
         preferences.putDouble(this->name, val);
         endNamespace();
     }
+}
+
+void Preferencable::deletePreference()
+{
+    ::deletePreference(this->name);
 }

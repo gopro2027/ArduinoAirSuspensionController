@@ -39,7 +39,8 @@ enum BTOasIdentifier
     TURNOFF = 25,
     SAFETYMODE = 26,
     DETECTPRESSURESENSORS = 27,
-    AISTATUSENABLED = 28
+    AISTATUSENABLED = 28,
+    RESETAIPKT = 29
 };
 
 enum StatusPacketBittset
@@ -225,6 +226,10 @@ struct RebootPacket : BTOasPacket
 struct TurnOffPacket : BTOasPacket
 {
     TurnOffPacket();
+};
+struct ResetAIPacket : BTOasPacket
+{
+    ResetAIPacket();
 };
 struct StartwebPacket : BTOasPacket
 {

@@ -22,6 +22,7 @@ public:
     void set(uint64_t val);
     void loadDouble(const char *name, double defaultValue);
     void setDouble(double val);
+    void deletePreference();
     PreferencableValue get()
     {
         return value;
@@ -31,6 +32,7 @@ public:
 size_t readBytes(const char *name, void *buf, size_t maxLen);
 
 void writeBytes(const char *name, const void *bytes, size_t len, const char *mode = "w");
+void deleteFile(const char *name);
 
 void deletePreference(const char *name);
 

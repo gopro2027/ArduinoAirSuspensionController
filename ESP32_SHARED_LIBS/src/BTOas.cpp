@@ -196,6 +196,10 @@ TurnOffPacket::TurnOffPacket()
 {
     this->cmd = TURNOFF;
 }
+ResetAIPacket::ResetAIPacket()
+{
+    this->cmd = RESETAIPKT;
+}
 StartwebPacket::StartwebPacket()
 {
     this->cmd = STARTWEB;

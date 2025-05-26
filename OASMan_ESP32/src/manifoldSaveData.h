@@ -32,6 +32,12 @@ class AIModelPreference {
     void setReady(bool ready) {
         isReadyToUse.set(ready);
     }
+    void deletePreferences() {
+        isReadyToUse.deletePreference();
+        weights[0].deletePreference();
+        weights[1].deletePreference();
+        weights[2].deletePreference();
+    }
 };
 
 class SaveData
