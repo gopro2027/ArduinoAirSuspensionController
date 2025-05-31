@@ -41,7 +41,7 @@ size_t readBytes(const char *name, void *buf, size_t maxLen) {
         Serial.println("Failed to open file for reading");
         return -1;
     } else {
-        Serial.println("Contents of test.txt:");
+        //Serial.println("Contents of test.txt:");
         int i = 0;
         while (file.available()) {
             if (i == maxLen) {
