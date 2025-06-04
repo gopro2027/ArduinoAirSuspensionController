@@ -235,6 +235,62 @@ double Wheel::calculatePressureTimingReal(Solenoid *valve)
     return timeDif;
 }
 
+int wheelLoopBittset = 0;
+
+static SemaphoreHandle_t wheelLockSem;
+// SemaphoreHandle_t wheelLockMut;
+// int wheelLockCount = 0;
+
+// void barrier_wait(int bid, int &count, SemaphoreHandle_t &sem, SemaphoreHandle_t &mut) {
+// 	xSemaphoreTake(mut,1);//pthread_mutex_lock(&mut)
+// 	count += 1;
+// 	xSemaphoreGive(mut);//pthread_mutex_unlock(&mut)
+
+// 	if (count == bid) {
+// 		xSemaphoreGive(sem);//sem_post(&sem);
+// 	}
+
+//     xSemaphoreTake(sem, 1);//sem_wait(&sem);
+
+// 	xSemaphoreTake(mut,1);//pthread_mutex_lock(&mut)
+// 	count -= 1;
+// 	xSemaphoreGive(mut);//pthread_mutex_unlock(&mut)
+
+// 	if (count != 0) {
+// 		xSemaphoreGive(sem);//sem_post(&sem);
+// 	}
+// }
+
+void wheelThreadLock() {
+    while (xSemaphoreTake(wheelLockSem, 1) != pdTRUE)
+    {
+        delay(1);
+    }
+}
+
+void wheelThreadUnlock() {
+    xSemaphoreGive(wheelLockSem);
+}
+
+void notifyWheelRelease(int thisWheelNum) {
+    wheelThreadLock();
+    wheelLoopBittset = wheelLoopBittset & ~(1<<thisWheelNum);
+    wheelThreadUnlock();
+}
+
+void notifyWheelInProgress(int thisWheelNum) {
+    wheelThreadLock();
+    wheelLoopBittset = wheelLoopBittset | (1<<thisWheelNum);
+    wheelThreadUnlock();
+}
+
+void wheelThreadWaitForAllReleased() {
+    while (wheelLoopBittset != 0) {
+        sleep(1);
+    }
+}
+
+
 // logic https://www.figma.com/board/YOKnd1caeojOlEjpdfY5NF/Untitled?node-id=0-1&node-type=canvas&t=p1SyY3R7azjm1PKs-0
 void Wheel::loop()
 {
@@ -246,9 +302,18 @@ void Wheel::loop()
         //const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
         //const double oscillation = 1.75;
         const double oscillation = 1.2;
-        int iteration = -1; // - values make it skip the first generation. It won't start dividing until iteration = 1
+        const int startIteration = -1;
+        int iteration = startIteration; // - values make it skip the first generation. It won't start dividing until iteration = 1
         for (;;)
         {
+            // if not first iteration, begin wheel lock shenanigans (assuming they should all have enough valve time to be locked by the second iteration ideally or else we prolly don't care if it ends so quickly that it just loops back around)
+            if (iteration != startIteration) {
+                notifyWheelRelease(thisWheelNum);
+                wheelThreadWaitForAllReleased();
+            }
+            notifyWheelInProgress(thisWheelNum);
+            
+
             // 10 second timeout in case tank doesn't have a whole lot of air or something
             if (millis() > this->routineStartTime + ROUTINE_TIMEOUT_MS)
             {
@@ -292,7 +357,12 @@ void Wheel::loop()
                     double tank_pressure = getCompressor()->getTankPressure();
 
                     if (canUseAiPrediction(valve->getAIIndex())) {
-                        valveTime = getAiPredictionTime(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure);
+                        int aiPredict = getAiPredictionTime(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure);
+
+                        // There are some valid scenarios where we can get inf or nan if say the tank pressure is lower than the end pressure
+                        if (aiPredict < 5000 && aiPredict > 0) {
+                            valveTime = aiPredict;
+                        }
                     }
 
                     // To help prevent ocellations, decrease it slightly each iteration
@@ -332,6 +402,7 @@ void Wheel::loop()
             }
             iteration++;
         }
+        notifyWheelRelease(thisWheelNum); // release the wheel lock
         // close both after (only applies for level sensor logic)
         this->s_AirIn->close();
         this->s_AirOut->close();
