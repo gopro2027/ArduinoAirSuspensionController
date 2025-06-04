@@ -581,6 +581,8 @@ double AIModel::predict(double start_pressure, double end_pressure, double tank_
 
         result = w1 * x + w2 * delta_p + b;
 
+        // result += w3 * start_pressure + w4 * end_pressure + w5 * tank_pressure;
+
         // time to open valve for = a * log(tank_pressure / (tank_pressure - end_pressure)) + b * (end_pressure - start_pressure) + c
     } else {
         double timeDifEndMinusStart = log(start_pressure/end_pressure);//(-log(end_pressure)) - (-log(start_pressure)); // the graph of the time it takes to air out given a set pressure is simply -log(pressure). So we take the start pressure minus the end pressure. then our multiplier and y offset and simply the weights. See the reddit post of the air out graph for reference https://www.reddit.com/r/askmath/comments/1k5kysw/what_type_of_line_is_this_and_how_can_i_make_a/ 
@@ -606,6 +608,10 @@ void AIModel::calculateDescent(double error, double start_pressure, double end_p
         w1 -= learning_rate * error * x;
         w2 -= learning_rate * error * delta_p;
         b  -= learning_rate * error;
+
+        // w3 -= learning_rate * error * start_pressure;
+        // w4 -= learning_rate * error * end_pressure;
+        // w5 -= learning_rate * error * tank_pressure;
     } else {
         if (!(end_pressure > 0) || !(start_pressure > 0))
             return;
@@ -755,7 +761,7 @@ int main() {
 
         // Train for several epochs
         int i = 0;
-        for (int epoch = 0; epoch < 1000*10*10; ++epoch) {
+        for (int epoch = 0; epoch < 1000*10; ++epoch) {
             i = 0;
             for (const auto& [start, end, tank, time] : training_data) {
                 //for (int epoch = 0; epoch < 1000*10*10; ++epoch) {
@@ -812,7 +818,7 @@ int main() {
     testPredict(model,40, 100, 180);
     testPredict(model,40, 100, 170);
     testPredict(model,40, 100, 160);
-    testPredict(model,40, 100, 100.001);
+    testPredict(model,40, 100, 101);
     std::cout << std::endl;
 
     // testPredict(model,30, 0, 180);

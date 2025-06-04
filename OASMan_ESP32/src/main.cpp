@@ -34,6 +34,7 @@ void setup()
     delay(200); // wait for voltage stabilize
 
     setupADCReadMutex();
+    setupWheelLockSem();
 
 
     setupManifold();

@@ -238,6 +238,10 @@ double Wheel::calculatePressureTimingReal(Solenoid *valve)
 int wheelLoopBittset = 0;
 
 static SemaphoreHandle_t wheelLockSem;
+void setupWheelLockSem()
+{
+    wheelLockSem = xSemaphoreCreateMutex();
+}
 // SemaphoreHandle_t wheelLockMut;
 // int wheelLockCount = 0;
 
@@ -379,10 +383,14 @@ void Wheel::loop()
 
                         
                         // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
-                        delay(150);
-                        this->readInputs();
-                        end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
-                        appendPressureDataToFile(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime);
+                        delay(250); // Changed to 250. 150 was... confusing
+
+                        // only bother saving data for first 2 iterations.
+                        if (iteration < startIteration + 2) {
+                            this->readInputs();
+                            end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
+                            appendPressureDataToFile(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime);
+                        }
                     } else {
                         // calculated valve time is 0 so just break out of loop
                         break;

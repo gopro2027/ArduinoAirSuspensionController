@@ -7,7 +7,8 @@
 
 #define MAX_PRESSURE_SAFETY 200
 
-#define LEARN_SAVE_COUNT 500
+// original full amount is 500
+#define LEARN_SAVE_COUNT 250
 
 /* Bags generally do not like to sit at exactly 0psi. Please choose which pressure is desired for air out */
 /* Not really used anymore, just using presets! Only kept here as legacy for og app */
