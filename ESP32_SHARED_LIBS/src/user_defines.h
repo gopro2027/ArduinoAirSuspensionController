@@ -39,6 +39,21 @@
 #define MAX_PROFILE_COUNT 5
 
 /* These are the pin numbers used for our manifold solenoids */
+
+#ifdef BOARD_VERSION_ATLEAST_4
+
+#define solenoidFrontPassengerInPin new InputType(18, OUTPUT)
+#define solenoidFrontPassengerOutPin new InputType(17, OUTPUT)
+#define solenoidRearPassengerInPin new InputType(19, OUTPUT)
+#define solenoidRearPassengerOutPin new InputType(33, OUTPUT)
+#define solenoidFrontDriverInPin new InputType(23, OUTPUT)
+#define solenoidFrontDriverOutPin new InputType(25, OUTPUT)
+#define solenoidRearDriverInPin new InputType(27, OUTPUT)
+#define solenoidRearDriverOutPin new InputType(26, OUTPUT)
+
+#else
+
+/* Default pin numbers before switch to 4 layer board. v2.X through v3.X */
 #define solenoidFrontPassengerInPin new InputType(33, OUTPUT)
 #define solenoidFrontPassengerOutPin new InputType(25, OUTPUT)
 #define solenoidRearPassengerInPin new InputType(23, OUTPUT)
@@ -47,6 +62,8 @@
 #define solenoidFrontDriverOutPin new InputType(27, OUTPUT)
 #define solenoidRearDriverInPin new InputType(18, OUTPUT)
 #define solenoidRearDriverOutPin new InputType(17, OUTPUT)
+
+#endif
 
 /* Pressure Sensor Inputs. Why are the ads pin nums in this specific order? Oh the world may never know */
 #define pressureSensorInput0 new InputType(0, &ADS1115A) // ADSA/0   Previous: D36/VP/A4   Default: pressureInputFrontPassenger
