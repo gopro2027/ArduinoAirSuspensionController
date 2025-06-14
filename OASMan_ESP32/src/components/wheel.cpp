@@ -1,5 +1,8 @@
 #include "wheel.h"
 
+#define NUM_WHEEL_THREADS 4
+std::atomic<bool> flagStartPressureGoalRoutine[NUM_WHEEL_THREADS];
+
 struct PressureGoalValveTiming
 {
     int pressureDelta;          // the pressure percision that we are trying to achieve
@@ -61,7 +64,8 @@ Wheel::Wheel(Solenoid *solenoidInPin, Solenoid *solenoidOutPin, InputType *press
     this->pressureValue = 0;
     this->pressureGoal = 0;
     this->routineStartTime = 0;
-    this->flagStartPressureGoalRoutine = false;
+    //this->flagStartPressureGoalRoutine = false;
+    flagStartPressureGoalRoutine[thisWheelNum] = false;
     this->quickMode = false;
 }
 
@@ -170,7 +174,7 @@ void Wheel::initPressureGoal(int newPressure, bool quick)
             this->pressureGoal = newPressure;
             this->quickMode = quick;
             this->routineStartTime = millis();
-            this->flagStartPressureGoalRoutine = true;
+            flagStartPressureGoalRoutine[thisWheelNum] = true;
         }
     }
 }
@@ -242,28 +246,6 @@ void setupWheelLockSem()
 {
     wheelLockSem = xSemaphoreCreateMutex();
 }
-// SemaphoreHandle_t wheelLockMut;
-// int wheelLockCount = 0;
-
-// void barrier_wait(int bid, int &count, SemaphoreHandle_t &sem, SemaphoreHandle_t &mut) {
-// 	xSemaphoreTake(mut,1);//pthread_mutex_lock(&mut)
-// 	count += 1;
-// 	xSemaphoreGive(mut);//pthread_mutex_unlock(&mut)
-
-// 	if (count == bid) {
-// 		xSemaphoreGive(sem);//sem_post(&sem);
-// 	}
-
-//     xSemaphoreTake(sem, 1);//sem_wait(&sem);
-
-// 	xSemaphoreTake(mut,1);//pthread_mutex_lock(&mut)
-// 	count -= 1;
-// 	xSemaphoreGive(mut);//pthread_mutex_unlock(&mut)
-
-// 	if (count != 0) {
-// 		xSemaphoreGive(sem);//sem_post(&sem);
-// 	}
-// }
 
 void wheelThreadLock() {
     while (xSemaphoreTake(wheelLockSem, 1) != pdTRUE)
@@ -276,33 +258,47 @@ void wheelThreadUnlock() {
     xSemaphoreGive(wheelLockSem);
 }
 
-void notifyWheelRelease(int thisWheelNum) {
-    wheelThreadLock();
-    wheelLoopBittset = wheelLoopBittset & ~(1<<thisWheelNum);
-    wheelThreadUnlock();
+// barrier code (for syncing wheel threads) generated from chat-gpt because I don't quite understand it but it seems to work fine lololol
+std::atomic<int> waiting_threads(0);
+std::atomic<int> generation(0);
+
+int count_participants() {
+    // Count how many threads are currently running
+    int currently_active = 0;
+    for (int i = 0; i < NUM_WHEEL_THREADS; ++i) {
+        if (flagStartPressureGoalRoutine[i].load()) {
+            currently_active++;
+        }
+    }
+    return currently_active;
 }
 
-void notifyWheelInProgress(int thisWheelNum) {
-    wheelThreadLock();
-    wheelLoopBittset = wheelLoopBittset | (1<<thisWheelNum);
-    wheelThreadUnlock();
-}
+void custom_barrier_wait(int num_participants) {
+    int gen = generation.load();
+    waiting_threads.fetch_add(1);
 
-void wheelThreadWaitForAllReleased() {
-    while (wheelLoopBittset != 0) {
-        sleep(1);
+    if (waiting_threads.load() == num_participants) {
+        // Last thread arrives, reset and let others go
+        wheelThreadLock();
+        waiting_threads.store(0);
+        generation.fetch_add(1);
+        wheelThreadUnlock();
+    } else {
+        // Poll until generation changes
+        while (generation.load() == gen) {
+            delay(1);
+        }
     }
 }
-
 
 // logic https://www.figma.com/board/YOKnd1caeojOlEjpdfY5NF/Untitled?node-id=0-1&node-type=canvas&t=p1SyY3R7azjm1PKs-0
 void Wheel::loop()
 {
     // Serial.println("WheelP: ");
     this->readInputs();
-    if (this->flagStartPressureGoalRoutine)
+    if (flagStartPressureGoalRoutine[thisWheelNum].load())
     {
-        this->flagStartPressureGoalRoutine = false;
+        delay(100);// wait for all threads to sync on first call
         //const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
         //const double oscillation = 1.75;
         const double oscillation = 1.2;
@@ -310,14 +306,6 @@ void Wheel::loop()
         int iteration = startIteration; // - values make it skip the first generation. It won't start dividing until iteration = 1
         for (;;)
         {
-            // if not first iteration, begin wheel lock shenanigans (assuming they should all have enough valve time to be locked by the second iteration ideally or else we prolly don't care if it ends so quickly that it just loops back around)
-            if (iteration != startIteration) {
-                notifyWheelRelease(thisWheelNum);
-                wheelThreadWaitForAllReleased();
-            }
-            notifyWheelInProgress(thisWheelNum);
-            
-
             // 10 second timeout in case tank doesn't have a whole lot of air or something
             if (millis() > this->routineStartTime + ROUTINE_TIMEOUT_MS)
             {
@@ -361,6 +349,8 @@ void Wheel::loop()
                     double tank_pressure = getCompressor()->getTankPressure();
 
                     if (canUseAiPrediction(valve->getAIIndex())) {
+
+                        // conversion float to int eliminates inf and nan
                         int aiPredict = getAiPredictionTime(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure);
 
                         // There are some valid scenarios where we can get inf or nan if say the tank pressure is lower than the end pressure
@@ -385,11 +375,13 @@ void Wheel::loop()
                         // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
                         delay(250); // Changed to 250. 150 was... confusing
 
-                        // only bother saving data for first 2 iterations.
-                        if (iteration < startIteration + 2) {
+                        // only bother saving data for first 2 iterations AND when the valve was opened for more than 10ms AND if the pressure change is greater than 3psi
+                        if (iteration < startIteration + 2 && valveTime > 10) {
                             this->readInputs();
                             end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
-                            appendPressureDataToFile(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime);
+                            if (abs(start_pressure - end_pressure) > 3) {
+                                appendPressureDataToFile(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime);
+                            }
                         }
                     } else {
                         // calculated valve time is 0 so just break out of loop
@@ -409,8 +401,15 @@ void Wheel::loop()
                 break;
             }
             iteration++;
+
+            
+
+            custom_barrier_wait(count_participants());
+
         }
-        notifyWheelRelease(thisWheelNum); // release the wheel lock
+        custom_barrier_wait(count_participants()); // needed here because when it breaks out of the loop it needs to hit it one last time.
+        
+        flagStartPressureGoalRoutine[thisWheelNum] = false;
         // close both after (only applies for level sensor logic)
         this->s_AirIn->close();
         this->s_AirOut->close();
