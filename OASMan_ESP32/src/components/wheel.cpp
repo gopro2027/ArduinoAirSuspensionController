@@ -302,8 +302,10 @@ void Wheel::loop()
         //const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
         //const double oscillation = 1.75;
         const double oscillation = 1.2;
+        int oscillationPow = 0;
         const int startIteration = -1;
         int iteration = startIteration; // - values make it skip the first generation. It won't start dividing until iteration = 1
+        bool previousDirection = false;
         for (;;)
         {
             // 10 second timeout in case tank doesn't have a whole lot of air or something
@@ -359,10 +361,16 @@ void Wheel::loop()
                         }
                     }
 
-                    // To help prevent ocellations, decrease it slightly each iteration
-                    if (iteration > 0) {
-                        valveTime = valveTime / std::pow(oscillation, iteration);
+                    // To help prevent ocellations, check if previous direction is different than new direction. Ex: was going up, but suddently now is going down. It must have jumped over goal. Go ahead and start dividing valve time by (oscillation ^ oscillationPow)
+                    if (iteration > startIteration) {
+                        if (previousDirection != up) {
+                            oscillationPow++;
+                        }
                     }
+                    valveTime = valveTime / std::pow(oscillation, oscillationPow);
+
+                    // save previous direction.
+                    previousDirection = up;
 
                     if (valveTime > 0)
                     {
