@@ -414,4 +414,13 @@ void Wheel::loop()
         this->s_AirIn->close();
         this->s_AirOut->close();
     }
+
+    // Maintain Pressure code
+    if (getmaintainPressure()) {
+        int pressureDif = this->pressureGoal - this->getSelectedInputValue();
+        int pressureDifABS = abs(pressureDif);
+        if (pressureDifABS >= 10) { // 10 psi difference
+            initPressureGoal(this->pressureGoal); // try to go back to the desired pressure
+        }
+    }
 }
