@@ -26,8 +26,6 @@ void setup()
 
     setupSpiffsLog();
 
-    writeToSpiffsLog("Here A\n");
-
 
     //clearPressureData();
 
@@ -43,12 +41,8 @@ void setup()
     setupADCReadMutex();
     setupWheelLockSem();
 
-    writeToSpiffsLog("Here B\n");
-
 
     setupManifold();
-
-    writeToSpiffsLog("Here C\n");
 
 #if SCREEN_ENABLED == true
 
@@ -69,23 +63,17 @@ void setup()
 
     compressor = new Compressor(compressorRelayPin, pressureInputs[getpressureInputTank()]);
 
-    writeToSpiffsLog("Here D\n");
-
     if (getlearnPressureSensors())
     {
         setlearnPressureSensors(false);
         PressureSensorCalibration::learnPressureSensorsRoutine();
     }
 
-    writeToSpiffsLog("Here E\n");
-
     accessoryWireSetup();
 
     // TODO: make base profile work (look in other spots in app for this)
     // readProfile(getbaseProfile());// TODO: add functionality for this in the controller
     readProfile(2);
-
-    writeToSpiffsLog("Calling setup tasks\n");
 
     setup_tasks();
 
