@@ -425,10 +425,13 @@ void Wheel::loop()
 
     // Maintain Pressure code
     if (getmaintainPressure()) {
-        int pressureDif = this->pressureGoal - this->getSelectedInputValue();
-        int pressureDifABS = abs(pressureDif);
-        if (pressureDifABS >= 10) { // 10 psi difference
-            initPressureGoal(this->pressureGoal); // try to go back to the desired pressure
+        // only run if pressure is higher than 10psi... also prevents it when a preset is not yet loaded (0)
+        if (this->pressureGoal > 10) {
+            int pressureDif = this->pressureGoal - this->getSelectedInputValue();
+            int pressureDifABS = abs(pressureDif);
+            if (pressureDifABS >= 10) { // 10 psi difference
+                initPressureGoal(this->pressureGoal); // try to go back to the desired pressure
+            }
         }
     }
 }
