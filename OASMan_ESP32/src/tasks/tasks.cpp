@@ -2,9 +2,13 @@
 
 bool ps3ServiceStarted = false;
 
+void writeToSpiffsLog(char *text);
+
 void task_bluetooth(void *parameters)
 {
     delay(200); // just wait a moment i guess this is legacy
+
+    writeToSpiffsLog("Bluetooth thread started!\n");
 
 #if ENABLE_PS3_CONTROLLER_SUPPORT
     // wait for ps3 controller service to boot
@@ -14,6 +18,8 @@ void task_bluetooth(void *parameters)
     }
     delay(50);
 #endif
+
+    writeToSpiffsLog("PS3 controller passed\n");
 
     Serial.println(F("Bluetooth Rest Service Beginning"));
 
@@ -150,6 +156,7 @@ void task_trainAI(void *parameters)
 
 void setup_tasks()
 {
+    writeToSpiffsLog("In setup tasks\n");
     //  Bluetooth Task
     xTaskCreate(
         task_bluetooth,
