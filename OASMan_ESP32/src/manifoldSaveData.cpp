@@ -46,6 +46,26 @@ void initDataFile(SOLENOID_AI_INDEX index) {
     Serial.println();
 }
 
+#define LOG_DATA_SIZE 2000
+#define LOG_FILE_NAME "/log.txt"
+void setupSpiffsLog() {
+    // char data[LOG_DATA_SIZE];
+    // memset(data,0,LOG_DATA_SIZE);
+    // int size = readBytes(LOG_FILE_NAME, data, LOG_DATA_SIZE);
+    // if (size > LOG_DATA_SIZE) {
+    //     //deleteFile(LOG_FILE_NAME);
+    // }
+    // if (size > 0) {
+    //     Serial.println("\n\nSPIFFS DATA LOG:\n");
+    //     Serial.println(data);
+    //     Serial.println("\nEND SPIFFS DATA LOG\n\n");
+    // }
+}
+
+void writeToSpiffsLog(char *text) {
+    // writeBytes(LOG_FILE_NAME, text, strlen(text), "a");
+}
+
 void loadAILearnedDataPreferences() {
     // load the 4 models and learn data
     for (int i = 0; i < 4; i++) {

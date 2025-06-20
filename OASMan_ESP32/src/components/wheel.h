@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <SPI.h>
+#include <atomic>
 #include <user_defines.h>
 #include "input_type.h"
 #include "solenoid.h"
@@ -19,7 +20,6 @@ private:
 
     byte pressureGoal;
     unsigned long routineStartTime;
-    bool flagStartPressureGoalRoutine; // flag to tell it to start routine to pressureGoal
     bool quickMode;                    // flag to skip extra percise measurements
 
     float pressureValue;
@@ -44,6 +44,8 @@ public:
 };
 
 float readPinPressure(InputType *pin, bool heightMode);
+
+void setupWheelLockSem();
 
 extern bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex);
 extern double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure);

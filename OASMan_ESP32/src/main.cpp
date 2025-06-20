@@ -12,6 +12,9 @@
 
 #include <SPIFFS.h>
 
+void setupSpiffsLog();
+void writeToSpiffsLog(char *text);
+
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
@@ -20,6 +23,8 @@ void setup()
     SPIFFS.begin(true);
     
     beginSaveData();
+
+    setupSpiffsLog();
 
 
     //clearPressureData();
@@ -34,6 +39,7 @@ void setup()
     delay(200); // wait for voltage stabilize
 
     setupADCReadMutex();
+    setupWheelLockSem();
 
 
     setupManifold();

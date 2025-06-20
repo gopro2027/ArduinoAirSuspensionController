@@ -7,7 +7,8 @@
 
 #define MAX_PRESSURE_SAFETY 200
 
-#define LEARN_SAVE_COUNT 500
+// original full amount is 500
+#define LEARN_SAVE_COUNT 250
 
 /* Bags generally do not like to sit at exactly 0psi. Please choose which pressure is desired for air out */
 /* Not really used anymore, just using presets! Only kept here as legacy for og app */
@@ -38,6 +39,21 @@
 #define MAX_PROFILE_COUNT 5
 
 /* These are the pin numbers used for our manifold solenoids */
+
+#ifdef BOARD_VERSION_ATLEAST_4
+
+#define solenoidFrontPassengerInPin new InputType(18, OUTPUT)
+#define solenoidFrontPassengerOutPin new InputType(17, OUTPUT)
+#define solenoidRearPassengerInPin new InputType(19, OUTPUT)
+#define solenoidRearPassengerOutPin new InputType(33, OUTPUT)
+#define solenoidFrontDriverInPin new InputType(23, OUTPUT)
+#define solenoidFrontDriverOutPin new InputType(25, OUTPUT)
+#define solenoidRearDriverInPin new InputType(27, OUTPUT)
+#define solenoidRearDriverOutPin new InputType(26, OUTPUT)
+
+#else
+
+/* Default pin numbers before switch to 4 layer board. v2.X through v3.X */
 #define solenoidFrontPassengerInPin new InputType(33, OUTPUT)
 #define solenoidFrontPassengerOutPin new InputType(25, OUTPUT)
 #define solenoidRearPassengerInPin new InputType(23, OUTPUT)
@@ -46,6 +62,8 @@
 #define solenoidFrontDriverOutPin new InputType(27, OUTPUT)
 #define solenoidRearDriverInPin new InputType(18, OUTPUT)
 #define solenoidRearDriverOutPin new InputType(17, OUTPUT)
+
+#endif
 
 /* Pressure Sensor Inputs. Why are the ads pin nums in this specific order? Oh the world may never know */
 #define pressureSensorInput0 new InputType(0, &ADS1115A) // ADSA/0   Previous: D36/VP/A4   Default: pressureInputFrontPassenger
@@ -59,8 +77,11 @@
 
 /* Accessory Wire */
 #define outputKeepAlivePin new InputType(12, OUTPUT) // D12, output high while accessory input is low to keep input on. Should always output high while accessory is on. Output low when accessory is low to turn off system.
-#define accessoryInput new InputType(35, INPUT)      // D34 because it's adc1 input only //D14, digital in high or low. 0 = acc on, 1 = acc off (it's on a pullup resistor)
+#define accessoryInput new InputType(35, INPUT)      // D35 because it's adc1 input only //D14, digital in high or low. 0 = acc on, 1 = acc off (it's on a pullup resistor)
 #define SYSTEM_SHUTOFF_TIME_M 15                     // 15 minutes
+
+/* E Brake Wire */
+#define ebrakeInput new InputType(34, INPUT) 
 
 // These will not be exact depending on how accurate your pressure sensors are.
 // For example: Mine will read 220psi when the actual pressure is 180psi

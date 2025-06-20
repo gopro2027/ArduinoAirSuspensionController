@@ -72,7 +72,7 @@ void ScrSettings::init()
 
     new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "Basic settings");
-    this->ui_maintainprssure = new Option(this->optionsContainer, OptionType::ON_OFF, "Maintain pressure", defaultCharVal, [](void *data)
+    this->ui_maintainprssure = new Option(this->optionsContainer, OptionType::ON_OFF, "Maintain Preset", defaultCharVal, [](void *data)
                                           { 
                 MaintainPressurePacket pkt(((bool)data));
                 sendRestPacket(&pkt);

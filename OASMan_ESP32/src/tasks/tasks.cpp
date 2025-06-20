@@ -2,6 +2,8 @@
 
 bool ps3ServiceStarted = false;
 
+void writeToSpiffsLog(char *text);
+
 void task_bluetooth(void *parameters)
 {
     delay(200); // just wait a moment i guess this is legacy
@@ -83,6 +85,7 @@ void task_wheel(void *parameters)
 {
     for (;;)
     {
+        // ideally we need to make this loop synced or get rid of this delay so they all start at the same time too but eh idk if it will be that beneficial tbh
         ((Wheel *)parameters)->loop();
         delay(100);
     }
