@@ -165,6 +165,7 @@ void Scr::loop()
         this->mb_dialog = NULL;
         this->deleteMessageBoxNextFrame = false;
     }
+    handleFunctionRunOnNextFrame();
     SimplePoint tp = {touchX(), touchY()};
     if (isJustPressed())
     {

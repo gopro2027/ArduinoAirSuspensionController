@@ -50,6 +50,7 @@ public:
     Preferencable learnPressureSensors;
     Preferencable safetyMode;
     Preferencable aiEnabled;
+    Preferencable updateMode;
 
     Preferencable pressureInputFrontPassenger;
     Preferencable pressureInputRearPassenger;
@@ -118,6 +119,7 @@ headerDefineSaveFunc(internalReboot, bool);
 headerDefineSaveFunc(learnPressureSensors, bool);
 headerDefineSaveFunc(safetyMode, bool);
 headerDefineSaveFunc(aiEnabled, bool);
+headerDefineSaveFunc(updateMode, bool);
 
 // pressure sensor values
 headerDefineSaveFunc(pressureInputFrontPassenger, byte);

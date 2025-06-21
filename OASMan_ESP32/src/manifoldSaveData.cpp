@@ -110,6 +110,7 @@ void beginSaveData()
     _SaveData.learnPressureSensors.load("learnPressureSensors", false);
     _SaveData.safetyMode.load("safetyMode", true);
     _SaveData.aiEnabled.load("aiEnabled", true);
+    _SaveData.updateMode.load("updateMode", false);
 
     // pressure sensor values
     _SaveData.pressureInputFrontPassenger.load("PIFP", 0);
@@ -317,6 +318,7 @@ createSaveFuncInt(internalReboot, bool);
 createSaveFuncInt(learnPressureSensors, bool);
 createSaveFuncInt(safetyMode, bool);
 createSaveFuncInt(aiEnabled, bool);
+createSaveFuncInt(updateMode, bool);
 
 
 // pressure sensor values

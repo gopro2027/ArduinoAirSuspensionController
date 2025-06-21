@@ -22,15 +22,11 @@ String generatePass(uint8_t str_len)
 void apMode()
 {
     char ssid[13];
-    char passwd[11];
     long unsigned int espmac = ESP.getEfuseMac() >> 24;
     snprintf(ssid, 13, SSID_FORMAT, espmac);
-    snprintf(passwd, 11, PASSWORD);
-    // snprintf(passwd, 11, generatePass(10).c_str());
     WiFi.mode(WIFI_AP);
-    WiFi.softAP(ssid, passwd); // Set up the SoftAP
+    WiFi.softAP(ssid); // Set up the SoftAP
     MDNS.begin("oasman");
-    Serial.printf("AP: %s, PASS: %s\n", ssid, passwd);
 }
 
 void handleUpdateEnd()

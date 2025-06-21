@@ -15,6 +15,7 @@
 void setupSpiffsLog();
 void writeToSpiffsLog(char *text);
 
+bool inUpdateMode = false;
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
@@ -23,6 +24,15 @@ void setup()
     SPIFFS.begin(true);
     
     beginSaveData();
+
+    // Check if in update mode and ignore everything else and just start the web server.
+    if (getupdateMode()) {
+        setupdateMode(false);
+        inUpdateMode = true;
+        ota_setup();
+        delay(150);
+        return;
+    }
 
     setupSpiffsLog();
 
@@ -103,14 +113,23 @@ void setup()
     //         delay(2);
     //     }
     // }
+    
 }
 
 void loop()
 {
+
+    if (inUpdateMode) {
+        ota_loop();
+        delay(150);
+        return;
+    }
+
     accessoryWireLoop();
     if (getinternalReboot() == true)
     {
         ESP.restart();
     }
+
     delay(100);
 }

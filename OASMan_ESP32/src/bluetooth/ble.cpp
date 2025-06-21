@@ -399,7 +399,6 @@ void ble_notify()
     }
 }
 
-extern bool startOTAServiceRequest;
 void runReceivedPacket(BTOasPacket *packet)
 {
     switch (packet->cmd)
@@ -499,7 +498,8 @@ void runReceivedPacket(BTOasPacket *packet)
         break;
     case BTOasIdentifier::STARTWEB:
         Serial.println(F("Starting OTA..."));
-        startOTAServiceRequest = true;
+        setupdateMode(true);
+        setinternalReboot(true);
         break;
     case BTOasIdentifier::PRESETREPORT:
     {

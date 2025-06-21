@@ -69,6 +69,19 @@ void sendConfigValuesPacket(bool saveToManifold)
 Scr *screens[3];
 Scr *currentScr = NULL;
 
+std::function<void()> functionToRunOnNextFrame = NULL;
+bool doRunFunctionNextFrame = false;
+void runNextFrame(std::function<void()> function) {
+    functionToRunOnNextFrame = function;
+    doRunFunctionNextFrame = true;
+}
+void handleFunctionRunOnNextFrame() {
+    if (doRunFunctionNextFrame) {
+        doRunFunctionNextFrame = false;
+        functionToRunOnNextFrame();
+    }
+}
+
 #pragma region bluetooth packets
 
 #define BTOASPACKETCOUNT 10

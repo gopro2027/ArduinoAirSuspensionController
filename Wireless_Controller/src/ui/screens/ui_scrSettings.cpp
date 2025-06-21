@@ -110,6 +110,30 @@ void ScrSettings::init()
     //                log_i("Pressed learn system calibration");
     //                showDialog("Doing calibration routine", lv_color_hex(0xFFFF00)); }, []() -> void {}, false); });
 
+        new Option(this->optionsContainer, OptionType::BUTTON, "Manifold Update", defaultCharVal, [](void *data)
+        { 
+            currentScr->showMsgBox("Begin update wifi service?", "This will start a wifi network on your esp32 that you can connect to from your phone that has an update page.\nAir suspension features will not be available during update mode.\nRestart the car/manifold to abort update mode.", "Start", "Cancel", []() -> void
+            {
+                StartwebPacket pkt;
+                sendRestPacket(&pkt);
+                log_i("Starting web service");
+                runNextFrame( []() -> void {
+                    currentScr->showMsgBox("Web service starting!", "Open your phone and go to http://oasman.dev and download the latest manifold firmware.bin, then connect to the OASMAN-XXXXX wifi network. Then open your web browser and go to the website\nhttp://oasman.local to upload the firmware.bin", NULL, "OK", []() -> void {}, []() -> void {}, false); 
+                });
+            
+            }, []() -> void {}, false); 
+        });
+
+        new Option(this->optionsContainer, OptionType::BUTTON, "Controller Update", defaultCharVal, [](void *data)
+        { 
+            currentScr->showMsgBox("Feature not yet implemented!", "Please go to the website https://oasman.dev on your computer and go to the software update page and plug in your controller to update.", NULL, "OK", []() -> void
+            {
+
+                
+            }, []() -> void {}, false); 
+        });
+               
+
     new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "Levelling Mode");
 

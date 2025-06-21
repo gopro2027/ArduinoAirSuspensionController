@@ -72,6 +72,9 @@ extern CenterRect ctr_preset_5;
 extern SimpleRect preset_save;
 extern SimpleRect preset_load;
 
+void runNextFrame(std::function<void()> function);
+void handleFunctionRunOnNextFrame();
+
 extern int currentPressures[5];
 extern uint32_t statusBittset;
 extern int profilePressures[5][4];
