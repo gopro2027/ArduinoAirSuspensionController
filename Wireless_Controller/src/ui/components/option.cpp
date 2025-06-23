@@ -128,10 +128,12 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_obj_set_style_bg_color(this->text, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);    // bg
         lv_obj_set_style_border_color(this->text, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT); // border
 
+        // disabled colors
+        lv_obj_set_style_bg_color(this->text, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DISABLED);     // bg
+        lv_obj_set_style_border_color(this->text, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DISABLED); // border
+
         lv_obj_add_flag(this->text, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
         lv_obj_add_event_cb(this->text, ui_clicked_radioOff, LV_EVENT_ALL, this);
-
-        // TODO: add decorations so its purple and such
 
         this->indentText();
     }
@@ -156,18 +158,18 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_obj_add_flag(this->ui_imgOff, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
         lv_obj_add_event_cb(this->ui_imgOff, ui_clicked_radioOff, LV_EVENT_ALL, this);
     }
-    else if (type == OptionType::KEYBOARD_INPUT_NUMBER)
+    else if (type == OptionType::KEYBOARD_INPUT_NUMBER || type == OptionType::KEYBOARD_INPUT_TEXT)
     {
         this->indentText();
-        const int textAreaWidth = 70;
+        const int textAreaWidth = (type == OptionType::KEYBOARD_INPUT_TEXT) ? 150 : 70;
         const int textMaxWidth = DISPLAY_WIDTH - (MARGIN * 2 + MARGIN + textAreaWidth) - 6;
         lv_obj_set_width(this->text, textMaxWidth); // space between the start position and the text input
 
         this->rightHandObj = lv_textarea_create(this->root);
         // lv_obj_remove_style_all(this->rightHandObj);
         //  lv_cont_set_fit2(ta, LV_FIT_PARENT, LV_FIT_NONE);
-        lv_textarea_set_text(this->rightHandObj, itoa(value.INT, strbuf, 10));
-        lv_textarea_set_placeholder_text(this->rightHandObj, "Number");
+        lv_textarea_set_text(this->rightHandObj, (type == OptionType::KEYBOARD_INPUT_TEXT) ? value.STRING : itoa(value.INT, strbuf, 10));
+        lv_textarea_set_placeholder_text(this->rightHandObj, "Input");
         lv_textarea_set_one_line(this->rightHandObj, true);
 
         // lv_textarea_set_cursor_hidden(ta, true);
@@ -204,7 +206,7 @@ void Option::setRightHandText(const char *text)
         }
         // lv_label_set_text_fmt(this->rightHandObj, "Compressor Frozen: %s", statusBittset & (1 << COMPRESSOR_FROZEN) ? "Yes" : "No");
     }
-    else if (type == OptionType::KEYBOARD_INPUT_NUMBER)
+    else if (type == OptionType::KEYBOARD_INPUT_NUMBER || type == OptionType::KEYBOARD_INPUT_TEXT)
     {
         if (strcmp(lv_textarea_get_text(this->rightHandObj), text) != 0)
         {

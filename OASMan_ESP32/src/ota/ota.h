@@ -7,6 +7,6 @@
 #include <Ticker.h>
 #include "html.h"
 #include <user_defines.h>
-void ota_setup();
-void ota_loop();
+// void ota_setup();
+// void ota_loop();
 #endif

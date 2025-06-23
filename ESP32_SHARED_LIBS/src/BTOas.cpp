@@ -200,11 +200,20 @@ ResetAIPacket::ResetAIPacket()
 {
     this->cmd = RESETAIPKT;
 }
-StartwebPacket::StartwebPacket()
+StartwebPacket::StartwebPacket(String ssid, String password)
 {
     this->cmd = STARTWEB;
+    strcpy((char *)&this->args[0], ssid.c_str());
+    strcpy((char *)&this->args[50], password.c_str());
 }
-
+String StartwebPacket::getSSID()
+{
+    return String((char *)&this->args[0]);
+}
+String StartwebPacket::getPassword()
+{
+    return String((char *)&this->args[50]);
+}
 int AirsmPacket::getRelativeValue()
 {
     return this->args32()[0].i;

@@ -83,12 +83,13 @@ union BTOasValue8
 };
 
 // NOTE: Default max for BLE is 23 bytes. We can do some compression if we need in the future but for now this uses 20 total (5 x 32 bits)
+// I have set it to max, 517, but not guaranteed all devices will negotiate that mutex fully.
 struct BTOasPacket
 {
     uint16_t cmd; // BTOasIdentifier
     uint8_t sender;
     uint8_t recipient;
-    uint8_t args[16];
+    uint8_t args[100]; // 6/22/2025 - originally 16. Currently the code base only supports 1 defualt args size. Right now StartwebPacket uses 100 bytes, all the rest fit into the default MTU but not guaranteeing it will stay that way in the future. MTU set to 517 if negotiated properly from both sides.
 
     uint8_t *tx();
     BTOasValue8 *args8();
@@ -233,7 +234,9 @@ struct ResetAIPacket : BTOasPacket
 };
 struct StartwebPacket : BTOasPacket
 {
-    StartwebPacket();
+    StartwebPacket(String ssid, String password);
+    String getSSID();
+    String getPassword();
 };
 struct ConfigValuesPacket : BTOasPacket
 {

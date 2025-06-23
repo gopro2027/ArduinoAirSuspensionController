@@ -9,39 +9,38 @@
 #include "manifoldSaveData.h"
 #include "airSuspensionUtil.h"
 #include "tasks/tasks.h"
+#include "ota/directdownload.h"
 
 #include <SPIFFS.h>
 
 void setupSpiffsLog();
 void writeToSpiffsLog(char *text);
 
-bool inUpdateMode = false;
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
     Serial.println(F("Startup!"));
 
     SPIFFS.begin(true);
-    
+
     beginSaveData();
 
     // Check if in update mode and ignore everything else and just start the web server.
-    if (getupdateMode()) {
+    if (getupdateMode())
+    {
         setupdateMode(false);
-        inUpdateMode = true;
-        ota_setup();
-        delay(150);
+        Serial.println("Gonna try to download update");
+        downloadUpdate();
         return;
     }
 
     setupSpiffsLog();
 
+    // clearPressureData();
 
-    //clearPressureData();
+    // trainAIModels();
 
-    //trainAIModels();
-
-    #ifdef parabolaLearn
+#ifdef parabolaLearn
     //  updateParabola(true, parabola_default_value, parabola_default_value, parabola_default_value);
     //  updateParabola(false, parabola_default_value, parabola_default_value, parabola_default_value);
 #endif
@@ -50,7 +49,6 @@ void setup()
 
     setupADCReadMutex();
     setupWheelLockSem();
-
 
     setupManifold();
 
@@ -102,7 +100,6 @@ void setup()
 
     Serial.println(F("Startup Complete"));
 
-    
     // for (int i = 0; i < 200; i++) {
     //     for (int j = 0; j < 2; j++) {
     //         appendPressureDataToFile((SOLENOID_AI_INDEX)j, 0,1,2,3);
@@ -113,18 +110,10 @@ void setup()
     //         delay(2);
     //     }
     // }
-    
 }
 
 void loop()
 {
-
-    if (inUpdateMode) {
-        ota_loop();
-        delay(150);
-        return;
-    }
-
     accessoryWireLoop();
     if (getinternalReboot() == true)
     {

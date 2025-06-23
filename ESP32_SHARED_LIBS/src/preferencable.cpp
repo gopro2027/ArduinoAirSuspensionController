@@ -119,7 +119,31 @@ void Preferencable::setDouble(double val)
     }
 }
 
+void Preferencable::loadString(const char *name, String defaultValue) {
+    strncpy(this->name, name, sizeof(this->name));
+    openNamespace(SAVEDATA_NAMESPACE, true);
+    if (preferences.isKey(name) == false)
+    {
+        endNamespace();
+        openNamespace(SAVEDATA_NAMESPACE, false); // reopen as read write
+        preferences.putString(this->name, defaultValue);
+    }
+    endNamespace();
+}
+void Preferencable::setString(String val) {
+    openNamespace(SAVEDATA_NAMESPACE, false);
+    preferences.putString(this->name, val);
+    endNamespace();
+}
+String Preferencable::getString() {
+    openNamespace(SAVEDATA_NAMESPACE, true);
+    String str = preferences.getString(this->name,"");
+    endNamespace();
+    return str;
+}
+
 void Preferencable::deletePreference()
 {
     ::deletePreference(this->name);
 }
+

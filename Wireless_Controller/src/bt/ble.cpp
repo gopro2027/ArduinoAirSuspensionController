@@ -24,7 +24,7 @@ static bool connected = false;
 static bool allowScan = true; // default to true so it initiates a scan on start
 static unsigned long timeoutMS = 0;
 static bool hasReceivedStatus = false;
-BLEClient *pClient = nullptr;
+NimBLEClient *pClient = nullptr;
 
 bool isConnectedToManifold()
 {
@@ -213,7 +213,7 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     Serial.print("Forming a connection to ");
     Serial.println(myDevice->getAddress().toString().c_str());
     deletePClientIfExist();
-    pClient = BLEDevice::createClient();
+    pClient = NimBLEDevice::createClient();
     Serial.println(" - Created client");
 
     // pClient->secureConnection(true);
@@ -246,6 +246,15 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     // delay(1000);
     // pClient->getServices();
     // delay(1000);
+
+    // request MTU
+    // if (pClient->requestMtu(100)) {
+    //     Serial.println("MTU request successful");
+    // } else {
+    //     Serial.println("MTU request failed");
+    // }
+    Serial.print("MTU:");
+    Serial.println(pClient->getMTU());
 
     // Obtain a reference to the service we are after in the remote BLE server.
     // pClient->getServices(); // invoke call to receive list of services
@@ -417,10 +426,12 @@ void scan()
         scanError = true;
     }
 }
+#define ESP_GATT_MAX_MTU_SIZE 517
 void ble_setup()
 {
     Serial.println("Starting Arduino BLE Client application...");
     BLEDevice::init("OASMan_Controller");
+    NimBLEDevice::setMTU(ESP_GATT_MAX_MTU_SIZE); // default is 255 if not set here!!
 
     disconnect(); // sets up variables to get it ready to go
 }
