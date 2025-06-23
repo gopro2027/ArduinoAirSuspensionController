@@ -37,8 +37,8 @@ void task_bluetooth(void *parameters)
 #endif
 }
 bool do_dance = false;
-void easterEggFunc() {
-    // This is completely unrelated to the ota function but it is here because it is blocking and needs to be ran from it's own task and this task is basically unused so I am putting it in here rather than allocating memory for a new task.
+void easterEggFunc()
+{
     if (do_dance)
     {
         do_dance = false;
