@@ -96,7 +96,6 @@ void task_wheel(void *parameters)
 {
     for (;;)
     {
-        // ideally we need to make this loop synced or get rid of this delay so they all start at the same time too but eh idk if it will be that beneficial tbh
         ((Wheel *)parameters)->loop();
         delay(100);
     }
