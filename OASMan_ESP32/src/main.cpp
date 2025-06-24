@@ -9,7 +9,7 @@
 #include "manifoldSaveData.h"
 #include "airSuspensionUtil.h"
 #include "tasks/tasks.h"
-#include "ota/directdownload.h"
+#include <directdownload.h>
 
 #include <SPIFFS.h>
 
@@ -30,7 +30,7 @@ void setup()
     {
         setupdateMode(false);
         Serial.println("Gonna try to download update");
-        downloadUpdate();
+        downloadUpdate(getwifiSSID(), getwifiPassword());
         return;
     }
 

@@ -117,6 +117,7 @@ public:
     Preferencable screenDimTimeM;
     Preferencable wifiSSID;
     Preferencable wifiPassword;
+    Preferencable updateResult;
 };
 
 extern SaveData _SaveData;
@@ -126,6 +127,7 @@ headerDefineSaveFunc(blePasskey, uint32_t);
 headerDefineSaveFunc(screenDimTimeM, uint32_t);
 headerDefineSaveFunc(wifiSSID, String);
 headerDefineSaveFunc(wifiPassword, String);
+headerDefineSaveFunc(updateResult, byte);
 
 void ta_event_cb(lv_event_t *e);
 bool isKeyboardHidden();

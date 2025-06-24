@@ -8,6 +8,9 @@
 #include <vector>
 #include <iostream>
 #include "NimBLEDevice.h"
+
+#include <directdownload.h>
+
 class ScrSettings : public Scr
 {
     using Scr::Scr;

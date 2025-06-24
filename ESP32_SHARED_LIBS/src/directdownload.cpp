@@ -1,20 +1,11 @@
 #include "directdownload.h"
 
-enum UPDATE_STATUS
-{
-    UPDATE_STATUS_NONE,
-    UPDATE_STATUS_SUCCESS,
-    UPDATE_STATUS_FAIL_WIFI_CONNECTION,
-    UPDATE_STATUS_FAIL_VERSION_REQUEST,
-    UPDATE_STATUS_FAIL_FILE_REQUEST,
-    UPDATE_STATUS_FAIL_GENERIC
-};
-void downloadUpdate()
+void downloadUpdate(String SSID, String PASS)
 {
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
     Serial.println("Connecting to network");
-    WiFi.begin(getwifiSSID(), getwifiPassword());
+    WiFi.begin(SSID, PASS);
 
     const int maxtimeout = 20; // 500ms * 20 = 10 seconds
     int timeoutCounter = 0;
@@ -67,7 +58,7 @@ void downloadUpdate()
     }
 
     char url[100];
-    snprintf(url, sizeof(url), "https://oasman.dev/oasman/firmware/manifold/firmware_%s.bin", versionNum);
+    snprintf(url, sizeof(url), DOWNLOAD_FIRMWARE_BIN_URL, versionNum);
     Serial.println(url);
     if (https.begin(client, url))
     {

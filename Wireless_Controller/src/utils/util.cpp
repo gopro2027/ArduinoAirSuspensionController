@@ -216,6 +216,7 @@ void beginSaveData()
     _SaveData.screenDimTimeM.load("screenDimTimeM", 3);
     _SaveData.wifiSSID.loadString("wifiSSID", "");
     _SaveData.wifiPassword.loadString("wifiPassword", "");
+    _SaveData.updateResult.load("updateResult", 0);
 }
 
 createSaveFuncInt(unitsMode, int);
@@ -223,6 +224,7 @@ createSaveFuncInt(blePasskey, uint32_t);
 createSaveFuncInt(screenDimTimeM, uint32_t);
 createSaveFuncString(wifiSSID);
 createSaveFuncString(wifiPassword);
+createSaveFuncInt(updateResult, byte);
 
 static lv_obj_t *kb = NULL;
 void closeKeyboard()
