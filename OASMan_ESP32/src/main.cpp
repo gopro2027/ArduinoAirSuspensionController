@@ -9,6 +9,7 @@
 #include "manifoldSaveData.h"
 #include "airSuspensionUtil.h"
 #include "tasks/tasks.h"
+#include <directdownload.h>
 
 #include <SPIFFS.h>
 
@@ -21,17 +22,25 @@ void setup()
     Serial.println(F("Startup!"));
 
     SPIFFS.begin(true);
-    
+
     beginSaveData();
+
+    // Check if in update mode and ignore everything else and just start the web server.
+    if (getupdateMode())
+    {
+        setupdateMode(false);
+        Serial.println("Gonna try to download update");
+        downloadUpdate(getwifiSSID(), getwifiPassword());
+        return;
+    }
 
     setupSpiffsLog();
 
+    // clearPressureData();
 
-    //clearPressureData();
+    // trainAIModels();
 
-    //trainAIModels();
-
-    #ifdef parabolaLearn
+#ifdef parabolaLearn
     //  updateParabola(true, parabola_default_value, parabola_default_value, parabola_default_value);
     //  updateParabola(false, parabola_default_value, parabola_default_value, parabola_default_value);
 #endif
@@ -40,7 +49,6 @@ void setup()
 
     setupADCReadMutex();
     setupWheelLockSem();
-
 
     setupManifold();
 
@@ -92,7 +100,6 @@ void setup()
 
     Serial.println(F("Startup Complete"));
 
-    
     // for (int i = 0; i < 200; i++) {
     //     for (int j = 0; j < 2; j++) {
     //         appendPressureDataToFile((SOLENOID_AI_INDEX)j, 0,1,2,3);
@@ -112,5 +119,6 @@ void loop()
     {
         ESP.restart();
     }
+
     delay(100);
 }

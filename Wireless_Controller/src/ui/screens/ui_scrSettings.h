@@ -8,9 +8,13 @@
 #include <vector>
 #include <iostream>
 #include "NimBLEDevice.h"
+
+#include <directdownload.h>
+
 class ScrSettings : public Scr
 {
     using Scr::Scr;
+    void updateUpdateButtonVisbility();
 
 public:
     lv_obj_t *optionsContainer;
@@ -35,6 +39,8 @@ public:
     Option *ui_config4;
     Option *ui_config5;
     Option *ui_config6;
+    Option *ui_updateBtn;
+    Option *ui_manifoldUpdateStatus;
     void init();
     void runTouchInput(SimplePoint pos, bool down);
     void loop();

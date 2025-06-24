@@ -16,12 +16,18 @@ class Preferencable
 
 public:
     char name[15]; // 15 is max len. Note for future devs: I didn't add any code to make sure it is 0 terminated so be careful how you choose a name i guess
-    //char buffer[4]; 
+    // char buffer[4];
     PreferencableValue value;
     void load(const char *name, uint64_t defaultValue);
     void set(uint64_t val);
     void loadDouble(const char *name, double defaultValue);
     void setDouble(double val);
+
+    // separate functions for stirng
+    void loadString(const char *name, String defaultValue);
+    void setString(String val);
+    String getString();
+
     void deletePreference();
     PreferencableValue get()
     {
@@ -47,6 +53,19 @@ void deletePreference(const char *name);
         {                                 \
             _SaveData.VARNAME.set(value); \
         }                                 \
+    }
+
+#define createSaveFuncString(VARNAME)           \
+    String get##VARNAME()                       \
+    {                                           \
+        return _SaveData.VARNAME.getString();   \
+    }                                           \
+    void set##VARNAME(String value)             \
+    {                                           \
+        if (get##VARNAME() != value)            \
+        {                                       \
+            _SaveData.VARNAME.setString(value); \
+        }                                       \
     }
 
 #define headerDefineSaveFunc(VARNAME, _TYPE) \

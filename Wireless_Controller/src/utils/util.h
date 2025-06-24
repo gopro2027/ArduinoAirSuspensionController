@@ -72,8 +72,14 @@ extern CenterRect ctr_preset_5;
 extern SimpleRect preset_save;
 extern SimpleRect preset_load;
 
+void runNextFrame(std::function<void()> function);
+void handleFunctionRunOnNextFrame();
+
 extern int currentPressures[5];
 extern uint32_t statusBittset;
+extern uint8_t AIPercentage;
+extern uint8_t AIReadyBittset;
+extern uint8_t manifoldUpdateStatus;
 extern int profilePressures[5][4];
 extern bool profileUpdated;
 extern int currentPreset;
@@ -112,6 +118,10 @@ public:
     Preferencable unitsMode;
     Preferencable blePasskey;
     Preferencable screenDimTimeM;
+    Preferencable updateMode;
+    Preferencable wifiSSID;
+    Preferencable wifiPassword;
+    Preferencable updateResult;
 };
 
 extern SaveData _SaveData;
@@ -119,6 +129,10 @@ void beginSaveData();
 headerDefineSaveFunc(unitsMode, int);
 headerDefineSaveFunc(blePasskey, uint32_t);
 headerDefineSaveFunc(screenDimTimeM, uint32_t);
+headerDefineSaveFunc(updateMode, bool);
+headerDefineSaveFunc(wifiSSID, String);
+headerDefineSaveFunc(wifiPassword, String);
+headerDefineSaveFunc(updateResult, byte);
 
 void ta_event_cb(lv_event_t *e);
 bool isKeyboardHidden();

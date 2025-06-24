@@ -8,28 +8,33 @@ int learnDataIndex[4];
 PressureLearnSaveStruct learnData[4][LEARN_SAVE_COUNT];
 static SemaphoreHandle_t learnDataMutex;
 
-PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX index) {
+PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX index)
+{
     return learnData[index];
 }
 
-int getLearnDataLength(SOLENOID_AI_INDEX index) {
+int getLearnDataLength(SOLENOID_AI_INDEX index)
+{
     return learnDataIndex[index];
 }
 
-const char *getLogFileName(SOLENOID_AI_INDEX index) {
-    switch (index) {
-        case SOLENOID_AI_INDEX::AI_MODEL_UP_FRONT:
-            return "/UpDataF.dat";
-        case SOLENOID_AI_INDEX::AI_MODEL_UP_REAR:
-            return "/UpDataR.dat";
-        case SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT:
-            return "/DownDataF.dat";
-        case SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR:
-            return "/DownDataR.dat";
+const char *getLogFileName(SOLENOID_AI_INDEX index)
+{
+    switch (index)
+    {
+    case SOLENOID_AI_INDEX::AI_MODEL_UP_FRONT:
+        return "/UpDataF.dat";
+    case SOLENOID_AI_INDEX::AI_MODEL_UP_REAR:
+        return "/UpDataR.dat";
+    case SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT:
+        return "/DownDataF.dat";
+    case SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR:
+        return "/DownDataR.dat";
     }
 }
 
-void initDataFile(SOLENOID_AI_INDEX index) {
+void initDataFile(SOLENOID_AI_INDEX index)
+{
     Serial.print(getLogFileName(index));
     Serial.print(" (");
 
@@ -38,8 +43,8 @@ void initDataFile(SOLENOID_AI_INDEX index) {
     Serial.print(size);
     Serial.println("):");
 
-
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < size; i++)
+    {
         pls[i].print();
         Serial.print(", ");
     }
@@ -48,7 +53,8 @@ void initDataFile(SOLENOID_AI_INDEX index) {
 
 #define LOG_DATA_SIZE 2000
 #define LOG_FILE_NAME "/log.txt"
-void setupSpiffsLog() {
+void setupSpiffsLog()
+{
     // char data[LOG_DATA_SIZE];
     // memset(data,0,LOG_DATA_SIZE);
     // int size = readBytes(LOG_FILE_NAME, data, LOG_DATA_SIZE);
@@ -62,13 +68,16 @@ void setupSpiffsLog() {
     // }
 }
 
-void writeToSpiffsLog(char *text) {
+void writeToSpiffsLog(char *text)
+{
     // writeBytes(LOG_FILE_NAME, text, strlen(text), "a");
 }
 
-void loadAILearnedDataPreferences() {
+void loadAILearnedDataPreferences()
+{
     // load the 4 models and learn data
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++)
+    {
         learnDataIndex[i] = readBytes(getLogFileName((SOLENOID_AI_INDEX)i), learnData[i], LEARN_SAVE_COUNT * sizeof(PressureLearnSaveStruct)) / sizeof(PressureLearnSaveStruct);
         char buf[15];
         snprintf(buf, sizeof(buf), "model%i|%i", i, 0);
@@ -80,7 +89,7 @@ void loadAILearnedDataPreferences() {
         snprintf(buf, sizeof(buf), "model%i|r", i);
         _SaveData.aiModels[i].isReadyToUse.load(buf, false);
         _SaveData.aiModels[i].loadModel(); // copy the values to the internal model
-        //Serial.println(getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.get().i);
+        // Serial.println(getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.get().i);
     }
 
     _SaveData.aiModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT].model.up = false;
@@ -90,7 +99,8 @@ void loadAILearnedDataPreferences() {
         Serial.println("");
     Serial.println("BEGIN IMPORTANT DATA FOR PRO");
     Serial.println(sizeof(PressureLearnSaveStruct));
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++)
+    {
         initDataFile((SOLENOID_AI_INDEX)i);
     }
     Serial.println("END IMPORTANT DATA FOR PRO");
@@ -110,6 +120,10 @@ void beginSaveData()
     _SaveData.learnPressureSensors.load("learnPressureSensors", false);
     _SaveData.safetyMode.load("safetyMode", true);
     _SaveData.aiEnabled.load("aiEnabled", true);
+    _SaveData.updateMode.load("updateMode", false);
+    _SaveData.wifiSSID.loadString("wifiSSID", "");
+    _SaveData.wifiPassword.loadString("wifiPassword", "");
+    _SaveData.updateResult.load("updateResult", 0);
 
     // pressure sensor values
     _SaveData.pressureInputFrontPassenger.load("PIFP", 0);
@@ -182,15 +196,15 @@ void beginSaveData()
     loadAILearnedDataPreferences();
 
     learnDataMutex = xSemaphoreCreateMutex();
-    //downDataMutex = xSemaphoreCreateMutex();
+    // downDataMutex = xSemaphoreCreateMutex();
 
-    //Reset ai models
-    // _SaveData.upModel.weights[0].setDouble(0.1);
-    // _SaveData.upModel.weights[1].setDouble(0.1);
-    // _SaveData.upModel.weights[2].setDouble(-0.1);
-    // _SaveData.upModel.weights[3].setDouble(0.1);
-    // _SaveData.upModel.weights[4].setDouble(0.1);
-    // _SaveData.upModel.weights[5].setDouble(0.0);
+    // Reset ai models
+    //  _SaveData.upModel.weights[0].setDouble(0.1);
+    //  _SaveData.upModel.weights[1].setDouble(0.1);
+    //  _SaveData.upModel.weights[2].setDouble(-0.1);
+    //  _SaveData.upModel.weights[3].setDouble(0.1);
+    //  _SaveData.upModel.weights[4].setDouble(0.1);
+    //  _SaveData.upModel.weights[5].setDouble(0.0);
 
     // _SaveData.downModel.weights[0].setDouble(0.1);
     // _SaveData.downModel.weights[1].setDouble(0.1);
@@ -198,15 +212,17 @@ void beginSaveData()
     // _SaveData.downModel.weights[3].setDouble(0.0);
     // _SaveData.downModel.weights[4].setDouble(0.1);
     // _SaveData.downModel.weights[5].setDouble(0.0);
-   
+
     // _SaveData.upModel.count.set(0);
     // _SaveData.downModel.count.set(0);
 }
 
 extern uint8_t AIReadyBittset;
 extern uint8_t AIPercentage;
-void clearPressureData() {
-    for (int i = 0; i < 4; i++) {
+void clearPressureData()
+{
+    for (int i = 0; i < 4; i++)
+    {
         // reset the file
         deleteFile(getLogFileName((SOLENOID_AI_INDEX)i));
 
@@ -219,24 +235,32 @@ void clearPressureData() {
 }
 
 extern void updateAIPercentage();
-void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex,uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS) {
+void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
+{
     int *size = &learnDataIndex[aiIndex];
 
-    if (abs((int)start_pressure-(int)goal_pressure) < 1) {
+    if (abs((int)start_pressure - (int)goal_pressure) < 1)
+    {
         // Don't want to spam a ton of super low valve timings where the pressures basically didn't move. This happened to a tester and the result was a ton of useless repetitive data saved where we could have had more useful data.
         return;
     }
 
     // first initial check for size before we open the semaphore, just to prevent constantly opening a semaphore every time this is called if it's full
-    if (*size < LEARN_SAVE_COUNT) {
+    if (*size < LEARN_SAVE_COUNT)
+    {
 
         // quick check to make sure it actually went in the right direction.... idk why it was messing up sometimes
-        if (aiIndex == SOLENOID_AI_INDEX::AI_MODEL_UP_FRONT || aiIndex == SOLENOID_AI_INDEX::AI_MODEL_UP_REAR) {
-            if ((int)goal_pressure - (int)start_pressure < 0) {
+        if (aiIndex == SOLENOID_AI_INDEX::AI_MODEL_UP_FRONT || aiIndex == SOLENOID_AI_INDEX::AI_MODEL_UP_REAR)
+        {
+            if ((int)goal_pressure - (int)start_pressure < 0)
+            {
                 return;
             }
-        } else {
-            if ((int)start_pressure - (int)goal_pressure < 0) {
+        }
+        else
+        {
+            if ((int)start_pressure - (int)goal_pressure < 0)
+            {
                 return;
             }
         }
@@ -249,30 +273,31 @@ void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex,uint8_t start_pressure, 
         PressureLearnSaveStruct *pls = getLearnData(aiIndex);
 
         // This is the actual important size check since it is inside of the semaphore now and safe
-        if (*size < LEARN_SAVE_COUNT) {
+        if (*size < LEARN_SAVE_COUNT)
+        {
             pls[*size].start_pressure = start_pressure;
             pls[*size].goal_pressure = goal_pressure;
             pls[*size].tank_pressure = tank_pressure;
             pls[*size].timeMS = timeMS;
 
             // This is full write. Do append instead
-            //writeBytes(getLogFileName(aiIndex),pls,(*size)*sizeof(PressureLearnSaveStruct));
+            // writeBytes(getLogFileName(aiIndex),pls,(*size)*sizeof(PressureLearnSaveStruct));
 
-            writeBytes(getLogFileName(aiIndex),&pls[*size],sizeof(PressureLearnSaveStruct), "a");
+            writeBytes(getLogFileName(aiIndex), &pls[*size], sizeof(PressureLearnSaveStruct), "a");
 
             *size = *size + 1; // moved to after append
         }
 
-        //xSemaphoreGive(learnDataMutex);
+        // xSemaphoreGive(learnDataMutex);
     }
 
     updateAIPercentage();
 }
 
-AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex) {
+AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex)
+{
     return &_SaveData.aiModels[aiIndex];
 }
-
 
 void readProfile(byte profileIndex)
 {
@@ -317,7 +342,11 @@ createSaveFuncInt(internalReboot, bool);
 createSaveFuncInt(learnPressureSensors, bool);
 createSaveFuncInt(safetyMode, bool);
 createSaveFuncInt(aiEnabled, bool);
+createSaveFuncInt(updateMode, bool);
 
+createSaveFuncString(wifiSSID);
+createSaveFuncString(wifiPassword);
+createSaveFuncInt(updateResult, byte);
 
 // pressure sensor values
 createSaveFuncInt(pressureInputFrontPassenger, byte);
