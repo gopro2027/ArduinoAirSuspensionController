@@ -26,7 +26,7 @@ void Scr::init()
     lv_obj_set_size(this->rect_bg, 240, 320);
     lv_obj_set_align(this->rect_bg, LV_ALIGN_TOP_MID);
     lv_obj_get_style_border_width(this->rect_bg, 0);
-    lv_obj_set_style_bg_color(this->rect_bg, lv_color_hex(0x1F1F1F), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(this->rect_bg, lv_color_hex(GENERIC_GREY_DARK), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_remove_flag(this->rect_bg, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE)); /// Flags
     lv_obj_set_style_bg_opa(this->rect_bg, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 

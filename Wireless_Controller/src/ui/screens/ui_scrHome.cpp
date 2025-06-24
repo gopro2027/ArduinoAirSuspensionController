@@ -35,18 +35,50 @@ void drawCircle(lv_obj_t *parent, CenterRect cr, int direction)
     lv_obj_set_scrollbar_mode(my_Cir, LV_SCROLLBAR_MODE_OFF);
     lv_obj_set_size(my_Cir, cr.w, cr.h);
     lv_obj_set_pos(my_Cir, cr.cx - cr.w / 2, cr.cy - cr.h / 2);
-    lv_obj_set_style_bg_color(my_Cir, lv_color_hex(THEME_COLOR_DARK), 0);
-    lv_obj_set_style_border_color(my_Cir, lv_color_hex(THEME_COLOR_LIGHT), 0);
+    lv_obj_set_style_bg_color(my_Cir, lv_color_hex(GENERIC_GREY_VERY_DARK), 0);
+    // lv_obj_set_style_border_color(my_Cir, lv_color_hex(THEME_COLOR_LIGHT), 0);
     lv_obj_set_style_radius(my_Cir, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_border_width(my_Cir, 0, 0);
 
     draw_arrow(parent, cr, direction);
 }
 
+void drawRect(lv_obj_t *parent, SimpleRect sr)
+{
+    lv_obj_t *my_Cir = lv_obj_create(parent);
+    lv_obj_set_scrollbar_mode(my_Cir, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_set_size(my_Cir, sr.w, sr.h);
+    lv_obj_set_pos(my_Cir, sr.x, sr.y);
+    lv_obj_set_style_bg_color(my_Cir, lv_color_hex(GENERIC_GREY_VERY_DARK), 0);
+    lv_obj_set_style_radius(my_Cir, 0, 0);
+    lv_obj_set_style_border_width(my_Cir, 0, 0);
+}
+
 void drawPill(lv_obj_t *parent, CenterRect up, CenterRect down)
 {
-
+    SimpleRect sr = {up.cx - up.w / 2, up.cy, up.w, down.cy - up.cy};
+    drawRect(parent, sr);
     drawCircle(parent, up, -1);
     drawCircle(parent, down, 1);
+
+    lv_point_precise_t *line_points = new lv_point_precise_t[3];
+    line_points[0].x = up.cx - up.w / 3.5;
+    line_points[0].y = (up.cy + down.cy) / 2;
+    line_points[1].x = up.cx + up.w / 3.5;
+    line_points[1].y = line_points[0].y;
+
+    /*Create style*/
+    static lv_style_t style_line;
+    lv_style_init(&style_line);
+    lv_style_set_line_width(&style_line, 1);
+    lv_style_set_line_color(&style_line, lv_color_hex(THEME_COLOR_DARK));
+    lv_style_set_line_rounded(&style_line, true);
+
+    /*Create a line and apply the new style*/
+    lv_obj_t *line1;
+    line1 = lv_line_create(parent);
+    lv_line_set_points(line1, line_points, 2); /*Set the points*/
+    lv_obj_add_style(line1, &style_line, 0);
 }
 
 void ScrHome::init(void)

@@ -81,7 +81,7 @@
 #define SYSTEM_SHUTOFF_TIME_M 15                     // 15 minutes
 
 /* E Brake Wire */
-#define ebrakeInput new InputType(34, INPUT) 
+#define ebrakeInput new InputType(34, INPUT)
 
 // These will not be exact depending on how accurate your pressure sensors are.
 // For example: Mine will read 220psi when the actual pressure is 180psi
@@ -125,8 +125,14 @@
 #define USE_BLE true
 
 #define THEME_COLOR_DARK 0x5A4673
+#define THEME_COLOR_VERY_DARK lv_color_darken(lv_color_hex(THEME_COLOR_DARK), 50)
 #define THEME_COLOR_MEDIUM 0x9C4DCC
 #define THEME_COLOR_LIGHT 0xBB86FC
+
+#define GENERIC_GREY_VERY_DARK 0x121212
+#define GENERIC_GREY_DARK 0x1F1F1F
+#define GENERIC_GREY 0x4e4954
+#define GENERIC_GREY_LIGHT 0x6a6571
 
 /* DO NOT CHANGE ANY PAST THIS LINE */
 #define WHEEL_FRONT_PASSENGER 0
