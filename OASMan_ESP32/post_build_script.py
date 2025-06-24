@@ -28,8 +28,8 @@ def post_program_action(source, target, env):
     if prod:
         print("\n\nPost execution prod script running:")
         path = '../../gopro2027.github.io/oasman/firmware/manifold'
-        if acc_functionality == False:
-            path = '../../gopro2027.github.io/oasman/firmware/manifold_no_acc'
+        #if acc_functionality == False:
+            #path = '../../gopro2027.github.io/oasman/firmware/manifold_no_acc'
         if os.path.exists(path):
             print("new path: ",path)
             print("location of bins: ",target[0].get_dir())
@@ -37,8 +37,8 @@ def post_program_action(source, target, env):
             partitions = str(target[0].get_dir())+"/partitions.bin"
             bootloader = str(target[0].get_dir())+"/bootloader.bin"
             shutil.copy2(fw, path)
-            shutil.copy2(partitions, path)
-            shutil.copy2(bootloader, path)
+            #shutil.copy2(partitions, path)
+            #shutil.copy2(bootloader, path)
         else:
             print("Github.io path does not exists, not copying files")
         

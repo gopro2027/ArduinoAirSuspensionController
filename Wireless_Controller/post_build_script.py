@@ -34,8 +34,8 @@ def post_program_action(source, target, env):
             partitions = str(target[0].get_dir())+"/partitions.bin"
             bootloader = str(target[0].get_dir())+"/bootloader.bin"
             shutil.copy2(fw, path)
-            shutil.copy2(partitions, path)
-            shutil.copy2(bootloader, path)
+            # shutil.copy2(partitions, path)
+            # shutil.copy2(bootloader, path)
 
             # update version file now
             findrv = 'RELEASE_VERSION='

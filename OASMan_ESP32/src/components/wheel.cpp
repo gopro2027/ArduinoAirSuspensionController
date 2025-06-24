@@ -298,7 +298,7 @@ void Wheel::loop()
     this->readInputs();
     if (flagStartPressureGoalRoutine[thisWheelNum].load())
     {
-        delay(100);// wait for all threads to sync on first call
+        delay(100);// wait for all threads to sync on first call. 6-19-2025: I actually have no clue if this is required. The 100 is the same as the delay in the task.
         //const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
         //const double oscillation = 1.75;
         const double oscillation = 1.2;

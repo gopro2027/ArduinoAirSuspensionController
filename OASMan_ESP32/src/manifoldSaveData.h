@@ -15,24 +15,29 @@ public:
     Preferencable pressure[4]; // byte
 };
 
-class AIModelPreference {
-    public:
-    Preferencable weights[3];//doubles
-    Preferencable isReadyToUse;//bool
+class AIModelPreference
+{
+public:
+    Preferencable weights[3];   // doubles
+    Preferencable isReadyToUse; // bool
     AIModel model;
-    void loadModel() {
-        model.loadWeights(weights[0].get().d,weights[1].get().d,weights[2].get().d);
+    void loadModel()
+    {
+        model.loadWeights(weights[0].get().d, weights[1].get().d, weights[2].get().d);
         model.print_weights();
     }
-    void saveWeights() {
+    void saveWeights()
+    {
         weights[0].setDouble(model.w1);
         weights[1].setDouble(model.w2);
         weights[2].setDouble(model.b);
     }
-    void setReady(bool ready) {
+    void setReady(bool ready)
+    {
         isReadyToUse.set(ready);
     }
-    void deletePreferences() {
+    void deletePreferences()
+    {
         isReadyToUse.deletePreference();
         weights[0].deletePreference();
         weights[1].deletePreference();
@@ -50,6 +55,10 @@ public:
     Preferencable learnPressureSensors;
     Preferencable safetyMode;
     Preferencable aiEnabled;
+    Preferencable updateMode;
+    Preferencable wifiSSID;
+    Preferencable wifiPassword;
+    Preferencable updateResult;
 
     Preferencable pressureInputFrontPassenger;
     Preferencable pressureInputRearPassenger;
@@ -71,12 +80,14 @@ public:
     AIModelPreference aiModels[4];
 };
 
-struct PressureLearnSaveStruct {
+struct PressureLearnSaveStruct
+{
     uint8_t start_pressure;
     uint8_t goal_pressure;
     uint16_t tank_pressure;
     uint32_t timeMS;
-    void print() {
+    void print()
+    {
         // Serial.printf("{0x%X, 0x%X, 0x%X, 0x%X}", start_pressure, goal_pressure, tank_pressure, timeMS);
         Serial.print("{");
         Serial.print((int)start_pressure);
@@ -104,7 +115,7 @@ int getLearnDataLength(SOLENOID_AI_INDEX aiIndex);
 
 void clearPressureData();
 
-void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex,uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
+void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
 
 AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex);
 
@@ -118,6 +129,10 @@ headerDefineSaveFunc(internalReboot, bool);
 headerDefineSaveFunc(learnPressureSensors, bool);
 headerDefineSaveFunc(safetyMode, bool);
 headerDefineSaveFunc(aiEnabled, bool);
+headerDefineSaveFunc(updateMode, bool);
+headerDefineSaveFunc(wifiSSID, String);
+headerDefineSaveFunc(wifiPassword, String);
+headerDefineSaveFunc(updateResult, byte);
 
 // pressure sensor values
 headerDefineSaveFunc(pressureInputFrontPassenger, byte);

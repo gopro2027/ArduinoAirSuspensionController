@@ -49,6 +49,9 @@ SimpleRect preset_load = {110, 225, 221 - 110, 256 - 225};
 
 int currentPressures[5];
 uint32_t statusBittset = 0;
+uint8_t AIPercentage = 0;
+uint8_t AIReadyBittset = 0;
+uint8_t manifoldUpdateStatus = 0;
 int profilePressures[5][4];
 bool profileUpdated = false;
 int currentPreset = -1;
@@ -68,6 +71,22 @@ void sendConfigValuesPacket(bool saveToManifold)
 
 Scr *screens[3];
 Scr *currentScr = NULL;
+
+std::function<void()> functionToRunOnNextFrame = NULL;
+bool doRunFunctionNextFrame = false;
+void runNextFrame(std::function<void()> function)
+{
+    functionToRunOnNextFrame = function;
+    doRunFunctionNextFrame = true;
+}
+void handleFunctionRunOnNextFrame()
+{
+    if (doRunFunctionNextFrame)
+    {
+        doRunFunctionNextFrame = false;
+        functionToRunOnNextFrame();
+    }
+}
 
 #pragma region bluetooth packets
 
@@ -198,11 +217,19 @@ void beginSaveData()
     _SaveData.unitsMode.load("units", UNITS_MODE::PSI);
     _SaveData.blePasskey.load("blePasskey", 202777);
     _SaveData.screenDimTimeM.load("screenDimTimeM", 3);
+    _SaveData.updateMode.load("updateMode", false);
+    _SaveData.wifiSSID.loadString("wifiSSID", "");
+    _SaveData.wifiPassword.loadString("wifiPassword", "");
+    _SaveData.updateResult.load("updateResult", 0);
 }
 
 createSaveFuncInt(unitsMode, int);
 createSaveFuncInt(blePasskey, uint32_t);
 createSaveFuncInt(screenDimTimeM, uint32_t);
+createSaveFuncInt(updateMode, bool);
+createSaveFuncString(wifiSSID);
+createSaveFuncString(wifiPassword);
+createSaveFuncInt(updateResult, byte);
 
 static lv_obj_t *kb = NULL;
 void closeKeyboard()
@@ -247,7 +274,14 @@ static void kb_event_cb(lv_event_t *e)
         {
             defocus(option);
             Serial.println(lv_textarea_get_text(option->rightHandObj));
-            option->event_cb((void *)atoi(lv_textarea_get_text(option->rightHandObj)));
+            if (option->type == OptionType::KEYBOARD_INPUT_NUMBER)
+            {
+                option->event_cb((void *)atoi(lv_textarea_get_text(option->rightHandObj)));
+            }
+            else
+            {
+                option->event_cb((void *)lv_textarea_get_text(option->rightHandObj));
+            }
         }
         closeKeyboard();
     }
@@ -257,7 +291,14 @@ void initKB(Option *option)
     closeKeyboard();
     kb = lv_keyboard_create(lv_scr_act());
     // lv_obj_set_height(cont, LV_VER_RES / 2);
-    lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_NUMBER);
+    if (option->type == OptionType::KEYBOARD_INPUT_NUMBER)
+    {
+        lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_NUMBER);
+    }
+    else
+    {
+        lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_TEXT_LOWER);
+    }
     lv_obj_add_event_cb(kb, kb_event_cb, LV_EVENT_ALL, option);
     lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT);    // lines in between buttons
     lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_ITEMS | LV_STATE_DEFAULT);  // buttons

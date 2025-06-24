@@ -36,6 +36,15 @@ void task_bluetooth(void *parameters)
     }
 #endif
 }
+bool do_dance = false;
+void easterEggFunc()
+{
+    if (do_dance)
+    {
+        do_dance = false;
+        doDance();
+    }
+}
 #if SCREEN_ENABLED == true
 void task_screen(void *parameters)
 {
@@ -44,6 +53,7 @@ void task_screen(void *parameters)
     {
         for (;;)
         {
+            easterEggFunc();
             Serial.println(F("SSD1306 allocation failed!"));
             delay(100);
         }
@@ -52,6 +62,7 @@ void task_screen(void *parameters)
     for (;;)
     {
         drawPSIReadings();
+        easterEggFunc();
         delay(100); // 10fps should be plenty
     }
 }
@@ -85,32 +96,8 @@ void task_wheel(void *parameters)
 {
     for (;;)
     {
-        // ideally we need to make this loop synced or get rid of this delay so they all start at the same time too but eh idk if it will be that beneficial tbh
         ((Wheel *)parameters)->loop();
         delay(100);
-    }
-}
-
-bool do_dance = false;
-void task_ota(void *parameters)
-{
-    delay(150);
-    while (startOTAServiceRequest == false)
-    {
-        // This is completely unrelated to the ota function but it is here because it is blocking and needs to be ran from it's own task and this task is basically unused so I am putting it in here rather than allocating memory for a new task.
-        if (do_dance)
-        {
-            do_dance = false;
-            doDance();
-        }
-        delay(50);
-    }
-    ota_setup();
-    delay(150);
-    for (;;)
-    {
-        ota_loop();
-        delay(150);
     }
 }
 
@@ -203,15 +190,6 @@ void setup_tasks()
         1000,
         NULL);
 #endif
-
-    // OTA Task
-    xTaskCreate(
-        task_ota,
-        "OTA",
-        512 * 5,
-        NULL,
-        1000,
-        NULL);
 
     //  Train AI Task
     xTaskCreate(

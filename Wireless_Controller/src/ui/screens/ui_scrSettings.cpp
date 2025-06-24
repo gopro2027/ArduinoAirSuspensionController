@@ -10,6 +10,17 @@ void alertValueUpdated()
 
 const char *test = "";
 extern bool isConnectedToManifold(); // from ble.cpp
+void ScrSettings::updateUpdateButtonVisbility()
+{
+    if (getwifiSSID().length() > 0 && getwifiPassword().length() > 0)
+    {
+        lv_obj_remove_flag(this->ui_updateBtn->root, (lv_obj_flag_t)(LV_OBJ_FLAG_HIDDEN));
+    }
+    else
+    {
+        lv_obj_add_flag(this->ui_updateBtn->root, (lv_obj_flag_t)(LV_OBJ_FLAG_HIDDEN));
+    }
+}
 void ScrSettings::init()
 {
     Scr::init();
@@ -57,18 +68,17 @@ void ScrSettings::init()
     this->ui_aiPercentage = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Learn Progress:", defaultCharVal);
     this->ui_aiReady = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Trained:", defaultCharVal);
     this->ui_aiEnabled = new Option(this->optionsContainer, OptionType::ON_OFF, "Enabled:", defaultCharVal, [](void *data)
-                             { 
+                                    { 
                 AIStatusPacket pkt(((bool)data));
                 sendRestPacket(&pkt);
                 log_i("Pressed ai status %i", ((bool)data)); });
     new Option(this->optionsContainer, OptionType::BUTTON, "Reset Learned Data", defaultCharVal, [](void *data)
-                                       { currentScr->showMsgBox("Reset Learned AI data?", "Run this if ai has completed training and you are getting innacurate presets.", "Confirm", "Cancel", []() -> void
-                                                                {
+               { currentScr->showMsgBox("Reset Learned AI data?", "Run this if ai has completed training and you are getting innacurate presets.", "Confirm", "Cancel", []() -> void
+                                        {
                                                                 
                                                                     ResetAIPacket pkt;
                                                                     sendRestPacket(&pkt);
-                                                                    log_i("Pressed reset ai");
-                                                                 }, []() -> void {}, false); });
+                                                                    log_i("Pressed reset ai"); }, []() -> void {}, false); });
 
     new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "Basic settings");
@@ -186,6 +196,66 @@ void ScrSettings::init()
         sendConfigValuesPacket(true);
     alertValueUpdated(); });
 
+    new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
+    new Option(this->optionsContainer, OptionType::HEADER, "Wifi / Update");
+
+    char buf[50];
+    strncpy(buf, getwifiSSID().c_str(), sizeof(buf));
+    OptionValue wifiOptionValue;
+    wifiOptionValue.STRING = buf;
+
+    new Option(this->optionsContainer,
+               OptionType::KEYBOARD_INPUT_TEXT,
+               "SSID",
+               wifiOptionValue,
+               [](void *data)
+               {
+                   log_i("Typed %s", ((char *)data));
+                   setwifiSSID(((char *)data));
+                   alertValueUpdated();
+                   ((ScrSettings *)currentScr)->updateUpdateButtonVisbility(); // lazy reference
+               });
+
+    strncpy(buf, getwifiPassword().c_str(), sizeof(buf));
+    wifiOptionValue.STRING = buf; // actually shouldn't be necessary
+
+    Option *pass = new Option(this->optionsContainer,
+                              OptionType::KEYBOARD_INPUT_TEXT,
+                              "PASS",
+                              wifiOptionValue,
+                              [](void *data)
+                              {
+                                  log_i("Typed %s", ((char *)data));
+                                  setwifiPassword(((char *)data));
+                                  alertValueUpdated();
+                                  ((ScrSettings *)currentScr)->updateUpdateButtonVisbility(); // lazy reference
+                              });
+
+    lv_textarea_set_password_mode(pass->rightHandObj, true);
+    lv_textarea_set_password_show_time(pass->rightHandObj, 10000);
+
+    this->ui_updateBtn = new Option(this->optionsContainer, OptionType::BUTTON, "Start Software Update", defaultCharVal, [](void *data)
+                                    { currentScr->showMsgBox("Begin update wifi service?", "This will use the wifi credentials you entered above to download and install the latest firmware update on both the manifold and controller. If an issue occurs, please go to http://oasman.dev and flash manually. Continue?", "Start", "Cancel", []() -> void // "This will start a wifi network on your esp32 that you can connect to from your phone that has an update page.\nAir suspension features will not be available during update mode.\nRestart the car/manifold to abort update mode."
+                                                             {
+                                 StartwebPacket pkt(getwifiSSID(),getwifiPassword());
+                                 sendRestPacket(&pkt);
+                                 log_i("Starting web service");
+                                 runNextFrame([]() -> void
+                                              {
+                                                  currentScr->showMsgBox("Updating in progress...", "Both the manifold & controller are installing their updates. Both will reboot when completed.", NULL, "OK", []() -> void {}, []() -> void {}, false); // Open your phone and go to http://oasman.dev and download the latest manifold firmware.bin, then connect to the OASMAN-XXXXX wifi network. Then open your web browser and go to the website\nhttp://oasman.local to upload the firmware.bin
+
+                                                  runNextFrame([]() -> void
+                                                               { setupdateMode(true);
+                    runNextFrame([]() -> void
+                                 { ESP.restart(); }); 
+                });
+
+                                                  Serial.println("Attempted to download update"); }); }, []() -> void {}, false); });
+
+    updateUpdateButtonVisbility();
+
+    this->ui_manifoldUpdateStatus = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Manifold:", defaultCharVal);
+
     // add space before qr code
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
 
@@ -202,7 +272,7 @@ void ScrSettings::init()
     lv_qrcode_set_size(this->ui_qrcode, 100);
     lv_qrcode_set_dark_color(this->ui_qrcode, lv_color_black());
     lv_qrcode_set_light_color(this->ui_qrcode, lv_color_white());
-    const char *qr_data = "https://github.com/gopro2027/ArduinoAirSuspensionController";
+    const char *qr_data = "https://oasman.dev";
     lv_qrcode_update(this->ui_qrcode, qr_data, strlen(qr_data));
     // lv_obj_set_align(this->ui_qrcode, LV_ALIGN_TOP_MID);
     lv_obj_set_x(this->ui_qrcode, DISPLAY_WIDTH / 2 - 50);
@@ -256,15 +326,39 @@ void ScrSettings::loop()
     this->ui_s2->setBooleanValue(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON));
     this->ui_aiEnabled->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AI_STATUS_ENABLED));
 
-    int aiPacked = statusBittset >> 21;
-    uint8_t AIReadyBittset = aiPacked & 0b1111;
-    uint8_t AIPercentage = aiPacked >> 4;
-    //Serial.println(AIReadyBittset);
+    char *manifoldUpdateStatusString;
+    switch (manifoldUpdateStatus)
+    {
+    case UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST:
+        manifoldUpdateStatusString = "FAIL_FILE_REQUEST";
+        break;
+    case UPDATE_STATUS::UPDATE_STATUS_FAIL_GENERIC:
+        manifoldUpdateStatusString = "FAIL_GENERIC";
+        break;
+    case UPDATE_STATUS::UPDATE_STATUS_FAIL_VERSION_REQUEST:
+        manifoldUpdateStatusString = "FAIL_VERSION_REQUEST";
+        break;
+    case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_CONNECTION:
+        manifoldUpdateStatusString = "FAIL_WIFI_CONNECTION";
+        break;
+    case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
+        manifoldUpdateStatusString = "SUCCESS";
+        break;
+    case UPDATE_STATUS_NONE:
+    default:
+        manifoldUpdateStatusString = "-";
+    }
+    this->ui_manifoldUpdateStatus->setRightHandText(manifoldUpdateStatusString);
+
+    // int aiPacked = statusBittset >> 21;
+    // uint8_t AIReadyBittset = aiPacked & 0b1111;
+    // uint8_t AIPercentage = aiPacked >> 4;
+    //  Serial.println(AIReadyBittset);
 
     char buf[40];
-    snprintf(buf,sizeof(buf),"%i%%",AIPercentage);
+    snprintf(buf, sizeof(buf), "%i%%", AIPercentage);
     this->ui_aiPercentage->setRightHandText(buf);
-    snprintf(buf,sizeof(buf),"UF:  %c UR:  %c\nDF: %c DR: %c", (AIReadyBittset & 0b1)?'Y':'n', (AIReadyBittset & 0b10 >> 1)?'Y':'n', (AIReadyBittset & 0b100 >> 2)?'Y':'n',(AIReadyBittset & 0b1000 >> 3)?'Y':'n');
+    snprintf(buf, sizeof(buf), "UF:  %c UR:  %c\nDF: %c DR: %c", (AIReadyBittset & 0b1) ? 'Y' : 'n', (AIReadyBittset & 0b10 >> 1) ? 'Y' : 'n', (AIReadyBittset & 0b100 >> 2) ? 'Y' : 'n', (AIReadyBittset & 0b1000 >> 3) ? 'Y' : 'n');
     this->ui_aiReady->setRightHandText(buf);
 
     if (*util_configValues._setValues())

@@ -213,9 +213,11 @@ class CharacteristicCallback : public BLECharacteristicCallbacks
 //     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(uint8_t));
 //     esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
 // }
-
+#define ESP_GATT_MAX_MTU_SIZE 517
 void ble_setup()
 {
+
+    BLEDevice::setMTU(ESP_GATT_MAX_MTU_SIZE);
 
     // Create the BLE Device
     BLEDevice::init("OASMan");
@@ -322,8 +324,8 @@ void ble_create_characteristics(BLEService *pService)
     valveControlCharacteristic->setCallbacks(&characteristicCallback);
 }
 
-extern uint8_t AIReadyBittset;//4
-extern uint8_t AIPercentage;//7
+extern uint8_t AIReadyBittset; // 4
+extern uint8_t AIPercentage;   // 7
 
 void ble_notify()
 {
@@ -385,21 +387,18 @@ void ble_notify()
             statusBittset = statusBittset | (1 << StatusPacketBittset::AI_STATUS_ENABLED);
         }
 
-        // pack these 2 values together at the top of the statusBittset
-        int aiDataPacked = (AIPercentage << 4) + AIReadyBittset; // combine at bottom
-        aiDataPacked = (aiDataPacked<<21); // move to top end (4 + 7 = 11; 32-11 = 21)
+        // // pack these 2 values together at the top of the statusBittset
+        // int aiDataPacked = (AIPercentage << 4) + AIReadyBittset; // combine at bottom
+        // aiDataPacked = (aiDataPacked << 21);                     // move to top end (4 + 7 = 11; 32-11 = 21)
+        // statusBittset = statusBittset | aiDataPacked;
 
-        statusBittset = statusBittset | aiDataPacked;
-
-
-        StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue(), getCompressor()->getTankPressure(), statusBittset);
+        StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue(), getCompressor()->getTankPressure(), statusBittset, AIPercentage, AIReadyBittset, getupdateResult());
 
         statusCharacteristic->setValue(statusPacket.tx(), BTOAS_PACKET_SIZE);
         statusCharacteristic->notify(); // we don't do this on the other characteristic thats why it has to be read manually TODO: THIS CRASHED AT ONE POINT????????? HAVING TROUBLE READING THE BLE VALUE. TRY RUNNING IN VERBOSE MODE AND SET IT TO IDLE FOR A LONG TIME TO DEBUG
     }
 }
 
-extern bool startOTAServiceRequest;
 void runReceivedPacket(BTOasPacket *packet)
 {
     switch (packet->cmd)
@@ -499,7 +498,16 @@ void runReceivedPacket(BTOasPacket *packet)
         break;
     case BTOasIdentifier::STARTWEB:
         Serial.println(F("Starting OTA..."));
-        startOTAServiceRequest = true;
+        setwifiSSID(((StartwebPacket *)packet)->getSSID());
+        setwifiPassword(((StartwebPacket *)packet)->getPassword());
+        // Serial.println("\n\n\n\n");
+        // Serial.print("SSID: ");
+        // Serial.println(getwifiSSID());
+        // Serial.print("PASSWORD: ");
+        // Serial.println(getwifiPassword());
+        // Serial.println("\n\n");
+        setupdateMode(true);
+        setinternalReboot(true);
         break;
     case BTOasIdentifier::PRESETREPORT:
     {
