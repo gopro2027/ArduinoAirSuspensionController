@@ -101,18 +101,25 @@ void setup()
         {
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST:
             showDialog("Update failed (file request)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "There was an issue obtaining the firmware file", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_GENERIC:
             showDialog("Update failed (generic)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "Unknown error installing update", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_VERSION_REQUEST:
             showDialog("Update failed (version request)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "Could not retreive the version info", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_CONNECTION:
             showDialog("Update failed (wifi connection)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "Could not connect to wifi network. Please check your wifi SSID and password", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
             showDialog("Update success!", lv_color_hex(0x00FF00));
+            char buf[150];
+            snprintf(buf, sizeof(buf), "You are now on version %s!\nPlease check the manifold update status in the update section of settings to verify the manifold was updated successfully too.", EVALUATE_AND_STRINGIFY(RELEASE_VERSION));
+            currentScr->showMsgBox("Update success!", buf, NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         }
         setupdateResult(0);

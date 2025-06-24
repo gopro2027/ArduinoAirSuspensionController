@@ -38,7 +38,7 @@ void BTOasPacket::dump()
 }
 
 // Outgoing packets
-StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset)
+StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage, uint8_t AIReadyBittset, uint8_t updateStatus)
 {
     this->cmd = STATUSREPORT;
     // 0 through 4
@@ -47,7 +47,10 @@ StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REA
     this->args16()[WHEEL_FRONT_DRIVER].i = WHEEL_FRONT_DRIVER_PRESSURE;       // getWheel(WHEEL_FRONT_DRIVER)->getPressure();
     this->args16()[WHEEL_REAR_DRIVER].i = WHEEL_REAR_DRIVER_PRESSURE;         // getWheel(WHEEL_REAR_DRIVER)->getPressure();
     this->args16()[_TANK_INDEX].i = TANK_PRESSURE;                            // getCompressor()->getTankPressure();
+    this->args8()[10].i = AIPercentage;
+    this->args8()[11].i = AIReadyBittset;
     this->args32()[3].i = bittset;
+    this->args8()[0x10].i = updateStatus;
 
     // doesn't matter for this because it is generic broadcasted for everyone
     this->sender = 0;

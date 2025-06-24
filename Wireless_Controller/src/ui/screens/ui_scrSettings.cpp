@@ -256,6 +256,8 @@ void ScrSettings::init()
 
     updateUpdateButtonVisbility();
 
+    this->ui_manifoldUpdateStatus = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Manifold:", defaultCharVal);
+
     // add space before qr code
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
 
@@ -326,10 +328,34 @@ void ScrSettings::loop()
     this->ui_s2->setBooleanValue(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON));
     this->ui_aiEnabled->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AI_STATUS_ENABLED));
 
-    int aiPacked = statusBittset >> 21;
-    uint8_t AIReadyBittset = aiPacked & 0b1111;
-    uint8_t AIPercentage = aiPacked >> 4;
-    // Serial.println(AIReadyBittset);
+    char *manifoldUpdateStatusString;
+    switch (manifoldUpdateStatus)
+    {
+    case UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST:
+        manifoldUpdateStatusString = "FAIL_FILE_REQUEST";
+        break;
+    case UPDATE_STATUS::UPDATE_STATUS_FAIL_GENERIC:
+        manifoldUpdateStatusString = "FAIL_GENERIC";
+        break;
+    case UPDATE_STATUS::UPDATE_STATUS_FAIL_VERSION_REQUEST:
+        manifoldUpdateStatusString = "FAIL_VERSION_REQUEST";
+        break;
+    case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_CONNECTION:
+        manifoldUpdateStatusString = "FAIL_WIFI_CONNECTION";
+        break;
+    case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
+        manifoldUpdateStatusString = "SUCCESS";
+        break;
+    case UPDATE_STATUS_NONE:
+    default:
+        manifoldUpdateStatusString = "-";
+    }
+    this->ui_manifoldUpdateStatus->setRightHandText(manifoldUpdateStatusString);
+
+    // int aiPacked = statusBittset >> 21;
+    // uint8_t AIReadyBittset = aiPacked & 0b1111;
+    // uint8_t AIPercentage = aiPacked >> 4;
+    //  Serial.println(AIReadyBittset);
 
     char buf[40];
     snprintf(buf, sizeof(buf), "%i%%", AIPercentage);

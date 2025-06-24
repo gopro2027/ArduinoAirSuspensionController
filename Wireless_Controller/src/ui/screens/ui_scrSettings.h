@@ -40,6 +40,7 @@ public:
     Option *ui_config5;
     Option *ui_config6;
     Option *ui_updateBtn;
+    Option *ui_manifoldUpdateStatus;
     void init();
     void runTouchInput(SimplePoint pos, bool down);
     void loop();
