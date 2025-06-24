@@ -246,8 +246,11 @@ void ScrSettings::init()
                                               {
                                                   currentScr->showMsgBox("Updating in progress...", "Both the manifold & controller are installing their updates. Both will reboot when completed.", NULL, "OK", []() -> void {}, []() -> void {}, false); // Open your phone and go to http://oasman.dev and download the latest manifold firmware.bin, then connect to the OASMAN-XXXXX wifi network. Then open your web browser and go to the website\nhttp://oasman.local to upload the firmware.bin
 
-                                                //   runNextFrame([]() -> void
-                                                //                { Serial.println("Gonna try to download update!!!"); downloadUpdate(getwifiSSID(), getwifiPassword()); });
+                                                  runNextFrame([]() -> void
+                                                               { setupdateMode(true);
+                    runNextFrame([]() -> void
+                                 { ESP.restart(); }); 
+                });
 
                                                   Serial.println("Attempted to download update"); }); }, []() -> void {}, false); });
 

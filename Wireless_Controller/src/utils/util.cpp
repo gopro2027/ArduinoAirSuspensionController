@@ -214,6 +214,7 @@ void beginSaveData()
     _SaveData.unitsMode.load("units", UNITS_MODE::PSI);
     _SaveData.blePasskey.load("blePasskey", 202777);
     _SaveData.screenDimTimeM.load("screenDimTimeM", 3);
+    _SaveData.updateMode.load("updateMode", false);
     _SaveData.wifiSSID.loadString("wifiSSID", "");
     _SaveData.wifiPassword.loadString("wifiPassword", "");
     _SaveData.updateResult.load("updateResult", 0);
@@ -222,6 +223,7 @@ void beginSaveData()
 createSaveFuncInt(unitsMode, int);
 createSaveFuncInt(blePasskey, uint32_t);
 createSaveFuncInt(screenDimTimeM, uint32_t);
+createSaveFuncInt(updateMode, bool);
 createSaveFuncString(wifiSSID);
 createSaveFuncString(wifiPassword);
 createSaveFuncInt(updateResult, byte);

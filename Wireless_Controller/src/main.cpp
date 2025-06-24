@@ -57,6 +57,15 @@ void setup()
 
     beginSaveData();
 
+    // Check if in update mode and ignore everything else and just start the web server.
+    if (getupdateMode())
+    {
+        setupdateMode(false);
+        Serial.println("Gonna try to download update");
+        downloadUpdate(getwifiSSID(), getwifiPassword());
+        return;
+    }
+
     setup_tasks();
 
     // out display file for the lcd:

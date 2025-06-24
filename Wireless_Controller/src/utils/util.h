@@ -115,6 +115,7 @@ public:
     Preferencable unitsMode;
     Preferencable blePasskey;
     Preferencable screenDimTimeM;
+    Preferencable updateMode;
     Preferencable wifiSSID;
     Preferencable wifiPassword;
     Preferencable updateResult;
@@ -125,6 +126,7 @@ void beginSaveData();
 headerDefineSaveFunc(unitsMode, int);
 headerDefineSaveFunc(blePasskey, uint32_t);
 headerDefineSaveFunc(screenDimTimeM, uint32_t);
+headerDefineSaveFunc(updateMode, bool);
 headerDefineSaveFunc(wifiSSID, String);
 headerDefineSaveFunc(wifiPassword, String);
 headerDefineSaveFunc(updateResult, byte);
