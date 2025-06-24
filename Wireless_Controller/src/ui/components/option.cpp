@@ -3,8 +3,6 @@ lv_style_t headerStyle;
 static bool styleCreated = false;
 LV_IMG_DECLARE(imgOn);
 LV_IMG_DECLARE(imgOff);
-LV_IMG_DECLARE(radioOn);
-LV_IMG_DECLARE(radioOff);
 #define OPTION_ROW_HEIGHT 36
 #define MARGIN 10 // originally 16
 static char strbuf[20];
@@ -48,7 +46,10 @@ void ui_clicked_imgOn(lv_event_t *e)
 }
 void Option::indentText(int extraX)
 {
-    lv_obj_set_x(this->text, MARGIN * 2 + extraX);
+    if (this->text != NULL)
+    {
+        lv_obj_set_x(this->text, MARGIN * 2 + extraX);
+    }
     this->bar = lv_obj_create(this->root);
     lv_obj_remove_style_all(this->bar);
     lv_obj_set_style_bg_opa(this->bar, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -56,7 +57,7 @@ void Option::indentText(int extraX)
     lv_obj_set_style_bg_color(this->bar, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_x(this->bar, MARGIN);
 }
-void ui_clicked_radioOff(lv_event_t *e)
+void ui_clicked_button(lv_event_t *e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
     lv_obj_t *target = (lv_obj_t *)lv_event_get_target(e);
@@ -68,6 +69,7 @@ void ui_clicked_radioOff(lv_event_t *e)
 }
 Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue value, option_event_cb_t _event_cb, void *_extraEventClickData)
 {
+    this->text = NULL;
     this->event_cb = NULL;
     this->extraEventClickData = _extraEventClickData;
 
@@ -133,7 +135,7 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_obj_set_style_border_color(this->text, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DISABLED); // border
 
         lv_obj_add_flag(this->text, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
-        lv_obj_add_event_cb(this->text, ui_clicked_radioOff, LV_EVENT_ALL, this);
+        lv_obj_add_event_cb(this->text, ui_clicked_button, LV_EVENT_ALL, this);
 
         this->indentText();
     }
@@ -141,22 +143,18 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     {
         this->indentText(MARGIN + 16); // lots of indent for the radio
 
-        this->ui_imgOn = lv_image_create(this->root);
-        lv_image_set_src(this->ui_imgOn, &radioOn);
+        this->ui_imgOn = lv_checkbox_create(this->root);
+        lv_checkbox_set_text(this->ui_imgOn, ""); // set blank because we render the text separately
         lv_obj_set_align(this->ui_imgOn, LV_ALIGN_LEFT_MID);
         lv_obj_set_x(this->ui_imgOn, MARGIN * 2);
 
-        this->ui_imgOff = lv_image_create(this->root);
-        lv_image_set_src(this->ui_imgOff, &radioOff);
-        lv_obj_set_align(this->ui_imgOff, LV_ALIGN_LEFT_MID);
-        lv_obj_set_x(this->ui_imgOff, MARGIN * 2);
-
-        // lv_obj_add_flag(this->ui_imgOn, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
-        // lv_obj_add_event_cb(this->ui_imgOn, ui_clicked_imgOn, LV_EVENT_ALL, this);
+        lv_obj_set_style_bg_color(this->ui_imgOn, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR | LV_STATE_CHECKED);
+        lv_obj_set_style_border_color(this->ui_imgOn, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(this->ui_imgOn, lv_color_hex(THEME_COLOR_DARK), LV_PART_INDICATOR | LV_STATE_DEFAULT);
 
         // only want the off image to be clickable
-        lv_obj_add_flag(this->ui_imgOff, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
-        lv_obj_add_event_cb(this->ui_imgOff, ui_clicked_radioOff, LV_EVENT_ALL, this);
+        lv_obj_add_flag(this->ui_imgOn, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
+        lv_obj_add_event_cb(this->ui_imgOn, ui_clicked_button, LV_EVENT_ALL, this);
     }
     else if (type == OptionType::KEYBOARD_INPUT_NUMBER || type == OptionType::KEYBOARD_INPUT_TEXT)
     {
@@ -250,13 +248,11 @@ void Option::setBooleanValue(bool value, bool netSend)
     {
         if (value)
         {
-            lv_obj_add_flag(this->ui_imgOff, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_remove_flag(this->ui_imgOn, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_state(this->ui_imgOn, LV_STATE_CHECKED);
         }
         else
         {
-            lv_obj_add_flag(this->ui_imgOn, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_remove_flag(this->ui_imgOff, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_remove_state(this->ui_imgOn, LV_STATE_CHECKED);
         }
     }
 }
