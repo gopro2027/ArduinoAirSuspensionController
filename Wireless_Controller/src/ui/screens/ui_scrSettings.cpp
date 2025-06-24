@@ -211,7 +211,6 @@ void ScrSettings::init()
                [](void *data)
                {
                    log_i("Typed %s", ((char *)data));
-                   // TODO save ssid
                    setwifiSSID(((char *)data));
                    alertValueUpdated();
                    ((ScrSettings *)currentScr)->updateUpdateButtonVisbility(); // lazy reference
@@ -227,7 +226,6 @@ void ScrSettings::init()
                               [](void *data)
                               {
                                   log_i("Typed %s", ((char *)data));
-                                  // TODO save password
                                   setwifiPassword(((char *)data));
                                   alertValueUpdated();
                                   ((ScrSettings *)currentScr)->updateUpdateButtonVisbility(); // lazy reference
