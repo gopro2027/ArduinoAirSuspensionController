@@ -93,6 +93,30 @@ void setup()
     setup_touchscreen_hook();
 
     dimScreenTime = millis() + DIM_SCREEN_TIME;
+
+    byte updateResult = getupdateResult();
+    if (updateResult != UPDATE_STATUS::UPDATE_STATUS_NONE)
+    {
+        switch (updateResult)
+        {
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST:
+            showDialog("Update failed (file request)", lv_color_hex(0xFF0000));
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_GENERIC:
+            showDialog("Update failed (generic)", lv_color_hex(0xFF0000));
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_VERSION_REQUEST:
+            showDialog("Update failed (version request)", lv_color_hex(0xFF0000));
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_CONNECTION:
+            showDialog("Update failed (wifi connection)", lv_color_hex(0xFF0000));
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
+            showDialog("Update success!", lv_color_hex(0x00FF00));
+            break;
+        }
+        setupdateResult(0);
+    }
 }
 
 auto lv_last_tick = millis();

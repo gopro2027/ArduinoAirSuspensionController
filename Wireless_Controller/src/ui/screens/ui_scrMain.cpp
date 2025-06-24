@@ -146,30 +146,6 @@ void ui_scrMain_screen_init(void)
 
     lv_obj_add_event_cb(scrMain.ui_Rotate, ui_scrMain_event_Rotate, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(scrMain.ui_btnCount, ui_scrMain_event_btnCount, LV_EVENT_ALL, NULL);
-
-    byte updateResult = getupdateResult();
-    if (updateResult != UPDATE_STATUS::UPDATE_STATUS_NONE)
-    {
-        switch (updateResult)
-        {
-        case UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST:
-            showDialog("Update failed (file request)", lv_color_hex(0xFF0000));
-            break;
-        case UPDATE_STATUS::UPDATE_STATUS_FAIL_GENERIC:
-            showDialog("Update failed (generic)", lv_color_hex(0xFF0000));
-            break;
-        case UPDATE_STATUS::UPDATE_STATUS_FAIL_VERSION_REQUEST:
-            showDialog("Update failed (version request)", lv_color_hex(0xFF0000));
-            break;
-        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_CONNECTION:
-            showDialog("Update failed (wifi connection)", lv_color_hex(0xFF0000));
-            break;
-        case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
-            showDialog("Update success!", lv_color_hex(0x00FF00));
-            break;
-        }
-        setupdateResult(0);
-    }
 }
 
 ulong next_millis;
