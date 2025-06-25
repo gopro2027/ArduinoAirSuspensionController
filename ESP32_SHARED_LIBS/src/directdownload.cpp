@@ -76,48 +76,29 @@ void downloadUpdate(String SSID, String PASS)
                 return;
             }
 
-            WiFiClient *stream = https.getStreamPtr();
-
-            const size_t bufferSize = 1024; // 1KB chunks
-            uint8_t buffer[bufferSize];
-
-            size_t totalRead = 0;
-            unsigned long lastTime = millis();
-
             if (Update.begin(fileSize))
             { // UPDATE_SIZE_UNKNOWN could also be used
+                size_t written = Update.writeStream(https.getStream());
 
-                while ((https.connected()) && totalRead < fileSize)
-                { //  stream->available()
-                    size_t bytesRead = stream->readBytes(buffer, bufferSize);
-
-                    // Something has gone wrong....
-                    if (bytesRead == 0)
-                    {
-                        break;
-                    }
-
-                    // Do something with the data chunk
-                    Serial.printf("Read %u bytes\n", bytesRead);
-
-                    // For example: write to SPIFFS, SD, or process in RAM
-                    totalRead += bytesRead;
-
-                    if (Update.write(buffer, bytesRead) != bytesRead)
-                    {
-                        Update.printError(Serial);
-                    }
-
-                    // Optional: avoid watchdog reset
-                    if (millis() - lastTime > 1000)
-                    {
-                        delay(10);
-                        lastTime = millis();
-                    }
+                if (written == fileSize)
+                {
+                    Serial.println("Written : " + String(written) + " successfully");
+                }
+                else
+                {
+                    Serial.println("Written only : " + String(written) + "/" + String(fileSize) + ". Retry?");
+                    setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST);
+                    ESP.restart();
+                    return;
                 }
             }
-
-            Serial.printf("Total bytes read: %u\n", totalRead);
+            else
+            {
+                Serial.println("File too large");
+                setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST);
+                ESP.restart();
+                return;
+            }
         }
         else
         {
