@@ -121,9 +121,6 @@
 
 #define AIR_OUT_AFTER_SHUTDOWN_MS 5000
 
-/* Use new BLE with latest features or old classic bluetooth with the classic android app */
-#define USE_BLE true
-
 #define THEME_COLOR_DARK 0x5A4673
 #define THEME_COLOR_VERY_DARK lv_color_darken(lv_color_hex(THEME_COLOR_DARK), 50)
 #define THEME_COLOR_MEDIUM 0x9C4DCC

@@ -489,12 +489,7 @@ void runReceivedPacket(BTOasPacket *packet)
         clearPressureData();
         break;
     case BTOasIdentifier::CALIBRATE:
-#ifdef parabolaLearn
-        Serial.println("Starting parabola calibration task");
-        start_parabolaLearnTask();
-#else
         Serial.println("Feature unfinished");
-#endif
         break;
     case BTOasIdentifier::STARTWEB:
         Serial.println(F("Starting OTA..."));
