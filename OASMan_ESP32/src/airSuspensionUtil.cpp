@@ -419,111 +419,32 @@ namespace PressureSensorCalibration
 
 #pragma endregion
 
-#pragma region parabolaLearn
-
-
-#ifdef parabolaLearn
-void learnParabolaSetup()
-{
-
-    getCompressor()->enableDisableOverride(true); // make sure compressor is on
-    // STEP 1: Air out all bags
-    downAllBags(20 * 1000);
-
-    // getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(20);
-    // getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(20);
-    // getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(20);
-    // getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(20);
-    // while (isAnyWheelActive())
-    // {
-    //     delay(20);
-    // }
-
-    delay(500); // wait for pressures to stabilize
-}
-
-void doParabolaRoutineOneWay(bool up)
-{
-    // file.print(up ? "UP: " : "DOWN: ");
-    const int sz = 10;
-    double pressures[sz];
-    double times[sz];
-
-    times[0] = 0;
-    pressures[0] = averageBags();
-    char buf[30];
-    const int valve_timing = 200;
-    for (int i = 1; i < sz; i++)
-    {
-        if (up)
-        {
-            upAllBags(valve_timing);
-        }
-        else
-        {
-            downAllBags(valve_timing);
-        }
-
-        delay(500); // wait for pressures to stabilize
-        times[i] = i * valve_timing;
-        pressures[i] = averageBags();
-
-        snprintf(buf, sizeof(buf), "(%d,%d),", (int)(pressures[i]), (int)(times[i]));
-        // file.print(buf);
-    }
-    // file.print("\n");
-
-    double A, B, C;
-    A = B = C = 0;
-    // calculateAverageOfSamples(pressures, times, sz, A, B, C);
-    // updateParabola(up, A, B, C);
-}
-
-// returns if it completed or not
-bool learnParabolaLoop()
-{
-    if (getCompressor()->isOn())
-    {
-        return false; // not done filling up yet!
-    }
-
-    Serial.println("Running parabola routine!");
-
-    // File file = SPIFFS.open("/log.txt", FILE_APPEND);
-
-    // do up parabola
-    delay(500);
-    doParabolaRoutineOneWay(true);
-    delay(500);
-    doParabolaRoutineOneWay(false);
-    // file.print("\n");
-    // file.close();
-    return true;
-}
-#endif
-#pragma endregion
-
 #pragma region training
 
 uint8_t AIReadyBittset = 0;
 uint8_t AIPercentage = 0;
 
-void trainSingleAIModel(SOLENOID_AI_INDEX index) {
+void trainSingleAIModel(SOLENOID_AI_INDEX index)
+{
     AIModel aiModelsTemp;
 
-    if (index == SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT || index == SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR) {
+    if (index == SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT || index == SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR)
+    {
         aiModelsTemp.up = false;
     }
 
     Serial.print(F("Training AI "));
     Serial.println((int)index);
     unsigned long t = millis();
-    for (int epoch = 0; epoch < 1000*10; ++epoch) {
-        for (int j = 0; j < getLearnDataLength(index); j++) {
+    for (int epoch = 0; epoch < 1000 * 10; ++epoch)
+    {
+        for (int j = 0; j < getLearnDataLength(index); j++)
+        {
             PressureLearnSaveStruct *pls = getLearnData(index);
             aiModelsTemp.train(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].timeMS);
         }
-        if (epoch%10 == 0) {
+        if (epoch % 10 == 0)
+        {
             delay(1); // inside a task, delay 1 so it doesn't block other things i guess. Should take about 4.5ms per loop
         }
     }
@@ -537,16 +458,18 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index) {
     getAIModel(index)->model.loadWeights(aiModelsTemp.w1, aiModelsTemp.w2, aiModelsTemp.b);
     getAIModel(index)->saveWeights();
     getAIModel(index)->setReady(true); // set to not train again and let it know it's ready to use
-    AIReadyBittset = AIReadyBittset | (1<<index);
+    AIReadyBittset = AIReadyBittset | (1 << index);
 }
 
-void updateAIPercentage() {
+void updateAIPercentage()
+{
     int totalLen = 0;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++)
+    {
         int len = getLearnDataLength((SOLENOID_AI_INDEX)i);
         totalLen += len;
     }
-    AIPercentage = ((float)totalLen/((float)LEARN_SAVE_COUNT*4)) * 100;
+    AIPercentage = ((float)totalLen / ((float)LEARN_SAVE_COUNT * 4)) * 100;
 }
 
 void trainAIModels()
@@ -561,27 +484,35 @@ void trainAIModels()
     // downModel.useWeight4 = true;
     // downModel.useWeight5 = false;
 
-    for (int i = 0; i < 4; i++) {
-        if (getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.get().i == false) {
-            if (getLearnDataLength((SOLENOID_AI_INDEX)i) >= LEARN_SAVE_COUNT) {
+    for (int i = 0; i < 4; i++)
+    {
+        if (getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.get().i == false)
+        {
+            if (getLearnDataLength((SOLENOID_AI_INDEX)i) >= LEARN_SAVE_COUNT)
+            {
                 trainSingleAIModel((SOLENOID_AI_INDEX)i);
             }
-        } else {
-            AIReadyBittset = AIReadyBittset | (1<<i);
+        }
+        else
+        {
+            AIReadyBittset = AIReadyBittset | (1 << i);
         }
     }
-    
+
     Serial.print("AI training bittset: ");
     Serial.println(AIReadyBittset);
     updateAIPercentage();
 }
 
-double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure) {
+double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure)
+{
     return getAIModel(aiIndex)->model.predictDeNormalized(start_pressure, end_pressure, tank_pressure);
 }
 
-bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex) {
-    if (!getaiEnabled()) {
+bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex)
+{
+    if (!getaiEnabled())
+    {
         return false;
     }
     return getAIModel(aiIndex)->isReadyToUse.get().i;

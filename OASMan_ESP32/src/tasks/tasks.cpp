@@ -19,14 +19,6 @@ void task_bluetooth(void *parameters)
 
     Serial.println(F("Bluetooth Rest Service Beginning"));
 
-#if USE_BLE == false
-    bt.begin(BT_NAME);
-    for (;;)
-    {
-        bt_cmd();
-        delay(10);
-    }
-#else
     ble_setup();
     delay(10);
     for (;;)
@@ -34,7 +26,6 @@ void task_bluetooth(void *parameters)
         ble_loop();
         delay(10);
     }
-#endif
 }
 bool do_dance = false;
 void easterEggFunc()
@@ -100,36 +91,6 @@ void task_wheel(void *parameters)
         delay(100);
     }
 }
-
-#ifdef parabolaLearn
-void task_parabolaLearn(void *parameters)
-{
-    learnParabolaSetup();
-    for (;;)
-    {
-        if (learnParabolaLoop())
-        {
-            Serial.println("Finished parabola learn!");
-            setinternalReboot(true);
-            ESP.restart();
-            return;
-        }
-        delay(100);
-    }
-}
-
-void start_parabolaLearnTask()
-{
-    //  Parabola Task
-    xTaskCreate(
-        task_parabolaLearn,
-        "parabolalearn",
-        512 * 4,
-        NULL,
-        1000,
-        NULL);
-}
-#endif
 
 void task_trainAI(void *parameters)
 {

@@ -5,7 +5,6 @@
 
 #include <user_defines.h>
 #include "components/screen.h"
-#include "bluetooth/bt.h"
 #include "bluetooth/ble.h"
 
 #if ENABLE_PS3_CONTROLLER_SUPPORT
@@ -13,8 +12,5 @@
 #endif
 
 void setup_tasks();
-#ifdef parabolaLearn
-void start_parabolaLearnTask();
-#endif
 
 #endif
