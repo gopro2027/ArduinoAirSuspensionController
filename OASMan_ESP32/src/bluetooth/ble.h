@@ -22,7 +22,5 @@
 
 void ble_setup();
 void ble_loop();
-void ble_notify();
-void ble_create_characteristics(BLEService *pService);
 
 #endif
