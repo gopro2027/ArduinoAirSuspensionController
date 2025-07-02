@@ -1,6 +1,8 @@
 #ifndef ble_h
 #define ble_h
 
+//#define OASMAN_BLE
+
 // Tutorial: https://www.youtube.com/watch?v=s3yoZa6kzus&ab_channel=MoThunderz
 // https://github.com/mo-thunderz/Esp32BlePart2/tree/main
 
@@ -20,7 +22,9 @@
 #include "components/manifold.h"
 #include "tasks/tasks.h"
 
+#ifdef OASMAN_BLE
 void ble_setup();
 void ble_loop();
+#endif
 
 #endif

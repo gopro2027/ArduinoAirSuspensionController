@@ -3,6 +3,7 @@
 // Based on this file: https://github.com/mo-thunderz/Esp32BlePart2/blob/main/Arduino/BLE_server_2characteristics/BLE_server_2characteristics.ino
 
 
+#ifdef OASMAN_BLE
 
 void ble_notify();
 void ble_create_characteristics(BLEService *pService);
@@ -553,3 +554,5 @@ void runReceivedPacket(BTOasPacket *packet)
         break;
     }
 }
+
+#endif

@@ -15,7 +15,7 @@
 #define AIR_OUT_PRESSURE_PSI 30
 
 /* Set to false if you don't plan to ever use the PS3 controller. MAC address can be left alone. Instructions for controller at https://github.com/gopro2027/ArduinoAirSuspensionController/tree/main/PS3_Controller_Tool */
-#define ENABLE_PS3_CONTROLLER_SUPPORT true
+#define ENABLE_PS3_CONTROLLER_SUPPORT false
 
 /* This is the private passcode you need to access your system from the app. Set the same value in the app settings after launching the app. */
 /* This is legacy bt, and ota but ota is only enabled when chosen so we can leave it as is */

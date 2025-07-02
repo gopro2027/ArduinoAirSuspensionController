@@ -18,7 +18,7 @@ void task_bluetooth(void *parameters)
 #endif
 
     Serial.println(F("Bluetooth Rest Service Beginning"));
-
+#ifdef OASMAN_BLE
     ble_setup();
     delay(10);
     for (;;)
@@ -26,6 +26,7 @@ void task_bluetooth(void *parameters)
         ble_loop();
         delay(10);
     }
+#endif
 }
 bool do_dance = false;
 void easterEggFunc()
@@ -33,7 +34,9 @@ void easterEggFunc()
     if (do_dance)
     {
         do_dance = false;
+        #if ENABLE_PS3_CONTROLLER_SUPPORT
         doDance();
+        #endif
     }
 }
 #if SCREEN_ENABLED == true
