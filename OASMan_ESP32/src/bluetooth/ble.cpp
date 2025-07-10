@@ -326,7 +326,7 @@ void ble_setup()
 
 
     // Initialize HCI with ESP32 transport
-    hci_init(hci_transport_h4_get_instance(), NULL);
+    hci_init(hci_transport_h4_instance(btstack_uart_block_freertos_instance()), NULL);
 
     // Set up HCI event handler
     hci_event_callback_registration.callback = &hci_event_handler;
