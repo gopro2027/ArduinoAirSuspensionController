@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "btstack.h"
+
 #include "btstack_run_loop.h"
 #include "ble/att_db.h"
 #include "btstack_util.h"
@@ -22,6 +23,7 @@
 #include <BTOas.h>
 #include "components/manifold.h"
 #include "tasks/tasks.h"
+#include <vector>
 
 void ble_setup();
 void ble_loop();
