@@ -1,5 +1,8 @@
 #include "ble.h"
 
+//#define ble2_new
+#ifdef ble2_new
+
 // Based on this file: https://github.com/mo-thunderz/Esp32BlePart2/blob/main/Arduino/BLE_server_2characteristics/BLE_server_2characteristics.ino
 
 void ble_notify();
@@ -320,20 +323,20 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
 void ble_setup()
 {
     // Initialize BTstack
-    btstack_memory_init();
-    btstack_run_loop_init(btstack_run_loop_freertos_get_instance());
+    //btstack_memory_init();
+    //btstack_run_loop_init(btstack_run_loop_freertos_get_instance());
 
 
 
     // Initialize HCI with ESP32 transport
-    hci_init(hci_transport_h4_instance(btstack_uart_block_freertos_instance()), NULL);
+    //hci_init(hci_transport_h4_instance_for_uart(btstack_uart_block_freertos_instance()), NULL);
 
     // Set up HCI event handler
     hci_event_callback_registration.callback = &hci_event_handler;
     hci_add_event_handler(&hci_event_callback_registration);
 
     // Initialize L2CAP
-    l2cap_init();
+    //l2cap_init();
 
     // Initialize ATT Server with our database
     att_server_init(att_database, att_read_callback, att_write_callback);
@@ -630,3 +633,4 @@ void runReceivedPacket(BTOasPacket *packet)
     }
 }
 
+#endif
