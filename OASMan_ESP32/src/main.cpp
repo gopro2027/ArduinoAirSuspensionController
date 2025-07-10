@@ -16,6 +16,57 @@
 void setupSpiffsLog();
 void writeToSpiffsLog(char *text);
 
+
+#pragma region bp32test
+
+#include <Bluepad32.h>
+
+GamepadPtr myGamepad = nullptr;
+
+void onConnectedGamepad(GamepadPtr gp) {
+    Serial.println("Gamepad connected");
+    myGamepad = gp;
+}
+
+void onDisconnectedGamepad(GamepadPtr gp) {
+    Serial.println("Gamepad disconnected");
+    myGamepad = nullptr;
+}
+
+void bp32setup() {
+
+    // Initialize Bluepad32
+    BP32.setup(&onConnectedGamepad, &onDisconnectedGamepad);
+    BP32.forgetBluetoothKeys(); // Optional: forget previous connections
+
+}
+
+void bp32loop() {
+    // Update Bluepad32
+    BP32.update();
+
+    if (myGamepad && myGamepad->isConnected()) {
+        // Read right joystick Y-axis (value between -512 to 512)
+        int axisX = myGamepad->axisX();
+
+        // Map from joystick range (-512 to 512) to servo range (0 to 180)
+        int angle = map(axisX, 512, -512, 0, 180);
+
+        // Constrain to valid servo range
+        angle = constrain(angle, 0, 180);
+
+        // Debug
+        Serial.print("Joystick X: ");
+        Serial.print(axisX);
+        Serial.print(" -> Servo angle: ");
+        Serial.println(angle);
+    }
+
+    delay(20); // Small delay for stability
+}
+
+#pragma endregion
+
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
@@ -41,6 +92,8 @@ void setup()
     // trainAIModels();
 
     delay(200); // wait for voltage stabilize
+
+    bp32setup();
 
     setupADCReadMutex();
     setupWheelLockSem();
@@ -115,5 +168,9 @@ void loop()
         ESP.restart();
     }
 
+    bp32loop();
+
     delay(100);
 }
+
+

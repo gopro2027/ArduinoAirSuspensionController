@@ -1,3 +1,5 @@
+// TODO: After BTstack is implemented we need to implement it all in here (take working code from main if it is compattable with btstack)
+
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2021 Ricardo Quesada
 // http://retro.moe/unijoysticle2
@@ -320,3 +322,6 @@ void bp32_loop() {
     //     vTaskDelay(1);
     delay(150);
 }
+
+
+

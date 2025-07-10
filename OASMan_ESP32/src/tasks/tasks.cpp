@@ -103,7 +103,10 @@ void task_trainAI(void *parameters)
 
 void setup_tasks()
 {
+
+#ifdef OASMAN_BLE
     //  Bluetooth Task
+    
     xTaskCreate(
         task_bluetooth,
         "Bluetooth",
@@ -111,6 +114,7 @@ void setup_tasks()
         NULL,
         1000,
         NULL);
+#endif
 
 #if SCREEN_ENABLED == true
     // Manifold OLED Task

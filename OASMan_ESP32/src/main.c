@@ -1,51 +1,53 @@
-// SPDX-License-Identifier: Apache-2.0
-// Copyright 2019 Ricardo Quesada
-// http://retro.moe/unijoysticle2
+// TODO: I don't think any of this will be necessary, delete file if end up not needing
 
-#include "sdkconfig.h"
+// // SPDX-License-Identifier: Apache-2.0
+// // Copyright 2019 Ricardo Quesada
+// // http://retro.moe/unijoysticle2
 
-#include <stddef.h>
+// #include "sdkconfig.h"
 
-// BTstack related
-#include <btstack_port_esp32.h>
-#include <btstack_run_loop.h>
-#include <btstack_stdio_esp32.h>
+// #include <stddef.h>
 
-// Bluepad32 related
-#include <arduino_platform.h>
-#include <uni.h>
+// // BTstack related
+// #include <btstack_port_esp32.h>
+// #include <btstack_run_loop.h>
+// #include <btstack_stdio_esp32.h>
 
-//
-// Autostart
-//
-#if CONFIG_AUTOSTART_ARDUINO
-void initBluepad32() {
-#else
-int app_main(void) {
-#endif  // !CONFIG_AUTOSTART_ARDUINO
-    // hci_dump_open(NULL, HCI_DUMP_STDOUT);
+// // Bluepad32 related
+// #include <arduino_platform.h>
+// #include <uni.h>
 
-// Don't use BTstack buffered UART. It conflicts with the console.
-#ifndef CONFIG_ESP_CONSOLE_UART_NONE
-#ifndef CONFIG_BLUEPAD32_USB_CONSOLE_ENABLE
-    btstack_stdio_init();
-#endif  // CONFIG_BLUEPAD32_USB_CONSOLE_ENABLE
-#endif  // CONFIG_ESP_CONSOLE_UART_NONE
+// //
+// // Autostart
+// //
+// #if CONFIG_AUTOSTART_ARDUINO
+// void initBluepad32() {
+// #else
+// int app_main(void) {
+// #endif  // !CONFIG_AUTOSTART_ARDUINO
+//     // hci_dump_open(NULL, HCI_DUMP_STDOUT);
 
-    // Configure BTstack for ESP32 VHCI Controller
-    btstack_init();
+// // Don't use BTstack buffered UART. It conflicts with the console.
+// #ifndef CONFIG_ESP_CONSOLE_UART_NONE
+// #ifndef CONFIG_BLUEPAD32_USB_CONSOLE_ENABLE
+//     btstack_stdio_init();
+// #endif  // CONFIG_BLUEPAD32_USB_CONSOLE_ENABLE
+// #endif  // CONFIG_ESP_CONSOLE_UART_NONE
 
-    // hci_dump_init(hci_dump_embedded_stdout_get_instance());
+//     // Configure BTstack for ESP32 VHCI Controller
+//     btstack_init();
 
-    // Must be called before uni_init()
-    uni_platform_set_custom(get_arduino_platform());
+//     // hci_dump_init(hci_dump_embedded_stdout_get_instance());
 
-    // Init Bluepad32.
-    uni_init(0 /* argc */, NULL /* argv */);
+//     // Must be called before uni_init()
+//     uni_platform_set_custom(get_arduino_platform());
 
-    // Does not return.
-    btstack_run_loop_execute();
-#if !CONFIG_AUTOSTART_ARDUINO
-    return 0;
-#endif  // !CONFIG_AUTOSTART_ARDUINO
-}
+//     // Init Bluepad32.
+//     uni_init(0 /* argc */, NULL /* argv */);
+
+//     // Does not return.
+//     btstack_run_loop_execute();
+// #if !CONFIG_AUTOSTART_ARDUINO
+//     return 0;
+// #endif  // !CONFIG_AUTOSTART_ARDUINO
+// }
