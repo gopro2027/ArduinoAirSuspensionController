@@ -6,10 +6,10 @@
 	],
 	"settings": {
 		"files.associations": {
-			"*.sqlbook": "sql",
-			"*.ndjson": "jsonl",
 			"*.dbclient-js": "javascript",
 			"jinja-html": "html",
+			"*.sqlbook": "sql",
+			"*.ndjson": "jsonl",
 			"new": "cpp",
 			"array": "cpp",
 			"*.tcc": "cpp",
@@ -100,7 +100,11 @@
 			"list": "cpp",
 			"mutex": "cpp",
 			"climits": "cpp",
-			"stack": "cpp"
+			"stack": "cpp",
+			"gpio_reg.h": "c",
+			"esp32-hal.h": "c",
+			"esp8266-compat.h": "c",
+			"queue.h": "c"
 		}
 	}
 }

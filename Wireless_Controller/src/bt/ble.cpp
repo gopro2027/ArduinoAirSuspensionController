@@ -273,14 +273,23 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     Serial.println(" - Found our service");
 
     // TODO: it will lock up if it fails in this characteristic code below. Not sure why tbh
+    Serial.println("Checking char: status");
     pRemoteChar_Status = pRemoteService->getCharacteristic(charUUID_Status);
+    Serial.println("Checking char: rest");
     pRemoteChar_Rest = pRemoteService->getCharacteristic(charUUID_Rest);
+    Serial.println("Checking char: valve");
     pRemoteChar_ValveControl = pRemoteService->getCharacteristic(charUUID_ValveControl);
+
+    Serial.println("connecting char: status");
     if (connectCharacteristic(pRemoteService, pRemoteChar_Status) == false)
         _connected = false;
-    else if (connectCharacteristic(pRemoteService, pRemoteChar_Rest) == false)
+
+    Serial.println("connecting char: rest");
+    if (connectCharacteristic(pRemoteService, pRemoteChar_Rest) == false)
         _connected = false;
-    else if (connectCharacteristic(pRemoteService, pRemoteChar_ValveControl) == false)
+
+    Serial.println("connecting char: valve");
+    if (connectCharacteristic(pRemoteService, pRemoteChar_ValveControl) == false)
         _connected = false;
 
     if (_connected == false)
@@ -294,6 +303,14 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
 
     AuthPacket authPacket(getblePasskey(), AuthResult::AUTHRESULT_WAITING);
     pRemoteChar_Rest->writeValue(authPacket.tx(), BTOAS_PACKET_SIZE);
+
+    // for (int i = 0; i < 20; i++)
+    // {
+    //     delay(250);
+    //     Serial.println("Checking auth again");
+    //     AuthPacket authPacket(getblePasskey(), AuthResult::AUTHRESULT_WAITING);
+    //     pRemoteChar_Rest->writeValue(authPacket.tx(), BTOAS_PACKET_SIZE);
+    // }
 
     unsigned long authEnd = millis() + 5000;
     while (true)
@@ -316,6 +333,7 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
             // pClient->disconnect();
             return false;
         }
+        Serial.print(".");
         delay(10);
     }
 
@@ -335,7 +353,10 @@ bool connectCharacteristic(BLERemoteService *pRemoteService, BLERemoteCharacteri
     }
 
     if (l_BLERemoteChar->canNotify())
+    {
+        Serial.println("Subscribing...");
         l_BLERemoteChar->subscribe(true, notifyCallback, false);
+    }
 
     return true;
 }
@@ -493,6 +514,7 @@ void ble_loop()
             Serial.println("Connecting to device! ");
 
             connected = connectToServer(advertisedDevice);
+            Serial.printf("Connected to server?? %i", connected);
             if (connected)
             {
                 NimBLEDevice::getScan()->stop();

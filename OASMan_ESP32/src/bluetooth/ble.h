@@ -31,6 +31,8 @@
 #include "tasks/tasks.h"
 #include <vector>
 
+#include "oasman_service.gatt.h"
+
 void ble_setup();
 void ble_loop();
 

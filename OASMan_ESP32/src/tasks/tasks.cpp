@@ -8,6 +8,8 @@ void task_bluetooth(void *parameters)
 {
     delay(200); // just wait a moment i guess this is legacy
 
+    delay(500);
+
 #if ENABLE_PS3_CONTROLLER_SUPPORT
     // wait for ps3 controller service to boot
     while (ps3ServiceStarted == false)
@@ -18,7 +20,7 @@ void task_bluetooth(void *parameters)
 #endif
 
     Serial.println(F("Bluetooth Rest Service Beginning"));
-//#ifdef OASMAN_BLE
+    // #ifdef OASMAN_BLE
     ble_setup();
     delay(10);
     for (;;)
@@ -26,7 +28,7 @@ void task_bluetooth(void *parameters)
         ble_loop();
         delay(10);
     }
-//#endif
+    // #endif
 }
 bool do_dance = false;
 void easterEggFunc()
@@ -34,9 +36,9 @@ void easterEggFunc()
     if (do_dance)
     {
         do_dance = false;
-        #if ENABLE_PS3_CONTROLLER_SUPPORT
+#if ENABLE_PS3_CONTROLLER_SUPPORT
         doDance();
-        #endif
+#endif
     }
 }
 #if SCREEN_ENABLED == true
@@ -104,9 +106,9 @@ void task_trainAI(void *parameters)
 void setup_tasks()
 {
 
-//#ifdef OASMAN_BLE
-    //  Bluetooth Task
-    
+    // #ifdef OASMAN_BLE
+    //   Bluetooth Task
+
     xTaskCreate(
         task_bluetooth,
         "Bluetooth",
@@ -114,7 +116,7 @@ void setup_tasks()
         NULL,
         1000,
         NULL);
-//#endif
+    // #endif
 
 #if SCREEN_ENABLED == true
     // Manifold OLED Task
