@@ -6,10 +6,10 @@
 	],
 	"settings": {
 		"files.associations": {
-			"*.sqlbook": "sql",
-			"*.ndjson": "jsonl",
 			"*.dbclient-js": "javascript",
 			"jinja-html": "html",
+			"*.sqlbook": "sql",
+			"*.ndjson": "jsonl",
 			"new": "cpp",
 			"array": "cpp",
 			"*.tcc": "cpp",
@@ -73,7 +73,16 @@
 			"set": "cpp",
 			"future": "cpp",
 			"mutex": "cpp",
-			"typeindex": "cpp"
+			"typeindex": "cpp",
+			"cfenv": "cpp",
+			"charconv": "cpp",
+			"codecvt": "cpp",
+			"csignal": "cpp",
+			"cuchar": "cpp",
+			"rope": "cpp",
+			"slist": "cpp",
+			"scoped_allocator": "cpp",
+			"shared_mutex": "cpp"
 		}
 	}
 }

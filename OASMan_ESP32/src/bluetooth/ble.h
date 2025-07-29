@@ -33,6 +33,9 @@
 
 #include "oasman_service.gatt.h"
 
+#include <unordered_map>
+#include <set>
+
 void ble_setup();
 void ble_loop();
 

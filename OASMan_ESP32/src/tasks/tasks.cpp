@@ -8,7 +8,7 @@ void task_bluetooth(void *parameters)
 {
     delay(200); // just wait a moment i guess this is legacy
 
-    delay(500);
+    delay(1000); // wait for the bluepad32 to start first
 
 #if ENABLE_PS3_CONTROLLER_SUPPORT
     // wait for ps3 controller service to boot
@@ -112,7 +112,7 @@ void setup_tasks()
     xTaskCreate(
         task_bluetooth,
         "Bluetooth",
-        512 * 5,
+        512 * 6,
         NULL,
         1000,
         NULL);

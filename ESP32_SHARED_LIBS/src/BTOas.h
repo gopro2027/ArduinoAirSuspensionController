@@ -103,8 +103,6 @@ struct BTOasPacket
 
 #define BTOAS_PACKET_SIZE sizeof(BTOasPacket)
 
-void runReceivedPacket(BTOasPacket *packet);
-
 // Outgoing packets
 struct StatusPacket : BTOasPacket
 {

@@ -170,6 +170,7 @@ class MyClientCallback : public NimBLEClientCallbacks
 
         // NimBLEDevice::injectPassKey(connInfo, BLE_PASSKEY);
         //  NimBLEDevice::startSecurity(desc);
+        // NimBLEDevice::startSecurity(pclient->getConnHandle());
 
         // pclient->secureConnection(); // okay but this line did cause it to not hang forever on the connect so that's interesting
     }
@@ -227,9 +228,9 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
 
     // NimBLEDevice::setSecurityAuth(true, true, false);
 
-    BLEDevice::setSecurityPasskey(BLE_PASSKEY);
-    NimBLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY); // Should use the passkey
-    NimBLEDevice::setSecurityAuth(false, false, true);      // Default
+    // BLEDevice::setSecurityPasskey(BLE_PASSKEY);
+    // NimBLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY); // Should use the passkey
+    // NimBLEDevice::setSecurityAuth(false, false, true);      // Default
 
     pClient->setClientCallbacks(&clientCallbacks, false);
 
@@ -280,13 +281,19 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     Serial.println("Checking char: valve");
     pRemoteChar_ValveControl = pRemoteService->getCharacteristic(charUUID_ValveControl);
 
+    delay(50);
+
     Serial.println("connecting char: status");
     if (connectCharacteristic(pRemoteService, pRemoteChar_Status) == false)
         _connected = false;
 
+    delay(50);
+
     Serial.println("connecting char: rest");
     if (connectCharacteristic(pRemoteService, pRemoteChar_Rest) == false)
         _connected = false;
+
+    delay(50);
 
     Serial.println("connecting char: valve");
     if (connectCharacteristic(pRemoteService, pRemoteChar_ValveControl) == false)
@@ -302,15 +309,11 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     Serial.println("Checking auth...");
 
     AuthPacket authPacket(getblePasskey(), AuthResult::AUTHRESULT_WAITING);
-    pRemoteChar_Rest->writeValue(authPacket.tx(), BTOAS_PACKET_SIZE);
+    pRemoteChar_Rest->writeValue(authPacket.tx(), BTOAS_PACKET_SIZE, true); // all of the writeValue last arg got changed to true when I switched the server to BTStack. Idk why it's required now but it is
 
-    // for (int i = 0; i < 20; i++)
-    // {
-    //     delay(250);
-    //     Serial.println("Checking auth again");
-    //     AuthPacket authPacket(getblePasskey(), AuthResult::AUTHRESULT_WAITING);
-    //     pRemoteChar_Rest->writeValue(authPacket.tx(), BTOAS_PACKET_SIZE);
-    // }
+    // Serial.println("Auth bypass...");
+    // authenticationResult = AuthResult::AUTHRESULT_SUCCESS;
+    // return true;
 
     unsigned long authEnd = millis() + 5000;
     while (true)
@@ -356,6 +359,8 @@ bool connectCharacteristic(BLERemoteService *pRemoteService, BLERemoteCharacteri
     {
         Serial.println("Subscribing...");
         l_BLERemoteChar->subscribe(true, notifyCallback, false);
+        // Serial.println("Subscribing 2...");
+        // l_BLERemoteChar->subscribe(true, notifyCallback, false);
     }
 
     return true;
@@ -475,14 +480,16 @@ void ble_loop()
         if (hasPacketToSend)
         {
             packet.dump();
-            success = pRemoteChar_Rest->writeValue(packet.tx(), BTOAS_PACKET_SIZE);
+            success = pRemoteChar_Rest->writeValue(packet.tx(), BTOAS_PACKET_SIZE, true);
+            Serial.println("Sent rest packet!");
         }
 
         unsigned int valveControlValue = getValveControlValue();
         if (previousValveInt != valveControlValue)
         {
-            success = success && pRemoteChar_ValveControl->writeValue((uint8_t *)&valveControlValue, 4);
+            success = success && pRemoteChar_ValveControl->writeValue((uint8_t *)&valveControlValue, 4, true);
             previousValveInt = valveControlValue;
+            Serial.println("Sent valve packet!");
         }
 
         if (!success)
