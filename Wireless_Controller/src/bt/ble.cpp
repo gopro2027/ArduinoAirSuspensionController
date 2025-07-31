@@ -228,9 +228,9 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
 
     // NimBLEDevice::setSecurityAuth(true, true, false);
 
-    // BLEDevice::setSecurityPasskey(BLE_PASSKEY);
-    // NimBLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY); // Should use the passkey
-    // NimBLEDevice::setSecurityAuth(false, false, true);      // Default
+    BLEDevice::setSecurityPasskey(BLE_PASSKEY);
+    NimBLEDevice::setSecurityIOCap(BLE_HS_IO_DISPLAY_ONLY); // Should use the passkey
+    NimBLEDevice::setSecurityAuth(false, false, true);      // Default
 
     pClient->setClientCallbacks(&clientCallbacks, false);
 
@@ -239,10 +239,21 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     // Connect to the remove BLE Server.
     Serial.print("Address type: ");
     Serial.println(myDevice->getAddressType());
-    bool _connected = pClient->connect(myDevice); // if you pass BLEAdvertisedDevice instead of address, it will be recognized type of peer device address (public or private)
+    // delay(100);
+
+    // Connect async so we can timeout after 1 second. Unfortunately fairly easily the code can glitch up and get stuck here. Having a 1 second timeout lets us retry the connection, and it is usually successfull the second time around.
+    bool _connected = pClient->connect(myDevice, true, true); // if you pass BLEAdvertisedDevice instead of address, it will be recognized type of peer device address (public or private)
+    unsigned long connectionTimeoutMS = millis() + 1000;
+    while (pClient->isConnected() == false && millis() < connectionTimeoutMS)
+    {
+        Serial.print(".");
+        delay(100);
+    }
+    _connected = pClient->isConnected();
     if (!_connected)
     {
-        Serial.println("Connection error");
+        pClient->cancelConnect();
+        Serial.println("Connection error (Timed out!)");
         // delete pClient;
         return false;
     }

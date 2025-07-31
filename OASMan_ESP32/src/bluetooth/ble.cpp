@@ -144,16 +144,6 @@ void addAuthed(hci_con_handle_t conn_id)
 {
     authedClients.insert(conn_id);
 }
-void removeAuthed(hci_con_handle_t conn_id)
-{
-    auto index = std::find(authedClients.begin(), authedClients.end(), conn_id);
-    while (index != authedClients.end())
-    {
-        log_i("Removing auth from client: %i", conn_id);
-        authedClients.erase(index);
-        index = std::find(authedClients.begin(), authedClients.end(), conn_id);
-    }
-}
 
 // code for checking if a client auth times out
 struct ClientTime
@@ -187,6 +177,32 @@ void checkConnectedClients()
                 gap_disconnect((*iter).conn_id);
             }
             // remove
+            iter = connectedClientTimer.erase(iter);
+        }
+        else
+        {
+            ++iter;
+        }
+    }
+}
+
+void removeAuthed(hci_con_handle_t conn_id)
+{
+    auto index = std::find(authedClients.begin(), authedClients.end(), conn_id);
+    while (index != authedClients.end())
+    {
+        log_i("Removing auth from client: %i", conn_id);
+        authedClients.erase(index);
+        index = std::find(authedClients.begin(), authedClients.end(), conn_id);
+    }
+
+    // now remove it from the security check part
+    std::vector<ClientTime>::iterator iter;
+    for (iter = connectedClientTimer.begin(); iter != connectedClientTimer.end();)
+    {
+
+        if ((*iter).conn_id == conn_id)
+        {
             iter = connectedClientTimer.erase(iter);
         }
         else
@@ -339,6 +355,38 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
     return 0;
 }
 
+static void handle_connection_complete(uint8_t *packet)
+{
+    hci_con_handle_t handle = hci_subevent_le_connection_complete_get_connection_handle(packet);
+    uint8_t status = hci_subevent_le_connection_complete_get_status(packet);
+
+    if (status != ERROR_CODE_SUCCESS)
+    {
+        printf("Connection failed with status 0x%02x\n", status);
+        return;
+    }
+
+    log_i("Connection established, handle: %04x", handle);
+
+    // Send assign recipient packet
+    // AssignRecipientPacket arp(currentUserNum);
+    // memcpy(rest_characteristic_data, arp.tx(), BTOAS_PACKET_SIZE);
+    currentUserNum++;
+
+    addConnectedClient({handle, millis()});
+
+    gap_advertisements_enable(1);
+
+    // Request faster connection parameters
+    gap_request_connection_parameter_update(
+        handle,
+        12, // min_interval: 15ms
+        24, // max_interval: 30ms
+        0,  // latency
+        100 // timeout: 1000ms
+    );
+}
+
 // HCI event handler
 static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size)
 {
@@ -362,17 +410,7 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
         switch (hci_event_le_meta_get_subevent_code(packet))
         {
         case HCI_SUBEVENT_LE_CONNECTION_COMPLETE:
-            hci_con_handle_t handle = hci_subevent_le_connection_complete_get_connection_handle(packet);
-            log_i("Connection established, handle: %04x", handle);
-
-            // Send assign recipient packet
-            // AssignRecipientPacket arp(currentUserNum);
-            // memcpy(rest_characteristic_data, arp.tx(), BTOAS_PACKET_SIZE);
-            currentUserNum++;
-
-            addConnectedClient({handle, millis()});
-
-            gap_advertisements_enable(1);
+            handle_connection_complete(packet);
 
             break;
 
@@ -514,11 +552,14 @@ void ble_setup()
     gap_set_max_number_peripheral_connections(MAX_CONNECTIONS);
 
     // Set advertisement parameters
-    // gap_advertisements_set_params(800, 1600, 0, 0, 0, 0x00, 0x00);
-    bd_addr_t null_addr = {0};
-    // gap_advertisements_set_params(0x0030, 0x0030, 0, 0, null_addr, 0x07, 0x00);
-    // gap_advertisements_set_params(800, 1600, 0, 0, null_addr, 0x00, 0x00);
-    gap_advertisements_set_params(0x6, 0x12, 0, 0, null_addr, 0x00, 0x00);
+
+    uint16_t adv_int_min = 32;
+    uint16_t adv_int_max = 48;
+    uint8_t adv_type = 0;
+    bd_addr_t null_addr;
+    memset(null_addr, 0, 6);
+
+    gap_advertisements_set_params(adv_int_min, adv_int_max, adv_type, 0, null_addr, 0x07, 0x00);
 
     // Set advertisement data
     gap_advertisements_set_data(sizeof(adv_data), adv_data);
