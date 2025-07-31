@@ -268,8 +268,6 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     // } else {
     //     Serial.println("MTU request failed");
     // }
-    Serial.print("MTU:");
-    Serial.println(pClient->getMTU());
 
     // Obtain a reference to the service we are after in the remote BLE server.
     // pClient->getServices(); // invoke call to receive list of services
@@ -316,6 +314,9 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
         Serial.println("At least one characteristic UUID not found");
         return false;
     }
+
+    Serial.print("MTU:");
+    Serial.println(pClient->getMTU());
 
     Serial.println("Checking auth...");
 

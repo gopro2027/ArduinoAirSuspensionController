@@ -393,7 +393,7 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
         break;
     }
 }
-
+#define ESP_GATT_MAX_MTU_SIZE 517
 void ble_setup()
 {
 
@@ -408,6 +408,8 @@ void ble_setup()
     gap_set_local_name("OASMan"); // not working for some reason
 
     gap_set_max_number_peripheral_connections(MAX_CONNECTIONS);
+
+    l2cap_set_max_le_mtu(ESP_GATT_MAX_MTU_SIZE);
 
     // Set advertisement parameters
 
