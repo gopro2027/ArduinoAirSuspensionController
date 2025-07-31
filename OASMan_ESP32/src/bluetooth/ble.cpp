@@ -3,7 +3,7 @@
 #define ble2_new
 #ifdef ble2_new
 
-#pragma region bluetooth packets
+#pragma region bluetooth packet mover util
 
 namespace packetMover
 {
@@ -85,23 +85,14 @@ namespace packetMover
 // Based on this file: https://github.com/mo-thunderz/Esp32BlePart2/blob/main/Arduino/BLE_server_2characteristics/BLE_server_2characteristics.ino
 
 void ble_notify();
-// void ble_create_characteristics();
-
-// BTSTACK handles and variables
-// static btstack_packet_callback_registration_t hci_event_callback_registration;
-// static btstack_packet_callback_registration_t sm_event_callback_registration;
-// static uint16_t att_read_callback_handle;
-// static uint16_t att_write_callback_handle;
 
 // Service and characteristic handles
-// static uint16_t service_handle = ;
-// static uint16_t status_characteristic_handle;
 const static uint16_t status_characteristic_value_handle = ATT_CHARACTERISTIC_66fda100_8972_4ec7_971c_3fd30b3072ac_01_VALUE_HANDLE;
 const static uint16_t status_characteristic_client_configuration_handle = ATT_CHARACTERISTIC_66fda100_8972_4ec7_971c_3fd30b3072ac_01_CLIENT_CONFIGURATION_HANDLE;
-// static uint16_t rest_characteristic_handle;
+
 const static uint16_t rest_characteristic_value_handle = ATT_CHARACTERISTIC_f573f13f_b38e_415e_b8f0_59a6a19a4e02_01_VALUE_HANDLE;
 const static uint16_t rest_characteristic_client_configuration_handle = ATT_CHARACTERISTIC_f573f13f_b38e_415e_b8f0_59a6a19a4e02_01_CLIENT_CONFIGURATION_HANDLE;
-// static uint16_t valve_control_characteristic_handle;
+
 const static uint16_t valve_control_characteristic_value_handle = ATT_CHARACTERISTIC_e225a15a_e816_4e9d_99b7_c384f91f273b_01_VALUE_HANDLE;
 const static uint16_t valve_control_characteristic_client_configuration_handle = ATT_CHARACTERISTIC_e225a15a_e816_4e9d_99b7_c384f91f273b_01_CLIENT_CONFIGURATION_HANDLE;
 
@@ -119,21 +110,10 @@ static uint8_t adv_data[] = {
 
 uint64_t currentUserNum = 1;
 
-// UUIDs - converted to uint8_t arrays for BTSTACK
-// static uint8_t service_uuid[] = {0x67, 0x94, 0x25, 0xc8, 0xd3, 0xb4, 0x44, 0x91, 0x9e, 0xb2, 0x3e, 0x3d, 0x15, 0xb6, 0x25, 0xf0};
-// static uint8_t status_characteristic_uuid[] = {0x66, 0xfd, 0xa1, 0x00, 0x89, 0x72, 0x4e, 0xc7, 0x97, 0x1c, 0x3f, 0xd3, 0x0b, 0x30, 0x72, 0xac};
-// static uint8_t rest_characteristic_uuid[] = {0xf5, 0x73, 0xf1, 0x3f, 0xb3, 0x8e, 0x41, 0x5e, 0xb8, 0xf0, 0x59, 0xa6, 0xa1, 0x9a, 0x4e, 0x02};
-// static uint8_t valve_control_characteristic_uuid[] = {0xe2, 0x25, 0xa1, 0x5a, 0xe8, 0x16, 0x4e, 0x9d, 0x99, 0xb7, 0xc3, 0x84, 0xf9, 0x1f, 0x27, 0x3b};
-
 // Characteristic data buffers
 static uint8_t status_characteristic_data[BTOAS_PACKET_SIZE];
 static uint8_t rest_characteristic_data[BTOAS_PACKET_SIZE];
 static uint8_t valve_control_characteristic_data[4]; // 32-bit value
-
-// Client configuration values
-// static std::unordered_map<uint16_t, uint16_t> status_characteristic_client_configuration;
-// static std::unordered_map<uint16_t, uint16_t> rest_characteristic_client_configuration;
-// static std::unordered_map<uint16_t, uint16_t> valve_control_characteristic_client_configuration;
 
 std::set<hci_con_handle_t> authedClients;
 bool isAuthed(hci_con_handle_t conn_id)
@@ -160,13 +140,11 @@ void addConnectedClient(ClientTime cl)
 #define AUTH_TIMEOUT 5000
 void checkConnectedClients()
 {
-    // log_i("checkConnectedClients");
     unsigned long curtime = millis();
 
     std::vector<ClientTime>::iterator iter;
     for (iter = connectedClientTimer.begin(); iter != connectedClientTimer.end();)
     {
-        // Serial.println("Connected");
         if ((*iter).connectTime + AUTH_TIMEOUT < curtime)
         {
             // check for authed
@@ -215,7 +193,6 @@ void removeAuthed(hci_con_handle_t conn_id)
 // ATT read callback
 static uint16_t att_read_callback(hci_con_handle_t con_handle, uint16_t att_handle, uint16_t offset, uint8_t *buffer, uint16_t buffer_size)
 {
-    log_i("wow in the read callback\n\n\n\n\n");
     if (att_handle == status_characteristic_value_handle)
     {
         return att_read_callback_handle_blob(status_characteristic_data, sizeof(status_characteristic_data), offset, buffer, buffer_size);
@@ -250,29 +227,20 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
 {
     static unsigned int valveTableValues = 0;
 
-    log_i("write callback called %i %i", att_handle, buffer_size);
-    // for (int i = 0; i < buffer_size; i++)
-    //     Serial.printf("%i,", buffer[i]);
-    // BTOasPacket *packet = (BTOasPacket *)buffer;
-    // packet->dump();
     if (att_handle == rest_characteristic_value_handle)
     {
-        log_i("wow we got a rest value");
-        // if (buffer_size >= BTOAS_PACKET_SIZE)
-        // {
+
         Serial.println("Received rest command");
         BTOasPacket *packet = (BTOasPacket *)buffer;
         packet->dump();
         if (isAuthed(con_handle))
         {
-            log_i("authed success");
             runReceivedPacket(con_handle, packet);
         }
 
         // Authed thing on connect
         if (packet->cmd == BTOasIdentifier::AUTHPACKET)
         {
-            Serial.println("This is an auth packet!!");
             AuthPacket *ap = ((AuthPacket *)packet);
             if (ap->getBleAuthResult() == AuthResult::AUTHRESULT_WAITING)
             {
@@ -281,7 +249,6 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
                 {
                     ap->setBleAuthResult(AuthResult::AUTHRESULT_SUCCESS);
                     addAuthed(con_handle);
-                    Serial.println("We have authed!");
                 }
                 else
                 {
@@ -292,7 +259,6 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
                 //  att_server_notify(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
             }
         }
-        //}
         return 0;
     }
 
@@ -333,24 +299,24 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
         return 0;
     }
 
-    if (att_handle == status_characteristic_client_configuration_handle)
-    {
-        log_i("STATUS CHARACTERISTIC WRITTEN?? %i", little_endian_read_16(buffer, 0));
-        // status_characteristic_client_configuration[con_handle] = little_endian_read_16(buffer, 0); // setting status_characteristic_client_configuration to 1
-        return 0;
-    }
-    if (att_handle == rest_characteristic_client_configuration_handle)
-    {
-        log_i("REST CHARACTERISTIC WRITTEN?? %i", little_endian_read_16(buffer, 0));
-        // rest_characteristic_client_configuration[con_handle] = little_endian_read_16(buffer, 0);
-        return 0;
-    }
-    if (att_handle == valve_control_characteristic_client_configuration_handle)
-    {
-        log_i("VALVE CHARACTERISTIC WRITTEN?? %i", little_endian_read_16(buffer, 0));
-        // valve_control_characteristic_client_configuration[con_handle] = little_endian_read_16(buffer, 0);
-        return 0;
-    }
+    // if (att_handle == status_characteristic_client_configuration_handle)
+    // {
+    //     log_i("STATUS CHARACTERISTIC WRITTEN?? %i", little_endian_read_16(buffer, 0));
+    //     // status_characteristic_client_configuration[con_handle] = little_endian_read_16(buffer, 0); // setting status_characteristic_client_configuration to 1
+    //     return 0;
+    // }
+    // if (att_handle == rest_characteristic_client_configuration_handle)
+    // {
+    //     log_i("REST CHARACTERISTIC WRITTEN?? %i", little_endian_read_16(buffer, 0));
+    //     // rest_characteristic_client_configuration[con_handle] = little_endian_read_16(buffer, 0);
+    //     return 0;
+    // }
+    // if (att_handle == valve_control_characteristic_client_configuration_handle)
+    // {
+    //     log_i("VALVE CHARACTERISTIC WRITTEN?? %i", little_endian_read_16(buffer, 0));
+    //     // valve_control_characteristic_client_configuration[con_handle] = little_endian_read_16(buffer, 0);
+    //     return 0;
+    // }
 
     return 0;
 }
@@ -411,11 +377,7 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
         {
         case HCI_SUBEVENT_LE_CONNECTION_COMPLETE:
             handle_connection_complete(packet);
-
             break;
-
-            // default:
-            //     break;
         }
         break;
 
@@ -430,121 +392,17 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
     default:
         break;
     }
-    // gap_advertisements_enable(1);
 }
-
-#include "btstack_config.h"
-#include "bluetooth.h"
-#include "btstack_defines.h"
-#include "btstack_memory.h"
-#include "btstack_run_loop.h"
-#include "btstack_util.h"
-#include "btstack_debug.h"
-#include "btstack_event.h"
-#include "att_db_util.h"
-#include "hci.h"
-#include "gap.h"
-
-#include "ble/att_db_util.h"
-
-// // Dummy value storage
-// static uint8_t notify_value[20];
-
-// // Custom UUIDs
-// static const uint8_t service_uuid[] = {0xf0, 0x25, 0xb6, 0x5b, 0xd1, 0xe3, 0xb2, 0x9e, 0x91, 0x44, 0xb4, 0xd3, 0xc8, 0x25, 0x94, 0x67};
-
-// static uint8_t status_characteristic_uuid[] = {0x66, 0xfd, 0xa1, 0x00, 0x89, 0x72, 0x4e, 0xc7, 0x97, 0x1c, 0x3f, 0xd3, 0x0b, 0x30, 0x72, 0xac};
-// static uint8_t rest_characteristic_uuid[] = {0xf5, 0x73, 0xf1, 0x3f, 0xb3, 0x8e, 0x41, 0x5e, 0xb8, 0xf0, 0x59, 0xa6, 0xa1, 0x9a, 0x4e, 0x02};
-// static uint8_t valve_control_characteristic_uuid[] = {0xe2, 0x25, 0xa1, 0x5a, 0xe8, 0x16, 0x4e, 0x9d, 0x99, 0xb7, 0xc3, 0x84, 0xf9, 0x1f, 0x27, 0x3b};
-
-// void create_gatt_db(void)
-// {
-
-//     // Add service
-//     // att_db_util_add_service_uuid128(service_uuid);
-
-//     // Add characteristic (READ + NOTIFY)
-//     att_db_util_add_characteristic_uuid128(
-//         status_characteristic_uuid,
-//         ATT_PROPERTY_READ | ATT_PROPERTY_NOTIFY,
-//         ATT_SECURITY_NONE, ATT_SECURITY_NONE,
-//         notify_value,
-//         sizeof(notify_value));
-
-//     att_db_util_add_characteristic_uuid128(
-//         rest_characteristic_uuid,
-//         ATT_PROPERTY_READ | ATT_PROPERTY_NOTIFY,
-//         ATT_SECURITY_NONE, ATT_SECURITY_NONE,
-//         notify_value,
-//         sizeof(notify_value));
-
-//     att_db_util_add_characteristic_uuid128(
-//         valve_control_characteristic_uuid,
-//         ATT_PROPERTY_READ | ATT_PROPERTY_NOTIFY,
-//         ATT_SECURITY_NONE, ATT_SECURITY_NONE,
-//         notify_value,
-//         sizeof(notify_value));
-
-//     // att_db_util_add_cccd(false); // false = support notify + indicate
-// }
-
-#define ATT_PERMISSIONS_READ 0x01
-#define ATT_PERMISSIONS_WRITE 0x02
 
 void ble_setup()
 {
 
     packetMover::setupRestSemaphore();
-    //    Initialize BTstack
-    //    btstack_memory_init();
-    //    btstack_run_loop_init(btstack_run_loop_freertos_get_instance());
-
-    // Initialize HCI with ESP32 transport
-    // hci_init(hci_transport_h4_instance_for_uart(btstack_uart_block_freertos_instance()), NULL);
-
-    // const uint8_t *att_db;
-    // uint16_t att_db_size;
-
-    // create_gatt_db();
-
-    // att_db = att_db_util_get_address();
-    // att_db_size = att_db_util_get_size();
 
     // Initialize ATT Server with our database
     att_server_init(profile_data, att_read_callback, att_write_callback);
 
-    // When creating your characteristic, include notify/indicate properties
-    uint8_t characteristic_props = ATT_PROPERTY_READ | ATT_PROPERTY_NOTIFY;
-
-    // The CCCD descriptor should be automatically added by BTStack when you
-    // include NOTIFY or INDICATE properties, but you may need to explicitly add it:
-
-    // Add CCCD descriptor (UUID 0x2902)
-    uint8_t cccd_value[2] = {0x00, 0x00};
-    att_db_util_add_descriptor_uuid16(0x2902, ATT_PROPERTY_READ | ATT_PROPERTY_WRITE | ATT_PROPERTY_NOTIFY, ATT_SECURITY_NONE, ATT_SECURITY_NONE, cccd_value, sizeof(cccd_value));
-
-    // for some reason it crashes now if i don't have these 3 lines so I guess they are required now lmao
-    // att_db_util_add_descriptor_uuid128(status_characteristic_uuid, ATT_PROPERTY_READ | ATT_PROPERTY_WRITE | ATT_PROPERTY_NOTIFY, ATT_SECURITY_NONE, ATT_SECURITY_NONE, cccd_value, sizeof(cccd_value));
-    // att_db_util_add_descriptor_uuid128(rest_characteristic_uuid, ATT_PROPERTY_READ | ATT_PROPERTY_WRITE | ATT_PROPERTY_NOTIFY, ATT_SECURITY_NONE, ATT_SECURITY_NONE, cccd_value, sizeof(cccd_value));
-    // att_db_util_add_descriptor_uuid128(valve_control_characteristic_uuid, ATT_PROPERTY_READ | ATT_PROPERTY_WRITE | ATT_PROPERTY_NOTIFY, ATT_SECURITY_NONE, ATT_SECURITY_NONE, cccd_value, sizeof(cccd_value));
-
-    // att_db_util_add_characteristic_uuid128(
-    //     characteristic_uuid,
-    //     ATT_PROPERTY_NOTIFY | ATT_PROPERTY_READ,
-    //     ATT_PERMISSION_READ,
-    //     buffer,
-    //     sizeof(buffer));
-
-    // Set up HCI event handler
-    // hci_event_callback_registration.callback = &hci_event_handler;
-    // hci_add_event_handler(&hci_event_callback_registration);
     att_server_register_packet_handler(hci_event_handler);
-
-    // Initialize L2CAP
-    // l2cap_init();
-
-    // Initialize SM
-    // sm_init();
 
     // Set device name
     gap_set_local_name("OASMan"); // not working for some reason
@@ -566,12 +424,6 @@ void ble_setup()
 
     gap_advertisements_enable(true);
 
-    uint8_t *att_db = att_db_util_get_address();
-    Serial.printf("ATT db 0x%X\n", att_db_util_get_size());
-
-    // Create characteristics
-    // ble_create_characteristics();
-
     // Initialize characteristic data
     IdlePacket idlepacket;
     memcpy(rest_characteristic_data, idlepacket.tx(), BTOAS_PACKET_SIZE);
@@ -579,17 +431,11 @@ void ble_setup()
     int valveValue = 0;
     little_endian_store_32(valve_control_characteristic_data, 0, valveValue);
 
-    // Turn on Bluetooth
-    hci_power_control(HCI_POWER_ON);
-
     Serial.println("Waiting a client connection to notify...");
-
-    // btstack_run_loop_execute();
 }
 
 void ble_loop()
 {
-    // log_i("ble_loop");
     static int prevConnectedCount = -1;
     int connectedCount = authedClients.size();
     if (connectedCount != prevConnectedCount)
@@ -600,32 +446,7 @@ void ble_loop()
 
     checkConnectedClients();
     ble_notify();
-
-    // Run BTstack main loop
-    // btstack_run_loop_execute();
 }
-
-// void ble_create_characteristics()
-// {
-//     // Note: With BTSTACK, characteristics are typically defined in a .gatt file
-//     // and compiled into profile_data. For this conversion, we'll assume the
-//     // profile_data contains the service and characteristic definitions.
-//     // The actual handles would be obtained from the generated profile.
-
-//     // These handle values would normally come from the generated profile
-//     // For now, we'll use placeholder values - in a real implementation,
-//     // these would be defined in the generated att_db.h file
-//     service_handle = 0x0001;
-//     status_characteristic_handle = 0x0002;
-//     status_characteristic_value_handle = 0x0003;
-//     status_characteristic_client_configuration_handle = 0x0004;
-//     rest_characteristic_handle = 0x0005;
-//     rest_characteristic_value_handle = 0x0006;
-//     rest_characteristic_client_configuration_handle = 0x0007;
-//     valve_control_characteristic_handle = 0x0008;
-//     valve_control_characteristic_value_handle = 0x0009;
-//     valve_control_characteristic_client_configuration_handle = 0x000A;
-// }
 
 extern uint8_t AIReadyBittset; // 4
 extern uint8_t AIPercentage;   // 7
@@ -646,7 +467,6 @@ void ble_notify()
         delay(40);
     }
 
-    // log_i("Doing ble_notify");
     //  calculate whether or not to do stuff at a specific interval, in this case, every 1 second we want to send out a notify.
     static bool prevTime = false;
     bool timeChange = (millis() / 250) % 2; // changes from 0 to 1 every 250ms
@@ -656,7 +476,6 @@ void ble_notify()
         runNotifications = true;
     }
     prevTime = timeChange;
-    // Serial.printf("ABout to do notification shit %i", runNotifications);
     if (runNotifications && authedClients.size() > 0)
     {
         uint32_t statusBittset = 0;
@@ -709,20 +528,12 @@ void ble_notify()
 
         memcpy(status_characteristic_data, statusPacket.tx(), BTOAS_PACKET_SIZE);
 
-        // log_i("About to notify server! %i", status_characteristic_client_configuration & 0x0001);
-
-        // Send notification if client has enabled notifications
-        // if (status_characteristic_client_configuration & 0x0001)
-        // {
         for (hci_con_handle_t handle : authedClients)
         {
             att_server_notify(handle, status_characteristic_value_handle, status_characteristic_data, BTOAS_PACKET_SIZE);
             delay(10); // need a delay here or it only sends it to 1 client
         }
-        //}
-        // Serial.println("called att server notif");
     }
-    // Serial.println("wow notif wow");
 }
 
 void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
@@ -832,14 +643,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         presetPacket.dump();
 
         // memcpy(rest_characteristic_data, presetPacket.tx(), BTOAS_PACKET_SIZE);
-
-        // Serial.println("Sending preset packet: ");
-
-        // // if (rest_characteristic_client_configuration & 0x0001)
-        // // {
-        // Serial.printf("preset handle: %i\n", con_handle);
         // att_server_notify(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
-        // // }
         break;
     }
     case BTOasIdentifier::MAINTAINPRESSURE:
@@ -867,10 +671,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage());
         packetMover::sendRestPacket(&pkt, con_handle);
         //  memcpy(rest_characteristic_data, pkt.tx(), BTOAS_PACKET_SIZE);
-        //   if (rest_characteristic_client_configuration & 0x0001)
-        //   {
         //  att_server_notify(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
-        //  }
         break;
     }
     case BTOasIdentifier::AUTHPACKET:
