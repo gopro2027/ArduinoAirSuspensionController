@@ -20,7 +20,6 @@ void task_bluetooth(void *parameters)
 #endif
 
     Serial.println(F("Bluetooth Rest Service Beginning"));
-    // #ifdef OASMAN_BLE
     ble_setup();
     delay(10);
     for (;;)
@@ -28,7 +27,6 @@ void task_bluetooth(void *parameters)
         ble_loop();
         delay(10);
     }
-    // #endif
 }
 bool do_dance = false;
 void easterEggFunc()
@@ -106,7 +104,6 @@ void task_trainAI(void *parameters)
 void setup_tasks()
 {
 
-    // #ifdef OASMAN_BLE
     //   Bluetooth Task
 
     xTaskCreate(
@@ -116,7 +113,6 @@ void setup_tasks()
         NULL,
         1000,
         NULL);
-    // #endif
 
 #if SCREEN_ENABLED == true
     // Manifold OLED Task
