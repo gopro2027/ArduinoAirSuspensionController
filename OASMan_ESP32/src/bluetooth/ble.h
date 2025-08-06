@@ -36,6 +36,8 @@
 #include <unordered_map>
 #include <set>
 
+#include "bp32.h"
+
 void ble_setup();
 void ble_loop();
 

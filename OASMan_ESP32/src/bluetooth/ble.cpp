@@ -682,6 +682,23 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             setblePasskey(((AuthPacket *)packet)->getBlePasskey());
         }
         break;
+    case BTOasIdentifier::BP32PKT:
+    {
+        BP32CMD bp32cmd = (BP32CMD)((BP32Packet *)packet)->args16()[0].i;
+        bool bp32val = ((BP32Packet *)packet)->args16()[1].i;
+        switch (bp32cmd)
+        {
+        case BP32CMD::BP32CMD_ENABLE_NEW_CONN:
+            Serial.println("Enabling new connections!");
+            bp32_setAllowConnections(bp32val);
+            break;
+        case BP32CMD::BP32CMD_FORGET_DEVICES:
+            Serial.println("Forgetting controllers!");
+            bp32_forgetDevices();
+            break;
+        }
+    }
+    break;
     }
 }
 

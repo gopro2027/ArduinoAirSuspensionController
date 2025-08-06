@@ -40,7 +40,8 @@ enum BTOasIdentifier
     SAFETYMODE = 26,
     DETECTPRESSURESENSORS = 27,
     AISTATUSENABLED = 28,
-    RESETAIPKT = 29
+    RESETAIPKT = 29,
+    BP32PKT = 30
 };
 
 enum StatusPacketBittset
@@ -64,6 +65,12 @@ enum AuthResult
     AUTHRESULT_SUCCESS,
     AUTHRESULT_FAIL,
     AUTHRESULT_UPDATEKEY
+};
+
+enum BP32CMD
+{
+    BP32CMD_ENABLE_NEW_CONN,
+    BP32CMD_FORGET_DEVICES
 };
 
 union BTOasValue32
@@ -253,6 +260,11 @@ struct AuthPacket : BTOasPacket
     uint32_t getBlePasskey();
     AuthResult getBleAuthResult();
     void setBleAuthResult(AuthResult ar);
+};
+
+struct BP32Packet : BTOasPacket
+{
+    BP32Packet(BP32CMD bp32Cmd, bool value);
 };
 
 #endif

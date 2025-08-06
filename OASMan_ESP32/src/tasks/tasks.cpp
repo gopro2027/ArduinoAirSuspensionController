@@ -1,6 +1,6 @@
 #include "tasks.h"
 
-bool ps3ServiceStarted = false;
+bool bp32ServiceStarted = false;
 
 void writeToSpiffsLog(char *text);
 
@@ -8,16 +8,14 @@ void task_bluetooth(void *parameters)
 {
     delay(200); // just wait a moment i guess this is legacy
 
-    delay(1000); // wait for the bluepad32 to start first
-
-#if ENABLE_PS3_CONTROLLER_SUPPORT
     // wait for ps3 controller service to boot
-    while (ps3ServiceStarted == false)
+    while (bp32ServiceStarted == false)
     {
         delay(1);
     }
     delay(50);
-#endif
+
+    delay(1000); // wait for the bluepad32 to start first
 
     Serial.println(F("Bluetooth Rest Service Beginning"));
     ble_setup();
@@ -34,9 +32,7 @@ void easterEggFunc()
     if (do_dance)
     {
         do_dance = false;
-#if ENABLE_PS3_CONTROLLER_SUPPORT
-        doDance();
-#endif
+        // doDance();
     }
 }
 #if SCREEN_ENABLED == true
@@ -63,18 +59,16 @@ void task_screen(void *parameters)
 
 #endif
 
-#if ENABLE_PS3_CONTROLLER_SUPPORT
-void task_ps3_controller(void *parameters)
+void task_bp32_controller(void *parameters)
 {
-    ps3_controller_setup();
-    ps3ServiceStarted = true;
+    bp32_setup();
+    bp32ServiceStarted = true;
     for (;;)
     {
-        ps3_controller_loop();
-        delay(100);
+        bp32_loop();
+        // delay(1);
     }
 }
-#endif
 
 void task_compressor(void *parameters)
 {
@@ -146,16 +140,14 @@ void setup_tasks()
             NULL);
     }
 
-#if ENABLE_PS3_CONTROLLER_SUPPORT
-    // PS3 Controller Task
+    // bluepad32 Controller Task
     xTaskCreate(
-        task_ps3_controller,
-        "PS3 Controller",
+        task_bp32_controller,
+        "BP32 Task",
         512 * 5,
         NULL,
         1000,
         NULL);
-#endif
 
     //  Train AI Task
     xTaskCreate(

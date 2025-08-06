@@ -4,12 +4,7 @@
 // Copyright 2021 Ricardo Quesada
 // http://retro.moe/unijoysticle2
 
-#include "sdkconfig.h"
-
 #include "bp32.h"
-
-#include <Arduino.h>
-#include <Bluepad32.h>
 
 //
 // README FIRST, README FIRST, README FIRST
@@ -27,254 +22,714 @@
 
 ControllerPtr myControllers[BP32_MAX_GAMEPADS];
 
+// struct OASMANControllerData
+// {
+//     int32_t x, y, rx, ry;
+// };
+
+struct OASMANJoystickState
+{
+    bool up, down, left, right = false;
+    bool rup, rdown, rleft, rright = false;
+};
+// OASMANControllerData previousControllerData[BP32_MAX_GAMEPADS];
+OASMANJoystickState oasmanJoystickState[BP32_MAX_GAMEPADS];
+
 // This callback gets called any time a new gamepad is connected.
 // Up to 4 gamepads can be connected at the same time.
-void onConnectedController(ControllerPtr ctl) {
+void onConnectedController(ControllerPtr ctl)
+{
+
     bool foundEmptySlot = false;
-    for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
-        if (myControllers[i] == nullptr) {
-            Console.printf("CALLBACK: Controller is connected, index=%d\n", i);
+    for (int i = 0; i < BP32_MAX_GAMEPADS; i++)
+    {
+        if (myControllers[i] == nullptr)
+        {
+            Serial.printf("CALLBACK: Controller is connected, index=%d\n", i);
             // Additionally, you can get certain gamepad properties like:
             // Model, VID, PID, BTAddr, flags, etc.
             ControllerProperties properties = ctl->getProperties();
-            Console.printf("Controller model: %s, VID=0x%04x, PID=0x%04x\n", ctl->getModelName(), properties.vendor_id,
-                           properties.product_id);
+            Serial.printf("Controller model: %s, VID=0x%04x, PID=0x%04x\n", ctl->getModelName(), properties.vendor_id,
+                          properties.product_id);
             myControllers[i] = ctl;
             foundEmptySlot = true;
+            // previousControllerData[i] = {0};
             break;
         }
     }
-    if (!foundEmptySlot) {
-        Console.println("CALLBACK: Controller connected, but could not found empty slot");
+    if (!foundEmptySlot)
+    {
+        Serial.println("CALLBACK: Controller connected, but could not found empty slot");
     }
+
+    // controller paired, turn back off allow pairing
+    BP32.enableNewBluetoothConnections(false);
 }
 
-void onDisconnectedController(ControllerPtr ctl) {
+void onDisconnectedController(ControllerPtr ctl)
+{
     bool foundController = false;
 
-    for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
-        if (myControllers[i] == ctl) {
-            Console.printf("CALLBACK: Controller disconnected from index=%d\n", i);
+    for (int i = 0; i < BP32_MAX_GAMEPADS; i++)
+    {
+        if (myControllers[i] == ctl)
+        {
+            Serial.printf("CALLBACK: Controller disconnected from index=%d\n", i);
             myControllers[i] = nullptr;
             foundController = true;
             break;
         }
     }
 
-    if (!foundController) {
-        Console.println("CALLBACK: Controller disconnected, but not found in myControllers");
+    if (!foundController)
+    {
+        Serial.println("CALLBACK: Controller disconnected, but not found in myControllers");
     }
 }
 
-void dumpGamepad(ControllerPtr ctl) {
-    Console.printf(
+void dumpGamepad(ControllerPtr ctl)
+{
+    Serial.printf(
         "idx=%d, dpad: 0x%02x, buttons: 0x%04x, axis L: %4d, %4d, axis R: %4d, %4d, brake: %4d, throttle: %4d, "
         "misc: 0x%02x, gyro x:%6d y:%6d z:%6d, accel x:%6d y:%6d z:%6d\n",
-        ctl->index(),        // Controller Index
-        ctl->dpad(),         // D-pad
-        ctl->buttons(),      // bitmask of pressed buttons
-        ctl->axisX(),        // (-511 - 512) left X Axis
-        ctl->axisY(),        // (-511 - 512) left Y axis
-        ctl->axisRX(),       // (-511 - 512) right X axis
-        ctl->axisRY(),       // (-511 - 512) right Y axis
-        ctl->brake(),        // (0 - 1023): brake button
-        ctl->throttle(),     // (0 - 1023): throttle (AKA gas) button
-        ctl->miscButtons(),  // bitmask of pressed "misc" buttons
-        ctl->gyroX(),        // Gyro X
-        ctl->gyroY(),        // Gyro Y
-        ctl->gyroZ(),        // Gyro Z
-        ctl->accelX(),       // Accelerometer X
-        ctl->accelY(),       // Accelerometer Y
-        ctl->accelZ()        // Accelerometer Z
+        ctl->index(),       // Controller Index
+        ctl->dpad(),        // D-pad
+        ctl->buttons(),     // bitmask of pressed buttons
+        ctl->axisX(),       // (-511 - 512) left X Axis
+        ctl->axisY(),       // (-511 - 512) left Y axis
+        ctl->axisRX(),      // (-511 - 512) right X axis
+        ctl->axisRY(),      // (-511 - 512) right Y axis
+        ctl->brake(),       // (0 - 1023): brake button
+        ctl->throttle(),    // (0 - 1023): throttle (AKA gas) button
+        ctl->miscButtons(), // bitmask of pressed "misc" buttons
+        ctl->gyroX(),       // Gyro X
+        ctl->gyroY(),       // Gyro Y
+        ctl->gyroZ(),       // Gyro Z
+        ctl->accelX(),      // Accelerometer X
+        ctl->accelY(),      // Accelerometer Y
+        ctl->accelZ()       // Accelerometer Z
     );
 }
 
-void dumpMouse(ControllerPtr ctl) {
-    Console.printf("idx=%d, buttons: 0x%04x, scrollWheel=0x%04x, delta X: %4d, delta Y: %4d\n",
-                   ctl->index(),        // Controller Index
-                   ctl->buttons(),      // bitmask of pressed buttons
-                   ctl->scrollWheel(),  // Scroll Wheel
-                   ctl->deltaX(),       // (-511 - 512) left X Axis
-                   ctl->deltaY()        // (-511 - 512) left Y axis
-    );
-}
+// void dumpMouse(ControllerPtr ctl)
+// {
+//     Serial.printf("idx=%d, buttons: 0x%04x, scrollWheel=0x%04x, delta X: %4d, delta Y: %4d\n",
+//                    ctl->index(),       // Controller Index
+//                    ctl->buttons(),     // bitmask of pressed buttons
+//                    ctl->scrollWheel(), // Scroll Wheel
+//                    ctl->deltaX(),      // (-511 - 512) left X Axis
+//                    ctl->deltaY()       // (-511 - 512) left Y axis
+//     );
+// }
 
-void dumpKeyboard(ControllerPtr ctl) {
-    static const char* key_names[] = {
-        // clang-format off
-        // To avoid having too much noise in this file, only a few keys are mapped to strings.
-        // Starts with "A", which is offset 4.
-        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
-        "W", "X", "Y", "Z", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
-        // Special keys
-        "Enter", "Escape", "Backspace", "Tab", "Spacebar", "Underscore", "Equal", "OpenBracket", "CloseBracket",
-        "Backslash", "Tilde", "SemiColon", "Quote", "GraveAccent", "Comma", "Dot", "Slash", "CapsLock",
-        // Function keys
-        "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
-        // Cursors and others
-        "PrintScreen", "ScrollLock", "Pause", "Insert", "Home", "PageUp", "Delete", "End", "PageDown",
-        "RightArrow", "LeftArrow", "DownArrow", "UpArrow",
-        // clang-format on
-    };
-    static const char* modifier_names[] = {
-        // clang-format off
-        // From 0xe0 to 0xe7
-        "Left Control", "Left Shift", "Left Alt", "Left Meta",
-        "Right Control", "Right Shift", "Right Alt", "Right Meta",
-        // clang-format on
-    };
-    Console.printf("idx=%d, Pressed keys: ", ctl->index());
-    for (int key = Keyboard_A; key <= Keyboard_UpArrow; key++) {
-        if (ctl->isKeyPressed(static_cast<KeyboardKey>(key))) {
-            const char* keyName = key_names[key - 4];
-            Console.printf("%s,", keyName);
+// void dumpKeyboard(ControllerPtr ctl)
+// {
+//     static const char *key_names[] = {
+//         // clang-format off
+//         // To avoid having too much noise in this file, only a few keys are mapped to strings.
+//         // Starts with "A", which is offset 4.
+//         "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
+//         "W", "X", "Y", "Z", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+//         // Special keys
+//         "Enter", "Escape", "Backspace", "Tab", "Spacebar", "Underscore", "Equal", "OpenBracket", "CloseBracket",
+//         "Backslash", "Tilde", "SemiColon", "Quote", "GraveAccent", "Comma", "Dot", "Slash", "CapsLock",
+//         // Function keys
+//         "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+//         // Cursors and others
+//         "PrintScreen", "ScrollLock", "Pause", "Insert", "Home", "PageUp", "Delete", "End", "PageDown",
+//         "RightArrow", "LeftArrow", "DownArrow", "UpArrow",
+//         // clang-format on
+//     };
+//     static const char *modifier_names[] = {
+//         // clang-format off
+//         // From 0xe0 to 0xe7
+//         "Left Control", "Left Shift", "Left Alt", "Left Meta",
+//         "Right Control", "Right Shift", "Right Alt", "Right Meta",
+//         // clang-format on
+//     };
+//     Serial.printf("idx=%d, Pressed keys: ", ctl->index());
+//     for (int key = Keyboard_A; key <= Keyboard_UpArrow; key++)
+//     {
+//         if (ctl->isKeyPressed(static_cast<KeyboardKey>(key)))
+//         {
+//             const char *keyName = key_names[key - 4];
+//             Serial.printf("%s,", keyName);
+//         }
+//     }
+//     for (int key = Keyboard_LeftControl; key <= Keyboard_RightMeta; key++)
+//     {
+//         if (ctl->isKeyPressed(static_cast<KeyboardKey>(key)))
+//         {
+//             const char *keyName = modifier_names[key - 0xe0];
+//             Serial.printf("%s,", keyName);
+//         }
+//     }
+//     Serial.printf("\n");
+// }
+
+// void dumpBalanceBoard(ControllerPtr ctl)
+// {
+//     Serial.printf("idx=%d,  TL=%u, TR=%u, BL=%u, BR=%u, temperature=%d\n",
+//                    ctl->index(),       // Controller Index
+//                    ctl->topLeft(),     // top-left scale
+//                    ctl->topRight(),    // top-right scale
+//                    ctl->bottomLeft(),  // bottom-left scale
+//                    ctl->bottomRight(), // bottom-right scale
+//                    ctl->temperature()  // temperature: used to adjust the scale value's precision
+//     );
+// }
+
+#pragma region joystick stuff
+
+int player = 0;
+int battery = 0;
+bool armed = true;
+bool armedIsHeldDown = false;
+
+void runJoystickInput(bool *val,
+                      Solenoid *a,
+                      Solenoid *b, bool cmp)
+{
+    if (cmp)
+    {
+        // open valve for left and set oasmanJoystickState flag
+        a->open();
+        b->open();
+        *val = true;
+    }
+    else
+    {
+        // first check if valve flag oasmanJoystickState is set, and if so, close valve and remove flag
+        if (*val)
+        {
+            *val = false;
+            a->close();
+            b->close();
         }
     }
-    for (int key = Keyboard_LeftControl; key <= Keyboard_RightMeta; key++) {
-        if (ctl->isKeyPressed(static_cast<KeyboardKey>(key))) {
-            const char* keyName = modifier_names[key - 0xe0];
-            Console.printf("%s,", keyName);
+}
+
+void joystickLoop2(ControllerPtr ctl, bool right = false)
+{
+
+    // steps:
+    // 1. check if any criteria is hit to open valves
+    // 2. if criteria is hit to open valves, also save that in OASMANJoystickState
+    // 3. check if criteria to close valve (basically, boolean not on the criteria to open)
+    // 4. if should close, check
+
+    OASMANJoystickState *thisJoystickState = &oasmanJoystickState[ctl->index()];
+
+    int32_t x = right ? ctl->axisRX() : ctl->axisX();
+    int32_t y = right ? ctl->axisRY() : ctl->axisY();
+
+    const int threshold = 200;
+
+    bool *val;
+    Solenoid *a;
+    Solenoid *b;
+
+    // left
+    val = right ? &thisJoystickState->rleft : &thisJoystickState->left;
+    a = right ? getWheel(WHEEL_FRONT_PASSENGER)->getOutSolenoid() : getWheel(WHEEL_FRONT_DRIVER)->getInSolenoid();
+    b = right ? getWheel(WHEEL_REAR_PASSENGER)->getOutSolenoid() : getWheel(WHEEL_REAR_DRIVER)->getInSolenoid();
+    runJoystickInput(val, a, b, x <= -threshold);
+
+    // right
+    val = right ? &thisJoystickState->rright : &thisJoystickState->right;
+    a = right ? getWheel(WHEEL_FRONT_PASSENGER)->getInSolenoid() : getWheel(WHEEL_FRONT_DRIVER)->getOutSolenoid();
+    b = right ? getWheel(WHEEL_REAR_PASSENGER)->getInSolenoid() : getWheel(WHEEL_REAR_DRIVER)->getOutSolenoid();
+    runJoystickInput(val, a, b, x >= threshold);
+
+    // up
+    val = right ? &thisJoystickState->rup : &thisJoystickState->up;
+    a = right ? getWheel(WHEEL_REAR_DRIVER)->getInSolenoid() : getWheel(WHEEL_FRONT_DRIVER)->getInSolenoid();
+    b = right ? getWheel(WHEEL_REAR_PASSENGER)->getInSolenoid() : getWheel(WHEEL_FRONT_PASSENGER)->getInSolenoid();
+    runJoystickInput(val, a, b, y <= -threshold);
+
+    // down
+    val = right ? &thisJoystickState->rup : &thisJoystickState->up;
+    a = right ? getWheel(WHEEL_REAR_DRIVER)->getOutSolenoid() : getWheel(WHEEL_FRONT_DRIVER)->getOutSolenoid();
+    b = right ? getWheel(WHEEL_REAR_PASSENGER)->getOutSolenoid() : getWheel(WHEEL_FRONT_PASSENGER)->getOutSolenoid();
+    runJoystickInput(val, a, b, y >= threshold);
+}
+
+#ifdef oldjoystickcode
+enum JoystickMode
+{
+    j_none,
+    j_left,
+    j_right,
+    j_up,
+    j_down
+};
+
+enum OpenClose
+{
+    v_close,
+    v_open
+};
+
+JoystickMode leftMode = j_none;
+JoystickMode rightMode = j_none;
+
+void printJoystick(JoystickMode js)
+{
+    if (js == j_none)
+    {
+        Serial.print("idle");
+    }
+    if (js == j_up)
+    {
+        Serial.print("up");
+    }
+    if (js == j_down)
+    {
+        Serial.print("down");
+    }
+    if (js == j_left)
+    {
+        Serial.print("left");
+    }
+    if (js == j_right)
+    {
+        Serial.print("right");
+    }
+}
+
+void updateJoystickVal(int8_t x, int8_t y, JoystickMode &joystickMode)
+{
+    // this function will only return the opposite of what it currently is. So ie can't go from left to right... would have to go left to none, and then on the next call go to right. This is so it knows to close the valve. ps3 controller should generally be quick enouch to catch a joystick movement mid move to do this properly
+
+    // check if new values of x and y mean we should go into a mode
+    if (joystickMode == j_none)
+    {
+        if (x <= -100)
+        {
+            joystickMode = j_left;
+        }
+        else if (x >= 100)
+        {
+            joystickMode = j_right;
+        }
+        else if (y <= -100)
+        {
+            joystickMode = j_up;
+        }
+        else if (y >= 100)
+        {
+            joystickMode = j_down;
         }
     }
-    Console.printf("\n");
+    else
+    {
+        // currently was running, check if we need to disable it based on new inputs
+        if (joystickMode == j_left && x > -100)
+        {
+            joystickMode = j_none;
+        }
+        else if (joystickMode == j_right && x < 100)
+        {
+            joystickMode = j_none;
+        }
+        else if (joystickMode == j_up && y > -100)
+        {
+            joystickMode = j_none;
+        }
+        else if (joystickMode == j_down && y < 100)
+        {
+            joystickMode = j_none;
+        }
+    }
 }
 
-void dumpBalanceBoard(ControllerPtr ctl) {
-    Console.printf("idx=%d,  TL=%u, TR=%u, BL=%u, BR=%u, temperature=%d\n",
-                   ctl->index(),        // Controller Index
-                   ctl->topLeft(),      // top-left scale
-                   ctl->topRight(),     // top-right scale
-                   ctl->bottomLeft(),   // bottom-left scale
-                   ctl->bottomRight(),  // bottom-right scale
-                   ctl->temperature()   // temperature: used to adjust the scale value's precision
-    );
+void joystickLoop(ControllerPtr ctl)
+{
+    OASMANControllerData *thispreviousControllerData = &previousControllerData[ctl->index()];
+    OASMANControllerData currentControllerData;
+    currentControllerData.x = ctl->axisX();
+    currentControllerData.y = ctl->axisY();
+    currentControllerData.rx = ctl->axisRX();
+    currentControllerData.ry = ctl->axisRY();
+    //---------------- Analog stick value events ---------------
+    if (abs(currentControllerData.x - thispreviousControllerData->x) + abs(currentControllerData.y - thispreviousControllerData->y) > 2)
+    {
+        Serial.print("Moved the left stick:");
+        Serial.print(" x=");
+        Serial.print(currentControllerData.x, DEC);
+        Serial.print(" y=");
+        Serial.print(currentControllerData.y, DEC);
+        Serial.println();
+
+        JoystickMode prev = leftMode;
+        updateJoystickVal(currentControllerData.x, currentControllerData.y, leftMode);
+        if (prev != leftMode)
+        {
+
+            // by default we assume prev is j_none and the new leftMode is a side so we would be opening the valve
+            OpenClose openOrClose = v_open;
+            JoystickMode cur = leftMode;
+
+            // if it is the opposite and we are actually going from valve open to close, reverse it
+            if (leftMode == j_none)
+            { // just stopped so close instead
+                openOrClose = v_close;
+                cur = prev;
+            }
+
+            // left joystick specifically
+
+            // left joystick left would be air up left side of car
+            if (cur == j_left)
+            {
+                if (openOrClose == v_open)
+                {
+                    getWheel(WHEEL_FRONT_DRIVER)->getInSolenoid()->open();
+                    getWheel(WHEEL_REAR_DRIVER)->getInSolenoid()->open();
+                }
+                else
+                {
+                    getWheel(WHEEL_FRONT_DRIVER)->getInSolenoid()->close();
+                    getWheel(WHEEL_REAR_DRIVER)->getInSolenoid()->close();
+                }
+            }
+
+            // left joystick right would be air out left side of car
+            if (cur == j_right)
+            {
+                if (openOrClose == v_open)
+                {
+                    getWheel(WHEEL_FRONT_DRIVER)->getOutSolenoid()->open();
+                    getWheel(WHEEL_REAR_DRIVER)->getOutSolenoid()->open();
+                }
+                else
+                {
+                    getWheel(WHEEL_FRONT_DRIVER)->getOutSolenoid()->close();
+                    getWheel(WHEEL_REAR_DRIVER)->getOutSolenoid()->close();
+                }
+            }
+
+            // left joystick up would be air up front side of car
+            if (cur == j_up)
+            {
+                if (openOrClose == v_open)
+                {
+                    getWheel(WHEEL_FRONT_DRIVER)->getInSolenoid()->open();
+                    getWheel(WHEEL_FRONT_PASSENGER)->getInSolenoid()->open();
+                }
+                else
+                {
+                    getWheel(WHEEL_FRONT_DRIVER)->getInSolenoid()->close();
+                    getWheel(WHEEL_FRONT_PASSENGER)->getInSolenoid()->close();
+                }
+            }
+
+            // left joystick down would be air down front side of car
+            if (cur == j_down)
+            {
+                if (openOrClose == v_open)
+                {
+                    getWheel(WHEEL_FRONT_DRIVER)->getOutSolenoid()->open();
+                    getWheel(WHEEL_FRONT_PASSENGER)->getOutSolenoid()->open();
+                }
+                else
+                {
+                    getWheel(WHEEL_FRONT_DRIVER)->getOutSolenoid()->close();
+                    getWheel(WHEEL_FRONT_PASSENGER)->getOutSolenoid()->close();
+                }
+            }
+        }
+    }
+
+    if (abs(currentControllerData.rx - thispreviousControllerData->rx) + abs(currentControllerData.ry - thispreviousControllerData->ry) > 2)
+    {
+        // Serial.print("Moved the right stick:");
+        // Serial.print(" x=");
+        // Serial.print(Ps3.data.analog.stick.rx, DEC);
+        // Serial.print(" y=");
+        // Serial.print(Ps3.data.analog.stick.ry, DEC);
+        // Serial.println();
+
+        JoystickMode prev = rightMode;
+        updateJoystickVal(currentControllerData.rx, currentControllerData.ry, rightMode);
+        if (prev != rightMode)
+        {
+
+            // by default we assume prev is j_none and the new rightMode is a side so we would be opening the valve
+            OpenClose openOrClose = v_open;
+            JoystickMode cur = rightMode;
+
+            // if it is the opposite and we are actually going from valve open to close, reverse it
+            if (rightMode == j_none)
+            { // just stopped so close instead
+                openOrClose = v_close;
+                cur = prev;
+            }
+
+            // right joystick specifically
+
+            // right joystick left would be air out right side of car
+            if (cur == j_left)
+            {
+                if (openOrClose == v_open)
+                {
+                    getWheel(WHEEL_FRONT_PASSENGER)->getOutSolenoid()->open();
+                    getWheel(WHEEL_REAR_PASSENGER)->getOutSolenoid()->open();
+                }
+                else
+                {
+                    getWheel(WHEEL_FRONT_PASSENGER)->getOutSolenoid()->close();
+                    getWheel(WHEEL_REAR_PASSENGER)->getOutSolenoid()->close();
+                }
+            }
+
+            // right joystick right would be air up right side of car
+            if (cur == j_right)
+            {
+                if (openOrClose == v_open)
+                {
+                    getWheel(WHEEL_FRONT_PASSENGER)->getInSolenoid()->open();
+                    getWheel(WHEEL_REAR_PASSENGER)->getInSolenoid()->open();
+                }
+                else
+                {
+                    getWheel(WHEEL_FRONT_PASSENGER)->getInSolenoid()->close();
+                    getWheel(WHEEL_REAR_PASSENGER)->getInSolenoid()->close();
+                }
+            }
+
+            // right joystick up would be air up rear side of car
+            if (cur == j_up)
+            {
+                if (openOrClose == v_open)
+                {
+                    getWheel(WHEEL_REAR_DRIVER)->getInSolenoid()->open();
+                    getWheel(WHEEL_REAR_PASSENGER)->getInSolenoid()->open();
+                }
+                else
+                {
+                    getWheel(WHEEL_REAR_DRIVER)->getInSolenoid()->close();
+                    getWheel(WHEEL_REAR_PASSENGER)->getInSolenoid()->close();
+                }
+            }
+
+            // right joystick down would be air down rear side of car
+            if (cur == j_down)
+            {
+                if (openOrClose == v_open)
+                {
+                    getWheel(WHEEL_REAR_DRIVER)->getOutSolenoid()->open();
+                    getWheel(WHEEL_REAR_PASSENGER)->getOutSolenoid()->open();
+                }
+                else
+                {
+                    getWheel(WHEEL_REAR_DRIVER)->getOutSolenoid()->close();
+                    getWheel(WHEEL_REAR_PASSENGER)->getOutSolenoid()->close();
+                }
+            }
+        }
+    }
+
+    printJoystick(leftMode);
+    Serial.print("\t");
+    printJoystick(rightMode);
+    Serial.println();
+
+    // copy over controller data
+    memcpy(thispreviousControllerData, &currentControllerData, sizeof(OASMANControllerData));
 }
 
-void processGamepad(ControllerPtr ctl) {
+#endif
+
+#pragma endregion
+
+void processGamepad(ControllerPtr ctl)
+{
     // There are different ways to query whether a button is pressed.
-    // By query each button individually:
-    //  a(), b(), x(), y(), l1(), etc...
-    if (ctl->a()) {
-        static int colorIdx = 0;
-        // Some gamepads like DS4 and DualSense support changing the color LED.
-        // It is possible to change it by calling:
-        switch (colorIdx % 3) {
-            case 0:
-                // Red
-                ctl->setColorLED(255, 0, 0);
-                break;
-            case 1:
-                // Green
-                ctl->setColorLED(0, 255, 0);
-                break;
-            case 2:
-                // Blue
-                ctl->setColorLED(0, 0, 255);
-                break;
+    // // By query each button individually:
+    // //  a(), b(), x(), y(), l1(), etc...
+    // if (ctl->a())
+    // {
+    //     static int colorIdx = 0;
+    //     // Some gamepads like DS4 and DualSense support changing the color LED.
+    //     // It is possible to change it by calling:
+    //     switch (colorIdx % 3)
+    //     {
+    //     case 0:
+    //         // Red
+    //         ctl->setColorLED(255, 0, 0);
+    //         break;
+    //     case 1:
+    //         // Green
+    //         ctl->setColorLED(0, 255, 0);
+    //         break;
+    //     case 2:
+    //         // Blue
+    //         ctl->setColorLED(0, 0, 255);
+    //         break;
+    //     }
+    //     colorIdx++;
+    // }
+
+    // if (ctl->b())
+    // {
+    //     // Turn on the 4 LED. Each bit represents one LED.
+    //     static int led = 0;
+    //     led++;
+    //     // Some gamepads like the DS3, DualSense, Nintendo Wii, Nintendo Switch
+    //     // support changing the "Player LEDs": those 4 LEDs that usually indicate
+    //     // the "gamepad seat".
+    //     // It is possible to change them by calling:
+    //     ctl->setPlayerLEDs(led & 0x0f);
+    // }
+
+    // if (ctl->x())
+    // {
+    //     // Some gamepads like DS3, DS4, DualSense, Switch, Xbox One S, Stadia support rumble.
+    //     // It is possible to set it by calling:
+    //     // Some controllers have two motors: "strong motor", "weak motor".
+    //     // It is possible to control them independently.
+    //     ctl->playDualRumble(0 /* delayedStartMs */, 250 /* durationMs */, 0x80 /* weakMagnitude */,
+    //                         0x40 /* strongMagnitude */);
+    // }
+
+    // // Another way to query controller data is by getting the buttons() function.
+    // // See how the different "dump*" functions dump the Controller info.
+    // dumpGamepad(ctl);
+
+    // // See ArduinoController.h for all the available functions.
+
+    if (ctl->r1() && ctl->l1())
+    {
+        if (armedIsHeldDown == false)
+        {
+            // this means we just pressed them, flip value of armed
+            armed = !armed;
+            ctl->playDualRumble(0 /* delayedStartMs */, 250 /* durationMs */, 0x80 /* weakMagnitude */,
+                                0x40 /* strongMagnitude */);
         }
-        colorIdx++;
+        armedIsHeldDown = true;
+    }
+    else
+    {
+        armedIsHeldDown = false;
     }
 
-    if (ctl->b()) {
-        // Turn on the 4 LED. Each bit represents one LED.
-        static int led = 0;
-        led++;
-        // Some gamepads like the DS3, DualSense, Nintendo Wii, Nintendo Switch
-        // support changing the "Player LEDs": those 4 LEDs that usually indicate
-        // the "gamepad seat".
-        // It is possible to change them by calling:
-        ctl->setPlayerLEDs(led & 0x0f);
-    }
-
-    if (ctl->x()) {
-        // Some gamepads like DS3, DS4, DualSense, Switch, Xbox One S, Stadia support rumble.
-        // It is possible to set it by calling:
-        // Some controllers have two motors: "strong motor", "weak motor".
-        // It is possible to control them independently.
-        ctl->playDualRumble(0 /* delayedStartMs */, 250 /* durationMs */, 0x80 /* weakMagnitude */,
-                            0x40 /* strongMagnitude */);
-    }
-
-    // Another way to query controller data is by getting the buttons() function.
-    // See how the different "dump*" functions dump the Controller info.
-    dumpGamepad(ctl);
-
-    // See ArduinoController.h for all the available functions.
-}
-
-void processMouse(ControllerPtr ctl) {
-    // This is just an example.
-    if (ctl->scrollWheel() > 0) {
-        // Do Something
-    } else if (ctl->scrollWheel() < 0) {
-        // Do something else
-    }
-
-    // See "dumpMouse" for possible things to query.
-    dumpMouse(ctl);
-}
-
-void processKeyboard(ControllerPtr ctl) {
-    if (!ctl->isAnyKeyPressed())
+    if (!armed)
+    {
         return;
-
-    // This is just an example.
-    if (ctl->isKeyPressed(Keyboard_A)) {
-        // Do Something
-        Console.println("Key 'A' pressed");
     }
 
-    // Don't do "else" here.
-    // Multiple keys can be pressed at the same time.
-    if (ctl->isKeyPressed(Keyboard_LeftShift)) {
-        // Do something else
-        Console.println("Key 'LEFT SHIFT' pressed");
+    // okay armed, let code run
+
+    if (ctl->miscSystem())
+    {
+        // Serial.println("Pressing both the select and start buttons");
+        //  setinternalReboot(true);
+        ctl->disconnect();
     }
 
-    // Don't do "else" here.
-    // Multiple keys can be pressed at the same time.
-    if (ctl->isKeyPressed(Keyboard_LeftArrow)) {
-        // Do something else
-        Console.println("Key 'Left Arrow' pressed");
-    }
-
-    // See "dumpKeyboard" for possible things to query.
-    dumpKeyboard(ctl);
+    // joystickLoop(ctl);
+    joystickLoop2(ctl, false);
+    joystickLoop2(ctl, true);
 }
 
-void processBalanceBoard(ControllerPtr ctl) {
-    // This is just an example.
-    if (ctl->topLeft() > 10000) {
-        // Do Something
-    }
+// void processMouse(ControllerPtr ctl)
+// {
+//     // This is just an example.
+//     if (ctl->scrollWheel() > 0)
+//     {
+//         // Do Something
+//     }
+//     else if (ctl->scrollWheel() < 0)
+//     {
+//         // Do something else
+//     }
 
-    // See "dumpBalanceBoard" for possible things to query.
-    dumpBalanceBoard(ctl);
-}
+//     // See "dumpMouse" for possible things to query.
+//     dumpMouse(ctl);
+// }
 
-void processControllers() {
-    for (auto myController : myControllers) {
-        if (myController && myController->isConnected() && myController->hasData()) {
-            if (myController->isGamepad()) {
+// void processKeyboard(ControllerPtr ctl)
+// {
+//     if (!ctl->isAnyKeyPressed())
+//         return;
+
+//     // This is just an example.
+//     if (ctl->isKeyPressed(Keyboard_A))
+//     {
+//         // Do Something
+//         Serial.println("Key 'A' pressed");
+//     }
+
+//     // Don't do "else" here.
+//     // Multiple keys can be pressed at the same time.
+//     if (ctl->isKeyPressed(Keyboard_LeftShift))
+//     {
+//         // Do something else
+//         Serial.println("Key 'LEFT SHIFT' pressed");
+//     }
+
+//     // Don't do "else" here.
+//     // Multiple keys can be pressed at the same time.
+//     if (ctl->isKeyPressed(Keyboard_LeftArrow))
+//     {
+//         // Do something else
+//         Serial.println("Key 'Left Arrow' pressed");
+//     }
+
+//     // See "dumpKeyboard" for possible things to query.
+//     dumpKeyboard(ctl);
+// }
+
+// void processBalanceBoard(ControllerPtr ctl)
+// {
+//     // This is just an example.
+//     if (ctl->topLeft() > 10000)
+//     {
+//         // Do Something
+//     }
+
+//     // See "dumpBalanceBoard" for possible things to query.
+//     dumpBalanceBoard(ctl);
+// }
+
+void processControllers()
+{
+    for (auto myController : myControllers)
+    {
+        if (myController && myController->isConnected() && myController->hasData())
+        {
+            if (myController->isGamepad())
+            {
                 processGamepad(myController);
-            } else if (myController->isMouse()) {
-                processMouse(myController);
-            } else if (myController->isKeyboard()) {
-                processKeyboard(myController);
-            } else if (myController->isBalanceBoard()) {
-                processBalanceBoard(myController);
-            } else {
-                Console.printf("Unsupported controller\n");
+            }
+            // else if (myController->isMouse())
+            // {
+            //     processMouse(myController);
+            // }
+            // else if (myController->isKeyboard())
+            // {
+            //     processKeyboard(myController);
+            // }
+            // else if (myController->isBalanceBoard())
+            // {
+            //     processBalanceBoard(myController);
+            // }
+            else
+            {
+                Serial.printf("Unsupported controller\n");
             }
         }
     }
 }
 
 // Arduino setup function. Runs in CPU 1
-void bp32_setup() {
-    Console.printf("Firmware: %s\n", BP32.firmwareVersion());
-    const uint8_t* addr = BP32.localBdAddress();
-    Console.printf("BD Addr: %2X:%2X:%2X:%2X:%2X:%2X\n", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+void bp32_setup()
+{
+    Serial.printf("Firmware: %s\n", BP32.firmwareVersion());
+    const uint8_t *addr = BP32.localBdAddress();
+    Serial.printf("BD Addr: %2X:%2X:%2X:%2X:%2X:%2X\n", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 
     // Setup the Bluepad32 callbacks, and the default behavior for scanning or not.
     // By default, if the "startScanning" parameter is not passed, it will do the "start scanning".
@@ -290,7 +745,7 @@ void bp32_setup() {
     // Calling "forgetBluetoothKeys" in setup() just as an example.
     // Forgetting Bluetooth keys prevents "paired" gamepads to reconnect.
     // But it might also fix some connection / re-connection issues.
-    BP32.forgetBluetoothKeys();
+    // BP32.forgetBluetoothKeys();
 
     // Enables mouse / touchpad support for gamepads that support them.
     // When enabled, controllers like DualSense and DualShock4 generate two connected devices:
@@ -303,10 +758,14 @@ void bp32_setup() {
     // This service allows clients, like a mobile app, to setup and see the state of Bluepad32.
     // By default, it is disabled.
     BP32.enableBLEService(false);
+
+    // by default lock it down so random controllers cannot connect!
+    BP32.enableNewBluetoothConnections(false);
 }
 
 // Arduino loop function. Runs in CPU 1.
-void bp32_loop() {
+void bp32_loop()
+{
     // This call fetches all the controllers' data.
     // Call this function in your main loop.
     bool dataUpdated = BP32.update();
@@ -319,9 +778,14 @@ void bp32_loop() {
     // Detailed info here:
     // https://stackoverflow.com/questions/66278271/task-watchdog-got-triggered-the-tasks-did-not-reset-the-watchdog-in-time
 
-    //     vTaskDelay(1);
-    delay(150);
+    delay(100);
 }
 
-
-
+void bp32_forgetDevices()
+{
+    BP32.forgetBluetoothKeys();
+}
+void bp32_setAllowConnections(bool allow)
+{
+    BP32.enableNewBluetoothConnections(allow);
+}

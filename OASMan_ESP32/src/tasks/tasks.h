@@ -6,10 +6,7 @@
 #include <user_defines.h>
 #include "components/screen.h"
 #include "bluetooth/ble.h"
-
-#if ENABLE_PS3_CONTROLLER_SUPPORT
-#include "bluetooth/ps3_controller.h"
-#endif
+#include "bluetooth/bp32.h"
 
 void setup_tasks();
 

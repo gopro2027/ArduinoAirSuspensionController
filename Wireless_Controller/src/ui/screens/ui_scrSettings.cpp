@@ -64,6 +64,23 @@ void ScrSettings::init()
                                                                 } }, []() -> void {}, false); });
 
     new Option(this->optionsContainer, OptionType::SPACE, "");
+    new Option(this->optionsContainer, OptionType::HEADER, "Game Controller");
+
+    new Option(this->optionsContainer, OptionType::BUTTON, "Allow New Controller", defaultCharVal, [](void *data)
+               { currentScr->showMsgBox("Confirm?", "After clicking this, you will be able to pair a new game controller with your OASMan system", "Confirm", "Cancel", []() -> void
+                                        {
+                                            BP32Packet pkt(BP32CMD::BP32CMD_ENABLE_NEW_CONN, true);
+                                            sendRestPacket(&pkt);
+                                            showDialog("Connect your controller!", lv_color_hex(0xFFFF00)); }, []() -> void {}, false); });
+
+    new Option(this->optionsContainer, OptionType::BUTTON, "Un-pair controllers", defaultCharVal, [](void *data)
+               { currentScr->showMsgBox("Confirm?", "After clicking this, all paired game controllers will be removed from memory", "Confirm", "Cancel", []() -> void
+                                        {
+                                            BP32Packet pkt(BP32CMD::BP32CMD_FORGET_DEVICES, NULL);
+                                            sendRestPacket(&pkt);
+                                            showDialog("Controllers forgotten!", lv_color_hex(0xFFFF00)); }, []() -> void {}, false); });
+
+    new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "ML/AI");
     this->ui_aiPercentage = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Learn Progress:", defaultCharVal);
     this->ui_aiReady = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Trained:", defaultCharVal);

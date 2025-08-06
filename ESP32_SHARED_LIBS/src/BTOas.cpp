@@ -298,3 +298,9 @@ void AuthPacket::setBleAuthResult(AuthResult ar)
 {
     this->args32()[1].i = (uint32_t)ar;
 }
+BP32Packet::BP32Packet(BP32CMD bp32Cmd, bool value)
+{
+    this->cmd = BP32PKT;
+    this->args16()[0].i = bp32Cmd;
+    this->args16()[1].i = value;
+}
