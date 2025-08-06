@@ -223,6 +223,22 @@ void joystickLoop2(ControllerPtr ctl, bool right = false)
     int32_t x = right ? ctl->axisRX() : ctl->axisX();
     int32_t y = right ? ctl->axisRY() : ctl->axisY();
 
+    // for single joystick controllers, go ahead and override it so if we are holding the b button it grabs the only joystick available
+    if (ctl->b())
+    {
+        if (right)
+        {
+            x = ctl->axisX();
+            y = ctl->axisY();
+        }
+        else
+        {
+            // left joystick is always 0 while b button is pressed
+            x = 0;
+            y = 0;
+        }
+    }
+
     const int threshold = 200;
 
     bool *val;
@@ -595,7 +611,7 @@ void processGamepad(ControllerPtr ctl)
 
     // // Another way to query controller data is by getting the buttons() function.
     // // See how the different "dump*" functions dump the Controller info.
-    // dumpGamepad(ctl);
+    dumpGamepad(ctl);
 
     // // See ArduinoController.h for all the available functions.
 
