@@ -167,17 +167,17 @@ void dumpGamepad(ControllerPtr ctl)
 //     Serial.printf("\n");
 // }
 
-// void dumpBalanceBoard(ControllerPtr ctl)
-// {
-//     Serial.printf("idx=%d,  TL=%u, TR=%u, BL=%u, BR=%u, temperature=%d\n",
-//                    ctl->index(),       // Controller Index
-//                    ctl->topLeft(),     // top-left scale
-//                    ctl->topRight(),    // top-right scale
-//                    ctl->bottomLeft(),  // bottom-left scale
-//                    ctl->bottomRight(), // bottom-right scale
-//                    ctl->temperature()  // temperature: used to adjust the scale value's precision
-//     );
-// }
+void dumpBalanceBoard(ControllerPtr ctl)
+{
+    Serial.printf("idx=%d,  TL=%u, TR=%u, BL=%u, BR=%u, temperature=%d\n",
+                  ctl->index(),       // Controller Index
+                  ctl->topLeft(),     // top-left scale
+                  ctl->topRight(),    // top-right scale
+                  ctl->bottomLeft(),  // bottom-left scale
+                  ctl->bottomRight(), // bottom-right scale
+                  ctl->temperature()  // temperature: used to adjust the scale value's precision
+    );
+}
 
 #pragma region joystick stuff
 
@@ -698,17 +698,83 @@ void processGamepad(ControllerPtr ctl)
 //     dumpKeyboard(ctl);
 // }
 
-// void processBalanceBoard(ControllerPtr ctl)
-// {
-//     // This is just an example.
-//     if (ctl->topLeft() > 10000)
-//     {
-//         // Do Something
-//     }
+void balanceBoardCode(ControllerPtr ctl, uint16_t tl, uint16_t tr, uint16_t bl, uint16_t br, bool right = false)
+{
 
-//     // See "dumpBalanceBoard" for possible things to query.
-//     dumpBalanceBoard(ctl);
-// }
+    int32_t rightY = tr - br;
+    int32_t leftY = tl - bl;
+
+    OASMANJoystickState *thisJoystickState = &oasmanJoystickState[ctl->index()];
+
+    int32_t y = right ? rightY : leftY;
+
+    const int threshold = 10000;
+
+    bool *val;
+    Solenoid *a;
+    Solenoid *b;
+
+    // up
+    val = right ? &thisJoystickState->rup : &thisJoystickState->up;
+    a = right ? getWheel(WHEEL_REAR_DRIVER)->getInSolenoid() : getWheel(WHEEL_FRONT_DRIVER)->getInSolenoid();
+    b = right ? getWheel(WHEEL_REAR_PASSENGER)->getInSolenoid() : getWheel(WHEEL_FRONT_PASSENGER)->getInSolenoid();
+    runJoystickInput(val, a, b, y <= -threshold);
+
+    // down
+    val = right ? &thisJoystickState->rup : &thisJoystickState->up;
+    a = right ? getWheel(WHEEL_REAR_DRIVER)->getOutSolenoid() : getWheel(WHEEL_FRONT_DRIVER)->getOutSolenoid();
+    b = right ? getWheel(WHEEL_REAR_PASSENGER)->getOutSolenoid() : getWheel(WHEEL_FRONT_PASSENGER)->getOutSolenoid();
+    runJoystickInput(val, a, b, y >= threshold);
+}
+
+void processBalanceBoard(ControllerPtr ctl)
+{
+
+    uint16_t tl = 0, tr = 0, bl = 0, br = 0;
+    bool right = false;
+
+    uint16_t largest = 0;
+    if (ctl->topLeft() > largest)
+        largest = ctl->topLeft();
+    if (ctl->topRight() > largest)
+        largest = ctl->topRight();
+    if (ctl->bottomLeft() > largest)
+        largest = ctl->bottomLeft();
+    if (ctl->bottomRight() > largest)
+        largest = ctl->bottomRight();
+
+    // This is just an example.
+    if (largest > 10000)
+    {
+        if (largest == ctl->topLeft())
+        {
+            Serial.println("Top Left");
+            tl = largest;
+        }
+        else if (largest == ctl->topRight())
+        {
+            Serial.println("Top Right");
+            tr = largest;
+            right = true;
+        }
+        else if (largest == ctl->bottomLeft())
+        {
+            Serial.println("Bottom Left");
+            bl = largest;
+        }
+        else if (largest == ctl->bottomRight())
+        {
+            Serial.println("Bottom Right");
+            br = largest;
+            right = true;
+        }
+    }
+
+    balanceBoardCode(ctl, tl, tr, bl, br, right);
+
+    // See "dumpBalanceBoard" for possible things to query.
+    dumpBalanceBoard(ctl);
+}
 
 void processControllers()
 {
@@ -728,10 +794,10 @@ void processControllers()
             // {
             //     processKeyboard(myController);
             // }
-            // else if (myController->isBalanceBoard())
-            // {
-            //     processBalanceBoard(myController);
-            // }
+            else if (myController->isBalanceBoard())
+            {
+                processBalanceBoard(myController);
+            }
             else
             {
                 Serial.printf("Unsupported controller\n");
