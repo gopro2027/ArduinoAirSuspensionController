@@ -131,7 +131,15 @@ void onWakeup()
     gpio_wakeup_disable((gpio_num_t)PWR_KEY_Input_PIN);
     woke_up = true;
 
-    smartdisplay_lcd_set_backlight(0.8f);
+    if (!key_pressed())
+    {
+        // woken up by 10 minute timer instead of key press, go ahead and shut down
+        Shutdown();
+    }
+    else
+    {
+        smartdisplay_lcd_set_backlight(0.8f);
+    }
 }
 
 void Fall_Asleep(void)
@@ -140,6 +148,7 @@ void Fall_Asleep(void)
     smartdisplay_lcd_set_backlight(0);
     vTaskDelay(pdMS_TO_TICKS(50)); // give time for backlight to turn off before sleeping
 
+    esp_sleep_enable_timer_wakeup(10 * 60 * 1000000); // 10 minutes in sleep will shutdown the device fully
     enableWakeup();
     // Enter light sleep (returns on wake)
     esp_light_sleep_start();
