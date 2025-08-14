@@ -9,6 +9,10 @@
 
 #include "utils/util.h"
 
+#if defined(WAVESHARE_BOARD)
+#include "waveshare/waveshare.h"
+#endif
+
 void OnAddOneClicked(lv_event_t *e)
 {
     static uint32_t cnt = 0;
@@ -42,6 +46,7 @@ unsigned long dimScreenTime = 0;
 bool dimmed = false;
 void setup()
 {
+
 #ifdef ARDUINO_USB_CDC_ON_BOOT
     // delay(5000);
 #endif
@@ -65,6 +70,10 @@ void setup()
         downloadUpdate(getwifiSSID(), getwifiPassword());
         return;
     }
+
+#if defined(WAVESHARE_BOARD)
+    waveshare_init();
+#endif
 
     setup_tasks();
 
@@ -174,6 +183,10 @@ void loop()
         dialogLoop();
         safetyModeMsgBoxCheck();
     }
+
+#if defined(WAVESHARE_BOARD)
+    waveshare_loop();
+#endif
 
     // Update the ticker
     lv_tick_inc(now - lv_last_tick);

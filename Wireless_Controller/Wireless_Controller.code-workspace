@@ -104,7 +104,8 @@
 			"gpio_reg.h": "c",
 			"esp32-hal.h": "c",
 			"esp8266-compat.h": "c",
-			"queue.h": "c"
+			"queue.h": "c",
+			"esp_log.h": "c"
 		}
 	}
 }
