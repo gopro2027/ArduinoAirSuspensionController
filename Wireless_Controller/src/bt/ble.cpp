@@ -26,6 +26,21 @@ static unsigned long timeoutMS = 0;
 static bool hasReceivedStatus = false;
 NimBLEClient *pClient = nullptr;
 
+const char *ble_getMAC()
+{
+    if (pClient == nullptr || !pClient->isConnected())
+    {
+        return "Not connected";
+    }
+    const char *mac = pClient->getConnInfo().getAddress().toString().c_str();
+    if (strlen(mac) < 17)
+    {
+        // if the address is not 17 characters long, it is probably not a valid address
+        mac = "Invalid MAC";
+    }
+    return mac;
+}
+
 bool isConnectedToManifold()
 {
     return connected;
@@ -482,10 +497,18 @@ void ble_loop()
 
     static unsigned int previousValveInt = 0;
 
+    // if we are connected but the client is not connected, then disconnect
+    if (connected && pClient != nullptr && !pClient->isConnected())
+    {
+        disconnect();
+        showDialog("Manifold disconnected!", lv_color_hex(0xFF0000), 30000);
+    }
+
     // If we are connected to a peer BLE Server, update the characteristic each time we are reached
     // with the current time since boot.
     if (connected)
     {
+
         BTOasPacket packet;
         bool hasPacketToSend = getBTRestPacketToSend(&packet);
         bool success = true;
@@ -512,8 +535,8 @@ void ble_loop()
         // check for connection issue
         if (hasReceivedStatus && timeoutMS < millis())
         {
-            showDialog("BLE Connection Timed Out!", lv_color_hex(0xFF0000), 30000);
             disconnect();
+            showDialog("BLE Connection Timed Out!", lv_color_hex(0xFF0000), 30000);
         }
     }
     else if (allowScan)

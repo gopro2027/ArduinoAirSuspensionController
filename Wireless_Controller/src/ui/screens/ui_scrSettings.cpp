@@ -306,6 +306,10 @@ void ScrSettings::init()
 #endif
     new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Version:", versionValue);
 
+    OptionValue macValue;
+    macValue.STRING = ble_getMAC();
+    this->ui_mac = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Manifold:", macValue);
+
     // add space at end of list
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
 
@@ -377,6 +381,8 @@ void ScrSettings::loop()
     this->ui_aiPercentage->setRightHandText(buf);
     snprintf(buf, sizeof(buf), "UF:  %c UR:  %c\nDF: %c DR: %c", (AIReadyBittset & 0b1) ? 'Y' : 'n', (AIReadyBittset & 0b10 >> 1) ? 'Y' : 'n', (AIReadyBittset & 0b100 >> 2) ? 'Y' : 'n', (AIReadyBittset & 0b1000 >> 3) ? 'Y' : 'n');
     this->ui_aiReady->setRightHandText(buf);
+
+    this->ui_mac->setRightHandText(ble_getMAC());
 
     if (*util_configValues._setValues())
     {

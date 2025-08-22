@@ -18,5 +18,5 @@
 bool connectCharacteristic(BLERemoteService *pRemoteService, BLERemoteCharacteristic *l_BLERemoteChar);
 void ble_setup();
 void ble_loop();
-
+const char *ble_getMAC();
 #endif
