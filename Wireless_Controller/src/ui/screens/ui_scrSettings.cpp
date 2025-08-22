@@ -67,14 +67,14 @@ void ScrSettings::init()
     new Option(this->optionsContainer, OptionType::HEADER, "Game Controller");
 
     new Option(this->optionsContainer, OptionType::BUTTON, "Allow New Controller", defaultCharVal, [](void *data)
-               { currentScr->showMsgBox("Confirm?", "After clicking this, you will be able to pair a new game controller with your OASMan system", "Confirm", "Cancel", []() -> void
+               { currentScr->showMsgBox("Confirm?", "After clicking this, you will be able to pair a new game controller with your OASMan system. After pairing, you will have to click this button again to pair another device.\nMax saved devices is 20", "Confirm", "Cancel", []() -> void
                                         {
                                             BP32Packet pkt(BP32CMD::BP32CMD_ENABLE_NEW_CONN, true);
                                             sendRestPacket(&pkt);
                                             showDialog("Connect your controller!", lv_color_hex(0xFFFF00)); }, []() -> void {}, false); });
 
-    new Option(this->optionsContainer, OptionType::BUTTON, "Un-pair controllers", defaultCharVal, [](void *data)
-               { currentScr->showMsgBox("Confirm?", "After clicking this, all paired game controllers will be removed from memory", "Confirm", "Cancel", []() -> void
+    new Option(this->optionsContainer, OptionType::BUTTON, "Un-pair All Controllers", defaultCharVal, [](void *data)
+               { currentScr->showMsgBox("Confirm?", "After clicking this, all paired game controllers will be removed from memory, and actively connected ones will be disconnected. This also resets your saved devices back to 0.", "Confirm", "Cancel", []() -> void
                                         {
                                             BP32Packet pkt(BP32CMD::BP32CMD_FORGET_DEVICES, NULL);
                                             sendRestPacket(&pkt);
