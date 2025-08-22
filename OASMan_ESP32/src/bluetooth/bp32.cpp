@@ -40,6 +40,12 @@ OASMANJoystickState oasmanJoystickState[BP32_MAX_GAMEPADS];
 void onConnectedController(ControllerPtr ctl)
 {
 
+    if (!checkAndAllowBluetoothDevice(ctl->getProperties().btaddr))
+    {
+        Serial.println("BP32: Bluetooth device attempted to connect but not allowed");
+        ctl->disconnect();
+        return;
+    }
     bool foundEmptySlot = false;
     for (int i = 0; i < BP32_MAX_GAMEPADS; i++)
     {
@@ -49,8 +55,8 @@ void onConnectedController(ControllerPtr ctl)
             // Additionally, you can get certain gamepad properties like:
             // Model, VID, PID, BTAddr, flags, etc.
             ControllerProperties properties = ctl->getProperties();
-            Serial.printf("Controller model: %s, VID=0x%04x, PID=0x%04x\n", ctl->getModelName(), properties.vendor_id,
-                          properties.product_id);
+            Serial.printf("Controller model: %s, VID=0x%04x, PID=0x%04x, BTAddr=%02x:%02x:%02x:%02x:%02x:%02x\n", ctl->getModelName(), properties.vendor_id,
+                          properties.product_id, properties.btaddr[0], properties.btaddr[1], properties.btaddr[2], properties.btaddr[3], properties.btaddr[4], properties.btaddr[5]);
             myControllers[i] = ctl;
             foundEmptySlot = true;
             // previousControllerData[i] = {0};
@@ -63,7 +69,7 @@ void onConnectedController(ControllerPtr ctl)
     }
 
     // controller paired, turn back off allow pairing
-    BP32.enableNewBluetoothConnections(false);
+    bp32_setAllowNewConnections(false);
 }
 
 void onDisconnectedController(ControllerPtr ctl)
@@ -638,7 +644,7 @@ void processGamepad(ControllerPtr ctl)
 
     // okay armed, let code run
 
-    if (ctl->miscSystem())
+    if (ctl->miscSystem()) // pressing the system button on the controller
     {
         // Serial.println("Pressing both the select and start buttons");
         //  setinternalReboot(true);
@@ -813,6 +819,10 @@ void bp32_setup()
     const uint8_t *addr = BP32.localBdAddress();
     Serial.printf("BD Addr: %2X:%2X:%2X:%2X:%2X:%2X\n", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 
+    loadAllowedBluetoothDevices();
+
+    bp32_setAllowNewConnections(false);
+
     // Setup the Bluepad32 callbacks, and the default behavior for scanning or not.
     // By default, if the "startScanning" parameter is not passed, it will do the "start scanning".
     // Notice that "Start scanning" will try to auto-connect to devices that are compatible with Bluepad32.
@@ -820,14 +830,14 @@ void bp32_setup()
     BP32.setup(&onConnectedController, &onDisconnectedController);
 
     // Notice that scanning can be stopped / started at any time by calling:
-    // BP32.enableNewBluetoothConnections(enabled);
+    // bp32_setAllowNewConnections(enabled);
 
-    // "forgetBluetoothKeys()" should be called when the user performs
+    // "bp32_forgetDevices()" should be called when the user performs
     // a "device factory reset", or similar.
-    // Calling "forgetBluetoothKeys" in setup() just as an example.
+    // Calling "bp32_forgetDevices" in setup() just as an example.
     // Forgetting Bluetooth keys prevents "paired" gamepads to reconnect.
     // But it might also fix some connection / re-connection issues.
-    // BP32.forgetBluetoothKeys();
+    // BP32.bp32_forgetDevices();
 
     // Enables mouse / touchpad support for gamepads that support them.
     // When enabled, controllers like DualSense and DualShock4 generate two connected devices:
@@ -842,7 +852,7 @@ void bp32_setup()
     BP32.enableBLEService(false);
 
     // by default lock it down so random controllers cannot connect!
-    BP32.enableNewBluetoothConnections(false);
+    bp32_setAllowNewConnections(false);
 }
 
 // Arduino loop function. Runs in CPU 1.
@@ -863,11 +873,91 @@ void bp32_loop()
     delay(100);
 }
 
+struct BTDeviceMac
+{
+    uint8_t addr[6];
+};
+#define MAX_ALLOWED_BLUETOOTH_DEVICES 20
+static BTDeviceMac allowedBluetoothDevices[MAX_ALLOWED_BLUETOOTH_DEVICES];
+
+#define BLUETOOTH_SAVED_DEVICES_FILE "/allowed_bt_devices.dat"
+void clearAllowedBluetoothDevices()
+{
+    deleteFile(BLUETOOTH_SAVED_DEVICES_FILE);
+    loadAllowedBluetoothDevices();
+}
+void loadAllowedBluetoothDevices()
+{
+    Serial.println("Loading allowed Bluetooth devices...");
+    memset(allowedBluetoothDevices, 0, sizeof(allowedBluetoothDevices));
+    readBytes(BLUETOOTH_SAVED_DEVICES_FILE, allowedBluetoothDevices, sizeof(allowedBluetoothDevices));
+}
+
+void addAllowedBluetoothDevice(const uint8_t *addr)
+{
+    bool written = false;
+    for (int i = 0; i < MAX_ALLOWED_BLUETOOTH_DEVICES; i++)
+    {
+        if (allowedBluetoothDevices[i].addr[0] == 0 && allowedBluetoothDevices[i].addr[1] == 0 &&
+            allowedBluetoothDevices[i].addr[2] == 0 && allowedBluetoothDevices[i].addr[3] == 0 &&
+            allowedBluetoothDevices[i].addr[4] == 0 && allowedBluetoothDevices[i].addr[5] == 0) // could have just converted the 4 bytes to an int32 and checked if 0 and probably been fine but figure'd why not be exact
+        {
+            memcpy(allowedBluetoothDevices[i].addr, addr, 6);
+            written = true;
+            break;
+        }
+    }
+    if (written)
+    {
+        writeBytes(BLUETOOTH_SAVED_DEVICES_FILE, allowedBluetoothDevices, sizeof(allowedBluetoothDevices));
+    }
+    else
+    {
+        Serial.println("BP32: No space left to add new Bluetooth device.");
+    }
+}
+
+bool areNewConnectionsAllowed = false;
+bool checkAndAllowBluetoothDevice(const uint8_t *addr)
+{
+    for (int i = 0; i < MAX_ALLOWED_BLUETOOTH_DEVICES; i++)
+    {
+        if (memcmp(allowedBluetoothDevices[i].addr, addr, 6) == 0)
+        {
+            Serial.printf("BP32: Allowing previously accepted device: %02x:%02x:%02x:%02x:%02x:%02x\n",
+                          addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+            return true;
+        }
+    }
+    if (areNewConnectionsAllowed)
+    {
+        Serial.printf("BP32: Allowing new device: %02x:%02x:%02x:%02x:%02x:%02x\n",
+                      addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+        addAllowedBluetoothDevice(addr);
+        return true;
+    }
+    return false;
+}
+
 void bp32_forgetDevices()
 {
+    Serial.println("Forgetting Bluetooth keys...");
     BP32.forgetBluetoothKeys();
+    clearAllowedBluetoothDevices(); // delete our saved file of bt macs
+
+    // disconnect all currently connected controllers
+    for (auto myController : myControllers)
+    {
+        if (myController)
+        {
+            myController->disconnect();
+        }
+    }
 }
-void bp32_setAllowConnections(bool allow)
+
+void bp32_setAllowNewConnections(bool allow)
 {
+    Serial.printf("BP32: Setting allow connections to %d\n", allow);
     BP32.enableNewBluetoothConnections(allow);
+    areNewConnectionsAllowed = allow;
 }

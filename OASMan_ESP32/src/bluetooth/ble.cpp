@@ -690,7 +690,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         {
         case BP32CMD::BP32CMD_ENABLE_NEW_CONN:
             Serial.println("Enabling new connections!");
-            bp32_setAllowConnections(bp32val);
+            bp32_setAllowNewConnections(bp32val);
             break;
         case BP32CMD::BP32CMD_FORGET_DEVICES:
             Serial.println("Forgetting controllers!");
