@@ -201,6 +201,10 @@ void runJoystickInput(bool *val,
         // open valve for left and set oasmanJoystickState flag
         a->open();
         b->open();
+        // if (*val != true)
+        // {
+        //     Serial.println("Opening valve");
+        // }
         *val = true;
     }
     else
@@ -209,6 +213,7 @@ void runJoystickInput(bool *val,
         if (*val)
         {
             *val = false;
+            // Serial.println("Closing valve");
             a->close();
             b->close();
         }
@@ -727,17 +732,19 @@ void balanceBoardCode(ControllerPtr ctl, uint16_t tl, uint16_t tr, uint16_t bl, 
     runJoystickInput(val, a, b, y <= -threshold);
 
     // down
-    val = right ? &thisJoystickState->rup : &thisJoystickState->up;
+    val = right ? &thisJoystickState->rdown : &thisJoystickState->down;
     a = right ? getWheel(WHEEL_REAR_DRIVER)->getOutSolenoid() : getWheel(WHEEL_FRONT_DRIVER)->getOutSolenoid();
     b = right ? getWheel(WHEEL_REAR_PASSENGER)->getOutSolenoid() : getWheel(WHEEL_FRONT_PASSENGER)->getOutSolenoid();
     runJoystickInput(val, a, b, y >= threshold);
+
+    // getManifold()->debugOut();
 }
 
 void processBalanceBoard(ControllerPtr ctl)
 {
 
     uint16_t tl = 0, tr = 0, bl = 0, br = 0;
-    bool right = false;
+    static bool right = false;
 
     uint16_t largest = 0;
     if (ctl->topLeft() > largest)
@@ -754,32 +761,34 @@ void processBalanceBoard(ControllerPtr ctl)
     {
         if (largest == ctl->topLeft())
         {
-            Serial.println("Top Left");
+            // Serial.println("Top Left");
             tl = largest;
         }
         else if (largest == ctl->topRight())
         {
-            Serial.println("Top Right");
+            // Serial.println("Top Right");
             tr = largest;
             right = true;
         }
         else if (largest == ctl->bottomLeft())
         {
-            Serial.println("Bottom Left");
+            // Serial.println("Bottom Left");
             bl = largest;
         }
         else if (largest == ctl->bottomRight())
         {
-            Serial.println("Bottom Right");
+            // Serial.println("Bottom Right");
             br = largest;
             right = true;
         }
     }
 
+    // TODO: update this code so we can have both right and left pressed at the same time. Probably requires modifying the code above this so i can have more than one pressed register at a time. maybe do the joystick calculation above where we do joystick = top - buttom ????
     balanceBoardCode(ctl, tl, tr, bl, br, right);
+    balanceBoardCode(ctl, 0, 0, 0, 0, !right); // other side is not being pressed, reset it. Later we can separate the right and left more to make it so you can press both right and left at the same time
 
     // See "dumpBalanceBoard" for possible things to query.
-    dumpBalanceBoard(ctl);
+    // dumpBalanceBoard(ctl);
 }
 
 void processControllers()
