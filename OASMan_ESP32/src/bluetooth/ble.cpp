@@ -256,7 +256,7 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
                 }
                 packetMover::sendRestPacket(ap, con_handle);
                 //  memcpy(rest_characteristic_data, ap->tx(), BTOAS_PACKET_SIZE);
-                //  att_server_notify(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
+                //  att_server_notify_SAFE(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
             }
         }
         return 0;
@@ -450,6 +450,15 @@ void ble_loop()
     ble_notify();
 }
 
+uint8_t att_server_notify_SAFE(hci_con_handle_t con_handle, uint16_t attribute_handle, const uint8_t *value, uint16_t value_len)
+{
+    // while (!att_server_can_send_packet_now(con_handle))
+    // {
+    //     delay(1);
+    // }
+    att_server_notify(con_handle, attribute_handle, value, value_len);
+}
+
 extern uint8_t AIReadyBittset; // 4
 extern uint8_t AIPercentage;   // 7
 
@@ -464,7 +473,7 @@ void ble_notify()
         delay(40); // This feels really shitty but it wants some delay here in-between packets or it won't send. So there is various delay's throught this file
         packet.dump();
         memcpy(rest_characteristic_data, packet.tx(), BTOAS_PACKET_SIZE);
-        att_server_notify(rest_con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
+        att_server_notify_SAFE(rest_con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
         Serial.println("Sent rest packet!");
         delay(40);
     }
@@ -532,7 +541,7 @@ void ble_notify()
 
         for (hci_con_handle_t handle : authedClients)
         {
-            att_server_notify(handle, status_characteristic_value_handle, status_characteristic_data, BTOAS_PACKET_SIZE);
+            att_server_notify_SAFE(handle, status_characteristic_value_handle, status_characteristic_data, BTOAS_PACKET_SIZE);
             delay(10); // need a delay here or it only sends it to 1 client
         }
     }
@@ -645,7 +654,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         presetPacket.dump();
 
         // memcpy(rest_characteristic_data, presetPacket.tx(), BTOAS_PACKET_SIZE);
-        // att_server_notify(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
+        // att_server_notify_SAFE(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
         break;
     }
     case BTOasIdentifier::MAINTAINPRESSURE:
@@ -673,7 +682,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage());
         packetMover::sendRestPacket(&pkt, con_handle);
         //  memcpy(rest_characteristic_data, pkt.tx(), BTOAS_PACKET_SIZE);
-        //  att_server_notify(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
+        //  att_server_notify_SAFE(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
         break;
     }
     case BTOasIdentifier::AUTHPACKET:
