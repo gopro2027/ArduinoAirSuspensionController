@@ -709,6 +709,7 @@ void processGamepad(ControllerPtr ctl)
 //     dumpKeyboard(ctl);
 // }
 
+#ifdef djkfgbhvdjkfhvguidesrhgvuidr_oldbalanceboardcode
 void balanceBoardCode(ControllerPtr ctl, uint16_t tl, uint16_t tr, uint16_t bl, uint16_t br, bool right = false)
 {
 
@@ -791,6 +792,77 @@ void processBalanceBoard(ControllerPtr ctl)
     // dumpBalanceBoard(ctl);
 }
 
+#endif
+
+void processBalanceBoardRight(ControllerPtr ctl)
+{
+    uint16_t tr = 0, br = 0;
+
+    uint16_t largest = 0;
+    if (ctl->topRight() > largest)
+        largest = ctl->topRight();
+    if (ctl->bottomRight() > largest)
+        largest = ctl->bottomRight();
+
+    const int threshold = 10000;
+
+    if (largest > threshold)
+    {
+        if (largest == ctl->topRight())
+        {
+            tr = largest;
+        }
+        else if (largest == ctl->bottomRight())
+        {
+            br = largest;
+        }
+    }
+
+    int32_t joystickVal = (int32_t)tr - (int32_t)br;
+
+    OASMANJoystickState *thisJoystickState = &oasmanJoystickState[ctl->index()];
+
+    // up
+    runJoystickInput(&thisJoystickState->rup, getWheel(WHEEL_REAR_DRIVER)->getInSolenoid(), getWheel(WHEEL_REAR_PASSENGER)->getInSolenoid(), joystickVal >= threshold);
+
+    // down
+    runJoystickInput(&thisJoystickState->rdown, getWheel(WHEEL_REAR_DRIVER)->getOutSolenoid(), getWheel(WHEEL_REAR_PASSENGER)->getOutSolenoid(), joystickVal <= -threshold);
+}
+void processBalanceBoardLeft(ControllerPtr ctl)
+{
+    uint16_t tl = 0, bl = 0;
+
+    uint16_t largest = 0;
+    if (ctl->topLeft() > largest)
+        largest = ctl->topLeft();
+    if (ctl->bottomLeft() > largest)
+        largest = ctl->bottomLeft();
+
+    const int threshold = 10000;
+
+    if (largest > threshold)
+    {
+        if (largest == ctl->topLeft())
+        {
+            tl = largest;
+        }
+        else if (largest == ctl->bottomLeft())
+        {
+            bl = largest;
+        }
+    }
+
+    int32_t joystickVal = (int32_t)tl - (int32_t)bl;
+
+    OASMANJoystickState *thisJoystickState = &oasmanJoystickState[ctl->index()];
+
+    // up
+    runJoystickInput(&thisJoystickState->up, getWheel(WHEEL_FRONT_DRIVER)->getInSolenoid(), getWheel(WHEEL_FRONT_PASSENGER)->getInSolenoid(), joystickVal >= threshold);
+
+    // down
+    runJoystickInput(&thisJoystickState->down, getWheel(WHEEL_FRONT_DRIVER)->getOutSolenoid(), getWheel(WHEEL_FRONT_PASSENGER)->getOutSolenoid(), joystickVal <= -threshold);
+}
+
 void processControllers()
 {
     for (auto myController : myControllers)
@@ -811,7 +883,9 @@ void processControllers()
             // }
             else if (myController->isBalanceBoard())
             {
-                processBalanceBoard(myController);
+                processBalanceBoardLeft(myController);
+                processBalanceBoardRight(myController);
+                getManifold()->debugOut();
             }
             else
             {
