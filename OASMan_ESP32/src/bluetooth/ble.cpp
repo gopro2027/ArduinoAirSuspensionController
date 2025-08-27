@@ -129,6 +129,7 @@ void addAuthed(hci_con_handle_t conn_id)
 struct ClientTime
 {
     uint16_t conn_id;
+    bd_addr_t addr;
     unsigned long connectTime;
 };
 std::vector<ClientTime> connectedClientTimer;
@@ -152,7 +153,15 @@ void checkConnectedClients()
             {
                 // not authed, go ahead and disconnect
                 log_i("Client auth timed out... disconnecting: %i", (*iter).conn_id);
-                gap_disconnect((*iter).conn_id);
+
+                if (!isBTDeviceARegisteredController((*iter).addr))
+                {
+                    gap_disconnect((*iter).conn_id);
+                }
+                else
+                {
+                    log_i("Client is a registered controller, not disconnecting: %s", bd_addr_to_str((*iter).addr));
+                }
             }
             // remove
             iter = connectedClientTimer.erase(iter);
@@ -326,6 +335,10 @@ static void handle_connection_complete(uint8_t *packet)
     hci_con_handle_t handle = hci_subevent_le_connection_complete_get_connection_handle(packet);
     uint8_t status = hci_subevent_le_connection_complete_get_status(packet);
 
+    bd_addr_t addr;
+    hci_subevent_le_connection_complete_get_peer_address(packet, addr);
+    printf("Connected to device with MAC: %s\n", bd_addr_to_str(addr));
+
     if (status != ERROR_CODE_SUCCESS)
     {
         printf("Connection failed with status 0x%02x\n", status);
@@ -339,7 +352,12 @@ static void handle_connection_complete(uint8_t *packet)
     // memcpy(rest_characteristic_data, arp.tx(), BTOAS_PACKET_SIZE);
     currentUserNum++;
 
-    addConnectedClient({handle, millis()});
+    ClientTime ct = {};
+    ct.conn_id = handle;
+    ct.connectTime = millis();
+    memcpy(ct.addr, addr, sizeof(bd_addr_t));
+
+    addConnectedClient(ct);
 
     gap_advertisements_enable(1);
 

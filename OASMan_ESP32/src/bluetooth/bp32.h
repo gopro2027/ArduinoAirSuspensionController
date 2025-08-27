@@ -17,4 +17,5 @@ void bp32_forgetDevices();
 void bp32_setAllowNewConnections(bool allow);
 void loadAllowedBluetoothDevices();
 bool checkAndAllowBluetoothDevice(const uint8_t *addr);
+bool isBTDeviceARegisteredController(const uint8_t *addr);
 #endif

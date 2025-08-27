@@ -890,6 +890,7 @@ void processControllers()
             else
             {
                 Serial.printf("Unsupported controller\n");
+                dumpGamepad(myController);
             }
         }
     }
@@ -998,6 +999,18 @@ void addAllowedBluetoothDevice(const uint8_t *addr)
     {
         Serial.println("BP32: No space left to add new Bluetooth device.");
     }
+}
+
+bool isBTDeviceARegisteredController(const uint8_t *addr)
+{
+    for (int i = 0; i < MAX_ALLOWED_BLUETOOTH_DEVICES; i++)
+    {
+        if (memcmp(allowedBluetoothDevices[i].addr, addr, 6) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool areNewConnectionsAllowed = false;
