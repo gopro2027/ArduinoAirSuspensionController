@@ -67,7 +67,7 @@ void ScrSettings::init()
     new Option(this->optionsContainer, OptionType::HEADER, "Game Controller");
 
     new Option(this->optionsContainer, OptionType::BUTTON, "Allow New Controller", defaultCharVal, [](void *data)
-               { currentScr->showMsgBox("Confirm?", "After clicking this, you will be able to pair a new game controller with your OASMan system. After pairing, you will have to click this button again to pair another device.\nMax saved devices is 20", "Confirm", "Cancel", []() -> void
+               { currentScr->showMsgBox("Confirm?", "After clicking this, OASMan will become pairable and the next controller to try to pair with OASMan will be allowed to pair and remembered by OASMan.\nMax saved devices is 20", "Confirm", "Cancel", []() -> void
                                         {
                                             BP32Packet pkt(BP32CMD::BP32CMD_ENABLE_NEW_CONN, true);
                                             sendRestPacket(&pkt);
@@ -79,6 +79,13 @@ void ScrSettings::init()
                                             BP32Packet pkt(BP32CMD::BP32CMD_FORGET_DEVICES, NULL);
                                             sendRestPacket(&pkt);
                                             showDialog("Controllers forgotten!", lv_color_hex(0xFFFF00)); }, []() -> void {}, false); });
+
+    new Option(this->optionsContainer, OptionType::BUTTON, "Disconnect Controllers", defaultCharVal, [](void *data)
+               { currentScr->showMsgBox("Confirm?", "Some devices may be difficult to disconnect on their own, this will disconnect them for you. Hint: Pressing the 'system' button on supporting controllers will disconnect them.", "Confirm", "Cancel", []() -> void
+                                        {
+                                            BP32Packet pkt(BP32CMD::BP32CMD_DISCONNECT_DEVICES, NULL);
+                                            sendRestPacket(&pkt);
+                                            showDialog("Controllers disconnected!", lv_color_hex(0xFFFF00)); }, []() -> void {}, false); });
 
     new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "ML/AI");

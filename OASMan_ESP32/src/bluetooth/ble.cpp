@@ -723,6 +723,10 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             Serial.println("Forgetting controllers!");
             bp32_forgetDevices();
             break;
+        case BP32CMD::BP32CMD_DISCONNECT_DEVICES:
+            Serial.println("disconnecting controllers!");
+            bp32_disconnectControllers();
+            break;
         }
     }
     break;

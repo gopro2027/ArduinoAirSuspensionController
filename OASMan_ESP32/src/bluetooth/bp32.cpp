@@ -1035,6 +1035,17 @@ bool checkAndAllowBluetoothDevice(const uint8_t *addr)
     return false;
 }
 
+void bp32_disconnectControllers()
+{
+    for (auto myController : myControllers)
+    {
+        if (myController && myController->isConnected())
+        {
+            myController->disconnect();
+        }
+    }
+}
+
 void bp32_forgetDevices()
 {
     Serial.println("Forgetting Bluetooth keys...");
@@ -1042,13 +1053,7 @@ void bp32_forgetDevices()
     clearAllowedBluetoothDevices(); // delete our saved file of bt macs
 
     // disconnect all currently connected controllers
-    for (auto myController : myControllers)
-    {
-        if (myController)
-        {
-            myController->disconnect();
-        }
-    }
+    bp32_disconnectControllers();
 }
 
 void bp32_setAllowNewConnections(bool allow)
