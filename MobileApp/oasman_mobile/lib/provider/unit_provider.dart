@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import '../models/appSettings.dart';
 
 class UnitProvider extends ChangeNotifier {
-  String _unit = 'Psi'; // Default unit
 
+
+  String _unit = globalSettings!.units;
+  
   String get unit => _unit;
 
   // Convert pressure to Bar if needed

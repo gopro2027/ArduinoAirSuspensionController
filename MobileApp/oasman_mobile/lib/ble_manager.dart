@@ -1,12 +1,11 @@
 import 'dart:async';
-import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:oasman_mobile/bluetooth.dart';
 import 'package:oasman_mobile/pages/popup/invalidkey.dart';
 import 'package:permission_handler/permission_handler.dart';
 import "dart:typed_data";
+import 'models/appSettings.dart';
 
 class BLEByte {
   BLEByte(this.value);
@@ -41,6 +40,7 @@ class BLEInt {
   int toInt() => value;
 }
 
+
 class BLEManager extends ChangeNotifier {
   final FlutterBluePlus flutterBlue = FlutterBluePlus(); // BLE instance
   BluetoothDevice? connectedDevice; // Currently connected device
@@ -54,7 +54,9 @@ class BLEManager extends ChangeNotifier {
   StreamSubscription<List<int>>? statusStream;
 
   List<BluetoothDevice> devicesList = []; // List of discovered devices
-  int passkey = 202777;
+
+  int passkey = int.parse(globalSettings!.passkeyText);
+  
 
   Map<String, String> pressureValues = {
     "frontLeft": "-",
@@ -63,6 +65,10 @@ class BLEManager extends ChangeNotifier {
     "rearRight": "-",
     "tankPressure": "-",
   };
+
+  bool compressorOn = false;
+  bool compressorFrozen = false;
+
 
   int valveControlValue = 0; // uint32
   int getValveControlValue() {
@@ -318,6 +324,45 @@ class BLEManager extends ChangeNotifier {
     }
   }
 
+void handleStatusBittset(List<int> statusBytes) {
+  if (statusBytes.length != 4) {
+    throw ArgumentError('StatusBittset must be exactly 4 bytes long');
+  }
+
+  // Convert bytes to Uint32 (little endian to match C++)
+  final byteData = ByteData.sublistView(Uint8List.fromList(statusBytes));
+  final statusBittset = byteData.getUint32(0, Endian.little);
+
+  print("Raw statusBittset: $statusBittset");
+
+  // Decode individual flags
+  compressorFrozen    = (statusBittset & (1 << 0)) != 0;
+  compressorOn        = (statusBittset & (1 << 1)) != 0;
+  final vehicleOn           = (statusBittset & (1 << 2)) != 0;
+  final timerExpired        = (statusBittset & (1 << 3)) != 0;
+  final clock               = (statusBittset & (1 << 4)) != 0;
+  final riseOnStart         = (statusBittset & (1 << 5)) != 0;
+  final maintainPressure    = (statusBittset & (1 << 6)) != 0;
+  final airOutOnShutoff     = (statusBittset & (1 << 7)) != 0;
+  final heightSensorMode    = (statusBittset & (1 << 8)) != 0;
+  final safetyMode          = (statusBittset & (1 << 9)) != 0;
+  final aiStatusEnabled     = (statusBittset & (1 << 10)) != 0;
+
+  print("""
+  Compressor Frozen: $compressorFrozen
+  Compressor On: $compressorOn
+  Vehicle On: $vehicleOn
+  Timer Expired: $timerExpired
+  Clock: $clock
+  Rise on Start: $riseOnStart
+  Maintain Pressure: $maintainPressure
+  Air out on Shutoff: $airOutOnShutoff
+  Height Sensor Mode: $heightSensorMode
+  Safety Mode: $safetyMode
+  AI Enabled: $aiStatusEnabled
+  """);
+}
+
   void _handleIncomingData(List<int> data) {
     try {
       if (data.length >= 16) {
@@ -329,6 +374,9 @@ class BLEManager extends ChangeNotifier {
           _decodeShort(data, 10),
         ];
         final tankPressure = _decodeShort(data, 12);
+
+        final statusBittset =  data.sublist(13, 17);
+        handleStatusBittset(statusBittset);
 
         pressureValues = {
           "frontLeft": wheelPressures[2].toString(),
