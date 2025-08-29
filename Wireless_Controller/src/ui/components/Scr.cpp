@@ -13,38 +13,32 @@ void Scr::init()
     this->scr = lv_obj_create(NULL);
     lv_obj_remove_flag(this->scr, LV_OBJ_FLAG_SCROLLABLE);
 
-    // NEW: stretch the root to the current display resolution
+    // Always fill the screen regardless of the panel resolution
     lv_obj_set_size(this->scr, LV_PCT(100), LV_PCT(100));
 
     this->mb_dialog = NULL;
     this->deleteMessageBoxNextFrame = false;
 
-    // background color
+    // Background fills the whole screen too
     this->rect_bg = lv_obj_create(this->scr);
     lv_obj_remove_style_all(this->rect_bg);
-
-    // OLD (fix): lv_obj_set_size(this->rect_bg, 320, 480);
-    // Make it fill the screen, regardless of resolution
     lv_obj_set_size(this->rect_bg, LV_PCT(100), LV_PCT(100));
     lv_obj_set_align(this->rect_bg, LV_ALIGN_TOP_MID);
-    lv_obj_get_style_border_width(this->rect_bg, 0);
-    lv_obj_set_style_bg_color(this->rect_bg, lv_color_hex(GENERIC_GREY_DARK), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(this->rect_bg, lv_color_hex(GENERIC_GREY_DARK), 0);
+    lv_obj_set_style_bg_opa(this->rect_bg, LV_OPA_COVER, 0);
     lv_obj_remove_flag(this->rect_bg, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE));
-    lv_obj_set_style_bg_opa(this->rect_bg, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    // navbar image
+    // Navbar image docked to bottom; span width so it anchors visually on 240x320 and 320x480
     this->icon_navbar = lv_image_create(this->scr);
     lv_image_set_src(this->icon_navbar, &this->navbarImage);
     lv_obj_set_align(this->icon_navbar, LV_ALIGN_BOTTOM_MID);
-
-    // Optional: if your navbar art is a fixed height, make it span width
-    // lv_obj_set_width(this->icon_navbar, LV_PCT(100));
+    lv_obj_set_width(this->icon_navbar, LV_PCT(100));   // <-- key line
 
     this->alert = new Alert(this);
 
     if (this->showPressures)
     {
-        const int xPadding = 72;
+        const int xPadding = 72; // these are fine because we align TOP_MID
         setupPressureLabel(this->scr, &this->ui_lblPressureFrontDriver,    -xPadding, 10, LV_ALIGN_TOP_MID, "0");
         setupPressureLabel(this->scr, &this->ui_lblPressureRearDriver,     -xPadding, 40, LV_ALIGN_TOP_MID, "0");
         setupPressureLabel(this->scr, &this->ui_lblPressureFrontPassenger,  xPadding, 10, LV_ALIGN_TOP_MID, "0");
@@ -52,6 +46,7 @@ void Scr::init()
         setupPressureLabel(this->scr, &this->ui_lblPressureTank,                0,   10, LV_ALIGN_TOP_MID, "0");
     }
 }
+
 
 
 // down = true when just pressed, false when just released
