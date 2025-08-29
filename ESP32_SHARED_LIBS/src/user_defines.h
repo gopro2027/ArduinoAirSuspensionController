@@ -3,7 +3,7 @@
 
 #define SERIAL_BAUD_RATE 115200
 
-#define BT_NAME "OASMan"
+#define BT_NAME "OASman"
 
 #define MAX_PRESSURE_SAFETY 200
 
@@ -15,7 +15,7 @@
 #define AIR_OUT_PRESSURE_PSI 30
 
 /* Set to false if you don't plan to ever use the PS3 controller. MAC address can be left alone. Instructions for controller at https://github.com/gopro2027/ArduinoAirSuspensionController/tree/main/PS3_Controller_Tool */
-#define ENABLE_PS3_CONTROLLER_SUPPORT true
+#define ENABLE_PS3_CONTROLLER_SUPPORT false
 
 /* This is the private passcode you need to access your system from the app. Set the same value in the app settings after launching the app. */
 /* This is legacy bt, and ota but ota is only enabled when chosen so we can leave it as is */
@@ -26,10 +26,10 @@
 #define BLE_PASSKEY 202777
 
 /* turns on/off some test features for debug use. Best left false */
-#define TEST_MODE false
+#define TEST_MODE true
 
 /* LCD screen definitions */
-#define SCREEN_ENABLED true
+#define SCREEN_ENABLED false
 #define SCREEN_WIDTH 128    // OLED display width, in pixels
 #define SCREEN_HEIGHT 64    // OLED display height, in pixels
 #define OLED_RESET -1       // Reset pin # (or -1 if sharing Arduino reset pin)
@@ -85,7 +85,7 @@
 
 // These will not be exact depending on how accurate your pressure sensors are.
 // For example: Mine will read 220psi when the actual pressure is 180psi
-#define COMPRESSOR_ON_BELOW_PSI 140
+#define COMPRESSOR_ON_BELOW_PSI 120
 #define COMPRESSOR_MAX_PSI 180
 
 /* Level sensor pins */
@@ -164,7 +164,8 @@ enum SOLENOID_AI_INDEX
 
 // platformio.ini toggleables
 
-#if defined(OFFICIAL_RELEASE)
+
+#if TEST_MODE == false
 #define ADS_MOCK_BYPASS false
 #define TANK_PRESSURE_MOCK false
 #endif

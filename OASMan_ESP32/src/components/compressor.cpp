@@ -98,11 +98,12 @@ void Compressor::loop()
     // COMPRESSOR CONTROL LOGIC:
 
     // Is safety mode is on, we aren't sure the compressor wire is correct, so disable compressor output
-    if (getsafetyMode() == true)
-    {
-        this->s_trigger.close();
-        return;
-    }
+    //if (getsafetyMode() == true)
+    //{
+    //    Serial.println("1Compressor: OFF");
+    //    this->s_trigger.close();
+    //   return;
+    //}
 
     // no matter which state compressor is in, check if it is up to max psi and turn it off if needed and return without any further execution. This is most important tank check and should ideally be ran first to turn off in any case where pressure is too high.
     if (this->getTankPressure() >= getcompressorOffPSI())
@@ -151,10 +152,11 @@ void Compressor::loop()
     // run the actual compressor routine...
 
     // if compressor off, check if tank psi is below low psi and turn on if needed
-    if (!this->s_trigger.isOpen())
+    if (!this->s_trigger.isOpen() && isVehicleOn())
     {
         if (this->getTankPressure() < getcompressorOnPSI())
         {
+            Serial.println("Compressor: ON");
             this->s_trigger.open();
         }
     }

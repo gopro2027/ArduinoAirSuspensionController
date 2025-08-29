@@ -39,11 +39,13 @@ void task_bluetooth(void *parameters)
 bool do_dance = false;
 void easterEggFunc()
 {
+#if ENABLE_PS3_CONTROLLER_SUPPORT
     if (do_dance)
     {
         do_dance = false;
         doDance();
     }
+#endif
 }
 #if SCREEN_ENABLED == true
 void task_screen(void *parameters)

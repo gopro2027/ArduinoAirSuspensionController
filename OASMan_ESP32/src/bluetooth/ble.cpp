@@ -127,7 +127,7 @@ class CharacteristicCallback : public BLECharacteristicCallbacks
 {
     void onWrite(BLECharacteristic *pChar, esp_ble_gatts_cb_param_t *param) override
     {
-
+        notifyKeepAlive();
         static unsigned int valveTableValues = 0;
         if (pChar->getUUID().toString() == charUUID_Rest.toString())
         {
@@ -218,9 +218,9 @@ void ble_setup()
 {
 
     BLEDevice::setMTU(ESP_GATT_MAX_MTU_SIZE);
-
+    
     // Create the BLE Device
-    BLEDevice::init("OASMan");
+    BLEDevice::init(getbleName().c_str());
 
     // Create the BLE Server
     pServer = BLEDevice::createServer();
@@ -261,6 +261,7 @@ void ble_loop()
 
     checkConnectedClients();
     ble_notify();
+
 }
 
 void ble_create_characteristics(BLEService *pService)
