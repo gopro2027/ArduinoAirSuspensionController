@@ -1,4 +1,5 @@
 #include "directdownload.h"
+#include <WiFiClientSecure.h>
 
 void downloadUpdate(String SSID, String PASS)
 {

@@ -1,14 +1,96 @@
 #include "util.h"
-int sr_contains(SimpleRect r, SimplePoint p)
-{
-    return p.x >= r.x && p.y >= r.y && p.x < r.x + r.w && p.y < r.y + r.h;
+
+
+
+
+
+
+
+
+// ----- reference layout space your rects were authored in -----
+#ifndef REF_W
+  #define REF_W 240
+#endif
+#ifndef REF_H
+  #define REF_H 320
+#endif
+
+// Current display resolution (provided by your board JSON / build flags).
+#ifndef DISPLAY_WIDTH
+  #define DISPLAY_WIDTH  320
+#endif
+#ifndef DISPLAY_HEIGHT
+  #define DISPLAY_HEIGHT 480
+#endif
+
+// The UI was authored in 240x320 coordinates
+static constexpr int REF_W = 240;
+static constexpr int REF_H = 320;
+
+static inline int sx(int v) { return (v * DISPLAY_WIDTH  + REF_W/2) / REF_W; }
+static inline int sy(int v) { return (v * DISPLAY_HEIGHT + REF_H/2) / REF_H; }
+static inline int sw(int v) { return (v * DISPLAY_WIDTH  + REF_W/2) / REF_W; }
+static inline int sh(int v) { return (v * DISPLAY_HEIGHT + REF_H/2) / REF_H; }
+
+static inline SimplePoint to_ref(SimplePoint p_disp) {
+  SimplePoint q;
+  q.x = (p_disp.x * REF_W  + DISPLAY_WIDTH/2)  / DISPLAY_WIDTH;   // rounded
+  q.y = (p_disp.y * REF_H  + DISPLAY_HEIGHT/2) / DISPLAY_HEIGHT;  // rounded
+  return q;
 }
 
-int cr_contains(CenterRect cr, SimplePoint p)
+
+// Map a display-space point (320x480) into the old 240x320 reference space
+static inline SimplePoint to_ref(SimplePoint p_disp)
 {
-    SimpleRect sr = {cr.cx - (cr.w / 2), cr.cy - (cr.h / 2), cr.w, cr.h};
-    return sr_contains(sr, p);
+  SimplePoint q;
+  // integer scaling with rounding
+  q.x = (int32_t)p_disp.x * REF_W  / DISPLAY_WIDTH;
+  q.y = (int32_t)p_disp.y * REF_H  / DISPLAY_HEIGHT;
+  return q;
 }
+
+static inline int contains_raw(SimpleRect r, SimplePoint p_ref)
+{
+  return p_ref.x >= r.x && p_ref.y >= r.y &&
+         p_ref.x <  r.x + r.w && p_ref.y <  r.y + r.h;
+}
+
+// Replace your originals with these:
+int sr_contains(SimpleRect r, SimplePoint p_disp)
+{
+  SimplePoint p_ref = to_ref(p_disp);
+  return contains_raw(r, p_ref);
+}
+
+int cr_contains(CenterRect cr, SimplePoint p_disp)
+{
+  SimplePoint p_ref = to_ref(p_disp);
+  SimpleRect r = { cr.cx - (cr.w/2), cr.cy - (cr.h/2), cr.w, cr.h };
+  return contains_raw(r, p_ref);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+// int sr_contains(SimpleRect r, SimplePoint p)
+// {
+//     return p.x >= r.x && p.y >= r.y && p.x < r.x + r.w && p.y < r.y + r.h;
+// }
+
+// int cr_contains(CenterRect cr, SimplePoint p)
+// {
+//     SimpleRect sr = {cr.cx - (cr.w / 2), cr.cy - (cr.h / 2), cr.w, cr.h};
+//     return sr_contains(sr, p);
+// }
 
 // first column (left)
 CenterRect ctr_row0col0up = {48, 89, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};

@@ -13,24 +13,16 @@
 class Scr;
 class Option;
 
-struct SimplePoint
-{
-    double x, y;
-};
-
-struct SimpleRect
-{
-    double x, y, w, h;
-};
-
-struct CenterRect
-{
-    double cx, cy, w, h;
-};
+struct SimplePoint { double x, y; };
+struct SimpleRect  { double x, y, w, h; };
+struct CenterRect  { double cx, cy, w, h; };
 
 int sr_contains(SimpleRect r, SimplePoint p);
-
 int cr_contains(CenterRect cr, SimplePoint p);
+
+// NEW: drawing-time scaling helpers
+CenterRect scaleCR(const CenterRect &c);
+SimpleRect  scaleSR(const SimpleRect  &r);
 
 #define ARROW_BUTTON_WIDTH 54
 #define ARROW_BUTTON_HEIGHT 44

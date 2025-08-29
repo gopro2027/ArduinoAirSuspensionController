@@ -83,25 +83,27 @@ void drawPill(lv_obj_t *parent, CenterRect up, CenterRect down)
 
 void ScrHome::init(void)
 {
-    Scr::init();
+  Scr::init();
 
-    drawPill(this->scr, ctr_row0col0up, ctr_row0col0down);
-    drawPill(this->scr, ctr_row1col0up, ctr_row1col0down);
+  drawPill(this->scr, scaleCR(ctr_row0col0up), scaleCR(ctr_row0col0down));
+  drawPill(this->scr, scaleCR(ctr_row1col0up), scaleCR(ctr_row1col0down));
 
-    drawPill(this->scr, ctr_row0col1up, ctr_row0col1down);
-    drawPill(this->scr, ctr_row1col1up, ctr_row1col1down);
+  drawPill(this->scr, scaleCR(ctr_row0col1up), scaleCR(ctr_row0col1down));
+  drawPill(this->scr, scaleCR(ctr_row1col1up), scaleCR(ctr_row1col1down));
 
-    drawPill(this->scr, ctr_row0col2up, ctr_row0col2down);
-    drawPill(this->scr, ctr_row1col2up, ctr_row1col2down);
+  drawPill(this->scr, scaleCR(ctr_row0col2up), scaleCR(ctr_row0col2down));
+  drawPill(this->scr, scaleCR(ctr_row1col2up), scaleCR(ctr_row1col2down));
 
-    lv_obj_move_foreground(this->icon_navbar);                  // bring navbar to foreground
-    lv_obj_move_foreground(this->ui_lblPressureFrontPassenger); // pressures to foreground front
-    lv_obj_move_foreground(this->ui_lblPressureRearPassenger);  // pressures to foreground front
-    lv_obj_move_foreground(this->ui_lblPressureFrontDriver);    // pressures to foreground front
-    lv_obj_move_foreground(this->ui_lblPressureRearDriver);     // pressures to foreground front
-    lv_obj_move_foreground(this->ui_lblPressureTank);           // pressures to foreground front
+  // if you draw navbar/preset rectangles anywhere, pass scaleSR(...)
+  // e.g. drawRect(this->scr, scaleSR(navbarbtn_home));
+
+  lv_obj_move_foreground(this->icon_navbar);
+  lv_obj_move_foreground(this->ui_lblPressureFrontPassenger);
+  lv_obj_move_foreground(this->ui_lblPressureRearPassenger);
+  lv_obj_move_foreground(this->ui_lblPressureFrontDriver);
+  lv_obj_move_foreground(this->ui_lblPressureRearDriver);
+  lv_obj_move_foreground(this->ui_lblPressureTank);
 }
-
 // down = true when just pressed, false when just released
 void ScrHome::runTouchInput(SimplePoint pos, bool down)
 {
@@ -117,26 +119,20 @@ void ScrHome::runTouchInput(SimplePoint pos, bool down)
     else
     {
         // driver side
-        bool _FRONT_DRIVER_IN = cr_contains(ctr_row0col0up, pos);
-        bool _FRONT_DRIVER_OUT = cr_contains(ctr_row0col0down, pos);
+        bool _FRONT_DRIVER_IN    = cr_contains_scaled(ctr_row0col0up,   pos);
+        bool _FRONT_DRIVER_OUT   = cr_contains_scaled(ctr_row0col0down, pos);
+        bool _REAR_DRIVER_IN     = cr_contains_scaled(ctr_row1col0up,   pos);
+        bool _REAR_DRIVER_OUT    = cr_contains_scaled(ctr_row1col0down, pos);
 
-        bool _REAR_DRIVER_IN = cr_contains(ctr_row1col0up, pos);
-        bool _REAR_DRIVER_OUT = cr_contains(ctr_row1col0down, pos);
+        bool _FRONT_PASSENGER_IN  = cr_contains_scaled(ctr_row0col2up,   pos);
+        bool _FRONT_PASSENGER_OUT = cr_contains_scaled(ctr_row0col2down, pos);
+        bool _REAR_PASSENGER_IN   = cr_contains_scaled(ctr_row1col2up,   pos);
+        bool _REAR_PASSENGER_OUT  = cr_contains_scaled(ctr_row1col2down, pos);
 
-        // passenger side
-        bool _FRONT_PASSENGER_IN = cr_contains(ctr_row0col2up, pos);
-        bool _FRONT_PASSENGER_OUT = cr_contains(ctr_row0col2down, pos);
-
-        bool _REAR_PASSENGER_IN = cr_contains(ctr_row1col2up, pos);
-        bool _REAR_PASSENGER_OUT = cr_contains(ctr_row1col2down, pos);
-
-        // axles
-        bool _FRONT_AXLE_IN = cr_contains(ctr_row0col1up, pos);
-        bool _FRONT_AXLE_OUT = cr_contains(ctr_row0col1down, pos);
-
-        bool _REAR_AXLE_IN = cr_contains(ctr_row1col1up, pos);
-        bool _REAR_AXLE_OUT = cr_contains(ctr_row1col1down, pos);
-
+        bool _FRONT_AXLE_IN   = cr_contains_scaled(ctr_row0col1up,   pos);
+        bool _FRONT_AXLE_OUT  = cr_contains_scaled(ctr_row0col1down, pos);
+        bool _REAR_AXLE_IN    = cr_contains_scaled(ctr_row1col1up,   pos);
+        bool _REAR_AXLE_OUT   = cr_contains_scaled(ctr_row1col1down, pos);
         // driver side
         if (_FRONT_DRIVER_IN)
         {
