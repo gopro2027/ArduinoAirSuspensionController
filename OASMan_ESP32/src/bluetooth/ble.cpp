@@ -470,11 +470,12 @@ void ble_loop()
 
 uint8_t att_server_notify_SAFE(hci_con_handle_t con_handle, uint16_t attribute_handle, const uint8_t *value, uint16_t value_len)
 {
-    // while (!att_server_can_send_packet_now(con_handle))
-    // {
-    //     delay(1);
-    // }
-    att_server_notify(con_handle, attribute_handle, value, value_len);
+
+    while (!att_server_can_send_packet_now(con_handle))
+    {
+        delay(1);
+    }
+    return att_server_notify(con_handle, attribute_handle, value, value_len);
 }
 
 extern uint8_t AIReadyBittset; // 4
