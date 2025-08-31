@@ -570,6 +570,127 @@ void joystickLoop(ControllerPtr ctl)
 
 #pragma endregion
 
+void loadProfileAirUpQuick(int profileIndex)
+{
+    if (profileIndex > MAX_PROFILE_COUNT)
+    {
+        return;
+    }
+    // load profile then air up
+    readProfile(profileIndex);
+    airUp(true);
+}
+
+uint8_t konamiIndex = 0;
+uint8_t konamiCompletions = 0;
+struct konamiInput
+{
+    int type;
+    int bit;
+};
+
+// 0 is ctl->dpad()
+// 1 is ctl->buttons()
+konamiInput konamiCode[] = {
+    {0, DPAD_UP},
+    {0, DPAD_UP},
+    {0, DPAD_DOWN},
+    {0, DPAD_DOWN},
+    {0, DPAD_LEFT},
+    {0, DPAD_RIGHT},
+    {0, DPAD_LEFT},
+    {0, DPAD_RIGHT},
+    {1, BUTTON_B},
+    {1, BUTTON_A}};
+
+void driverUpPassDown(int ms)
+{
+    // driver goes up, passenger goes down
+    Serial.println("Driver up passenger down");
+    getWheel(WHEEL_FRONT_DRIVER)->getInSolenoid()->open();
+    getWheel(WHEEL_REAR_DRIVER)->getInSolenoid()->open();
+    getWheel(WHEEL_FRONT_PASSENGER)->getOutSolenoid()->open();
+    getWheel(WHEEL_REAR_PASSENGER)->getOutSolenoid()->open();
+    delay(ms);
+    getWheel(WHEEL_FRONT_DRIVER)->getInSolenoid()->close();
+    getWheel(WHEEL_REAR_DRIVER)->getInSolenoid()->close();
+    getWheel(WHEEL_FRONT_PASSENGER)->getOutSolenoid()->close();
+    getWheel(WHEEL_REAR_PASSENGER)->getOutSolenoid()->close();
+}
+void passUpDriverDown(int ms)
+{
+    // passenger goes up, driver goes down
+    Serial.println("Passenger up driver down");
+    getWheel(WHEEL_FRONT_DRIVER)->getOutSolenoid()->open();
+    getWheel(WHEEL_REAR_DRIVER)->getOutSolenoid()->open();
+    getWheel(WHEEL_FRONT_PASSENGER)->getInSolenoid()->open();
+    getWheel(WHEEL_REAR_PASSENGER)->getInSolenoid()->open();
+    delay(ms);
+    getWheel(WHEEL_FRONT_DRIVER)->getOutSolenoid()->close();
+    getWheel(WHEEL_REAR_DRIVER)->getOutSolenoid()->close();
+    getWheel(WHEEL_FRONT_PASSENGER)->getInSolenoid()->close();
+    getWheel(WHEEL_REAR_PASSENGER)->getInSolenoid()->close();
+}
+void doDance()
+{
+    Serial.println("Doing dance sequence!");
+    int timing = 600;
+    // initialize by dropping for half the time of one side
+    passUpDriverDown(timing / 2);
+    for (int i = 0; i < 5; i++)
+    {
+        driverUpPassDown(timing);
+        passUpDriverDown(timing);
+    }
+
+    Serial.println("Loading profile 2");
+    // TODO: make base profile work (look in other spots in app for this)
+    // go to the 2nd profile since that is default right now for ride height.
+    loadProfileAirUpQuick(2);
+}
+
+void updateKonami(ControllerPtr ctl)
+{
+    if ((konamiCode[konamiIndex].type == 1 ? ctl->buttons() : ctl->dpad()) & konamiCode[konamiIndex].bit)
+    {
+
+        konamiIndex++;
+        Serial.print("Konami progress update: ");
+        Serial.println(konamiIndex);
+        if (konamiIndex == (sizeof(konamiCode) / sizeof(*konamiCode)))
+        {
+            Serial.println("Konami code complete!");
+            konamiCompletions++;
+            ctl->playDualRumble(0 /* delayedStartMs */, 5000 /* durationMs */, 0x80 /* weakMagnitude */,
+                                0x40 /* strongMagnitude */);
+            konamiIndex = 0;
+            if (konamiCompletions > 1)
+            {
+                do_dance = true;
+            }
+        }
+    }
+    else
+    {
+        if (konamiIndex > 0)
+        {
+            // check if a different button was pressed and reset konami code
+            if (ctl->buttons() != 0 || ctl->dpad() != 0)
+            {
+
+                // check if it's just the previous button that was pressed and don't reset it. our code doesn't perfectly decide if a button was a full press or just held down and this is a shortcut so i don't have to implement that functionality
+                if ((konamiCode[konamiIndex - 1].type == 1 ? ctl->buttons() : ctl->dpad()) & konamiCode[konamiIndex - 1].bit)
+                {
+                }
+                else
+                {
+                    konamiIndex = 0;
+                }
+            }
+        }
+    }
+}
+
 void processGamepad(ControllerPtr ctl)
 {
     // There are different ways to query whether a button is pressed.
@@ -626,6 +747,19 @@ void processGamepad(ControllerPtr ctl)
 
     // // See ArduinoController.h for all the available functions.
 
+    // on off button
+    if (ctl->miscSystem()) // pressing the system button on the controller
+    {
+        Serial.println("Misc button pressed, controller disconnecting");
+        ctl->disconnect();
+
+        // reset armed state
+        armedIsHeldDown = false;
+        armed = true;
+        return;
+    }
+
+    // check arming
     if (ctl->r1() && ctl->l1())
     {
         if (armedIsHeldDown == false)
@@ -649,12 +783,7 @@ void processGamepad(ControllerPtr ctl)
 
     // okay armed, let code run
 
-    if (ctl->miscSystem()) // pressing the system button on the controller
-    {
-        // Serial.println("Pressing both the select and start buttons");
-        //  setinternalReboot(true);
-        ctl->disconnect();
-    }
+    updateKonami(ctl);
 
     // joystickLoop(ctl);
     joystickLoop2(ctl, false);

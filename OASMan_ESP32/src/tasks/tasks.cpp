@@ -32,7 +32,7 @@ void easterEggFunc()
     if (do_dance)
     {
         do_dance = false;
-        // doDance();
+        doDance();
     }
 }
 #if SCREEN_ENABLED == true
