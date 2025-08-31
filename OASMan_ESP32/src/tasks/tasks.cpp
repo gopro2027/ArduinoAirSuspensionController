@@ -8,7 +8,7 @@ void task_bluetooth(void *parameters)
 {
     delay(200); // just wait a moment i guess this is legacy
 
-    // wait for ps3 controller service to boot
+    // wait for bp32 service to boot
     while (bp32ServiceStarted == false)
     {
         delay(1);
