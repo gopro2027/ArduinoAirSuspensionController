@@ -473,7 +473,8 @@ uint8_t att_server_notify_SAFE(hci_con_handle_t con_handle, uint16_t attribute_h
 
     while (!att_server_can_send_packet_now(con_handle))
     {
-        delay(1);
+        // log_i("\n\n\nCAN'T SEND PACKET\n\n\n");
+        delay(10);
     }
     return att_server_notify(con_handle, attribute_handle, value, value_len);
 }
