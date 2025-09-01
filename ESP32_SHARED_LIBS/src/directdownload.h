@@ -8,17 +8,17 @@
 
 #ifdef PROJECT_IS_MANIFOLD
 #ifdef BOARD_VERSION_ATLEAST_4
-#define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/manifold/firmware_v4_%s.bin"
+#define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/manifold_v4/firmware_%s.bin"
 #elif defined ACCESSORY_WIRE_FUNCTIONALITY
 #define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/manifold/firmware_%s.bin"
 #else
-#define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/manifold/firmware_no_acc_%s.bin"
+#define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/manifold_no_acc/firmware_%s.bin"
 #endif
 #endif
 
 #ifdef PROJECT_IS_CONTROLLER
 #ifdef WAVESHARE_BOARD
-#define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/controller/firmware_ws2p8_%s.bin"
+#define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/ws2p8controller/firmware_%s.bin"
 #else
 #define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/controller/firmware_%s.bin"
 #endif
