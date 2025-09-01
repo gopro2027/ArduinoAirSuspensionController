@@ -17,7 +17,11 @@
 #endif
 
 #ifdef PROJECT_IS_CONTROLLER
+#ifdef WAVESHARE_BOARD
+#define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/controller/firmware_ws2p8_%s.bin"
+#else
 #define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/controller/firmware_%s.bin"
+#endif
 #endif
 
 enum UPDATE_STATUS
