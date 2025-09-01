@@ -5,7 +5,6 @@ import 'popup/bluetooth.dart';
 import '../ble_manager.dart';
 import '../provider/unit_provider.dart';
 import '../widgets/car_image_widget.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class Header extends StatelessWidget {
   const Header({super.key});
@@ -14,6 +13,9 @@ class Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final orientation = MediaQuery.of(context).orientation;
+    final iconSize = orientation == Orientation.portrait
+        ? size.width * 0.07 // Portrait size
+        : size.width * 0.04; // Landscape size
 
     return Consumer2<BLEManager, UnitProvider>(
       builder: (context, bleManager, unitProvider, child) {
@@ -27,31 +29,44 @@ class Header extends StatelessWidget {
 
               // Bluetooth Icon with dynamic positioning
               Positioned(
-                // Adjust position based on orientation
-                top: orientation == Orientation.portrait
-                    ? size.height * 0.04 // Portrait top
-                    : size.height * 0.10, // Landscape top (adjust as needed)
-                left: orientation == Orientation.portrait
-                    ? size.width * 0.01 // Portrait left
-                    : size.width * 0.18, // Landscape left (adjust as needed)
-                child: GestureDetector(
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => const BluetoothPopup(),
-                    );
-                  },
-                  child: Icon(
-                    Icons.bluetooth,
-                    color: bleManager.connectedDevice != null
-                        ? Colors.green
-                        : Colors.pink,
-                    size: orientation == Orientation.portrait
-                        ? size.width * 0.07 // Portrait size
-                        : size.width * 0.04, // Landscape size
-                  ),
-                ),
-              ),
+                  // Adjust position based on orientation
+                  top: orientation == Orientation.portrait
+                      ? size.height * 0.04 // Portrait top
+                      : size.height * 0.10, // Landscape top (adjust as needed)
+                  left: orientation == Orientation.portrait
+                      ? size.width * 0.01 // Portrait left
+                      : size.width * 0.18, // Landscape left (adjust as needed)
+                  child: Column(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (_) => const BluetoothPopup(),
+                          );
+                        },
+                        child: Icon(
+                          Icons.bluetooth,
+                          color: bleManager.connectedDevice != null
+                              ? Colors.green
+                              : Colors.pink,
+                          size: iconSize,
+                        ),
+                      ),
+                      if (bleManager.vehicleOn)
+                        Icon(
+                          Icons.key,
+                          color: Colors.green,
+                          size: iconSize,
+                        )
+                      else
+                        Icon(
+                          Icons.key_off,
+                          color: Colors.pink,
+                          size: iconSize,
+                        )
+                    ],
+                  )),
             ],
           ),
         );
@@ -134,23 +149,35 @@ class Header extends StatelessWidget {
                     crossAxisAlignment:
                         CrossAxisAlignment.center, // <-- center vertically
                     children: [
-                      if (true) Icon(Icons.power_settings_new,color: Colors.pink, size: 25),
-                      if (true) Icon(Icons.ac_unit, color: Colors.pink, size: 25),
+                      if (bleManager.safetyMode)
+                        Text('SAFETY MODE',
+                            style: TextStyle(
+                              color: Colors.pink,
+                              fontFamily: 'Bebas Neue',
+                              fontSize: 23,
+                            ))
+                      else ...[
+                        if (bleManager.compressorOn)
+                          Icon(Icons.power_settings_new,
+                              color: Colors.pink, size: 25),
+                        if (bleManager.compressorFrozen)
+                          Icon(Icons.ac_unit, color: Colors.pink, size: 25),
 
-                      SizedBox(width: 8), // spacing between icon and text
+                        SizedBox(width: 8), // spacing between icon and text
 
-                      Text(
-                        "${unitProvider.unit == 'Bar' ? unitProvider.convertToBar(double.tryParse(bleManager.pressureValues["tankPressure"] ?? "0") ?? 0.0).toStringAsFixed(2) : (double.tryParse(bleManager.pressureValues["tankPressure"] ?? "0") ?? 0.0).toStringAsFixed(2)} ${unitProvider.unit}",
-                        style: TextStyle(
-                          fontFamily: 'Bebas Neue',
-                          // TODO if compressor is low
-                          color: false
-                              ? Colors.white
-                              : Colors.pink, // <-- conditional
-                          fontSize: 25,
+                        Text(
+                          "${unitProvider.unit == 'Bar' ? unitProvider.convertToBar(double.tryParse(bleManager.pressureValues["tankPressure"] ?? "0") ?? 0.0).toStringAsFixed(2) : (double.tryParse(bleManager.pressureValues["tankPressure"] ?? "0") ?? 0.0).toStringAsFixed(2)} ${unitProvider.unit}",
+                          style: TextStyle(
+                            fontFamily: 'Bebas Neue',
+                            // TODO if compressor is low
+                            color: false
+                                ? Colors.white
+                                : Colors.pink, // <-- conditional
+                            fontSize: 25,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
+                      ],
                     ],
                   )),
             ],
@@ -234,8 +261,11 @@ class Header extends StatelessWidget {
                     crossAxisAlignment:
                         CrossAxisAlignment.center, // <-- center vertically
                     children: [
-                      if (bleManager.compressorOn) Icon(Icons.power_settings_new,color: Colors.pink, size: 25),
-                      if (bleManager.compressorFrozen) Icon(Icons.ac_unit, color: Colors.pink, size: 25),
+                      if (bleManager.compressorOn)
+                        Icon(Icons.power_settings_new,
+                            color: Colors.pink, size: 25),
+                      if (bleManager.compressorFrozen)
+                        Icon(Icons.ac_unit, color: Colors.pink, size: 25),
 
                       SizedBox(width: 8), // spacing between icon and text
 
