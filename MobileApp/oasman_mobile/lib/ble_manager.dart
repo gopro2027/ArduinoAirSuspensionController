@@ -68,6 +68,14 @@ class BLEManager extends ChangeNotifier {
 
   bool compressorOn = false;
   bool compressorFrozen = false;
+  bool vehicleOn = false;
+  bool riseOnStart = true;
+  bool maintainPressure = true;
+  bool airOutOnShutoff = true;
+  bool safetyMode = true;
+  String bleBroadcastName = 'TODO';
+  int compressorOnPSI = 120;
+  int compressorOffPSI = 140;
 
 
   int valveControlValue = 0; // uint32
@@ -338,14 +346,14 @@ void handleStatusBittset(List<int> statusBytes) {
   // Decode individual flags
   compressorFrozen    = (statusBittset & (1 << 0)) != 0;
   compressorOn        = (statusBittset & (1 << 1)) != 0;
-  final vehicleOn           = (statusBittset & (1 << 2)) != 0;
+  vehicleOn           = (statusBittset & (1 << 2)) != 0;
   final timerExpired        = (statusBittset & (1 << 3)) != 0;
   final clock               = (statusBittset & (1 << 4)) != 0;
-  final riseOnStart         = (statusBittset & (1 << 5)) != 0;
-  final maintainPressure    = (statusBittset & (1 << 6)) != 0;
-  final airOutOnShutoff     = (statusBittset & (1 << 7)) != 0;
+  riseOnStart         = (statusBittset & (1 << 5)) != 0;
+  maintainPressure    = (statusBittset & (1 << 6)) != 0;
+  airOutOnShutoff     = (statusBittset & (1 << 7)) != 0;
   final heightSensorMode    = (statusBittset & (1 << 8)) != 0;
-  final safetyMode          = (statusBittset & (1 << 9)) != 0;
+  safetyMode          = (statusBittset & (1 << 9)) != 0;
   final aiStatusEnabled     = (statusBittset & (1 << 10)) != 0;
 
   print("""
