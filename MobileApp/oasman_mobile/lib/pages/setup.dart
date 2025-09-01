@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import '../models/appSettings.dart';
 import '../provider/unit_provider.dart';
 import '../ble_manager.dart';
@@ -8,11 +9,44 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:oasman_mobile/pages/popup/invalidkey.dart';
-import 'package:permission_handler/permission_handler.dart';
-import "dart:typed_data";
+class ConnectManifoldCard extends StatelessWidget {
+  const ConnectManifoldCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey[850],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white24, width: 1),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.bluetooth_disabled_rounded,
+            color: Colors.white54,
+            size: 32,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Please connect a Bluetooth manifold first',
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -26,8 +60,7 @@ class SettingsPageState extends State<SettingsPage> {
   String inputType = 'Buttons';
   bool maintainPressure = true;
   bool riseOnStart = true;
-  bool dropDownWhenOff = true;
-  bool liftUpWhenOn = true;
+  bool dropDownWhenOff = true; //airOutOnShutoff on the controller
   double dropDownDelay = 12.0;
   double liftUpDelay = 12.0;
   double solenoidOpenTime = 100.0;
@@ -35,6 +68,10 @@ class SettingsPageState extends State<SettingsPage> {
   String readoutType = 'Height sensors';
   String units = globalSettings!.units;
   String passkeyText = globalSettings!.passkeyText;
+  bool safetyMode = true;
+  String bleBroadcastName = 'OasMan';
+  int compressorOnPSI = 120;
+  int compressorOffPSI = 140;
 
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
@@ -60,33 +97,48 @@ class SettingsPageState extends State<SettingsPage> {
       });
     }
 
-    //load app settings saved on phoe
+    //load app settings saved on the phone
     setState(() {
       units = prefs.getString('_units') ?? 'Psi';
       passkeyText = prefs.getString('_passkeyText') ?? '202777';
     });
     print("App's settings loaded");
-    //test
-    print(units);
-    print(passkeyText);
+
+    //load app settings saved on the manifold
+    if (bleManager.connectedDevice != null) {
+    riseOnStart = bleManager.riseOnStart;
+    maintainPressure = bleManager.maintainPressure;
+    dropDownWhenOff = bleManager.airOutOnShutoff;
+    safetyMode = bleManager.safetyMode;
+    bleBroadcastName = bleManager.bleBroadcastName;
+    compressorOnPSI = bleManager.compressorOnPSI;
+    compressorOffPSI = bleManager.compressorOffPSI;
+    print("Manifold's settings loaded");
+    };
+
   }
 
   // Save settings
   Future<void> _saveSettings() async {
+    //Save settings to phone's
     final prefs = await SharedPreferences.getInstance();
     units = globalSettings!.units;
     await prefs.setString('_units', units);
     await prefs.setString('_passkeyText', passkeyText);
+
+    //Save settings to manifold
+    if (bleManager.connectedDevice != null) {
+    bleManager.passkey = int.parse(passkeyText);
+    bleManager.bleBroadcastName = bleBroadcastName;
+    bleManager.compressorOnPSI = compressorOnPSI;
+    bleManager.compressorOffPSI = compressorOffPSI;
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Settings saved!')),
       );
     }
-    //test
-    print("save settings:");
-    print(units);
-    print(passkeyText);
   }
 
   Future<void> _pickImage() async {
@@ -214,6 +266,7 @@ class SettingsPageState extends State<SettingsPage> {
                 children: [
                   _buildUploadImageSection(),
                   _buildBluetoothSection(),
+                  if (bleManager.connectedDevice != null) ...[
                   _buildInputTypeSection(),
                   _buildBasicSettingsSection(),
                   _buildDropDownWhenOffSection(),
@@ -224,6 +277,9 @@ class SettingsPageState extends State<SettingsPage> {
                   _buildDutyCycleSection(),
                   _buildUnitsSection(context),
                   _buildSystemSection(),
+                  ]else ...[
+const ConnectManifoldCard(),
+                  ],
                 ],
               ),
             ),
@@ -273,17 +329,19 @@ class SettingsPageState extends State<SettingsPage> {
                         passkeyText = "202777";
                       });
                     }
-                  },
+                  },isNumberInput: true,
                 ),
+                if (bleManager.connectedDevice != null) ...[
                 _buildKeyboardInputRow(
                   "Broadcast name",
-                  "TODO",
+                  bleBroadcastName,
                   (value) {
                     setState(() {
-                      inputType = value;
+                      bleBroadcastName = value;
                     });
                   },
                 ),
+              ],
               ],
             ),
           ),
@@ -382,24 +440,6 @@ class SettingsPageState extends State<SettingsPage> {
                   (value) {
                     setState(() {
                       maintainPressure = value;
-                    });
-                  },
-                ),
-                _buildSwitch(
-                  'Rise on start',
-                  riseOnStart,
-                  (value) {
-                    setState(() {
-                      riseOnStart = value;
-                    });
-                  },
-                ),
-                _buildSwitch(
-                  'Drop down when off',
-                  dropDownWhenOff,
-                  (value) {
-                    setState(() {
-                      dropDownWhenOff = value;
                     });
                   },
                 ),
@@ -505,17 +545,17 @@ class SettingsPageState extends State<SettingsPage> {
                 ),
               ),
               Switch(
-                value: liftUpWhenOn,
+                value: riseOnStart,
                 onChanged: (value) {
                   setState(() {
-                    liftUpWhenOn = value;
+                    riseOnStart = value;
                   });
                 },
                 activeColor: Color(0xFFBB86FC),
               ),
             ],
           ),
-          if (liftUpWhenOn)
+          if (riseOnStart)
             Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
@@ -709,34 +749,34 @@ class SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildTankPressureSection() {
-       return Padding(
+    return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-            Row(
-              children: [
-                const Text(
-                  'Compressor',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+          Row(
+            children: [
+              const Text(
+                'Compressor',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-                IconButton(
-                  icon: const Icon(Icons.help_outline,
-                      size: 20, color: Colors.grey),
-                  onPressed: () {
-                    showInfoDialog(
-                      context,
-                      'Compressor pressures',
-                      'The compressor will start if pressure is below the "min pressure" and stop when it is above the "max pressure".\nCAUTION! Always check both tank\'s and compressor\'s pressure ratings!',
-                    );
-                  },
-                ),
-              ],
-            ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.help_outline,
+                    size: 20, color: Colors.grey),
+                onPressed: () {
+                  showInfoDialog(
+                    context,
+                    'Compressor pressures',
+                    'The compressor will start if pressure is below the "min pressure" and stop when it is above the "max pressure".\nCAUTION! Always check both tank\'s and compressor\'s pressure ratings!',
+                  );
+                },
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -748,23 +788,17 @@ class SettingsPageState extends State<SettingsPage> {
             child: Column(
               children: [
                 _buildKeyboardInputRow(
-                  "Min pressure",
-                  "TODO",
-                  (value) {
-                    setState(() {
-                      inputType = value;
-                    });
-                  },
-                ),
+                    "Min pressure", compressorOnPSI.toString(), (value) {
+                  setState(() {
+                    compressorOnPSI = int.parse(value);
+                  });
+                }, isNumberInput: true),
                 _buildKeyboardInputRow(
-                  "Max pressure",
-                  "TODO",
-                  (value) {
-                    setState(() {
-                      inputType = value;
-                    });
-                  },
-                ),
+                    "Max pressure", compressorOffPSI.toString(), (value) {
+                  setState(() {
+                    compressorOffPSI = int.parse(value);
+                  });
+                }, isNumberInput: true),
               ],
             ),
           ),
@@ -772,100 +806,101 @@ class SettingsPageState extends State<SettingsPage> {
       ),
     );
   }
-  }
+}
 
-
-  Widget _buildAdjustableRow(
-      String label, double value, String unit, ValueChanged<double> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(color: Colors.white, fontSize: 16),
-            ),
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon: Icon(Icons.remove, color: Color(0xFFBB86FC)),
-                onPressed: () {
-                  if (value > 0) {
-                    onChanged(value - 1);
-                  }
-                },
-              ),
-              Text(
-                '${value.toStringAsFixed(0)} $unit',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              IconButton(
-                icon: Icon(Icons.add, color: Color(0xFFBB86FC)),
-                onPressed: () {
-                  onChanged(value + 1);
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildKeyboardInputRow(
-      String label, String value, ValueChanged<String> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(color: Colors.white, fontSize: 16),
-            ),
-          ),
-          Expanded(
-            child: TextFormField(
-              initialValue: value,
-              onChanged: onChanged,
-              style: TextStyle(color: Colors.white), // text color
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                filled: true,
-                fillColor: Colors.grey[900], // dark background for the field
-                hintText: 'Enter your manifold passkey',
-                hintStyle: TextStyle(color: Colors.white54), // hint color
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSwitch(String label, bool value, ValueChanged<bool> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
+Widget _buildAdjustableRow(
+    String label, double value, String unit, ValueChanged<double> onChanged) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8.0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Text(
             label,
             style: TextStyle(color: Colors.white, fontSize: 16),
           ),
-          Switch(
-              value: value,
-              onChanged: onChanged,
-              activeColor: Color(0xFFBB86FC)),
-        ],
-      ),
-    );
-  }
+        ),
+        Row(
+          children: [
+            IconButton(
+              icon: Icon(Icons.remove, color: Color(0xFFBB86FC)),
+              onPressed: () {
+                if (value > 0) {
+                  onChanged(value - 1);
+                }
+              },
+            ),
+            Text(
+              '${value.toStringAsFixed(0)} $unit',
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            IconButton(
+              icon: Icon(Icons.add, color: Color(0xFFBB86FC)),
+              onPressed: () {
+                onChanged(value + 1);
+              },
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
+Widget _buildKeyboardInputRow(
+    String label, String value, ValueChanged<String> onChanged,
+    {bool isNumberInput = false}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8.0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
+        ),
+        Expanded(
+          child: TextFormField(
+            initialValue: value,
+            onChanged: onChanged,
+            keyboardType:
+                isNumberInput ? TextInputType.number : TextInputType.text,
+            inputFormatters:
+                isNumberInput ? [FilteringTextInputFormatter.digitsOnly] : [],
+            style: TextStyle(color: Colors.white), // text color
+            decoration: InputDecoration(
+              border: OutlineInputBorder(),
+              filled: true,
+              fillColor: Colors.grey[900], // dark background for the field
+              hintText: 'Enter your manifold passkey',
+              hintStyle: TextStyle(color: Colors.white54), // hint color
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildSwitch(String label, bool value, ValueChanged<bool> onChanged) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8.0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(color: Colors.white, fontSize: 16),
+        ),
+        Switch(
+            value: value, onChanged: onChanged, activeColor: Color(0xFFBB86FC)),
+      ],
+    ),
+  );
+}
 
 Widget _buildDutyCycleSection() {
   return Padding(
