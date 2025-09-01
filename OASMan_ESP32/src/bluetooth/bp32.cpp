@@ -250,7 +250,7 @@ void joystickLoop2(ControllerPtr ctl, bool right = false)
         }
     }
 
-    const int threshold = 200;
+    const int threshold = 400;
 
     bool *val;
     Solenoid *a;
@@ -275,7 +275,7 @@ void joystickLoop2(ControllerPtr ctl, bool right = false)
     runJoystickInput(val, a, b, y <= -threshold);
 
     // down
-    val = right ? &thisJoystickState->rup : &thisJoystickState->up;
+    val = right ? &thisJoystickState->rdown : &thisJoystickState->down;
     a = right ? getWheel(WHEEL_REAR_DRIVER)->getOutSolenoid() : getWheel(WHEEL_FRONT_DRIVER)->getOutSolenoid();
     b = right ? getWheel(WHEEL_REAR_PASSENGER)->getOutSolenoid() : getWheel(WHEEL_FRONT_PASSENGER)->getOutSolenoid();
     runJoystickInput(val, a, b, y >= threshold);
@@ -570,6 +570,7 @@ void joystickLoop(ControllerPtr ctl)
 
 #pragma endregion
 
+#pragma region konami
 void loadProfileAirUpQuick(int profileIndex)
 {
     if (profileIndex > MAX_PROFILE_COUNT)
@@ -690,6 +691,7 @@ void updateKonami(ControllerPtr ctl)
         }
     }
 }
+#pragma endregion
 
 void processGamepad(ControllerPtr ctl)
 {
@@ -743,7 +745,7 @@ void processGamepad(ControllerPtr ctl)
 
     // // Another way to query controller data is by getting the buttons() function.
     // // See how the different "dump*" functions dump the Controller info.
-    dumpGamepad(ctl);
+    // dumpGamepad(ctl);
 
     // // See ArduinoController.h for all the available functions.
 
@@ -788,6 +790,7 @@ void processGamepad(ControllerPtr ctl)
     // joystickLoop(ctl);
     joystickLoop2(ctl, false);
     joystickLoop2(ctl, true);
+    // getManifold()->debugOut();
 }
 
 // void processMouse(ControllerPtr ctl)
