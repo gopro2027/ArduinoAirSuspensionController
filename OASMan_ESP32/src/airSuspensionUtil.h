@@ -8,8 +8,6 @@
 #include "manifoldSaveData.h"
 #include "sampleReading.tcc"
 
-// #define parabolaLearn
-
 extern InputType *pressureInputs[5];
 extern Manifold *manifold;
 extern Compressor *compressor;
@@ -45,10 +43,6 @@ namespace PressureSensorCalibration
 {
     void learnPressureSensorsRoutine();
 }
-#ifdef parabolaLearn
-bool learnParabolaLoop();
-void learnParabolaSetup();
-#endif
 
 void trainAIModels();
 double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure);

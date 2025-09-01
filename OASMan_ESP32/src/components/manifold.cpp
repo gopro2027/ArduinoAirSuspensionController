@@ -32,6 +32,19 @@ Solenoid **Manifold::getAll()
     return this->solenoidList;
 }
 
+void Manifold::debugOut()
+{
+    for (int i = 0; i < SOLENOID_COUNT; i++)
+    {
+        Solenoid *solenoid = this->solenoidList[i];
+        if (solenoid)
+        {
+            Serial.printf("%s ", solenoid->isOpen() ? "1" : "0");
+        }
+    }
+    Serial.println();
+}
+
 // TODO: Get rid of this function in the future. It's an abstract match between the two things. Not great
 // Solenoid *getSolenoidFromIndex(int solenoid)
 // {

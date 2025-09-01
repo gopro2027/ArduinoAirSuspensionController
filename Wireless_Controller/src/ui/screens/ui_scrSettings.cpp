@@ -64,6 +64,30 @@ void ScrSettings::init()
                                                                 } }, []() -> void {}, false); });
 
     new Option(this->optionsContainer, OptionType::SPACE, "");
+    new Option(this->optionsContainer, OptionType::HEADER, "Game Controller");
+
+    new Option(this->optionsContainer, OptionType::BUTTON, "Allow New Controller", defaultCharVal, [](void *data)
+               { currentScr->showMsgBox("Confirm?", "After clicking this, OASMan will become pairable and the next controller to try to pair with OASMan will be allowed to pair and remembered by OASMan.\nMax saved devices is 20", "Confirm", "Cancel", []() -> void
+                                        {
+                                            BP32Packet pkt(BP32CMD::BP32CMD_ENABLE_NEW_CONN, true);
+                                            sendRestPacket(&pkt);
+                                            showDialog("Connect your controller!", lv_color_hex(0xFFFF00)); }, []() -> void {}, false); });
+
+    new Option(this->optionsContainer, OptionType::BUTTON, "Un-pair All Controllers", defaultCharVal, [](void *data)
+               { currentScr->showMsgBox("Confirm?", "After clicking this, all paired game controllers will be removed from memory, and actively connected ones will be disconnected. This also resets your saved devices back to 0.", "Confirm", "Cancel", []() -> void
+                                        {
+                                            BP32Packet pkt(BP32CMD::BP32CMD_FORGET_DEVICES, NULL);
+                                            sendRestPacket(&pkt);
+                                            showDialog("Controllers forgotten!", lv_color_hex(0xFFFF00)); }, []() -> void {}, false); });
+
+    new Option(this->optionsContainer, OptionType::BUTTON, "Disconnect Controllers", defaultCharVal, [](void *data)
+               { currentScr->showMsgBox("Confirm?", "Some devices may be difficult to disconnect on their own, this will disconnect them for you. Hint: Pressing the 'system' button on supporting controllers will disconnect them.", "Confirm", "Cancel", []() -> void
+                                        {
+                                            BP32Packet pkt(BP32CMD::BP32CMD_DISCONNECT_DEVICES, NULL);
+                                            sendRestPacket(&pkt);
+                                            showDialog("Controllers disconnected!", lv_color_hex(0xFFFF00)); }, []() -> void {}, false); });
+
+    new Option(this->optionsContainer, OptionType::SPACE, "");
     new Option(this->optionsContainer, OptionType::HEADER, "ML/AI");
     this->ui_aiPercentage = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Learn Progress:", defaultCharVal);
     this->ui_aiReady = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Trained:", defaultCharVal);
@@ -289,6 +313,10 @@ void ScrSettings::init()
 #endif
     new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Version:", versionValue);
 
+    OptionValue macValue;
+    macValue.STRING = ble_getMAC();
+    this->ui_mac = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Manifold:", macValue);
+
     // add space at end of list
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
 
@@ -360,6 +388,8 @@ void ScrSettings::loop()
     this->ui_aiPercentage->setRightHandText(buf);
     snprintf(buf, sizeof(buf), "UF:  %c UR:  %c\nDF: %c DR: %c", (AIReadyBittset & 0b1) ? 'Y' : 'n', (AIReadyBittset & 0b10 >> 1) ? 'Y' : 'n', (AIReadyBittset & 0b100 >> 2) ? 'Y' : 'n', (AIReadyBittset & 0b1000 >> 3) ? 'Y' : 'n');
     this->ui_aiReady->setRightHandText(buf);
+
+    this->ui_mac->setRightHandText(ble_getMAC());
 
     if (*util_configValues._setValues())
     {

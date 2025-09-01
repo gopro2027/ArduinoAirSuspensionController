@@ -24,6 +24,7 @@ public:
              InputType *rdo);
     Solenoid *get(int solenoid);
     Solenoid **getAll();
+    void debugOut();
     // void pauseValvesForBlockingTask();
     // void unpauseValvesForBlockingTaskCompleted();
 };
