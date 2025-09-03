@@ -1,28 +1,38 @@
-# PS3 Controller Setup
-### Setup:
+# Videogame Controller Usage
+OASMan implements a library called [Bluepad32](https://bluepad32.readthedocs.io/en/latest/) in order to allow a multitude of controllers to connect to our air suspension system!
+<img width="512" height="384" alt="image" src="https://github.com/user-attachments/assets/9d18df13-a463-4ef8-9556-bc83d4e6a9f8" />
+<br>
+Thank you to [ricardoquesada](https://github.com/ricardoquesada/bluepad32) for the creation of this library!
+
+### How to pair a controller
+DISCLAIMER: Always store controllers in a safe location when driving so they do not get enabled accidentally while driving. Do not use controllers while driving. Use at your own risk.
+1. Put your car in park for pairing. Pairing a new controller may potentially disrupt bluetooth signal, and in the worst case, cause oasman to reboot. This shouldn't pose any safety issues, but please be careful.
+3. You need to go into your oasman touch screen control and go to settings and click "Allow New Controller". This will put oasman into pairing mode.
+4. Grab your controller and follow the manufacturers instructions on how to put it into pairing/sync mode. You can also find instructions for this on [bluepad32's wiki](https://bluepad32.readthedocs.io/en/latest/supported_gamepads/)
+Sometimes there may be issues during syncing new controllers. You may find better results if you disconnect other controllers before trying to sync a new controller.
+
+Once your controller is paired, to reconnect it again, simply turn it on like normal and oasman will accept the connection.
+
+There is an arbitrarily chosen max of 20 paired controllers in OASMan. You can reset all paired controllers in the settings page of the touch screen controller.
+
+Oasman technically supports multiple controllers being connected at the same time.
+
+Not all controllers are supported, such as keyboards, but I did specifically add [support for the wii fit balance board](https://www.instagram.com/p/DNy50Yu3hv6/)
+
+### Special instructions for PS3 Controllers
 If you plan to use a ps3 controller, use the sixaxis pair tool to change your mac address of your PS3 controller to your ESP32's mac address<br>
-You can use a phone app called nRF Connect to obtain the mac address of the system<br>
+You can use a phone app called nRF Connect to obtain the mac address of the oasman system<br>
 <br>
-![Screenshot_20250322_171036_nRF Connect (2)](https://github.com/user-attachments/assets/0a26b60f-f8ef-4f27-9dff-c2e1ca890823)<br>
-<br>
-![example](https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/refs/heads/main/PS3_Controller_Tool/SixaxisPairTool_rename_example.png)<br>
+<img height="300" alt="image" src="https://github.com/user-attachments/assets/0a26b60f-f8ef-4f27-9dff-c2e1ca890823" />
+<img height="300" alt="image" src="https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/refs/heads/main/PS3_Controller_Tool/SixaxisPairTool_rename_example.png" />
+
 <a href="https://github.com/gopro2027/ArduinoAirSuspensionController/raw/refs/heads/main/PS3_Controller_Tool/SixaxisPairToolSetup-0.3.1.exe">Download Sixaxis Pair Tool here</a><br>
 <br>
-If using the legacy android app (unlikely), the PS3 controller must be connected before the app is connected in order to function properly! You can have both connected at the same time as long as you connect the controller first.<br>
+Additional information that explains why the ps3 controller is special and linux setup: <a href="https://bluepad32.readthedocs.io/en/latest/pair_ds3/">https://bluepad32.readthedocs.io/en/latest/pair_ds3/</a><br>
 <br>
-Additional information that explains why the ps3 controller is special: <a href="https://bluepad32.readthedocs.io/en/latest/pair_ds3/">https://bluepad32.readthedocs.io/en/latest/pair_ds3/</a><br>
-<br>
-### Controls:
-**L1 + R1**: enable/disable the controller (enabled by default)<br>
-**Start + Select**: turn off controller (this actually reboots the manifold which causes the controller to turn off)<br>
-<br>
-Button inputs: (not really useful on the controller but they are there anyways)<br>
-**X**: goto preset 1<br>
-**Square**: goto preset 2<br>
-**Triangle**: goto preset 3<br>
-**Circle**: goto preset 4<br>
-**Dpad Up**: air up to current preset<br>
-**Dpad Down**: air out<br>
+### Controller Controls
+**L1 + R1**: arm/disarm the controller (armed by default)<br>
+**System Button (aka playstation button or xbox button)**: disconnect controller<br>
 <br>
 Joystick inputs:<br>
 **left joystick - left**: air up left side of car<br>
@@ -34,11 +44,8 @@ Joystick inputs:<br>
 **right joystick - up**: air up rear side of car<br>
 **right joystick - down**: air down rear side of car<br>
 <br>
-Your battery level is also indicated by how many led's show up on the top of the controller.<br>
-The lights will flash periodically when armed (enabled), and be solid when unarmed (disabled).<br>
-4 led's = full<br>
-3 led's = high<br>
-2 led's = low<br>
-1 led = dying<br>
-0 led's = shutting down<br>
-Moving led's = charging<br>
+**Controllers with only one joystick**: Devices such as the nintendo switch joycon, you can press and hold the **B** button to make your joystick swap from one side to the other while holding it.<br>
+<br>
+**Wii Fit Balance Board**: Left side controls front of car, right side controls rear of car<br>
+<br>
+There is also an easter egg. See if you can find it!<br>

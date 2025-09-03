@@ -21,6 +21,8 @@ If you wish to make any customizations to the code, please follow the following 
 5. Build the project and test for errors:
     1. look in the top right corner and you should see a checkmark that says 'Build' when you hover over it. Click that and verify for no errors.
 6. Install the project onto your esp32 by clicking the dropdown arrow next to the build button and choosing "Upload"
+
+<!--
 ### Editing the code
 1. In github desktop, create a new branch and call it `my_config` or whatever you want
 2. Make edits.
@@ -33,3 +35,5 @@ If you wish to make any customizations to the code, please follow the following 
 4. At the top click `Branch` -> `Update from main` and your code will be updated
 5. If there is any merge conflicts you will need to fix them at this point. Feel free to ask the discord if you need help!
 6. Now you can flash to your esp32 with the new update without loosing any custom configurations.
+
+-->
