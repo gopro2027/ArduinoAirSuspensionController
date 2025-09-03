@@ -1,0 +1,24 @@
+Instructions:
+
+(numbers calculates pre-tariff on a v3 board)
+
+NOTE BEFORE YOU ORDER: ASK IN THE DISCORD FIRST IF ANYONE HAS SOME FOR SALE FOR CHEAPER BECAUSE MOST PEOPLE DON'T NEED ALL THE ONES JLCPCB WILL SEND (BULK ORDERS ONLY). ORDERING FROM JLCPCB IS MINIMUM OF 5 BOARDS AND A LITTLE OVER $100 AFTER SHIPPING (about $120 for 5 full PCBA, or about $14 less ($106) if you only get 2 boards assembled)
+
+Go to jlcpcb.com
+Upload gerber file Gerber_PCB1_3_2025-03-03.zip
+Choose PCB color of your choice
+Choose how many to order (recommended default minimum of 5)
+Select the button to enable PCB Assembly (PCBA)
+Choose how many to have assembled (recommended 5 instead of minimum of 2, price difference is only $14)
+Click NEXT button
+You are on the PCB page, click NEXT again
+You are on the Bill of Materials page:
+	Click add BOM file button and choose BOM_SMD test 2_PCB1____.xlsx
+	Click add CPL file button and choose PickAndPlace_PCB1____.xlsx
+Click Process BOM & CPL button. Verify stock and modify if they are out of stock (hopefully not!)
+Click next and verify positioning (should be fine) click next again
+Click save to cart button and go to check out and choose shipping.
+* (Recommended) UPS express saver seems to be the best overall for the price ($27.77)
+* Global standard direct line is the cheapest but will take ages to receive ($13.29)
+* The others tend to be inferior in price and speed
+Complete purchase?
