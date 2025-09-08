@@ -41,7 +41,8 @@ enum BTOasIdentifier
     DETECTPRESSURESENSORS = 27,
     AISTATUSENABLED = 28,
     RESETAIPKT = 29,
-    BROADCASTNAME = 30
+    BROADCASTNAME = 35,
+    BP32PKT = 30
 };
 
 enum StatusPacketBittset
@@ -65,6 +66,13 @@ enum AuthResult
     AUTHRESULT_SUCCESS,
     AUTHRESULT_FAIL,
     AUTHRESULT_UPDATEKEY
+};
+
+enum BP32CMD
+{
+    BP32CMD_ENABLE_NEW_CONN,
+    BP32CMD_FORGET_DEVICES,
+    BP32CMD_DISCONNECT_DEVICES
 };
 
 union BTOasValue32
@@ -103,8 +111,6 @@ struct BTOasPacket
 };
 
 #define BTOAS_PACKET_SIZE sizeof(BTOasPacket)
-
-void runReceivedPacket(BTOasPacket *packet);
 
 // Outgoing packets
 struct StatusPacket : BTOasPacket
@@ -257,6 +263,11 @@ struct AuthPacket : BTOasPacket
     uint32_t getBlePasskey();
     AuthResult getBleAuthResult();
     void setBleAuthResult(AuthResult ar);
+};
+
+struct BP32Packet : BTOasPacket
+{
+    BP32Packet(BP32CMD bp32Cmd, bool value);
 };
 struct BroadcastNamePacket : BTOasPacket
 {

@@ -9,6 +9,10 @@
 
 #include "utils/util.h"
 
+#if defined(WAVESHARE_BOARD)
+#include "waveshare/waveshare.h"
+#endif
+
 void OnAddOneClicked(lv_event_t *e)
 {
     static uint32_t cnt = 0;
@@ -42,10 +46,13 @@ unsigned long dimScreenTime = 0;
 bool dimmed = false;
 void setup()
 {
+
 #ifdef ARDUINO_USB_CDC_ON_BOOT
     // delay(5000);
 #endif
     Serial.begin(115200);
+    // esp_bt_controller_mem_release(ESP_BT_MODE_BLE);
+    esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT); // should free a tad bit of memory
     // Serial.setDebugOutput(true);
     log_i("Board: %s", BOARD_NAME);
     log_i("CPU: %s rev%d, CPU Freq: %d Mhz, %d core(s)", ESP.getChipModel(), ESP.getChipRevision(), getCpuFrequencyMhz(), ESP.getChipCores());
@@ -65,6 +72,10 @@ void setup()
         downloadUpdate(getwifiSSID(), getwifiPassword());
         return;
     }
+
+#if defined(WAVESHARE_BOARD)
+    waveshare_init();
+#endif
 
     setup_tasks();
 
@@ -90,7 +101,9 @@ void setup()
     // startBurnInFix();
     stopBurnInFix();
 
+#ifdef BOARD_HAS_TOUCH
     setup_touchscreen_hook();
+#endif
 
     dimScreenTime = millis() + DIM_SCREEN_TIME;
 
@@ -117,7 +130,7 @@ void setup()
             break;
         case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
             showDialog("Update success!", lv_color_hex(0x00FF00));
-            char buf[150];
+            char buf[160];
             snprintf(buf, sizeof(buf), "You are now on version %s!\nPlease check the manifold update status in the update section of settings to verify the manifold was updated successfully too.", EVALUATE_AND_STRINGIFY(RELEASE_VERSION));
             currentScr->showMsgBox("Update success!", buf, NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
@@ -172,6 +185,10 @@ void loop()
         dialogLoop();
         safetyModeMsgBoxCheck();
     }
+
+#if defined(WAVESHARE_BOARD)
+    waveshare_loop();
+#endif
 
     // Update the ticker
     lv_tick_inc(now - lv_last_tick);

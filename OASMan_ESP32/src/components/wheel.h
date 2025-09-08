@@ -20,15 +20,13 @@ private:
 
     byte pressureGoal;
     unsigned long routineStartTime;
-    bool quickMode;                    // flag to skip extra percise measurements
+    bool quickMode; // flag to skip extra percise measurements
 
     float pressureValue;
     float levelValue;
 
     Solenoid *s_AirIn;
     Solenoid *s_AirOut;
-
-    double calculatePressureTimingReal(Solenoid *valve);
 
 public:
     Wheel();

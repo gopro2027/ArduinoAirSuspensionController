@@ -18,5 +18,6 @@
 bool connectCharacteristic(BLERemoteService *pRemoteService, BLERemoteCharacteristic *l_BLERemoteChar);
 void ble_setup();
 void ble_loop();
-
+void disconnect(bool showDialogOnDisconnect = true);
+const char *ble_getMAC();
 #endif

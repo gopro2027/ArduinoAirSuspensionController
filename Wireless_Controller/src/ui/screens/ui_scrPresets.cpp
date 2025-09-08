@@ -185,6 +185,14 @@ void ScrPresets::showPresetDialog()
     this->showMsgBox(title, text, NULL, "OK", []() -> void {}, []() -> void {}, false);
 }
 
+void loadSelectedPreset()
+{
+    Serial.println("load preset");
+    AirupQuickPacket pkt(currentPreset - 1);
+    sendRestPacket(&pkt);
+    showDialog("Loaded Preset!", lv_color_hex(0x22bb33));
+}
+
 void ScrPresets::runTouchInput(SimplePoint pos, bool down)
 {
     Scr::runTouchInput(pos, down);
@@ -228,10 +236,17 @@ void ScrPresets::runTouchInput(SimplePoint pos, bool down)
             }
             if (sr_contains(preset_load, pos))
             {
-                Serial.println("load preset");
-                AirupQuickPacket pkt(currentPreset - 1);
-                sendRestPacket(&pkt);
-                showDialog("Loaded Preset!", lv_color_hex(0x22bb33));
+
+                if (currentPreset == 1)
+                {
+                    currentScr->showMsgBox("Air out?", "Preset 1 is typically air out. Please verify your car is not moving. Are you sure you wish to air out?", "Confirm", "Cancel", []() -> void
+                                           { loadSelectedPreset(); }, []() -> void {}, false);
+                }
+
+                else
+                {
+                    loadSelectedPreset();
+                }
             }
         }
     }

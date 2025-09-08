@@ -11,6 +11,8 @@
 
 #include <directdownload.h>
 
+#include "bt/ble.h"
+
 class ScrSettings : public Scr
 {
     using Scr::Scr;
@@ -41,6 +43,7 @@ public:
     Option *ui_config6;
     Option *ui_updateBtn;
     Option *ui_manifoldUpdateStatus;
+    Option *ui_mac;
     void init();
     void runTouchInput(SimplePoint pos, bool down);
     void loop();

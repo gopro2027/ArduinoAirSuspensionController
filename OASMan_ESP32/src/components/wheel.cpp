@@ -64,7 +64,7 @@ Wheel::Wheel(Solenoid *solenoidInPin, Solenoid *solenoidOutPin, InputType *press
     this->pressureValue = 0;
     this->pressureGoal = 0;
     this->routineStartTime = 0;
-    //this->flagStartPressureGoalRoutine = false;
+    // this->flagStartPressureGoalRoutine = false;
     flagStartPressureGoalRoutine[thisWheelNum] = false;
     this->quickMode = false;
 }
@@ -182,63 +182,6 @@ void Wheel::initPressureGoal(int newPressure, bool quick)
 // height sensor: AA-ROT-120 https://www.aliexpress.us/item/3256807527882480.html https://www.amazon.com/Height-Sensor-Suspension-Leveling-AA-ROT-120/dp/B08DJ3HX1B https://www.aliexpress.us/item/3256806751644782.html
 // Output voltage UA:0.5-4.5
 
-// 300 and 700 works quite well but way too long of times
-// 100 and 400 appeared to not be quite enough for an accurate reading. It bounced a lot going from 20 to 90 and undershot, and also going from 90 to 20 it didn't calculate accurately either
-#define VALVE_OPEN_TIME 200
-#define VALVE_STABILIZE_TIME 500
-// does 1 quick burst to figure out the rest of the values we want
-double Wheel::calculatePressureTimingReal(Solenoid *valve)
-{
-    int pressureDifABS = abs(this->pressureGoal - this->getSelectedInputValue());
-    if (pressureDifABS < 15)
-    {
-        return calculateValveOpenTimeMS(pressureDifABS, this->quickMode);
-    }
-    double pressures[2];
-    double times[2];
-    // grab initial value first
-    this->readInputs();
-    pressures[0] = this->getSelectedInputValue(); // 0
-    times[0] = 0;                                 // 0
-
-    // open valve for set time and grab value so we have a graph now so we can estimate the pressure since the graphs are mostly linear
-
-    valve->open();
-    delay(VALVE_OPEN_TIME); // too low and we risk innacurate values due to flow timing ect it's not perfect. lower values are less time to stabilize after
-    valve->close();
-    delay(VALVE_STABILIZE_TIME); // ts jiggles so increased from 150 to 300
-    this->readInputs();
-    pressures[1] = this->getSelectedInputValue(); // 50
-    times[1] = VALVE_OPEN_TIME;                   // 1
-
-    // we can just flip the x and y (time and pressure) so we instead log a typical quadratic equation and then also since our x value is now pressure, which does appear to map correctly, we can just plug in our pressure into the equation and we don't have to use the quadratic formula to solve for y.
-
-    // formula: y-y1=m(x-x1) & m=(y-y1)/(x-x1) & y=mx+b & b=y-mx
-    // m = (1 - 0) / (50 - 0) = 0.02
-    double m = (times[1] - times[0]) / (pressures[1] - pressures[0]);
-    // b = 0 - 0.02 * 0 = 0
-    double b = times[0] - m * pressures[0];
-
-    // Formula: f(pressureGoal) - f(currentPressure)
-    // Proof:
-    // f(currentPressure) = times[1]
-    // f(currentPressure) = (m * pressures[1] + b)
-    // times[1] = (m * pressures[1] + b) = (0.02 * 50 + 0) = 1
-    // timeDif = (0.02 * 100 + 0) - 1 = 1 which matches simulation graph for air up! https://www.reddit.com/r/askmath/comments/1k5kysw/what_type_of_line_is_this_and_how_can_i_make_a/
-    double timeDif = (m * pressureGoal + b) - times[1];
-
-    // if value is negative, we must have overshot. returning a negative value will be ignored and valve won't open and that will be just fine
-
-    // if value is more than 5000 just assume something is wrong and use the old method
-    if (timeDif > 5000)
-    {
-        // wack value... do it the old way
-        return calculateValveOpenTimeMS(abs(this->pressureGoal - this->getSelectedInputValue()), this->quickMode);
-    }
-
-    return timeDif;
-}
-
 int wheelLoopBittset = 0;
 
 static SemaphoreHandle_t wheelLockSem;
@@ -247,14 +190,16 @@ void setupWheelLockSem()
     wheelLockSem = xSemaphoreCreateMutex();
 }
 
-void wheelThreadLock() {
+void wheelThreadLock()
+{
     while (xSemaphoreTake(wheelLockSem, 1) != pdTRUE)
     {
         delay(1);
     }
 }
 
-void wheelThreadUnlock() {
+void wheelThreadUnlock()
+{
     xSemaphoreGive(wheelLockSem);
 }
 
@@ -262,30 +207,38 @@ void wheelThreadUnlock() {
 std::atomic<int> waiting_threads(0);
 std::atomic<int> generation(0);
 
-int count_participants() {
+int count_participants()
+{
     // Count how many threads are currently running
     int currently_active = 0;
-    for (int i = 0; i < NUM_WHEEL_THREADS; ++i) {
-        if (flagStartPressureGoalRoutine[i].load()) {
+    for (int i = 0; i < NUM_WHEEL_THREADS; ++i)
+    {
+        if (flagStartPressureGoalRoutine[i].load())
+        {
             currently_active++;
         }
     }
     return currently_active;
 }
 
-void custom_barrier_wait(int num_participants) {
+void custom_barrier_wait(int num_participants)
+{
     int gen = generation.load();
     waiting_threads.fetch_add(1);
 
-    if (waiting_threads.load() == num_participants) {
+    if (waiting_threads.load() == num_participants)
+    {
         // Last thread arrives, reset and let others go
         wheelThreadLock();
         waiting_threads.store(0);
         generation.fetch_add(1);
         wheelThreadUnlock();
-    } else {
+    }
+    else
+    {
         // Poll until generation changes
-        while (generation.load() == gen) {
+        while (generation.load() == gen)
+        {
             delay(1);
         }
     }
@@ -298,9 +251,9 @@ void Wheel::loop()
     this->readInputs();
     if (flagStartPressureGoalRoutine[thisWheelNum].load())
     {
-        delay(100);// wait for all threads to sync on first call. 6-19-2025: I actually have no clue if this is required. The 100 is the same as the delay in the task.
-        //const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
-        //const double oscillation = 1.75;
+        delay(100); // wait for all threads to sync on first call. 6-19-2025: I actually have no clue if this is required. The 100 is the same as the delay in the task.
+        // const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
+        // const double oscillation = 1.75;
         const double oscillation = 1.2;
         int oscillationPow = 0;
         const int startIteration = -1;
@@ -345,25 +298,28 @@ void Wheel::loop()
                     // right now not going to use this because it doesn't seem to work super well up air up. Results in super low values. Need to do more testing
                     // int valveTime = this->calculatePressureTimingReal(valve);
 
-                    
                     double start_pressure = this->getSelectedInputValue();
                     double end_pressure = this->pressureGoal;
                     double tank_pressure = getCompressor()->getTankPressure();
 
-                    if (canUseAiPrediction(valve->getAIIndex())) {
+                    if (canUseAiPrediction(valve->getAIIndex()))
+                    {
 
                         // conversion float to int eliminates inf and nan
                         int aiPredict = getAiPredictionTime(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure);
 
                         // There are some valid scenarios where we can get inf or nan if say the tank pressure is lower than the end pressure
-                        if (aiPredict < 5000 && aiPredict > 0) {
+                        if (aiPredict < 5000 && aiPredict > 0)
+                        {
                             valveTime = aiPredict;
                         }
                     }
 
                     // To help prevent ocellations, check if previous direction is different than new direction. Ex: was going up, but suddently now is going down. It must have jumped over goal. Go ahead and start dividing valve time by (oscillation ^ oscillationPow)
-                    if (iteration > startIteration) {
-                        if (previousDirection != up) {
+                    if (iteration > startIteration)
+                    {
+                        if (previousDirection != up)
+                        {
                             oscillationPow++;
                         }
                     }
@@ -379,19 +335,22 @@ void Wheel::loop()
                         delay(valveTime);
                         valve->close();
 
-                        
                         // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
                         delay(250); // Changed to 250. 150 was... confusing
 
                         // only bother saving data for first 2 iterations AND when the valve was opened for more than 10ms AND if the pressure change is greater than 3psi
-                        if (iteration < startIteration + 2 && valveTime > 10) {
+                        if (iteration < startIteration + 2 && valveTime > 10)
+                        {
                             this->readInputs();
                             end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
-                            if (abs(start_pressure - end_pressure) > 3) {
+                            if (abs(start_pressure - end_pressure) > 3)
+                            {
                                 appendPressureDataToFile(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime);
                             }
                         }
-                    } else {
+                    }
+                    else
+                    {
                         // calculated valve time is 0 so just break out of loop
                         break;
                     }
@@ -410,13 +369,10 @@ void Wheel::loop()
             }
             iteration++;
 
-            
-
             custom_barrier_wait(count_participants());
-
         }
         custom_barrier_wait(count_participants()); // needed here because when it breaks out of the loop it needs to hit it one last time.
-        
+
         flagStartPressureGoalRoutine[thisWheelNum] = false;
         // close both after (only applies for level sensor logic)
         this->s_AirIn->close();
@@ -424,11 +380,14 @@ void Wheel::loop()
     }
 
     // Maintain Pressure code
-    if (getmaintainPressure()) {
+    if (getmaintainPressure())
+    {
         // only run if pressure is higher than 10psi... also prevents it when a preset is not yet loaded (0)
-        if (this->pressureGoal > 10) {
+        if (this->pressureGoal > 10)
+        {
             int pressureDif = this->pressureGoal - this->getSelectedInputValue();
-            if (pressureDif >= 10) { // 10 psi difference
+            if (pressureDif >= 10)
+            {                                         // 10 psi difference
                 initPressureGoal(this->pressureGoal); // try to go back to the desired pressure
             }
         }

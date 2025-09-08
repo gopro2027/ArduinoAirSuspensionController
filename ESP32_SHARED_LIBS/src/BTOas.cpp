@@ -307,3 +307,9 @@ String BroadcastNamePacket::getBroadcastName()
 {
     return String((char *)&this->args[0]);
 }
+BP32Packet::BP32Packet(BP32CMD bp32Cmd, bool value)
+{
+    this->cmd = BP32PKT;
+    this->args16()[0].i = bp32Cmd;
+    this->args16()[1].i = value;
+}

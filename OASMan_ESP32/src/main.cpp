@@ -40,11 +40,6 @@ void setup()
 
     // trainAIModels();
 
-#ifdef parabolaLearn
-    //  updateParabola(true, parabola_default_value, parabola_default_value, parabola_default_value);
-    //  updateParabola(false, parabola_default_value, parabola_default_value, parabola_default_value);
-#endif
-
     delay(200); // wait for voltage stabilize
 
     setupADCReadMutex();
