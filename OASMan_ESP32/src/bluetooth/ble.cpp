@@ -218,7 +218,7 @@ void ble_setup()
 {
 
     BLEDevice::setMTU(ESP_GATT_MAX_MTU_SIZE);
-    
+
     // Create the BLE Device
     BLEDevice::init(getbleName().c_str());
 
@@ -261,7 +261,6 @@ void ble_loop()
 
     checkConnectedClients();
     ble_notify();
-
 }
 
 void ble_create_characteristics(BLEService *pService)
@@ -392,7 +391,6 @@ void ble_notify()
         // int aiDataPacked = (AIPercentage << 4) + AIReadyBittset; // combine at bottom
         // aiDataPacked = (aiDataPacked << 21);                     // move to top end (4 + 7 = 11; 32-11 = 21)
         // statusBittset = statusBittset | aiDataPacked;
-
         StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue(), getCompressor()->getTankPressure(), statusBittset, AIPercentage, AIReadyBittset, getupdateResult());
 
         statusCharacteristic->setValue(statusPacket.tx(), BTOAS_PACKET_SIZE);
@@ -514,7 +512,6 @@ void runReceivedPacket(BTOasPacket *packet)
     {
         readProfile(((PresetPacket *)packet)->getProfile());
         PresetPacket presetPacket(((PresetPacket *)packet)->getProfile(), currentProfile[WHEEL_FRONT_PASSENGER], currentProfile[WHEEL_REAR_PASSENGER], currentProfile[WHEEL_FRONT_DRIVER], currentProfile[WHEEL_REAR_DRIVER]);
-
         restCharacteristic->setValue(presetPacket.tx(), BTOAS_PACKET_SIZE);
         restCharacteristic->notify();
         break;
@@ -544,12 +541,32 @@ void runReceivedPacket(BTOasPacket *packet)
         ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage());
         restCharacteristic->setValue(pkt.tx(), BTOAS_PACKET_SIZE);
         restCharacteristic->notify();
+        delay(500);
+        Serial.println("name send start");
+        String bleNames = getbleName();
+        Serial.println(bleNames);
+/*         BroadcastNamePacket pac(bleNames.c_str());
+        restCharacteristic->setValue(pac.tx(), BTOAS_PACKET_SIZE);
+        restCharacteristic->notify();
+        Serial.println("name send end"); */
         break;
     }
     case BTOasIdentifier::AUTHPACKET:
         if (((AuthPacket *)packet)->getBleAuthResult() == AuthResult::AUTHRESULT_UPDATEKEY)
         {
-            setblePasskey(((AuthPacket *)packet)->getBlePasskey());
+            if (((AuthPacket *)packet)->getBlePasskey() != getblePasskey())
+            {
+                setblePasskey(((AuthPacket *)packet)->getBlePasskey());
+                setinternalReboot(true);
+            }
+        }
+        break;
+    case BTOasIdentifier::BROADCASTNAME:
+
+        if (((BroadcastNamePacket *)packet)->getBroadcastName() != getbleName())
+        {
+            setbleName(((BroadcastNamePacket *)packet)->getBroadcastName());
+            setinternalReboot(true);
         }
         break;
     }

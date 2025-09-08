@@ -251,6 +251,7 @@ ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, u
     *this->_bagVolumePercentage() = bagVolumePercentage;
     *this->_setValues() = setValues;
 }
+
 uint32_t *ConfigValuesPacket::_systemShutoffTimeM()
 {
     return (uint32_t *)&(this->args32()[0].i);
@@ -279,7 +280,6 @@ bool *ConfigValuesPacket::_setValues()
 {
     return (bool *)&(this->args8()[8 + 3].i);
 }
-
 AuthPacket::AuthPacket(uint32_t blePasskey, AuthResult authResult)
 {
     this->cmd = AUTHPACKET;
@@ -297,4 +297,13 @@ AuthResult AuthPacket::getBleAuthResult()
 void AuthPacket::setBleAuthResult(AuthResult ar)
 {
     this->args32()[1].i = (uint32_t)ar;
+}
+BroadcastNamePacket::BroadcastNamePacket(String broadcastName)
+{
+    this->cmd = BROADCASTNAME;
+    strcpy((char *)&this->args[0], broadcastName.c_str());
+}
+String BroadcastNamePacket::getBroadcastName()
+{
+    return String((char *)&this->args[0]);
 }

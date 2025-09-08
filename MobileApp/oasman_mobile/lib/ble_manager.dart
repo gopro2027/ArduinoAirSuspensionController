@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert'; // for utf8.encode
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -40,7 +41,6 @@ class BLEInt {
   int toInt() => value;
 }
 
-
 class BLEManager extends ChangeNotifier {
   final FlutterBluePlus flutterBlue = FlutterBluePlus(); // BLE instance
   BluetoothDevice? connectedDevice; // Currently connected device
@@ -52,11 +52,30 @@ class BLEManager extends ChangeNotifier {
       valveControlCharacteristic; // Characteristic for notifications
   StreamSubscription<List<int>>? restStream;
   StreamSubscription<List<int>>? statusStream;
+  StreamSubscription<OnConnectionStateChangedEvent>? _globalConnSub;
+
+  void _startGlobalConnListener() {
+    _globalConnSub?.cancel();
+    _globalConnSub =
+        FlutterBluePlus.events.onConnectionStateChanged.listen((event) {
+      // fires for ALL devices
+      debugPrint(
+          'Global conn event: ${event.device.id} -> ${event.connectionState}');
+      if (connectedDevice?.id == event.device.id &&
+          event.connectionState == BluetoothConnectionState.disconnected) {
+        print('Manifold disconnected!');
+        connectedDevice = null;
+        vehicleOn = false;
+        restCharacteristic = null;
+        statusCharacteristic = null;
+        notifyListeners();
+      }
+    });
+  }
 
   List<BluetoothDevice> devicesList = []; // List of discovered devices
 
   int passkey = int.parse(globalSettings!.passkeyText);
-  
 
   Map<String, String> pressureValues = {
     "frontLeft": "-",
@@ -69,14 +88,17 @@ class BLEManager extends ChangeNotifier {
   bool compressorOn = false;
   bool compressorFrozen = false;
   bool vehicleOn = false;
-  bool riseOnStart = true;
-  bool maintainPressure = true;
-  bool airOutOnShutoff = true;
+  bool riseOnStart = false;
+  bool maintainPressure = false;
+  bool airOutOnShutoff = false;
   bool safetyMode = true;
-  String bleBroadcastName = 'TODO';
-  int compressorOnPSI = 120;
-  int compressorOffPSI = 140;
-
+  String bleBroadcastName = '';
+  int compressorOnPSI = 0;
+  int compressorOffPSI = 0;
+  int systemShutoffTimeM = 0;
+  int pressureSensorMax = 0;
+  int bagVolumePercentage = 0;
+  int bagMaxPressure = 0;
 
   int valveControlValue = 0; // uint32
   int getValveControlValue() {
@@ -162,6 +184,7 @@ class BLEManager extends ChangeNotifier {
   Future<void> connectToDevice(
       BluetoothDevice device, BuildContext context) async {
     try {
+      _startGlobalConnListener(); // ensure listener is active
       print("Connecting to device: ${device.name} (${device.id})");
       await device.connect(autoConnect: false);
 
@@ -169,6 +192,7 @@ class BLEManager extends ChangeNotifier {
       notifyListeners();
 
       await discoverServices(device, context);
+      await sendRestCommand([21]); //ask for config from manifold
 
       print("Successfully connected to ${device.name} (${device.id})");
     } catch (e) {
@@ -182,6 +206,7 @@ class BLEManager extends ChangeNotifier {
     if (connectedDevice != null) {
       try {
         await connectedDevice!.disconnect();
+        await _globalConnSub?.cancel();
         restStream?.cancel();
         statusStream?.cancel();
 
@@ -304,23 +329,89 @@ class BLEManager extends ChangeNotifier {
     }
   }
 
+  Future<void> sendRestCommandString(List<int> address, String text) async {
+    if (restCharacteristic != null) {
+      try {
+        if (restCharacteristic!.properties.write) {
+          // Convert the string into a list of bytes
+          List<int> command = utf8.encode(text);
+
+          await restCharacteristic!
+              .write(address + command, withoutResponse: false);
+          print("String command sent successfully: $text");
+        } else {
+          print("Write characteristic does not support write operations.");
+        }
+      } catch (e) {
+        print("Error sending string command: $e");
+      }
+    } else {
+      print("No write characteristic available.");
+    }
+  }
+
   void _handleIncomingRestData(List<int> data, BuildContext context) {
     try {
       //if (data.length >= 16) {
       final packetId = _decodeInt32(data, 0);
       print("Received data: $data");
       print("Rest Packet ID: $packetId");
-      if (packetId == 22) {
-        print("Received auth result");
-        //print(_decodeInt32(data, 4).toString());
-        //print(_decodeInt32(data, 8).toString());
-        if (_decodeInt32(data, 8) == 2 /*AuthResult::AUTHRESULT_FAIL*/) {
-          disconnectDevice();
-          showDialog(
-            context: context,
-            builder: (_) => const InvalidPasskeyPopup(),
-          );
-        }
+
+      switch (packetId) {
+        case 22: //handle incoming status packages
+          print("Received auth result");
+          //print(_decodeInt32(data, 4).toString());
+          //print(_decodeInt32(data, 8).toString());
+          if (_decodeInt32(data, 8) == 2 /*AuthResult::AUTHRESULT_FAIL*/) {
+            disconnectDevice();
+            showDialog(
+              context: context,
+              builder: (_) => const InvalidPasskeyPopup(),
+            );
+          }
+          break;
+        case 21: //handle incoming config packages
+          systemShutoffTimeM = _decodeInt32(data, 4); //uint32_t
+          pressureSensorMax = _decodeShort(data, 8); //uint16_t
+          bagVolumePercentage = _decodeShort(data, 10); //uint16_t
+          bagMaxPressure = data[12]; //uint8_t
+          compressorOnPSI = data[13]; //uint8_t
+          compressorOffPSI = data[14]; //uint8_t
+          bool setValues = data[15] != 0;
+
+          print("System shutoff time: ");
+          print(systemShutoffTimeM);
+          print("Pressure sensor max: ");
+          print(pressureSensorMax);
+          print("Bag volume %: ");
+          print(bagVolumePercentage);
+          print("Bag max pressure: ");
+          print(bagMaxPressure);
+          print("Compressor ON PSI: ");
+          print(compressorOnPSI);
+          print("Compressor OFF PSI: ");
+          print(compressorOffPSI);
+          print("Set values flag: ");
+          print(setValues ? "true" : "false");
+
+          break;
+        case 30:
+          print("incoming blename");
+          print(data);
+          final bytes = Uint8List.fromList(data);
+          final byteData = ByteData.sublistView(bytes);
+
+          // First 4 bytes -> ID
+          int id = byteData.getUint32(0, Endian.little);
+
+          // Rest -> UTF-8 string, remove trailing zeros
+          List<int> nameBytes =
+              bytes.sublist(4).takeWhile((b) => b != 0).toList();
+          String bleName = utf8.decode(nameBytes);
+
+          print("ID: $id, bleName: $bleName");
+          bleBroadcastName = bleName;
+          break;
       }
 
       notifyListeners();
@@ -332,69 +423,84 @@ class BLEManager extends ChangeNotifier {
     }
   }
 
-void handleStatusBittset(List<int> statusBytes) {
-  if (statusBytes.length != 4) {
-    throw ArgumentError('StatusBittset must be exactly 4 bytes long');
+  int toUint32(List<int> bytes, [int startIndex = 0]) {
+    return (bytes[startIndex] & 0xFF) |
+        ((bytes[startIndex + 1] & 0xFF) << 8) |
+        ((bytes[startIndex + 2] & 0xFF) << 16) |
+        ((bytes[startIndex + 3] & 0xFF) << 24);
   }
 
-  // Convert bytes to Uint32 (little endian to match C++)
-  final byteData = ByteData.sublistView(Uint8List.fromList(statusBytes));
-  final statusBittset = byteData.getUint32(0, Endian.little);
+  void handleStatusBittset(List<int> statusBytes) {
+    if (statusBytes.length != 4) {
+      throw ArgumentError('StatusBittset must be exactly 4 bytes long');
+    }
 
-  print("Raw statusBittset: $statusBittset");
+    // Convert bytes to Uint32 (little endian to match C++)
+    final byteData = ByteData.sublistView(Uint8List.fromList(statusBytes));
+    final statusBittset = byteData.getUint32(0, Endian.little);
 
-  // Decode individual flags
-  compressorFrozen    = (statusBittset & (1 << 0)) != 0;
-  compressorOn        = (statusBittset & (1 << 1)) != 0;
-  vehicleOn           = (statusBittset & (1 << 2)) != 0;
-  final timerExpired        = (statusBittset & (1 << 3)) != 0;
-  final clock               = (statusBittset & (1 << 4)) != 0;
-  riseOnStart         = (statusBittset & (1 << 5)) != 0;
-  maintainPressure    = (statusBittset & (1 << 6)) != 0;
-  airOutOnShutoff     = (statusBittset & (1 << 7)) != 0;
-  final heightSensorMode    = (statusBittset & (1 << 8)) != 0;
-  safetyMode          = (statusBittset & (1 << 9)) != 0;
-  final aiStatusEnabled     = (statusBittset & (1 << 10)) != 0;
+    print(toUint32(statusBytes));
+    //print(byteData);
+    print(statusBittset);
 
-  print("""
-  Compressor Frozen: $compressorFrozen
-  Compressor On: $compressorOn
-  Vehicle On: $vehicleOn
-  Timer Expired: $timerExpired
-  Clock: $clock
-  Rise on Start: $riseOnStart
-  Maintain Pressure: $maintainPressure
-  Air out on Shutoff: $airOutOnShutoff
-  Height Sensor Mode: $heightSensorMode
-  Safety Mode: $safetyMode
-  AI Enabled: $aiStatusEnabled
-  """);
-}
+    // Decode individual flags
+    compressorFrozen = (statusBittset & (1 << 0)) != 0;
+    compressorOn = (statusBittset & (1 << 1)) != 0;
+    vehicleOn = (statusBittset & (1 << 2)) != 0;
+    final timerExpired = (statusBittset & (1 << 3)) != 0;
+    final clock = (statusBittset & (1 << 4)) != 0;
+    riseOnStart = (statusBittset & (1 << 5)) != 0;
+    maintainPressure = (statusBittset & (1 << 6)) != 0;
+    airOutOnShutoff = (statusBittset & (1 << 7)) != 0;
+    final heightSensorMode = (statusBittset & (1 << 8)) != 0;
+    safetyMode = (statusBittset & (1 << 9)) != 0;
+    final aiStatusEnabled = (statusBittset & (1 << 10)) != 0;
+
+/*        print("""
+     Compressor Frozen: $compressorFrozen
+     Compressor On: $compressorOn
+     Vehicle On: $vehicleOn
+     Timer Expired: $timerExpired
+     Clock: $clock
+     Rise on Start: $riseOnStart
+     Maintain Pressure: $maintainPressure
+     Air out on Shutoff: $airOutOnShutoff
+     Height Sensor Mode: $heightSensorMode
+     Safety Mode: $safetyMode
+     AI Enabled: $aiStatusEnabled
+     """); */
+  }
 
   void _handleIncomingData(List<int> data) {
     try {
       if (data.length >= 16) {
         final packetId = _decodeInt32(data, 0);
-        final wheelPressures = [
-          _decodeShort(data, 4),
-          _decodeShort(data, 6),
-          _decodeShort(data, 8),
-          _decodeShort(data, 10),
-        ];
-        final tankPressure = _decodeShort(data, 12);
+        switch (packetId) {
+          case 1: //handle incoming status packages
+            final wheelPressures = [
+              _decodeShort(data, 4),
+              _decodeShort(data, 6),
+              _decodeShort(data, 8),
+              _decodeShort(data, 10),
+            ];
+            final tankPressure = _decodeShort(data, 12);
 
-        final statusBittset =  data.sublist(13, 17);
-        handleStatusBittset(statusBittset);
+            final statusBittset = data.sublist(16, 20);
+            print(data);
+            print(statusBittset);
+            handleStatusBittset(statusBittset);
 
-        pressureValues = {
-          "frontLeft": wheelPressures[2].toString(),
-          "frontRight": wheelPressures[0].toString(),
-          "rearLeft": wheelPressures[3].toString(),
-          "rearRight": wheelPressures[1].toString(),
-          "tankPressure": tankPressure.toString(),
-        };
+            pressureValues = {
+              "frontLeft": wheelPressures[2].toString(),
+              "frontRight": wheelPressures[0].toString(),
+              "rearLeft": wheelPressures[3].toString(),
+              "rearRight": wheelPressures[1].toString(),
+              "tankPressure": tankPressure.toString(),
+            };
+            break;
+        }
 
-        //print("Packet ID: $packetId");
+        print("Packet ID: $packetId");
         //print("Updated Pressure Values: $pressureValues");
         notifyListeners();
       } else {
@@ -409,6 +515,13 @@ void handleStatusBittset(List<int> statusBytes) {
     return data[offset] | (data[offset + 1] << 8);
   }
 
+  List<int> _encodeShort(int value) {
+    return [
+      value & 0xFF, // low byte
+      (value >> 8) & 0xFF, // high byte
+    ];
+  }
+
   int _decodeInt32(List<int> data, int offset) {
     return data[offset] |
         (data[offset + 1] << 8) |
@@ -416,5 +529,38 @@ void handleStatusBittset(List<int> statusBytes) {
         (data[offset + 3] << 24);
   }
 
+  List<int> _encodeInt32(int value) {
+    return [
+      value & 0xFF, // byte 0 (LSB)
+      (value >> 8) & 0xFF, // byte 1
+      (value >> 16) & 0xFF, // byte 2
+      (value >> 24) & 0xFF, // byte 3 (MSB)
+    ];
+  }
+
   bool isConnected() => connectedDevice != null;
+
+  void saveConfigToManifold() {
+    List<int> _packetID = _encodeInt32(21);
+    List<int> _systemShutoffTimeM = _encodeInt32(systemShutoffTimeM); //uint32_t
+    List<int> _pressureSensorMax = _encodeShort(pressureSensorMax); //uint16_t
+    List<int> _bagVolumePercentage = _encodeShort(bagVolumePercentage); //uint16_t
+    List<int> _data = [
+      ..._packetID,
+      ..._systemShutoffTimeM,
+      ..._pressureSensorMax,
+      ..._bagVolumePercentage,
+      bagMaxPressure,
+      compressorOnPSI,
+      compressorOffPSI,
+      1
+    ];
+    sendRestCommand(_data);
+    sendRestCommand([..._encodeInt32(26), safetyMode ? 1 : 0]);
+    sendRestCommand([..._encodeInt32(10), riseOnStart ? 1 : 0]);
+    sendRestCommand([..._encodeInt32(19), maintainPressure ? 1 : 0]);
+    sendRestCommand([..._encodeInt32(20), airOutOnShutoff ? 1 : 0]);
+    sendRestCommandString(_encodeInt32(30), bleBroadcastName);
+    sendRestCommand([..._encodeInt32(22), ..._encodeInt32(passkey), ..._encodeInt32(3)]);
+  }
 }

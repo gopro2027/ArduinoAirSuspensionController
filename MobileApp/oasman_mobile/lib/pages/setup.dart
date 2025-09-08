@@ -46,7 +46,7 @@ class ConnectManifoldCard extends StatelessWidget {
   }
 }
 
-
+bool _settingsLoaded = false;
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -58,31 +58,40 @@ class SettingsPage extends StatefulWidget {
 class SettingsPageState extends State<SettingsPage> {
   late BLEManager bleManager;
   String inputType = 'Buttons';
-  bool maintainPressure = true;
-  bool riseOnStart = true;
-  bool dropDownWhenOff = true; //airOutOnShutoff on the controller
+  bool maintainPressure = false;
+  bool riseOnStart = false;
+  bool dropDownWhenOff = false; //airOutOnShutoff on the controller
   double dropDownDelay = 12.0;
   double liftUpDelay = 12.0;
   double solenoidOpenTime = 100.0;
   double solenoidPsi = 5.0;
   String readoutType = 'Height sensors';
-  String units = globalSettings!.units;
-  String passkeyText = globalSettings!.passkeyText;
+  String units = "Psi";
+  String passkeyText = "202777";
   bool safetyMode = true;
-  String bleBroadcastName = 'OasMan';
+  String bleBroadcastName = '';
   int compressorOnPSI = 120;
   int compressorOffPSI = 140;
+  int systemShutoffTimeM = 0;
+  int pressureSensorMax = 0;
+  int bagVolumePercentage = 0;
+  int bagMaxPressure = 0;
 
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
 
-  @override
   void initState() {
-    _loadSettings();
     super.initState();
+    bleManager = BLEManager();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await _loadSettings(); // now load settings
   }
 
   void onLeavePage() {
+    _settingsLoaded = false;
     _saveSettings();
   }
 
@@ -106,16 +115,19 @@ class SettingsPageState extends State<SettingsPage> {
 
     //load app settings saved on the manifold
     if (bleManager.connectedDevice != null) {
-    riseOnStart = bleManager.riseOnStart;
-    maintainPressure = bleManager.maintainPressure;
-    dropDownWhenOff = bleManager.airOutOnShutoff;
-    safetyMode = bleManager.safetyMode;
-    bleBroadcastName = bleManager.bleBroadcastName;
-    compressorOnPSI = bleManager.compressorOnPSI;
-    compressorOffPSI = bleManager.compressorOffPSI;
-    print("Manifold's settings loaded");
-    };
-
+      setState(() {
+        riseOnStart = bleManager.riseOnStart;
+        maintainPressure = bleManager.maintainPressure;
+        dropDownWhenOff = bleManager.airOutOnShutoff;
+        safetyMode = bleManager.safetyMode;
+        bleBroadcastName = bleManager.bleBroadcastName;
+        compressorOnPSI = bleManager.compressorOnPSI;
+        compressorOffPSI = bleManager.compressorOffPSI;
+        systemShutoffTimeM = bleManager.systemShutoffTimeM;
+      });
+      print("Manifold's settings loaded");
+    }
+    _settingsLoaded = true;
   }
 
   // Save settings
@@ -123,15 +135,24 @@ class SettingsPageState extends State<SettingsPage> {
     //Save settings to phone's
     final prefs = await SharedPreferences.getInstance();
     units = globalSettings!.units;
+    passkeyText = globalSettings!.passkeyText;
     await prefs.setString('_units', units);
     await prefs.setString('_passkeyText', passkeyText);
 
     //Save settings to manifold
-    if (bleManager.connectedDevice != null) {
-    bleManager.passkey = int.parse(passkeyText);
-    bleManager.bleBroadcastName = bleBroadcastName;
-    bleManager.compressorOnPSI = compressorOnPSI;
-    bleManager.compressorOffPSI = compressorOffPSI;
+    if (bleManager.isConnected()) {
+      bleManager.passkey = int.parse(passkeyText);
+      bleManager.bleBroadcastName = bleBroadcastName;
+      bleManager.compressorOnPSI = compressorOnPSI;
+      bleManager.compressorOffPSI = compressorOffPSI;
+      bleManager.systemShutoffTimeM = systemShutoffTimeM;
+      bleManager.safetyMode = safetyMode;
+      bleManager.riseOnStart = riseOnStart;
+      bleManager.maintainPressure = maintainPressure;
+      bleManager.airOutOnShutoff = dropDownWhenOff;
+
+      bleManager.saveConfigToManifold();
+
     }
 
     if (mounted) {
@@ -240,6 +261,9 @@ class SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_settingsLoaded) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
@@ -267,18 +291,39 @@ class SettingsPageState extends State<SettingsPage> {
                   _buildUploadImageSection(),
                   _buildBluetoothSection(),
                   if (bleManager.connectedDevice != null) ...[
-                  _buildInputTypeSection(),
-                  _buildBasicSettingsSection(),
-                  _buildDropDownWhenOffSection(),
-                  _buildLiftUpWhenOnSection(),
-                  _buildSolenoidsSection(),
-                  _buildReadoutTypeSection(),
-                  _buildTankPressureSection(),
-                  _buildDutyCycleSection(),
-                  _buildUnitsSection(context),
-                  _buildSystemSection(),
-                  ]else ...[
-const ConnectManifoldCard(),
+                    _buildInputTypeSection(),
+                    _buildBasicSettingsSection(),
+                    _buildDropDownWhenOffSection(),
+                    _buildLiftUpWhenOnSection(),
+                    _buildSolenoidsSection(),
+                    _buildReadoutTypeSection(),
+                    _buildTankPressureSection(),
+                    _buildDutyCycleSection(),
+                    _buildUnitsSection(context),
+                    _buildSystemSection(),
+                    ElevatedButton(
+                      onPressed: () {
+                        try {
+                          bleManager.sendRestCommand([12]);
+                          debugPrint("Reboot the manifold");
+                        } catch (e) {
+                          debugPrint("Failed to send command: $e");
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        "Reboot the manifold!",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ] else ...[
+                    const ConnectManifoldCard(),
                   ],
                 ],
               ),
@@ -315,10 +360,11 @@ const ConnectManifoldCard(),
               children: [
                 _buildKeyboardInputRow(
                   "Passkey",
-                  passkeyText,
+                  globalSettings!.passkeyText,
                   (value) {
                     try {
                       bleManager.passkey = int.parse(value);
+                      globalSettings!.passkeyText = value;
                       setState(() {
                         passkeyText = value;
                       });
@@ -329,19 +375,22 @@ const ConnectManifoldCard(),
                         passkeyText = "202777";
                       });
                     }
-                  },isNumberInput: true,
+                  },
+                  isNumberInput: true,limitChar: 6,
                 ),
                 if (bleManager.connectedDevice != null) ...[
-                _buildKeyboardInputRow(
-                  "Broadcast name",
-                  bleBroadcastName,
-                  (value) {
-                    setState(() {
-                      bleBroadcastName = value;
-                    });
-                  },
-                ),
-              ],
+                  _buildKeyboardInputRow(
+                    "Broadcast name",
+                    bleBroadcastName,
+                    (value) {
+                      setState(() {
+                        bleBroadcastName = value;
+                      }
+                      );
+                    },
+                    limitChar: 10,
+                  ),
+                ],
               ],
             ),
           ),
@@ -434,6 +483,42 @@ const ConnectManifoldCard(),
             ),
             child: Column(
               children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Safety mode',
+                          style: TextStyle(
+                            color: Colors.white,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.help_outline,
+                              size: 20, color: Colors.grey),
+                          onPressed: () {
+                            showInfoDialog(
+                              context,
+                              'Safety mode',
+                              'In safety mode the compressor is disabled.',
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    _buildSwitch(
+                      '',
+                      safetyMode,
+                      (value) {
+                        setState(() {
+                          safetyMode = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
                 _buildSwitch(
                   'Maintain pressure',
                   maintainPressure,
@@ -443,6 +528,41 @@ const ConnectManifoldCard(),
                     });
                   },
                 ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'System off delay',
+                      style: TextStyle(
+                        color: Colors.white,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.help_outline,
+                          size: 20, color: Colors.grey),
+                      onPressed: () {
+                        showInfoDialog(
+                          context,
+                          'System off delay',
+                          'Define the number of minutes the air ride system remains powered after the ignition is switched off.',
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildKeyboardInputRow(
+                        "",
+                        systemShutoffTimeM.toString(),
+                        (value) {
+                          setState(() {
+                            systemShutoffTimeM = int.parse(value);
+                          });
+                        },
+                        isNumberInput: true,
+                      ),
+                    ),
+                  ],
+                )
               ],
             ),
           ),
@@ -850,26 +970,29 @@ Widget _buildAdjustableRow(
 
 Widget _buildKeyboardInputRow(
     String label, String value, ValueChanged<String> onChanged,
-    {bool isNumberInput = false}) {
+    {bool isNumberInput = false, int limitChar = 0}) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 8.0),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(color: Colors.white, fontSize: 16),
+        if (label != "")
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
           ),
-        ),
         Expanded(
           child: TextFormField(
             initialValue: value,
             onChanged: onChanged,
             keyboardType:
                 isNumberInput ? TextInputType.number : TextInputType.text,
-            inputFormatters:
-                isNumberInput ? [FilteringTextInputFormatter.digitsOnly] : [],
+            inputFormatters:[
+              if (isNumberInput) FilteringTextInputFormatter.digitsOnly,
+              if (limitChar != 0)LengthLimitingTextInputFormatter(limitChar),
+                ],
             style: TextStyle(color: Colors.white), // text color
             decoration: InputDecoration(
               border: OutlineInputBorder(),
@@ -891,10 +1014,11 @@ Widget _buildSwitch(String label, bool value, ValueChanged<bool> onChanged) {
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(color: Colors.white, fontSize: 16),
-        ),
+        if (label != "")
+          Text(
+            label,
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
         Switch(
             value: value, onChanged: onChanged, activeColor: Color(0xFFBB86FC)),
       ],
