@@ -13,6 +13,7 @@ class AppSettings {
   });
 
   factory AppSettings.fromPrefs(SharedPreferences prefs) {
+    print("factory app's settings");
     return AppSettings(
       units : prefs.getString('_units') ?? 'Psi',
       passkeyText : prefs.getString('_passkeyText') ?? '202777',
@@ -26,9 +27,11 @@ AppSettings? globalSettings;
 // Helper to load settings
 Future<void> loadGlobalSettings() async {
   final prefs = await SharedPreferences.getInstance();
+  print("load app's settings");
   globalSettings = AppSettings(
       units : prefs.getString('_units') ?? 'Psi',
       passkeyText : prefs.getString('_passkeyText') ?? '202777',
       uploadedPicture: prefs.getString('uploaded_image') ?? '',
   );
+  print(globalSettings!.units);
 }

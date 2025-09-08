@@ -560,7 +560,7 @@ class BLEManager extends ChangeNotifier {
     sendRestCommand([..._encodeInt32(10), riseOnStart ? 1 : 0]);
     sendRestCommand([..._encodeInt32(19), maintainPressure ? 1 : 0]);
     sendRestCommand([..._encodeInt32(20), airOutOnShutoff ? 1 : 0]);
-    sendRestCommandString(_encodeInt32(30), bleBroadcastName);
+    sendRestCommandString(_encodeInt32(35), bleBroadcastName);
     sendRestCommand([..._encodeInt32(22), ..._encodeInt32(passkey), ..._encodeInt32(3)]);
   }
 }

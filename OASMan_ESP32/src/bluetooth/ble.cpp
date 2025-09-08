@@ -382,6 +382,7 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
     if (packet_type != HCI_EVENT_PACKET)
         return;
 
+    notifyKeepAlive();
     switch (hci_event_packet_get_type(packet))
     {
     case HCI_EVENT_DISCONNECTION_COMPLETE:
