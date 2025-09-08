@@ -395,7 +395,7 @@ class BLEManager extends ChangeNotifier {
           print(setValues ? "true" : "false");
 
           break;
-        case 30:
+        case 35: //handle incoming BLEname broadcast
           print("incoming blename");
           print(data);
           final bytes = Uint8List.fromList(data);
