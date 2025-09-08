@@ -51,6 +51,8 @@ void setup()
     // delay(5000);
 #endif
     Serial.begin(115200);
+    // esp_bt_controller_mem_release(ESP_BT_MODE_BLE);
+    esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT); // should free a tad bit of memory
     // Serial.setDebugOutput(true);
     log_i("Board: %s", BOARD_NAME);
     log_i("CPU: %s rev%d, CPU Freq: %d Mhz, %d core(s)", ESP.getChipModel(), ESP.getChipRevision(), getCpuFrequencyMhz(), ESP.getChipCores());
