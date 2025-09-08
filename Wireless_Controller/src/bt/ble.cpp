@@ -71,7 +71,7 @@ void deletePClientIfExist()
 }
 
 bool doDisconnect = false;
-void disconnect()
+void disconnect(bool showDialogOnDisconnect)
 {
     connected = false;
 
@@ -91,7 +91,10 @@ void disconnect()
         }
         else
         {
-            showDialog("Disconnected!", lv_color_hex(0xFF0000), 30000);
+            if (showDialogOnDisconnect)
+            {
+                showDialog("Disconnected!", lv_color_hex(0xFF0000), 30000);
+            }
         }
         deletePClientIfExist();
     }
@@ -147,8 +150,11 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
         log_i("Rest packet received: %i", pkt->cmd);
         if (pkt->cmd == AUTHPACKET)
         {
+            log_i("Auth packet received");
             authenticationResult = ((AuthPacket *)pkt)->getBleAuthResult();
+            log_i("Auth result: %i", authenticationResult);
             authedBleAddr = (ble_addr_t *)pBLERemoteCharacteristic->getClient()->getPeerAddress().getBase();
+            log_i("Authed address: %X:%X:%X:%X:%X:%X", authedBleAddr->val[5], authedBleAddr->val[4], authedBleAddr->val[3], authedBleAddr->val[2], authedBleAddr->val[1], authedBleAddr->val[0]);
         }
         if (authenticationResult == AuthResult::AUTHRESULT_SUCCESS)
         {
@@ -228,12 +234,11 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
 {
     clearPackets(); // not sure this is actually needed, but leaving in here to just give a clean slate?
     authenticationResult = AuthResult::AUTHRESULT_WAITING;
-    Serial.println(charUUID_Status.toString().c_str());
-    Serial.print("Forming a connection to ");
-    Serial.println(myDevice->getAddress().toString().c_str());
+    log_i("Status: %s", charUUID_Status.toString().c_str());
+    log_i("Forming a connection to %s", myDevice->getAddress().toString().c_str());
     deletePClientIfExist();
     pClient = NimBLEDevice::createClient();
-    Serial.println(" - Created client");
+    log_i(" - Created client");
 
     // pClient->secureConnection(true);
     // BLEDevice::setSecurityPasskey(BLE_PASSKEY);
@@ -249,11 +254,10 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
 
     pClient->setClientCallbacks(&clientCallbacks, false);
 
-    Serial.println("Set callbacks");
+    log_i("Set callbacks");
 
     // Connect to the remove BLE Server.
-    Serial.print("Address type: ");
-    Serial.println(myDevice->getAddressType());
+    log_i("Address type: %d", myDevice->getAddressType());
     // delay(100);
 
     // Connect async so we can timeout after 1 second. Unfortunately fairly easily the code can glitch up and get stuck here. Having a 1 second timeout lets us retry the connection, and it is usually successfull the second time around.
@@ -268,20 +272,20 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     if (!_connected)
     {
         pClient->cancelConnect();
-        Serial.println("Connection error (Timed out!)");
+        log_i("Connection error (Timed out!)");
         // delete pClient;
         return false;
     }
-    Serial.println(" - Connected to server");
+    log_i(" - Connected to server");
     // delay(1000);
     // pClient->getServices();
     // delay(1000);
 
     // request MTU
     // if (pClient->requestMtu(100)) {
-    //     Serial.println("MTU request successful");
+    //     log_i("MTU request successful");
     // } else {
-    //     Serial.println("MTU request failed");
+    //     log_i("MTU request failed");
     // }
 
     // Obtain a reference to the service we are after in the remote BLE server.
@@ -290,50 +294,48 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     BLERemoteService *pRemoteService = pClient->getService(serviceUUID);
     if (pRemoteService == nullptr)
     {
-        Serial.print("Failed to find our service UUID: ");
-        Serial.println(serviceUUID.toString().c_str());
+        log_i("Failed to find our service UUID: %s", serviceUUID.toString().c_str());
         // pClient->disconnect();
         return false;
     }
-    Serial.println(" - Found our service");
+    log_i(" - Found our service");
 
     // TODO: it will lock up if it fails in this characteristic code below. Not sure why tbh
-    Serial.println("Checking char: status");
+    log_i("Checking char: status");
     pRemoteChar_Status = pRemoteService->getCharacteristic(charUUID_Status);
-    Serial.println("Checking char: rest");
+    log_i("Checking char: rest");
     pRemoteChar_Rest = pRemoteService->getCharacteristic(charUUID_Rest);
-    Serial.println("Checking char: valve");
+    log_i("Checking char: valve");
     pRemoteChar_ValveControl = pRemoteService->getCharacteristic(charUUID_ValveControl);
 
     delay(50);
 
-    Serial.println("connecting char: status");
+    log_i("connecting char: status");
     if (connectCharacteristic(pRemoteService, pRemoteChar_Status) == false)
         _connected = false;
 
     delay(50);
 
-    Serial.println("connecting char: rest");
+    log_i("connecting char: rest");
     if (connectCharacteristic(pRemoteService, pRemoteChar_Rest) == false)
         _connected = false;
 
     delay(50);
 
-    Serial.println("connecting char: valve");
+    log_i("connecting char: valve");
     if (connectCharacteristic(pRemoteService, pRemoteChar_ValveControl) == false)
         _connected = false;
 
     if (_connected == false)
     {
         // pClient->disconnect();
-        Serial.println("At least one characteristic UUID not found");
+        log_i("At least one characteristic UUID not found");
         return false;
     }
 
-    Serial.print("MTU:");
-    Serial.println(pClient->getMTU());
+    log_i("MTU: %d", pClient->getMTU());
 
-    Serial.println("Checking auth...");
+    log_i("Checking auth...");
 
     AuthPacket authPacket(getblePasskey(), AuthResult::AUTHRESULT_WAITING);
     pRemoteChar_Rest->writeValue(authPacket.tx(), BTOAS_PACKET_SIZE, true); // all of the writeValue last arg got changed to true when I switched the server to BTStack. Idk why it's required now but it is
@@ -347,19 +349,19 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     {
         if (authenticationResult == AuthResult::AUTHRESULT_SUCCESS)
         {
-            Serial.println("Auth success!");
+            log_i("Auth success!");
             return true;
         }
         if (authenticationResult == AuthResult::AUTHRESULT_FAIL)
         {
             // authblacklist.push_back(*pClient->getPeerAddress().getBase());
-            Serial.println("Auth failed");
+            log_i("Auth failed");
             // pClient->disconnect();
             return false;
         }
         if (millis() > authEnd)
         {
-            Serial.println("Auth timed out");
+            log_i("Auth timed out");
             // pClient->disconnect();
             return false;
         }
@@ -367,7 +369,7 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
         delay(10);
     }
 
-    Serial.println("Connected Successfully");
+    log_i("Connected Successfully");
 
     return true;
 }
@@ -384,7 +386,7 @@ bool connectCharacteristic(BLERemoteService *pRemoteService, BLERemoteCharacteri
 
     if (l_BLERemoteChar->canNotify())
     {
-        Serial.println("Subscribing...");
+        log_i("Subscribing...");
         l_BLERemoteChar->subscribe(true, notifyCallback, false);
         // Serial.println("Subscribing 2...");
         // l_BLERemoteChar->subscribe(true, notifyCallback, false);
@@ -485,11 +487,13 @@ void scan()
 #define ESP_GATT_MAX_MTU_SIZE 517
 void ble_setup()
 {
-    Serial.println("Starting Arduino BLE Client application...");
+    log_i("Starting Arduino BLE Client application...");
     BLEDevice::init("OASMan_Controller");
     NimBLEDevice::setMTU(ESP_GATT_MAX_MTU_SIZE); // default is 255 if not set here!!
 
     disconnect(); // sets up variables to get it ready to go
+
+    showDialog("Searching for manifold...", lv_color_hex(0xFFFF00), 30000);
 }
 
 void ble_loop()
@@ -516,7 +520,7 @@ void ble_loop()
         {
             packet.dump();
             success = pRemoteChar_Rest->writeValue(packet.tx(), BTOAS_PACKET_SIZE, true);
-            Serial.println("Sent rest packet!");
+            log_i("Sent rest packet!");
         }
 
         unsigned int valveControlValue = getValveControlValue();
@@ -524,7 +528,7 @@ void ble_loop()
         {
             success = success && pRemoteChar_ValveControl->writeValue((uint8_t *)&valveControlValue, 4, true);
             previousValveInt = valveControlValue;
-            Serial.println("Sent valve packet!");
+            log_i("Sent valve packet!");
         }
 
         if (!success)
@@ -553,7 +557,7 @@ void ble_loop()
         {
 
             scanCallbacks.anyFound = true;
-            Serial.println("Connecting to device! ");
+            log_i("Connecting to device! ");
 
             connected = connectToServer(advertisedDevice);
             Serial.printf("Connected to server?? %i", connected);
@@ -583,7 +587,7 @@ void ble_loop()
             }
         }
 
-        Serial.println("disconnecting and rescanning");
+        log_i("disconnecting and rescanning");
         // failed to connect, do disconnect procedure
         disconnect();
     }

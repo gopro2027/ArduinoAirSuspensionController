@@ -139,12 +139,14 @@ void onWakeup()
     else
     {
         smartdisplay_lcd_set_backlight(0.8f);
+        showDialog("Waking up, reconnecting...", lv_color_hex(0xFFFF00), 30000);
     }
 }
 
 void Fall_Asleep(void)
 {
     log_i("Falling asleep");
+    disconnect(false); // disconnect from any BLE connections
     smartdisplay_lcd_set_backlight(0);
     vTaskDelay(pdMS_TO_TICKS(50)); // give time for backlight to turn off before sleeping
 
