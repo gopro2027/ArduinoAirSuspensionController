@@ -1,10 +1,11 @@
 #include "ui_scrHome.h"
 #include "ui/ui.h" // sketchy backwards import may break in the future
 
-LV_IMAGE_DECLARE(navbar_home);
 
 LV_IMAGE_DECLARE(navbar_home);
 ScrHome scrHome(navbar_home, true);
+static constexpr int NAV_FINAL_H  = 49;
+
 
 void draw_arrow(lv_obj_t *parent, CenterRect cr, int direction)
 {
@@ -110,16 +111,14 @@ void ScrHome::init(void)
 {
     Scr::init();
 
-    // Navbar image at bottom, stretched
+    // ====== Navbar at bottom: fixed 320x49 ======
     lv_obj_t *nav = lv_image_create(this->scr);
     lv_image_set_src(nav, &navbar_home);
-    lv_obj_set_size(nav, 320, 49);   // scale to full width
+    lv_obj_set_size(nav, DISPLAY_WIDTH, NAV_FINAL_H);
     lv_image_set_align(nav, LV_IMAGE_ALIGN_STRETCH);
     lv_obj_align(nav, LV_ALIGN_BOTTOM_MID, 0, 0);
-    
-
-    // keep reference if you need it
     this->icon_navbar = nav;
+
 
     // Your existing pills
     drawPill(this->scr, ctr_row0col0up, ctr_row0col0down);

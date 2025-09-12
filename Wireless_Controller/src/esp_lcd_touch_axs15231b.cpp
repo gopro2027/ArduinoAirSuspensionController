@@ -1,4 +1,6 @@
 #include "esp_lcd_touch_axs15231b.h"
+#include "waveshare_3p5/i2c_guard.h"
+
 TwoWire *g_touch_i2c;       
 
 uint16_t g_width; 
@@ -7,28 +9,33 @@ uint16_t g_rotation;
 touch_data_t g_touch_data;
 
 bool g_touch_int_flag = false;
-static bool touch_i2c_write_read(uint8_t driver_addr, uint8_t *write_buf, uint32_t write_len, uint8_t *read_buf, uint32_t read_len)
+static bool touch_i2c_write_read(uint8_t addr, uint8_t *wb, uint32_t wl,
+                                 uint8_t *rb, uint32_t rl)
 {
-    g_touch_i2c->beginTransmission(driver_addr);
-    g_touch_i2c->write(write_buf, write_len);
-    if (g_touch_i2c->endTransmission() != 0) {
-        Serial.println("The I2C write fails. - I2C Read\r\n");
-        return false;
-    }
+  if (!::i2c_lock(6)) return false;   // short timeout so touch “wins”
 
-    g_touch_i2c->requestFrom(driver_addr, read_len);
-    if (g_touch_i2c->available() != read_len) {
-        Serial.println("The I2C read fails. - I2C Read\r\n");
-        return false;
-    }
-    g_touch_i2c->readBytes(read_buf, read_len);
-    return true;
+  g_touch_i2c->beginTransmission(addr);
+  g_touch_i2c->write(wb, wl);
+  if (g_touch_i2c->endTransmission() != 0) {
+    ::i2c_unlock();
+    return false;
+  }
+  g_touch_i2c->requestFrom(addr, rl);
+  if (g_touch_i2c->available() != rl) {
+    ::i2c_unlock();
+    return false;
+  }
+  g_touch_i2c->readBytes(rb, rl);
+
+  ::i2c_unlock();
+  return true;
 }
 
 
 void bsp_touch_init(TwoWire *touch_i2c,int tp_rst, uint16_t rotation, uint16_t width, uint16_t height)
 {
     g_touch_i2c = touch_i2c;
+    
     g_width = width;
     g_height = height;
     g_rotation = rotation;

@@ -2,6 +2,7 @@
 
 LV_IMG_DECLARE(navbar_settings);
 ScrSettings scrSettings(navbar_settings, false);
+static constexpr int NAV_FINAL_H  = 49;
 
 void alertValueUpdated()
 {
@@ -25,9 +26,18 @@ void ScrSettings::init()
 {
     Scr::init();
 
+    // ====== Navbar at bottom: fixed 320x49 ======
+    lv_obj_t *nav = lv_image_create(this->scr);
+    lv_image_set_src(nav, &navbar_settings);
+    lv_obj_set_size(nav, DISPLAY_WIDTH, NAV_FINAL_H);
+    lv_image_set_align(nav, LV_IMAGE_ALIGN_STRETCH);
+    lv_obj_align(nav, LV_ALIGN_BOTTOM_MID, 0, 0);
+    this->icon_navbar = nav;
+
+
     this->optionsContainer = lv_obj_create(this->scr);
     lv_obj_remove_style_all(this->optionsContainer);
-    lv_obj_set_size(this->optionsContainer, DISPLAY_WIDTH, DISPLAY_HEIGHT - NAVBAR_HEIGHT);
+    lv_obj_set_size(this->optionsContainer, DISPLAY_WIDTH, DISPLAY_HEIGHT - NAV_FINAL_H);
     lv_obj_align(this->optionsContainer, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_set_layout(this->optionsContainer, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(this->optionsContainer, LV_FLEX_FLOW_COLUMN);

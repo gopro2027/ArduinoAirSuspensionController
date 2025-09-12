@@ -1,7 +1,8 @@
 {
-    "cmake.sourceDirectory": "C:/Users/kible/OASMAN/ArduinoAirSuspensionController/Wireless_Controller/src/ui",
+    "cmake.sourceDirectory": "D:/OASMAN_gopro/ArduinoAirSuspensionController/Wireless_Controller/src/ui",
     "files.associations": {
         "*.py": "python",
-        "esp_lcd_panel_vendor.h": "c"
+        "esp_lcd_panel_vendor.h": "c",
+        "*.tpp": "cpp"
     }
 }

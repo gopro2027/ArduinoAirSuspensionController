@@ -142,7 +142,11 @@
     #if LV_USE_DRAW_SW_ASM == LV_DRAW_SW_ASM_CUSTOM
         #define  LV_DRAW_SW_ASM_CUSTOM_INCLUDE ""
     #endif
+
+    #define LV_USE_DRAW_SW_COMPLEX_GRADIENTS 1
 #endif
+
+
 
 /* Use NXP's VG-Lite GPU on iMX RTxxx platforms. */
 #define LV_USE_DRAW_VGLITE 0
