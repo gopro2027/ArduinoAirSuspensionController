@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert'; // for utf8.encode
 
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:oasman_mobile/pages/popup/invalidkey.dart';
@@ -229,7 +230,7 @@ class BLEManager extends ChangeNotifier {
     try {
       _startGlobalConnListener(); // ensure listener is active
       print("Connecting to device: ${device.name} (${device.id})");
-      await device.connect(autoConnect: false);
+      await device.connect(autoConnect: true);
 
       connectedDevice = device;
       notifyListeners();
@@ -241,6 +242,9 @@ class BLEManager extends ChangeNotifier {
 
       print("Successfully connected to ${device.name} (${device.id})");
       bleBroadcastName = device.name;
+      globalSettings?.pairedManifoldId = device.id.toString();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('_passkeyText', device.id.toString());
     } catch (e) {
       print("Error connecting to device: $e");
       await disconnectDevice();
@@ -248,14 +252,29 @@ class BLEManager extends ChangeNotifier {
   }
     void _connectToDevice(BluetoothDevice device) async {
 
-    await device.connect(autoConnect: true); // autoConnect helps on Android
+    try {
+      _startGlobalConnListener(); // ensure listener is active
+      print("Connecting to device: ${device.name} (${device.id})");
+      await device.connect(autoConnect: true);
 
-    // Listen for disconnects and retry
-    device.connectionState.listen((state) {
-      if (state == BluetoothConnectionState.disconnected) {
-        _retryConnection(device);
-      }
-    });
+      connectedDevice = device;
+      notifyListeners();
+
+      await sendRestCommand([
+        BTOasIdentifier.GETCONFIGVALUES.value
+      ]); //ask for config from manifold
+
+      print("Successfully connected to ${device.name} (${device.id})");
+      bleBroadcastName = device.name;
+      globalSettings?.pairedManifoldId = device.id.toString();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('_passkeyText', device.id.toString());
+    } catch (e) {
+      print("Error connecting to device: $e");
+      await disconnectDevice();
+       _retryConnection(device);
+    }
+
   }  
   
   void _retryConnection(BluetoothDevice device) async {

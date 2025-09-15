@@ -20,7 +20,7 @@ class AppSettings {
       units : prefs.getString('_units') ?? 'Psi',
       passkeyText : prefs.getString('_passkeyText') ?? '202777',
       uploadedPicture: prefs.getString('uploaded_image') ?? '',
-      pairedManifoldId: prefs.getString('pairedManifoldId') ?? '',
+      pairedManifoldId: prefs.getString('_pairedManifoldId') ?? '',
     );
   }
 }
@@ -35,6 +35,6 @@ Future<void> loadGlobalSettings() async {
       units : prefs.getString('_units') ?? 'Psi',
       passkeyText : prefs.getString('_passkeyText') ?? '202777',
       uploadedPicture: prefs.getString('uploaded_image') ?? '',
-      pairedManifoldId: prefs.getString('pairedManifoldId') ?? '',
+      pairedManifoldId: prefs.getString('_pairedManifoldId') ?? '',
   );
 }
