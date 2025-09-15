@@ -69,7 +69,9 @@ void setup()
     {
         setupdateMode(false);
         Serial.println("Gonna try to download update");
+#if defined(OTA_SUPPORTED)
         downloadUpdate(getwifiSSID(), getwifiPassword());
+#endif
         return;
     }
 

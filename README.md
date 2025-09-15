@@ -18,12 +18,12 @@ Our goal with this project is to provide the car community with a modern fully c
 - Did your proprietary air suspension software stop working and there's no update? Not an issue here!<br>
 - Sensor broke in your proprietary manifold and you have to buy a whole new one for $1000? Not an issue here, just replace the sensor for $10.<br>
 - Want to use bespoke heavy duty valves but also have a nice user interface? Look no further than OAS-Man!<br>
-- Control your system with a PS3 controller? Yep, [we have that](https://www.youtube.com/shorts/fbXJVwzc6P0)<br>
+- Control your system with a PS3/PS4/Xbox controller? Yep, [we have that](https://www.youtube.com/shorts/fbXJVwzc6P0)<br>
 - Restomodding an old air suspension system? OAS-Man may be the solution!<br>
 - Literally any idea you've ever wanted to try with air suspension? OASMan is the best place to start.<br>
 
-This github repo includes an android app<sup>1</sup> and arduino code along with some 3d printable files and a PCB. The PCB is pre-made and ready for upload in JLCPCB to order. There is also a pre-made device you can order ($25) which is used as the dedicated controller<sup>2</sup>. You will still need to supply the rest of your system which is not covered in this project, such as struts/bags, tank, compressor, tubing and fittings, ect. So that is what you would need in addition to this, similarly to what you would need for one of the on-the-shelf manifolds. If you are unsure what to purchase, I suggest referencing (or purchasing!) the [Airtekk Stage 1 Kit](https://www.airtekk.com/product-p/uni-stage1-kit.htm) as that will just about cover everything you need.<br>
-<sub>1. The new version 2 android/ios app is work in progress as of 3/4/2025 and unfinished, please use the dedicated wireless controller for now.</sub><br>
+This github repo includes an android app<sup>1</sup> and esp32 code along with some 3d printable files and a PCB. The PCB is pre-made SMD and ready for upload in JLCPCB with assembly so minimal-to-no soldering required. There is also a pre-made touch screen device you can order ($25 to $40) which is used as the dedicated controller<sup>2</sup>. There is an easy to use webpage to upload the software so there is no coding required. You will still need to supply the rest of your system which is not covered in this project, such as struts/bags, tank, compressor, tubing and fittings, ect. So that is what you would need in addition to this, similarly to what you would need for one of the on-the-shelf manifolds. If you are unsure what to purchase, I suggest referencing (or purchasing!) the [Airtekk Stage 1 Kit](https://www.airtekk.com/product-p/uni-stage1-kit.htm) as that will just about cover everything you need.<br>
+<sub>1. The mobile app is behind on development and lacks various features of the controller software, and currently only has an android release. Recommended to use the touch screen controller for full functionality.</sub><br>
 <sub>2. Please view the tutorial and build instructions for more info.</sub>
 
 ### Branch Information:
@@ -40,7 +40,6 @@ This github repo includes an android app<sup>1</sup> and arduino code along with
 **ESP32_SHARED_LIBS** - Contains files used between the main board and controller projects. Notably the config file which you may or may not need to edit.<br>
 **LCDImageCreatorTool** - Code generator for making images for the tiny 128x64 screen on the manifold.<br>
 **MobileApp** - New flutter mobile app using BLE (incomplete at the time of this writing)<br>
-**AirSuspension** - Legacy android app using traditional bluetooth. Will be deleted in the future.<br>
 **3d Prints** - Contains files for 3d printing (more info in tutorials)<br>
 **PCB** - PCB files. More info in tutorial<br>
 **PS3_Controller_Tool** - Contains instructions & exe for setting the MAC address of your ps3 controller to work with OASMan<br>
