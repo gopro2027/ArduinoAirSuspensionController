@@ -714,12 +714,20 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
     case BTOasIdentifier::AUTHPACKET:
         if (((AuthPacket *)packet)->getBleAuthResult() == AuthResult::AUTHRESULT_UPDATEKEY)
         {
+            if (((AuthPacket *)packet)->getBlePasskey() != getblePasskey())
+            {
                 setblePasskey(((AuthPacket *)packet)->getBlePasskey());
+                setinternalReboot(true);
+            }
         }
         break;
     case BTOasIdentifier::BROADCASTNAME:
+
+        if (((BroadcastNamePacket *)packet)->getBroadcastName() != getbleName())
+        {
             setbleName(((BroadcastNamePacket *)packet)->getBroadcastName());
             setinternalReboot(true);
+        }
         break;
     case BTOasIdentifier::BP32PKT:
     {

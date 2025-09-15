@@ -44,9 +44,7 @@ enum BTOasIdentifier {
 
   final int value;
   const BTOasIdentifier(this.value);
-
 }
-
 
 class BLEByte {
   BLEByte(this.value);
@@ -205,6 +203,11 @@ class BLEManager extends ChangeNotifier {
             devicesList.add(result.device);
             notifyListeners();
           }
+          if (result.device.remoteId.str == globalSettings?.pairedManifoldId) {
+            FlutterBluePlus.stopScan();
+            _connectToDevice(result.device);
+            break;
+          }
         }
       }).onDone(() {
         isScanning = false;
@@ -232,13 +235,37 @@ class BLEManager extends ChangeNotifier {
       notifyListeners();
 
       await discoverServices(device, context);
-      await sendRestCommand([BTOasIdentifier.GETCONFIGVALUES.value]); //ask for config from manifold
+      await sendRestCommand([
+        BTOasIdentifier.GETCONFIGVALUES.value
+      ]); //ask for config from manifold
 
       print("Successfully connected to ${device.name} (${device.id})");
       bleBroadcastName = device.name;
     } catch (e) {
       print("Error connecting to device: $e");
       await disconnectDevice();
+    }
+  }
+    void _connectToDevice(BluetoothDevice device) async {
+
+    await device.connect(autoConnect: true); // autoConnect helps on Android
+
+    // Listen for disconnects and retry
+    device.connectionState.listen((state) {
+      if (state == BluetoothConnectionState.disconnected) {
+        _retryConnection(device);
+      }
+    });
+  }  
+  
+  void _retryConnection(BluetoothDevice device) async {
+    try {
+      await device.connect(autoConnect: true);
+    } catch (e) {
+      debugPrint("Reconnect failed: $e");
+      Future.delayed(const Duration(seconds: 3), () {
+        _retryConnection(device);
+      });
     }
   }
 
@@ -568,7 +595,8 @@ class BLEManager extends ChangeNotifier {
     List<int> _packetID = _encodeInt32(21);
     List<int> _systemShutoffTimeM = _encodeInt32(systemShutoffTimeM); //uint32_t
     List<int> _pressureSensorMax = _encodeShort(pressureSensorMax); //uint16_t
-    List<int> _bagVolumePercentage = _encodeShort(bagVolumePercentage); //uint16_t
+    List<int> _bagVolumePercentage =
+        _encodeShort(bagVolumePercentage); //uint16_t
     List<int> _data = [
       ..._packetID,
       ..._systemShutoffTimeM,
@@ -580,11 +608,28 @@ class BLEManager extends ChangeNotifier {
       1
     ];
     sendRestCommand(_data);
-    sendRestCommand([..._encodeInt32(BTOasIdentifier.SAFETYMODE.value), safetyMode ? 1 : 0]);
-    sendRestCommand([..._encodeInt32(BTOasIdentifier.RISEONSTART.value), riseOnStart ? 1 : 0]);
-    sendRestCommand([..._encodeInt32(BTOasIdentifier.MAINTAINPRESSURE.value), maintainPressure ? 1 : 0]);
-    sendRestCommand([..._encodeInt32(BTOasIdentifier.FALLONSHUTDOWN.value), airOutOnShutoff ? 1 : 0]);
-    sendRestCommandString(_encodeInt32(BTOasIdentifier.BROADCASTNAME.value), bleBroadcastName);
-    sendRestCommand([..._encodeInt32(BTOasIdentifier.AUTHPACKET.value), ..._encodeInt32(passkey), ..._encodeInt32(3)]);
+    sendRestCommand([
+      ..._encodeInt32(BTOasIdentifier.SAFETYMODE.value),
+      safetyMode ? 1 : 0
+    ]);
+    sendRestCommand([
+      ..._encodeInt32(BTOasIdentifier.RISEONSTART.value),
+      riseOnStart ? 1 : 0
+    ]);
+    sendRestCommand([
+      ..._encodeInt32(BTOasIdentifier.MAINTAINPRESSURE.value),
+      maintainPressure ? 1 : 0
+    ]);
+    sendRestCommand([
+      ..._encodeInt32(BTOasIdentifier.FALLONSHUTDOWN.value),
+      airOutOnShutoff ? 1 : 0
+    ]);
+    sendRestCommandString(
+        _encodeInt32(BTOasIdentifier.BROADCASTNAME.value), bleBroadcastName);
+    sendRestCommand([
+      ..._encodeInt32(BTOasIdentifier.AUTHPACKET.value),
+      ..._encodeInt32(passkey),
+      ..._encodeInt32(3)
+    ]);
   }
 }

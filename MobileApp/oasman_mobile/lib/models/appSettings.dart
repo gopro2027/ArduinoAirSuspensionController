@@ -5,11 +5,13 @@ class AppSettings {
   String uploadedPicture = '';
   String units = 'Psi';
   String passkeyText = '202777';
+  String pairedManifoldId = '';
 
   AppSettings({
     required this.units,
     required this.passkeyText,
     required this.uploadedPicture,
+    required this.pairedManifoldId,
   });
 
   factory AppSettings.fromPrefs(SharedPreferences prefs) {
@@ -18,6 +20,7 @@ class AppSettings {
       units : prefs.getString('_units') ?? 'Psi',
       passkeyText : prefs.getString('_passkeyText') ?? '202777',
       uploadedPicture: prefs.getString('uploaded_image') ?? '',
+      pairedManifoldId: prefs.getString('pairedManifoldId') ?? '',
     );
   }
 }
@@ -32,6 +35,6 @@ Future<void> loadGlobalSettings() async {
       units : prefs.getString('_units') ?? 'Psi',
       passkeyText : prefs.getString('_passkeyText') ?? '202777',
       uploadedPicture: prefs.getString('uploaded_image') ?? '',
+      pairedManifoldId: prefs.getString('pairedManifoldId') ?? '',
   );
-  print(globalSettings!.units);
 }

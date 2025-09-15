@@ -8,19 +8,20 @@ import 'package:oasman_mobile/pages/buttons.dart';
 import 'package:oasman_mobile/pages/setup.dart';
 import 'package:oasman_mobile/pages/header.dart'; // Import your header
 
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => BLEManager()), // BLEManager globally available
-        ChangeNotifierProvider(create: (_) => UnitProvider()), // UnitProvider globally available
+        ChangeNotifierProvider(
+            create: (_) => BLEManager()), // BLEManager globally available
+        ChangeNotifierProvider(
+            create: (_) => UnitProvider()), // UnitProvider globally available
       ],
-      child:MyApp(),
+      child: MyApp(),
     ),
   );
-  
 }
 
 class MyApp extends StatefulWidget {
@@ -33,20 +34,24 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   bool _isReady = false;
 
-   @override
+  @override
   void initState() {
     super.initState();
-    _initializeApp();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeApp();
+    });
   }
 
   Future<void> _initializeApp() async {
+    final bleManager = context.read<BLEManager>();
     await loadGlobalSettings(); // Load settings at startup
+    await bleManager.startScan(); // Auto-connect logic inside startScan
+
     setState(() => _isReady = true);
   }
 
   @override
   Widget build(BuildContext context) {
-
     if (!_isReady) {
       // Show loading indicator while settings load
       return const MaterialApp(
@@ -81,27 +86,24 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
-  
 
-  final GlobalKey<SettingsPageState> _settingsKey = GlobalKey<SettingsPageState>();
+  final GlobalKey<SettingsPageState> _settingsKey =
+      GlobalKey<SettingsPageState>();
   // List of pages
   List<Widget> get _pages => <Widget>[
-    const ButtonsPage(),
-    SettingsPage(key: _settingsKey),
-  ];
+        const ButtonsPage(),
+        SettingsPage(key: _settingsKey),
+      ];
 
   void _onItemTapped(int index) {
     if (_selectedIndex == 1 && index != 1) {
-    _settingsKey.currentState?.onLeavePage();
+      _settingsKey.currentState?.onLeavePage();
     }
     setState(() {
       _selectedIndex = index;
       print("Navigated to page index: $_selectedIndex");
     });
-    
   }
-  
-  
 
   @override
   Widget build(BuildContext context) {
@@ -135,4 +137,3 @@ class _MainPageState extends State<MainPage> {
     );
   }
 }
-
