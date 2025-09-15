@@ -27,8 +27,8 @@ extern "C" lv_indev_t *indev;   // owned by your smartdisplay glue (kept for com
 #ifndef DISPLAY_HEIGHT
   #define DISPLAY_HEIGHT 480
 #endif
-#ifndef DISPLAY_BCKL
-  #define DISPLAY_BCKL   6
+#ifndef GPIO_BCKL
+  #define GPIO_BCKL   6
 #endif
 
 #ifndef AXS15231B_SPI_BUS_PCLK
