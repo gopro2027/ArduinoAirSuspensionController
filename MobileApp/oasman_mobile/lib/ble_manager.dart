@@ -8,6 +8,46 @@ import 'package:permission_handler/permission_handler.dart';
 import "dart:typed_data";
 import 'models/appSettings.dart';
 
+enum BTOasIdentifier {
+  IDLE(0),
+  STATUSREPORT(1),
+  AIRUP(2),
+  AIROUT(3),
+  AIRSM(4),
+  SAVETOPROFILE(5),
+  READPROFILE(6),
+  AIRUPQUICK(7),
+  BASEPROFILE(8),
+  SETAIRHEIGHT(9),
+  RISEONSTART(10),
+  RAISEONPRESSURESET(11),
+  REBOOT(12),
+  CALIBRATE(13),
+  STARTWEB(14),
+  ASSIGNRECEPIENT(15),
+  MESSAGE(16),
+  SAVECURRENTPRESSURESTOPROFILE(17),
+  PRESETREPORT(18),
+  MAINTAINPRESSURE(19),
+  FALLONSHUTDOWN(20),
+  GETCONFIGVALUES(21),
+  AUTHPACKET(22),
+  HEIGHTSENSORMODE(23),
+  COMPRESSORSTATUS(24),
+  TURNOFF(25),
+  SAFETYMODE(26),
+  DETECTPRESSURESENSORS(27),
+  AISTATUSENABLED(28),
+  RESETAIPKT(29),
+  BP32PKT(30),
+  BROADCASTNAME(35);
+
+  final int value;
+  const BTOasIdentifier(this.value);
+
+}
+
+
 class BLEByte {
   BLEByte(this.value);
   int value;
@@ -192,9 +232,10 @@ class BLEManager extends ChangeNotifier {
       notifyListeners();
 
       await discoverServices(device, context);
-      await sendRestCommand([21]); //ask for config from manifold
+      await sendRestCommand([BTOasIdentifier.GETCONFIGVALUES.value]); //ask for config from manifold
 
       print("Successfully connected to ${device.name} (${device.id})");
+      bleBroadcastName = device.name;
     } catch (e) {
       print("Error connecting to device: $e");
       await disconnectDevice();
@@ -358,7 +399,7 @@ class BLEManager extends ChangeNotifier {
       print("Rest Packet ID: $packetId");
 
       switch (packetId) {
-        case 22: //handle incoming status packages
+        case BTOasIdentifier.AUTHPACKET: //handle incoming status packages
           print("Received auth result");
           //print(_decodeInt32(data, 4).toString());
           //print(_decodeInt32(data, 8).toString());
@@ -370,7 +411,7 @@ class BLEManager extends ChangeNotifier {
             );
           }
           break;
-        case 21: //handle incoming config packages
+        case BTOasIdentifier.GETCONFIGVALUES: //handle incoming config packages
           systemShutoffTimeM = _decodeInt32(data, 4); //uint32_t
           pressureSensorMax = _decodeShort(data, 8); //uint16_t
           bagVolumePercentage = _decodeShort(data, 10); //uint16_t
@@ -394,23 +435,6 @@ class BLEManager extends ChangeNotifier {
           print("Set values flag: ");
           print(setValues ? "true" : "false");
 
-          break;
-        case 35: //handle incoming BLEname broadcast
-          print("incoming blename");
-          print(data);
-          final bytes = Uint8List.fromList(data);
-          final byteData = ByteData.sublistView(bytes);
-
-          // First 4 bytes -> ID
-          int id = byteData.getUint32(0, Endian.little);
-
-          // Rest -> UTF-8 string, remove trailing zeros
-          List<int> nameBytes =
-              bytes.sublist(4).takeWhile((b) => b != 0).toList();
-          String bleName = utf8.decode(nameBytes);
-
-          print("ID: $id, bleName: $bleName");
-          bleBroadcastName = bleName;
           break;
       }
 
@@ -476,7 +500,7 @@ class BLEManager extends ChangeNotifier {
       if (data.length >= 16) {
         final packetId = _decodeInt32(data, 0);
         switch (packetId) {
-          case 1: //handle incoming status packages
+          case BTOasIdentifier.STATUSREPORT: //handle incoming status packages
             final wheelPressures = [
               _decodeShort(data, 4),
               _decodeShort(data, 6),
@@ -556,11 +580,11 @@ class BLEManager extends ChangeNotifier {
       1
     ];
     sendRestCommand(_data);
-    sendRestCommand([..._encodeInt32(26), safetyMode ? 1 : 0]);
-    sendRestCommand([..._encodeInt32(10), riseOnStart ? 1 : 0]);
-    sendRestCommand([..._encodeInt32(19), maintainPressure ? 1 : 0]);
-    sendRestCommand([..._encodeInt32(20), airOutOnShutoff ? 1 : 0]);
-    sendRestCommandString(_encodeInt32(35), bleBroadcastName);
-    sendRestCommand([..._encodeInt32(22), ..._encodeInt32(passkey), ..._encodeInt32(3)]);
+    sendRestCommand([..._encodeInt32(BTOasIdentifier.SAFETYMODE.value), safetyMode ? 1 : 0]);
+    sendRestCommand([..._encodeInt32(BTOasIdentifier.RISEONSTART.value), riseOnStart ? 1 : 0]);
+    sendRestCommand([..._encodeInt32(BTOasIdentifier.MAINTAINPRESSURE.value), maintainPressure ? 1 : 0]);
+    sendRestCommand([..._encodeInt32(BTOasIdentifier.FALLONSHUTDOWN.value), airOutOnShutoff ? 1 : 0]);
+    sendRestCommandString(_encodeInt32(BTOasIdentifier.BROADCASTNAME.value), bleBroadcastName);
+    sendRestCommand([..._encodeInt32(BTOasIdentifier.AUTHPACKET.value), ..._encodeInt32(passkey), ..._encodeInt32(3)]);
   }
 }

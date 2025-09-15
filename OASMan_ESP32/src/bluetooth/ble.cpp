@@ -422,15 +422,9 @@ void ble_setup()
     att_server_init(profile_data, att_read_callback, att_write_callback);
 
     att_server_register_packet_handler(hci_event_handler);
-    // Create the BLE Device
-    BLEDevice::init(getbleName().c_str());
-
-    // Create the BLE Server
-    pServer = BLEDevice::createServer();
-    pServer->setCallbacks(new MyServerCallbacks());
-
+ 
     // Set device name
-    gap_set_local_name("OASMan"); // not working for some reason
+    gap_set_local_name(getbleName().c_str()); // not working for some reason
 
     gap_set_max_number_peripheral_connections(MAX_CONNECTIONS);
 
@@ -715,32 +709,17 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         //  memcpy(rest_characteristic_data, pkt.tx(), BTOAS_PACKET_SIZE);
         //  att_server_notify_SAFE(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
         delay(500);
-        Serial.println("name send start");
-        String bleNames = getbleName();
-        Serial.println(bleNames);
-/*         BroadcastNamePacket pac(bleNames.c_str());
-        restCharacteristic->setValue(pac.tx(), BTOAS_PACKET_SIZE);
-        restCharacteristic->notify();
-        Serial.println("name send end"); */
         break;
     }
     case BTOasIdentifier::AUTHPACKET:
         if (((AuthPacket *)packet)->getBleAuthResult() == AuthResult::AUTHRESULT_UPDATEKEY)
         {
-            if (((AuthPacket *)packet)->getBlePasskey() != getblePasskey())
-            {
                 setblePasskey(((AuthPacket *)packet)->getBlePasskey());
-                setinternalReboot(true);
-            }
         }
         break;
     case BTOasIdentifier::BROADCASTNAME:
-
-        if (((BroadcastNamePacket *)packet)->getBroadcastName() != getbleName())
-        {
             setbleName(((BroadcastNamePacket *)packet)->getBroadcastName());
             setinternalReboot(true);
-        }
         break;
     case BTOasIdentifier::BP32PKT:
     {

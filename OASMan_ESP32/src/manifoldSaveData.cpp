@@ -118,7 +118,7 @@ void beginSaveData()
     _SaveData.raiseOnPressure.load("raiseOnPressure", false);
     _SaveData.internalReboot.load("internalReboot", false);
     _SaveData.learnPressureSensors.load("learnPressureSensors", false);
-    _SaveData.safetyMode.load("safetyMode", false);
+    _SaveData.safetyMode.load("safetyMode", true);
     _SaveData.aiEnabled.load("aiEnabled", true);
     _SaveData.updateMode.load("updateMode", false);
     _SaveData.wifiSSID.loadString("wifiSSID", "");

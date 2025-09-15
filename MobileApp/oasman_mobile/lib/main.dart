@@ -8,10 +8,6 @@ import 'package:oasman_mobile/pages/buttons.dart';
 import 'package:oasman_mobile/pages/setup.dart';
 import 'package:oasman_mobile/pages/header.dart'; // Import your header
 
-
-
-
-
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
 

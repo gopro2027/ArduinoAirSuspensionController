@@ -152,11 +152,11 @@ void Compressor::loop()
     // run the actual compressor routine...
 
     // if compressor off, check if tank psi is below low psi and turn on if needed
-    if (!this->s_trigger.isOpen() && isVehicleOn())
+    if (!this->s_trigger.isOpen())
     {
         if (this->getTankPressure() < getcompressorOnPSI())
         {
-            Serial.println("Compressor: ON");
+            //Serial.println("Compressor: ON");
             this->s_trigger.open();
         }
     }

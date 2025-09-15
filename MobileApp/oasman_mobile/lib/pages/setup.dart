@@ -67,7 +67,7 @@ class SettingsPageState extends State<SettingsPage> {
   double solenoidPsi = 5.0;
   String readoutType = 'Height sensors';
   //String units = "Psi";
-  String passkeyText = "202777";
+  String passkeyText = "";
   bool safetyMode = true;
   String bleBroadcastName = '';
   int compressorOnPSI = 120;
@@ -290,7 +290,7 @@ class SettingsPageState extends State<SettingsPage> {
                 children: [
                   _buildUploadImageSection(),
                   _buildBluetoothSection(),
-                  if (bleManager.isConnected() || true) ...[
+                  if (bleManager.isConnected()) ...[
                     _buildInputTypeSection(),
                     _buildBasicSettingsSection(),
                     _buildDropDownWhenOffSection(),
