@@ -717,7 +717,6 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             if (((AuthPacket *)packet)->getBlePasskey() != getblePasskey())
             {
                 setblePasskey(((AuthPacket *)packet)->getBlePasskey());
-                setinternalReboot(true);
             }
         }
         break;
@@ -726,7 +725,9 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         if (((BroadcastNamePacket *)packet)->getBroadcastName() != getbleName())
         {
             setbleName(((BroadcastNamePacket *)packet)->getBroadcastName());
-            setinternalReboot(true);
+            //setinternalReboot(true);
+            Serial.print("new broacast name:");
+            Serial.println(((BroadcastNamePacket *)packet)->getBroadcastName());
         }
         break;
     case BTOasIdentifier::BP32PKT:

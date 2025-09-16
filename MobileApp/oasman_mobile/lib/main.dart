@@ -37,15 +37,13 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeApp();
-    });
+    _initializeApp();
   }
 
   Future<void> _initializeApp() async {
-    final bleManager = context.read<BLEManager>();
+    //final bleManager = BLEManager();
     await loadGlobalSettings(); // Load settings at startup
-    await bleManager.startScan(); // Auto-connect logic inside startScan
+    //await bleManager.startScan(); // Auto-connect logic inside startScan
 
     setState(() => _isReady = true);
   }

@@ -56,6 +56,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class SettingsPageState extends State<SettingsPage> {
+  late UnitProvider unitprovider;
   late BLEManager bleManager;
   String inputType = 'Buttons';
   bool maintainPressure = false;
@@ -81,10 +82,23 @@ class SettingsPageState extends State<SettingsPage> {
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
 
+  late TextEditingController passkeyController;
+  late TextEditingController broadcastController;
+  late TextEditingController shutdownTimeController;
+  late TextEditingController minPressureController;
+  late TextEditingController maxPressureController;
+
   void initState() {
     super.initState();
     bleManager = BLEManager();
     _initialize();
+  }
+
+  @override
+  void dispose() {
+    passkeyController.dispose();
+    broadcastController.dispose();
+    super.dispose();
   }
 
   Future<void> _initialize() async {
@@ -128,6 +142,13 @@ class SettingsPageState extends State<SettingsPage> {
       });
       print("Manifold's settings loaded");
     }
+    passkeyController =
+        TextEditingController(text: globalSettings!.passkeyText);
+    broadcastController = TextEditingController(text: bleBroadcastName);
+    shutdownTimeController =
+        TextEditingController(text: systemShutoffTimeM.toString());
+    minPressureController = TextEditingController();
+    maxPressureController = TextEditingController();
     _settingsLoaded = true;
   }
 
@@ -142,6 +163,9 @@ class SettingsPageState extends State<SettingsPage> {
 
     //Save settings to manifold
     if (bleManager.isConnected()) {
+      if( compressorOnPSI >= compressorOffPSI){  //the compression max pressure cannot be smaller then the min pressure
+        compressorOffPSI = compressorOnPSI + 1;
+      }
       bleManager.passkey = int.parse(passkeyText);
       bleManager.bleBroadcastName = bleBroadcastName;
       bleManager.compressorOnPSI = compressorOnPSI;
@@ -304,7 +328,7 @@ class SettingsPageState extends State<SettingsPage> {
                     ElevatedButton(
                       onPressed: () {
                         try {
-                          bleManager.sendRestCommand([12]);
+                          bleManager.sendRestCommand([BTOasIdentifier.REBOOT]);
                           debugPrint("Reboot the manifold");
                         } catch (e) {
                           debugPrint("Failed to send command: $e");
@@ -360,7 +384,7 @@ class SettingsPageState extends State<SettingsPage> {
               children: [
                 _buildKeyboardInputRow(
                   "Passkey",
-                  globalSettings!.passkeyText,
+                  passkeyController, // ✅ pass controller instead of string
                   (value) {
                     try {
                       bleManager.passkey = int.parse(value);
@@ -369,7 +393,6 @@ class SettingsPageState extends State<SettingsPage> {
                         passkeyText = value;
                       });
                     } catch (e) {
-                      print(e);
                       bleManager.passkey = 202777;
                       setState(() {
                         passkeyText = "202777";
@@ -382,7 +405,7 @@ class SettingsPageState extends State<SettingsPage> {
                 if (bleManager.connectedDevice != null) ...[
                   _buildKeyboardInputRow(
                     "Broadcast name",
-                    bleBroadcastName,
+                    broadcastController, // ✅ controller
                     (value) {
                       setState(() {
                         bleBroadcastName = value;
@@ -527,7 +550,7 @@ class SettingsPageState extends State<SettingsPage> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         const Text(
-                          'Compressor only when the car is running',
+                          'Compressor @ ACC',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -591,10 +614,15 @@ class SettingsPageState extends State<SettingsPage> {
                     Expanded(
                       child: _buildKeyboardInputRow(
                         "",
-                        systemShutoffTimeM.toString(),
+                        shutdownTimeController,
                         (value) {
                           setState(() {
-                            systemShutoffTimeM = int.parse(value);
+                            if (value.isEmpty) {
+                              // Handle empty input safely
+                              systemShutoffTimeM = 0; // or keep previous value
+                            } else {
+                              systemShutoffTimeM = int.parse(value);
+                            }
                           });
                         },
                         isNumberInput: true,
@@ -911,6 +939,21 @@ class SettingsPageState extends State<SettingsPage> {
     return Consumer<UnitProvider>(
       builder: (context, unitProvider, child) {
         final units = unitProvider.unit;
+
+        // Update controllers if needed
+        // This ensures text changes when units change
+        minPressureController.text = units == 'Bar'
+            ? unitProvider
+                .convertToBar(compressorOnPSI.toDouble())
+                .toStringAsFixed(2)
+            : compressorOnPSI.toString();
+
+        maxPressureController.text = units == 'Bar'
+            ? unitProvider
+                .convertToBar(compressorOffPSI.toDouble())
+                .toStringAsFixed(2)
+            : compressorOffPSI.toString();
+
         return Padding(
             padding: const EdgeInsets.symmetric(vertical: 24.0),
             child: Column(
@@ -951,18 +994,19 @@ class SettingsPageState extends State<SettingsPage> {
                     children: [
                       _buildKeyboardInputRow(
                         "Min pressure",
-                        units == 'Bar'
-                            ? unitProvider
-                                .convertToBar(compressorOnPSI.toDouble())
-                                .toStringAsFixed(2)
-                            : compressorOnPSI.toString(),
+                        minPressureController,
                         (value) {
                           setState(() {
-                            compressorOnPSI = units == 'Bar'
-                                ? unitProvider
-                                    .convertToPsi(double.parse(value))
-                                    .toInt()
-                                : int.parse(value);
+                            if (value.isEmpty) {
+                              // Handle empty input safely
+                              compressorOnPSI = 0; // or keep previous value
+                            } else {
+                              compressorOnPSI = units == 'Bar'
+                                  ? unitProvider
+                                      .convertToPsi(double.parse(value))
+                                      .toInt()
+                                  : int.parse(value);
+                            }
                           });
                         },
                         isNumberInput: true,
@@ -970,19 +1014,20 @@ class SettingsPageState extends State<SettingsPage> {
                       ),
                       _buildKeyboardInputRow(
                         "Max pressure",
-                        units == 'Bar'
-                            ? unitProvider
-                                .convertToBar(compressorOffPSI.toDouble())
-                                .toStringAsFixed(2)
-                            : compressorOffPSI.toString(),
+                        maxPressureController,
                         (value) {
-                          setState(() {
-                            compressorOffPSI = units == 'Bar'
-                                ? unitProvider
-                                    .convertToPsi(double.parse(value))
-                                    .toInt()
-                                : int.parse(value);
-                          });
+                          // setState(() {
+                          //   if (value.isEmpty) {
+                          //     // Handle empty input safely
+                          //     compressorOffPSI = 0; // or keep previous value
+                          //   } else {
+                          //     compressorOffPSI = units == 'Bar'
+                          //         ? unitProvider
+                          //             .convertToPsi(double.parse(value))
+                          //             .toInt()
+                          //         : int.parse(value);
+                          //   }
+                          // });
                         },
                         isNumberInput: true,
                         units: units,
@@ -1038,18 +1083,15 @@ class SettingsPageState extends State<SettingsPage> {
 
   Widget _buildKeyboardInputRow(
     String label,
-    String value,
+    TextEditingController controller, // ✅ accept controller
     ValueChanged<String> onChanged, {
     bool isNumberInput = false,
     int limitChar = 0,
     String units = '',
   }) {
-    final controller = TextEditingController(text: value); // ✅ new each rebuild
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           if (label != "")
             Expanded(
@@ -1060,7 +1102,7 @@ class SettingsPageState extends State<SettingsPage> {
             ),
           Expanded(
             child: TextFormField(
-              controller: controller, // ✅ use controller, not initialValue
+              controller: controller, // ✅ stable reference
               onChanged: onChanged,
               keyboardType:
                   isNumberInput ? TextInputType.number : TextInputType.text,
@@ -1082,222 +1124,221 @@ class SettingsPageState extends State<SettingsPage> {
       ),
     );
   }
+}
 
-  Widget _buildSwitch(String label, bool value, ValueChanged<bool> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          if (label != "")
-            Text(
-              label,
-              style: TextStyle(color: Colors.white, fontSize: 16),
-            ),
-          Switch(
-              value: value,
-              onChanged: onChanged,
-              activeColor: Color(0xFFBB86FC)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDutyCycleSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+Widget _buildSwitch(String label, bool value, ValueChanged<bool> onChanged) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8.0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        if (label != "")
           Text(
-            'Duty cycle',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+            label,
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
+        Switch(
+            value: value, onChanged: onChanged, activeColor: Color(0xFFBB86FC)),
+      ],
+    ),
+  );
+}
+
+Widget _buildDutyCycleSection() {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 24.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Duty cycle',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(color: Color(0xFFBB86FC), width: 2),
             ),
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+          child: ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFFBB86FC),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
               ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFBB86FC),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: const Text(
-                'Set Duty cycle',
-                style: TextStyle(color: Colors.black),
-              ),
+            child: const Text(
+              'Set Duty cycle',
+              style: TextStyle(color: Colors.black),
             ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+void showInfoDialog(BuildContext context, String title, String message) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
           ),
         ],
-      ),
-    );
-  }
+      );
+    },
+  );
+}
 
-  void showInfoDialog(BuildContext context, String title, String message) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildUnitsSection(BuildContext context) {
-    return Consumer<UnitProvider>(
-      builder: (context, unitProvider, child) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Text(
-                    'Units',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+Widget _buildUnitsSection(BuildContext context) {
+  return Consumer<UnitProvider>(
+    builder: (context, unitProvider, child) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'Units',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.help_outline,
-                        size: 20, color: Colors.grey),
-                    onPressed: () {
-                      showInfoDialog(
-                        context,
-                        'Pressure unit',
-                        'Choose which pressure unit you prefer. Default is "PSI".',
-                      );
+                ),
+                IconButton(
+                  icon: const Icon(Icons.help_outline,
+                      size: 20, color: Colors.grey),
+                  onPressed: () {
+                    showInfoDialog(
+                      context,
+                      'Pressure unit',
+                      'Choose which pressure unit you prefer. Default is "PSI".',
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+                ),
+              ),
+              child: Column(
+                children: [
+                  RadioListTile<String>(
+                    title: const Text('Psi',
+                        style: TextStyle(color: Colors.white)),
+                    value: 'Psi',
+                    groupValue: unitProvider.unit, // ✅ bind to provider
+                    onChanged: (value) {
+                      unitProvider.setUnit(value!);
+                      globalSettings!.units = value;
                     },
+                    activeColor: Color(0xFFBB86FC),
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('Bar',
+                        style: TextStyle(color: Colors.white)),
+                    value: 'Bar',
+                    groupValue: unitProvider.unit,
+                    onChanged: (value) {
+                      unitProvider.setUnit(value!);
+                      globalSettings!.units = value;
+                    },
+                    activeColor: Color(0xFFBB86FC),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: Color(0xFFBB86FC), width: 2),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    RadioListTile<String>(
-                      title: const Text('Psi',
-                          style: TextStyle(color: Colors.white)),
-                      value: 'Psi',
-                      groupValue: unitProvider.unit, // ✅ bind to provider
-                      onChanged: (value) {
-                        unitProvider.setUnit(value!);
-                        globalSettings!.units = value;
-                      },
-                    ),
-                    RadioListTile<String>(
-                      title: const Text('Bar',
-                          style: TextStyle(color: Colors.white)),
-                      value: 'Bar',
-                      groupValue: unitProvider.unit,
-                      onChanged: (value) {
-                        unitProvider.setUnit(value!);
-                        globalSettings!.units = value;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
 
-  Widget _buildSystemSection() {
-    String system = '2 point';
+Widget _buildSystemSection() {
+  String system = '2 point';
 
-    return StatefulBuilder(
-      builder: (BuildContext context, StateSetter setState) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'System',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+  return StatefulBuilder(
+    builder: (BuildContext context, StateSetter setState) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'System',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: Color(0xFFBB86FC), width: 2),
                 ),
               ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+              child: Column(
+                children: [
+                  RadioListTile<String>(
+                    title: Text(
+                      '4 point',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    value: '4 point',
+                    groupValue: system,
+                    onChanged: (value) {
+                      setState(() {
+                        system = value!;
+                      });
+                    },
+                    activeColor: Color(0xFFBB86FC),
                   ),
-                ),
-                child: Column(
-                  children: [
-                    RadioListTile<String>(
-                      title: Text(
-                        '4 point',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      value: '4 point',
-                      groupValue: system,
-                      onChanged: (value) {
-                        setState(() {
-                          system = value!;
-                        });
-                      },
-                      activeColor: Color(0xFFBB86FC),
+                  RadioListTile<String>(
+                    title: Text(
+                      '2 point',
+                      style: TextStyle(color: Colors.white),
                     ),
-                    RadioListTile<String>(
-                      title: Text(
-                        '2 point',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      value: '2 point',
-                      groupValue: system,
-                      onChanged: (value) {
-                        setState(() {
-                          system = value!;
-                        });
-                      },
-                      activeColor: Color(0xFFBB86FC),
-                    ),
-                  ],
-                ),
+                    value: '2 point',
+                    groupValue: system,
+                    onChanged: (value) {
+                      setState(() {
+                        system = value!;
+                      });
+                    },
+                    activeColor: Color(0xFFBB86FC),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+            ),
+          ],
+        ),
+      );
+    },
+  );
 }

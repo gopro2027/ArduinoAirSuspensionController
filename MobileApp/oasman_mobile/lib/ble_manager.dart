@@ -9,42 +9,39 @@ import 'package:permission_handler/permission_handler.dart';
 import "dart:typed_data";
 import 'models/appSettings.dart';
 
-enum BTOasIdentifier {
-  IDLE(0),
-  STATUSREPORT(1),
-  AIRUP(2),
-  AIROUT(3),
-  AIRSM(4),
-  SAVETOPROFILE(5),
-  READPROFILE(6),
-  AIRUPQUICK(7),
-  BASEPROFILE(8),
-  SETAIRHEIGHT(9),
-  RISEONSTART(10),
-  RAISEONPRESSURESET(11),
-  REBOOT(12),
-  CALIBRATE(13),
-  STARTWEB(14),
-  ASSIGNRECEPIENT(15),
-  MESSAGE(16),
-  SAVECURRENTPRESSURESTOPROFILE(17),
-  PRESETREPORT(18),
-  MAINTAINPRESSURE(19),
-  FALLONSHUTDOWN(20),
-  GETCONFIGVALUES(21),
-  AUTHPACKET(22),
-  HEIGHTSENSORMODE(23),
-  COMPRESSORSTATUS(24),
-  TURNOFF(25),
-  SAFETYMODE(26),
-  DETECTPRESSURESENSORS(27),
-  AISTATUSENABLED(28),
-  RESETAIPKT(29),
-  BP32PKT(30),
-  BROADCASTNAME(35);
-
-  final int value;
-  const BTOasIdentifier(this.value);
+class BTOasIdentifier {
+  static const int IDLE = 0;
+  static const int STATUSREPORT = 1;
+  static const int AIRUP = 2;
+  static const int AIROUT = 3;
+  static const int AIRSM = 4;
+  static const int SAVETOPROFILE = 5;
+  static const int READPROFILE = 6;
+  static const int AIRUPQUICK = 7;
+  static const int BASEPROFILE = 8;
+  static const int SETAIRHEIGHT = 9;
+  static const int RISEONSTART = 10;
+  static const int RAISEONPRESSURESET = 11;
+  static const int REBOOT = 12;
+  static const int CALIBRATE = 13;
+  static const int STARTWEB = 14;
+  static const int ASSIGNRECEPIENT = 15;
+  static const int MESSAGE = 16;
+  static const int SAVECURRENTPRESSURESTOPROFILE = 17;
+  static const int PRESETREPORT = 18;
+  static const int MAINTAINPRESSURE = 19;
+  static const int FALLONSHUTDOWN = 20;
+  static const int GETCONFIGVALUES = 21;
+  static const int AUTHPACKET = 22;
+  static const int HEIGHTSENSORMODE = 23;
+  static const int COMPRESSORSTATUS = 24;
+  static const int TURNOFF = 25;
+  static const int SAFETYMODE = 26;
+  static const int DETECTPRESSURESENSORS = 27;
+  static const int AISTATUSENABLED = 28;
+  static const int RESETAIPKT = 29;
+  static const int BP32PKT = 30;
+  static const int BROADCASTNAME = 35;
 }
 
 class BLEByte {
@@ -198,15 +195,19 @@ class BLEManager extends ChangeNotifier {
 
       FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
 
+      print("ble scan started");
+      print("paired ble id:");
+      print(globalSettings!.pairedManifoldId);
       FlutterBluePlus.scanResults.listen((results) {
         for (ScanResult result in results) {
           if (!devicesList.contains(result.device)) {
             devicesList.add(result.device);
             notifyListeners();
           }
-          if (result.device.remoteId.str == globalSettings?.pairedManifoldId) {
+          if (result.device.remoteId.str == globalSettings!.pairedManifoldId) {
+            print("paired device found");
             FlutterBluePlus.stopScan();
-            _connectToDevice(result.device);
+            //_connectToDevice(result.device);
             break;
           }
         }
@@ -230,21 +231,21 @@ class BLEManager extends ChangeNotifier {
     try {
       _startGlobalConnListener(); // ensure listener is active
       print("Connecting to device: ${device.name} (${device.id})");
-      await device.connect(autoConnect: true);
+      await device.connect(autoConnect: false);
 
       connectedDevice = device;
       notifyListeners();
 
       await discoverServices(device, context);
       await sendRestCommand([
-        BTOasIdentifier.GETCONFIGVALUES.value
+        BTOasIdentifier.GETCONFIGVALUES
       ]); //ask for config from manifold
 
       print("Successfully connected to ${device.name} (${device.id})");
       bleBroadcastName = device.name;
-      globalSettings?.pairedManifoldId = device.id.toString();
+      globalSettings!.pairedManifoldId = device.id.toString();
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('_passkeyText', device.id.toString());
+      await prefs.setString('_pairedManifoldId', device.id.toString());
     } catch (e) {
       print("Error connecting to device: $e");
       await disconnectDevice();
@@ -261,7 +262,7 @@ class BLEManager extends ChangeNotifier {
       notifyListeners();
 
       await sendRestCommand([
-        BTOasIdentifier.GETCONFIGVALUES.value
+        BTOasIdentifier.GETCONFIGVALUES
       ]); //ask for config from manifold
 
       print("Successfully connected to ${device.name} (${device.id})");
@@ -611,7 +612,7 @@ class BLEManager extends ChangeNotifier {
   bool isConnected() => connectedDevice != null;
 
   void saveConfigToManifold() {
-    List<int> _packetID = _encodeInt32(21);
+    List<int> _packetID = _encodeInt32(BTOasIdentifier.GETCONFIGVALUES);
     List<int> _systemShutoffTimeM = _encodeInt32(systemShutoffTimeM); //uint32_t
     List<int> _pressureSensorMax = _encodeShort(pressureSensorMax); //uint16_t
     List<int> _bagVolumePercentage =
@@ -628,25 +629,25 @@ class BLEManager extends ChangeNotifier {
     ];
     sendRestCommand(_data);
     sendRestCommand([
-      ..._encodeInt32(BTOasIdentifier.SAFETYMODE.value),
+      ..._encodeInt32(BTOasIdentifier.SAFETYMODE),
       safetyMode ? 1 : 0
     ]);
     sendRestCommand([
-      ..._encodeInt32(BTOasIdentifier.RISEONSTART.value),
+      ..._encodeInt32(BTOasIdentifier.RISEONSTART),
       riseOnStart ? 1 : 0
     ]);
     sendRestCommand([
-      ..._encodeInt32(BTOasIdentifier.MAINTAINPRESSURE.value),
+      ..._encodeInt32(BTOasIdentifier.MAINTAINPRESSURE),
       maintainPressure ? 1 : 0
     ]);
     sendRestCommand([
-      ..._encodeInt32(BTOasIdentifier.FALLONSHUTDOWN.value),
+      ..._encodeInt32(BTOasIdentifier.FALLONSHUTDOWN),
       airOutOnShutoff ? 1 : 0
     ]);
     sendRestCommandString(
-        _encodeInt32(BTOasIdentifier.BROADCASTNAME.value), bleBroadcastName);
+        _encodeInt32(BTOasIdentifier.BROADCASTNAME), bleBroadcastName);
     sendRestCommand([
-      ..._encodeInt32(BTOasIdentifier.AUTHPACKET.value),
+      ..._encodeInt32(BTOasIdentifier.AUTHPACKET),
       ..._encodeInt32(passkey),
       ..._encodeInt32(3)
     ]);
