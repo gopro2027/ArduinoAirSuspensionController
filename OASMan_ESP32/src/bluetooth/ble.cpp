@@ -415,22 +415,16 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
 #define ESP_GATT_MAX_MTU_SIZE 517
 void ble_setup()
 {
-
     packetMover::setupRestSemaphore();
 
-    // Initialize ATT Server with our database
     att_server_init(profile_data, att_read_callback, att_write_callback);
-
     att_server_register_packet_handler(hci_event_handler);
- 
-    // Set device name
-    gap_set_local_name(getbleName().c_str()); // not working for some reason
+
+    const char* name = getbleName().c_str();
+    gap_set_local_name(name);
 
     gap_set_max_number_peripheral_connections(MAX_CONNECTIONS);
-
     l2cap_set_max_le_mtu(ESP_GATT_MAX_MTU_SIZE);
-
-    // Set advertisement parameters
 
     uint16_t adv_int_min = 32;
     uint16_t adv_int_max = 48;
@@ -440,8 +434,12 @@ void ble_setup()
 
     gap_advertisements_set_params(adv_int_min, adv_int_max, adv_type, 0, null_addr, 0x07, 0x00);
 
-    // Set advertisement data
-    gap_advertisements_set_data(sizeof(adv_data), adv_data);
+    // Build new advertisement data with the device name
+    uint8_t adv_data[31];
+    uint8_t adv_data_len;
+
+    adv_data_len = gap_adv_set_data(adv_data, sizeof(adv_data), name);  
+    gap_advertisements_set_data(adv_data_len, adv_data);
 
     gap_advertisements_enable(true);
 
@@ -725,7 +723,6 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         if (((BroadcastNamePacket *)packet)->getBroadcastName() != getbleName())
         {
             setbleName(((BroadcastNamePacket *)packet)->getBroadcastName());
-            //setinternalReboot(true);
             Serial.print("new broacast name:");
             Serial.println(((BroadcastNamePacket *)packet)->getBroadcastName());
         }

@@ -131,7 +131,7 @@ class BLEManager extends ChangeNotifier {
   String bleBroadcastName = '';
   int compressorOnPSI = 0;
   int compressorOffPSI = 0;
-  int systemShutoffTimeM = 0;
+  int systemShutoffTimeM = 15;
   int pressureSensorMax = 0;
   int bagVolumePercentage = 0;
   int bagMaxPressure = 0;
@@ -194,10 +194,7 @@ class BLEManager extends ChangeNotifier {
       notifyListeners();
 
       FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
-
-      print("ble scan started");
-      print("paired ble id:");
-      print(globalSettings!.pairedManifoldId);
+      print("ble scan started, paired ID: ${globalSettings!.pairedManifoldId}");
       FlutterBluePlus.scanResults.listen((results) {
         for (ScanResult result in results) {
           if (!devicesList.contains(result.device)) {
@@ -207,7 +204,7 @@ class BLEManager extends ChangeNotifier {
           if (result.device.remoteId.str == globalSettings!.pairedManifoldId) {
             print("paired device found");
             FlutterBluePlus.stopScan();
-            //_connectToDevice(result.device);
+            _connectToDevice(result.device);
             break;
           }
         }

@@ -41,9 +41,11 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _initializeApp() async {
-    //final bleManager = BLEManager();
     await loadGlobalSettings(); // Load settings at startup
-    //await bleManager.startScan(); // Auto-connect logic inside startScan
+    if (globalSettings?.pairedManifoldId != '') { //in case if saved/paired device exists
+      final bleManager = BLEManager();
+      await bleManager.startScan(); // Auto-connect logic inside startScan
+    }
 
     setState(() => _isReady = true);
   }

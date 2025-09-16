@@ -163,7 +163,8 @@ class SettingsPageState extends State<SettingsPage> {
 
     //Save settings to manifold
     if (bleManager.isConnected()) {
-      if( compressorOnPSI >= compressorOffPSI){  //the compression max pressure cannot be smaller then the min pressure
+      if (compressorOnPSI >= compressorOffPSI) {
+        //the compression max pressure cannot be smaller then the min pressure
         compressorOffPSI = compressorOnPSI + 1;
       }
       bleManager.passkey = int.parse(passkeyText);
@@ -382,37 +383,36 @@ class SettingsPageState extends State<SettingsPage> {
             ),
             child: Column(
               children: [
-                _buildKeyboardInputRow(
-                  "Passkey",
-                  passkeyController, // ✅ pass controller instead of string
-                  (value) {
-                    try {
-                      bleManager.passkey = int.parse(value);
-                      globalSettings!.passkeyText = value;
-                      setState(() {
-                        passkeyText = value;
-                      });
-                    } catch (e) {
-                      bleManager.passkey = 202777;
-                      setState(() {
-                        passkeyText = "202777";
-                      });
-                    }
-                  },
-                  isNumberInput: true,
-                  limitChar: 6,
-                ),
+                _buildKeyboardInputRow("Passkey", passkeyController, (value) {
+                  try {
+                    bleManager.passkey = int.parse(value);
+                    globalSettings!.passkeyText = value;
+                    setState(() {
+                      passkeyText = value;
+                    });
+                  } catch (e) {
+                    bleManager.passkey = 202777;
+                    setState(() {
+                      passkeyText = "202777";
+                    });
+                  }
+                },
+                    isNumberInput: true,
+                    limitChar: 6,
+                    tooltipTitle: "Passkey",
+                    tooltip:
+                        "The passkey is a kind of password which should match between the app and the manifold controller. It validates upon connection. If you change during the manifold connected, it will change on it too. The passkey only can be numbers and 6 digits."),
                 if (bleManager.connectedDevice != null) ...[
-                  _buildKeyboardInputRow(
-                    "Broadcast name",
-                    broadcastController, // ✅ controller
-                    (value) {
-                      setState(() {
-                        bleBroadcastName = value;
-                      });
-                    },
-                    limitChar: 10,
-                  ),
+                  _buildKeyboardInputRow("Broadcast name", broadcastController,
+                      (value) {
+                    setState(() {
+                      bleBroadcastName = value;
+                    });
+                  },
+                      limitChar: 10,
+                      tooltipTitle: "Manifold's bluetooth name",
+                      tooltip:
+                          "Change the name of bluetooth broadcast name of the manifold. The change takes place after a reboot or next start. Max 10 characters."),
                 ],
               ],
             ),
@@ -592,28 +592,10 @@ class SettingsPageState extends State<SettingsPage> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Text(
-                      'System off delay',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.help_outline,
-                          size: 20, color: Colors.grey),
-                      onPressed: () {
-                        showInfoDialog(
-                          context,
-                          'System off delay',
-                          'Define the number of minutes the air ride system remains powered after the ignition is switched off.',
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 5),
                     Expanded(
                       child: _buildKeyboardInputRow(
-                        "",
+                        "System off delay",
                         shutdownTimeController,
                         (value) {
                           setState(() {
@@ -626,6 +608,9 @@ class SettingsPageState extends State<SettingsPage> {
                           });
                         },
                         isNumberInput: true,
+                        limitChar: 3,
+                        units: "min",
+                        tooltip: "Define the number of minutes the air ride system remains powered after the ignition is switched off.",
                       ),
                     ),
                   ],
@@ -935,24 +920,28 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  String? _lastUnits;
   _buildTankPressureSection(BuildContext context) {
     return Consumer<UnitProvider>(
       builder: (context, unitProvider, child) {
         final units = unitProvider.unit;
 
-        // Update controllers if needed
-        // This ensures text changes when units change
-        minPressureController.text = units == 'Bar'
-            ? unitProvider
-                .convertToBar(compressorOnPSI.toDouble())
-                .toStringAsFixed(2)
-            : compressorOnPSI.toString();
+        // Only update text if units changed
+        if (_lastUnits != units) {
+          minPressureController.text = units == 'Bar'
+              ? unitProvider
+                  .convertToBar(compressorOnPSI.toDouble())
+                  .toStringAsFixed(2)
+              : compressorOnPSI.toString();
 
-        maxPressureController.text = units == 'Bar'
-            ? unitProvider
-                .convertToBar(compressorOffPSI.toDouble())
-                .toStringAsFixed(2)
-            : compressorOffPSI.toString();
+          maxPressureController.text = units == 'Bar'
+              ? unitProvider
+                  .convertToBar(compressorOffPSI.toDouble())
+                  .toStringAsFixed(2)
+              : compressorOffPSI.toString();
+
+          _lastUnits = units;
+        }
 
         return Padding(
             padding: const EdgeInsets.symmetric(vertical: 24.0),
@@ -1016,18 +1005,18 @@ class SettingsPageState extends State<SettingsPage> {
                         "Max pressure",
                         maxPressureController,
                         (value) {
-                          // setState(() {
-                          //   if (value.isEmpty) {
-                          //     // Handle empty input safely
-                          //     compressorOffPSI = 0; // or keep previous value
-                          //   } else {
-                          //     compressorOffPSI = units == 'Bar'
-                          //         ? unitProvider
-                          //             .convertToPsi(double.parse(value))
-                          //             .toInt()
-                          //         : int.parse(value);
-                          //   }
-                          // });
+                          setState(() {
+                            if (value.isEmpty) {
+                              // Handle empty input safely
+                              compressorOffPSI = 0; // or keep previous value
+                            } else {
+                              compressorOffPSI = units == 'Bar'
+                                  ? unitProvider
+                                      .convertToPsi(double.parse(value))
+                                      .toInt()
+                                  : int.parse(value);
+                            }
+                          });
                         },
                         isNumberInput: true,
                         units: units,
@@ -1083,12 +1072,15 @@ class SettingsPageState extends State<SettingsPage> {
 
   Widget _buildKeyboardInputRow(
     String label,
-    TextEditingController controller, // ✅ accept controller
+    TextEditingController controller,
     ValueChanged<String> onChanged, {
     bool isNumberInput = false,
     int limitChar = 0,
     String units = '',
+    String tooltip = '',
+    String tooltipTitle = '',
   }) {
+    tooltipTitle = label;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -1100,14 +1092,29 @@ class SettingsPageState extends State<SettingsPage> {
                 style: TextStyle(color: Colors.white, fontSize: 16),
               ),
             ),
+          if (tooltip != '')
+            IconButton(
+              icon:
+                  const Icon(Icons.help_outline, size: 20, color: Colors.grey),
+              onPressed: () {
+                showInfoDialog(
+                  context,
+                  tooltipTitle,
+                  tooltip,
+                );
+              },
+            ),
           Expanded(
             child: TextFormField(
-              controller: controller, // ✅ stable reference
-              onChanged: onChanged,
+              controller: controller,
               keyboardType:
                   isNumberInput ? TextInputType.number : TextInputType.text,
               inputFormatters: [
-                if (isNumberInput) FilteringTextInputFormatter.digitsOnly,
+                if (isNumberInput)
+                  units == "Bar"
+                      ? FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,1}'))
+                      : FilteringTextInputFormatter.digitsOnly,
                 if (limitChar != 0) LengthLimitingTextInputFormatter(limitChar),
               ],
               style: TextStyle(color: Colors.white),
