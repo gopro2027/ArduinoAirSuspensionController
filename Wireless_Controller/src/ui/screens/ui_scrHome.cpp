@@ -1,10 +1,20 @@
 #include "ui_scrHome.h"
 #include "ui/ui.h" // sketchy backwards import may break in the future
+#include "ui/components/ui_navbar.h"
 
 
 LV_IMAGE_DECLARE(navbar_home);
 ScrHome scrHome(navbar_home, true);
-static constexpr int NAV_FINAL_H  = 49;
+// static constexpr int NAV_FINAL_H  = 49;
+
+
+extern void switch_to_home();
+extern void switch_to_presets();
+extern void switch_to_settings();
+
+static inline void build_navbar_for_home(Scr* self) {
+    self->icon_navbar = navbar_create(self->scr, NAV_HOME);
+}
 
 
 void draw_arrow(lv_obj_t *parent, CenterRect cr, int direction)
@@ -112,13 +122,14 @@ void ScrHome::init(void)
     Scr::init();
 
     // ====== Navbar at bottom: fixed 320x49 ======
-    lv_obj_t *nav = lv_image_create(this->scr);
-    lv_image_set_src(nav, &navbar_home);
-    lv_obj_set_size(nav, DISPLAY_WIDTH, NAV_FINAL_H);
-    lv_image_set_align(nav, LV_IMAGE_ALIGN_STRETCH);
-    lv_obj_align(nav, LV_ALIGN_BOTTOM_MID, 0, 0);
-    this->icon_navbar = nav;
+    // lv_obj_t *nav = lv_image_create(this->scr);
+    // lv_image_set_src(nav, &navbar_home);
+    // lv_obj_set_size(nav, DISPLAY_WIDTH, NAV_FINAL_H);
+    // lv_image_set_align(nav, LV_IMAGE_ALIGN_STRETCH);
+    // lv_obj_align(nav, LV_ALIGN_BOTTOM_MID, 0, 0);
+    // this->icon_navbar = nav;
 
+     this->icon_navbar = navbar_create(this->scr, NAV_HOME);
 
     // Your existing pills
     drawPill(this->scr, ctr_row0col0up, ctr_row0col0down);
@@ -135,6 +146,8 @@ void ScrHome::init(void)
     lv_obj_move_foreground(this->ui_lblPressureFrontDriver);
     lv_obj_move_foreground(this->ui_lblPressureRearDriver);
     lv_obj_move_foreground(this->ui_lblPressureTank);
+
+    
 }
 
 

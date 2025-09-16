@@ -6,6 +6,7 @@
 #include "ui_scrPresets.h"
 #include "ui/ui.h"
 #include "utils/util.h"   // SimpleRect, CenterRect, sr_contains/cr_contains if you still need them
+#include "ui/components/ui_navbar.h"  // navbar_create()
 
 // ----- Assets we still use -----
 LV_IMG_DECLARE(navbar_presets);
@@ -229,15 +230,17 @@ void ScrPresets::init()
     Scr::init();
     init_styles_once();
 
-    // ====== Navbar (fixed 320×49) ======
-    lv_obj_t *nav = lv_image_create(this->scr);
-    lv_image_set_src(nav, &navbar_presets);
-    lv_obj_set_size(nav, DISPLAY_WIDTH, NAV_FINAL_H);
-#if LVGL_VERSION_MAJOR >= 9
-    lv_image_set_align(nav, LV_IMAGE_ALIGN_STRETCH);
-#endif
-    lv_obj_align(nav, LV_ALIGN_BOTTOM_MID, 0, 0);
-    this->icon_navbar = nav;
+//     // ====== Navbar (fixed 320×49) ======
+//     lv_obj_t *nav = lv_image_create(this->scr);
+//     lv_image_set_src(nav, &navbar_presets);
+//     lv_obj_set_size(nav, DISPLAY_WIDTH, NAV_FINAL_H);
+// #if LVGL_VERSION_MAJOR >= 9
+//     lv_image_set_align(nav, LV_IMAGE_ALIGN_STRETCH);
+// #endif
+//     lv_obj_align(nav, LV_ALIGN_BOTTOM_MID, 0, 0);
+//     this->icon_navbar = nav;
+
+    this->icon_navbar = navbar_create(this->scr, NAV_PRESETS);
 
     // ====== Content root (fills above navbar) ======
     lv_obj_t *content = lv_obj_create(this->scr);

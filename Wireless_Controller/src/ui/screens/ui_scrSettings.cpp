@@ -1,4 +1,5 @@
 #include "ui_scrSettings.h"
+#include "ui/components/ui_navbar.h"
 
 LV_IMG_DECLARE(navbar_settings);
 ScrSettings scrSettings(navbar_settings, false);
@@ -26,13 +27,15 @@ void ScrSettings::init()
 {
     Scr::init();
 
-    // ====== Navbar at bottom: fixed 320x49 ======
-    lv_obj_t *nav = lv_image_create(this->scr);
-    lv_image_set_src(nav, &navbar_settings);
-    lv_obj_set_size(nav, DISPLAY_WIDTH, NAV_FINAL_H);
-    lv_image_set_align(nav, LV_IMAGE_ALIGN_STRETCH);
-    lv_obj_align(nav, LV_ALIGN_BOTTOM_MID, 0, 0);
-    this->icon_navbar = nav;
+    // // ====== Navbar at bottom: fixed 320x49 ======
+    // lv_obj_t *nav = lv_image_create(this->scr);
+    // lv_image_set_src(nav, &navbar_settings);
+    // lv_obj_set_size(nav, DISPLAY_WIDTH, NAV_FINAL_H);
+    // lv_image_set_align(nav, LV_IMAGE_ALIGN_STRETCH);
+    // lv_obj_align(nav, LV_ALIGN_BOTTOM_MID, 0, 0);
+    // this->icon_navbar = nav;
+
+    this->icon_navbar = navbar_create(this->scr, NAV_SETTINGS);
 
 
     this->optionsContainer = lv_obj_create(this->scr);
