@@ -176,7 +176,8 @@ class SettingsPageState extends State<SettingsPage> {
       bleManager.riseOnStart = riseOnStart;
       bleManager.maintainPressure = maintainPressure;
       bleManager.airOutOnShutoff = dropDownWhenOff;
-
+      print("save started");
+      print(bleBroadcastName);
       bleManager.saveConfigToManifold();
     }
 
@@ -1125,6 +1126,7 @@ class SettingsPageState extends State<SettingsPage> {
                 hintStyle: TextStyle(color: Colors.white54),
                 suffixText: units,
               ),
+              onChanged: onChanged, 
             ),
           ),
         ],

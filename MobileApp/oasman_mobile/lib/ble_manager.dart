@@ -234,9 +234,8 @@ class BLEManager extends ChangeNotifier {
       notifyListeners();
 
       await discoverServices(device, context);
-      await sendRestCommand([
-        BTOasIdentifier.GETCONFIGVALUES
-      ]); //ask for config from manifold
+      await sendRestCommand(
+          [BTOasIdentifier.GETCONFIGVALUES]); //ask for config from manifold
 
       print("Successfully connected to ${device.name} (${device.id})");
       bleBroadcastName = device.name;
@@ -248,8 +247,8 @@ class BLEManager extends ChangeNotifier {
       await disconnectDevice();
     }
   }
-    void _connectToDevice(BluetoothDevice device) async {
 
+  void _connectToDevice(BluetoothDevice device) async {
     try {
       _startGlobalConnListener(); // ensure listener is active
       print("Connecting to device: ${device.name} (${device.id})");
@@ -258,9 +257,8 @@ class BLEManager extends ChangeNotifier {
       connectedDevice = device;
       notifyListeners();
 
-      await sendRestCommand([
-        BTOasIdentifier.GETCONFIGVALUES
-      ]); //ask for config from manifold
+      await sendRestCommand(
+          [BTOasIdentifier.GETCONFIGVALUES]); //ask for config from manifold
 
       print("Successfully connected to ${device.name} (${device.id})");
       bleBroadcastName = device.name;
@@ -270,11 +268,10 @@ class BLEManager extends ChangeNotifier {
     } catch (e) {
       print("Error connecting to device: $e");
       await disconnectDevice();
-       _retryConnection(device);
+      _retryConnection(device);
     }
+  }
 
-  }  
-  
   void _retryConnection(BluetoothDevice device) async {
     try {
       await device.connect(autoConnect: true);
@@ -625,14 +622,10 @@ class BLEManager extends ChangeNotifier {
       1
     ];
     sendRestCommand(_data);
-    sendRestCommand([
-      ..._encodeInt32(BTOasIdentifier.SAFETYMODE),
-      safetyMode ? 1 : 0
-    ]);
-    sendRestCommand([
-      ..._encodeInt32(BTOasIdentifier.RISEONSTART),
-      riseOnStart ? 1 : 0
-    ]);
+    sendRestCommand(
+        [..._encodeInt32(BTOasIdentifier.SAFETYMODE), safetyMode ? 1 : 0]);
+    sendRestCommand(
+        [..._encodeInt32(BTOasIdentifier.RISEONSTART), riseOnStart ? 1 : 0]);
     sendRestCommand([
       ..._encodeInt32(BTOasIdentifier.MAINTAINPRESSURE),
       maintainPressure ? 1 : 0

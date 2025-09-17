@@ -80,7 +80,6 @@ void Compressor::updateFreezeTimer(unsigned long curTime)
     this->lastFreezeTime = curTime;
     this->freezeTimerLastReadValue = this->getTankPressure();
 }
-
 void Compressor::loop()
 {
     unsigned long curTime = millis();
@@ -100,7 +99,7 @@ void Compressor::loop()
     // Is safety mode is on, we aren't sure the compressor wire is correct, so disable compressor output
     if (getsafetyMode() == true)
     {
-        Serial.println("SAFETY MODE -> Compressor: OFF");
+        //Serial.println("SAFETY MODE -> Compressor: OFF");
         this->s_trigger.close();
        return;
     }
@@ -156,7 +155,7 @@ void Compressor::loop()
     {
         if (this->getTankPressure() < getcompressorOnPSI())
         {
-            //Serial.println("Compressor: ON");
+            // Serial.println("Compressor: ON");
             this->s_trigger.open();
         }
     }
