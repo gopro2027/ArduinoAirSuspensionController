@@ -135,6 +135,8 @@ void beginSaveData()
     // things moves from inside the user config
     _SaveData.bagMaxPressure.load("bagMaxPressure", MAX_PRESSURE_SAFETY);
     _SaveData.blePasskey.load("blePasskey", BLE_PASSKEY);
+    _SaveData.bleName.loadString("bleName", BT_NAME);
+
     _SaveData.systemShutoffTimeM.load("systemShutoffTimeM", SYSTEM_SHUTOFF_TIME_M);
     _SaveData.compressorOnPSI.load("compressorOnPSI", COMPRESSOR_ON_BELOW_PSI);
     _SaveData.compressorOffPSI.load("compressorOffPSI", COMPRESSOR_MAX_PSI);
@@ -358,6 +360,7 @@ createSaveFuncInt(pressureInputTank, byte);
 // values moved from the user defines file
 createSaveFuncInt(bagMaxPressure, uint8_t);
 createSaveFuncInt(blePasskey, uint32_t);         // 6 digits base 10
+createSaveFuncString(bleName);
 createSaveFuncInt(systemShutoffTimeM, uint32_t); // may have to change
 createSaveFuncInt(compressorOnPSI, uint8_t);
 createSaveFuncInt(compressorOffPSI, uint8_t);

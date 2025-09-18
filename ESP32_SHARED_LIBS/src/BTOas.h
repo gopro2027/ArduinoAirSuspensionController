@@ -41,7 +41,8 @@ enum BTOasIdentifier
     DETECTPRESSURESENSORS = 27,
     AISTATUSENABLED = 28,
     RESETAIPKT = 29,
-    BP32PKT = 30
+    BP32PKT = 30,
+    BROADCASTNAME = 35,
 };
 
 enum StatusPacketBittset
@@ -255,6 +256,7 @@ struct ConfigValuesPacket : BTOasPacket
     uint16_t *_pressureSensorMax();
     uint16_t *_bagVolumePercentage();
 };
+
 struct AuthPacket : BTOasPacket
 {
     AuthPacket(uint32_t blePasskey, AuthResult authResult);
@@ -266,6 +268,11 @@ struct AuthPacket : BTOasPacket
 struct BP32Packet : BTOasPacket
 {
     BP32Packet(BP32CMD bp32Cmd, bool value);
+};
+struct BroadcastNamePacket : BTOasPacket
+{
+    BroadcastNamePacket(String bleBroadcast);
+    String getBroadcastName();
 };
 
 #endif

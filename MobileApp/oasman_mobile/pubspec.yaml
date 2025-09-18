@@ -1,5 +1,5 @@
 name: oasman_mobile
-description: "A new Flutter project."
+description: "Oasman android app"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
@@ -39,7 +39,10 @@ dependencies:
   permission_handler: ^11.3.1
   flutter_svg: ^2.0.16
   provider: ^6.0.5
-  shared_preferences: ^2.0.15 
+  image_picker: ^1.1.2
+  path_provider: ^2.1.4
+  shared_preferences: ^2.2.3
+  font_awesome_flutter: ^10.10.0
 
 dev_dependencies:
   flutter_test:
@@ -92,3 +95,7 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+  fonts:
+    - family: Bebas Neue
+      fonts:
+        - asset: assets/fonts/BebasNeue-Regular.ttf
