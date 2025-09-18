@@ -72,7 +72,6 @@ void setRideHeightRearDriver(byte value)
 #if USE_ADS == true
 void initializeADS()
 {
-    bool error = false;
     if (!ADS1115A.begin(ADS_A_ADDRESS))
     {
         Serial.println(F("Failed to initialize ADS A"));
@@ -230,7 +229,6 @@ void accessoryWireLoop()
             // one time check that it just happened for the first time
             if (hasJustShutoff == false)
             {
-                Serial.println("ACC: OFF");
                 hasJustShutoff = true;
                 // actually check if air out code is enabled and do as asked
                 airOutWithSafetyCheck();
