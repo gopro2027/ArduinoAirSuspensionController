@@ -80,6 +80,7 @@ void Compressor::updateFreezeTimer(unsigned long curTime)
     this->lastFreezeTime = curTime;
     this->freezeTimerLastReadValue = this->getTankPressure();
 }
+
 void Compressor::loop()
 {
     unsigned long curTime = millis();
@@ -99,9 +100,8 @@ void Compressor::loop()
     // Is safety mode is on, we aren't sure the compressor wire is correct, so disable compressor output
     if (getsafetyMode() == true)
     {
-        //Serial.println("SAFETY MODE -> Compressor: OFF");
         this->s_trigger.close();
-       return;
+        return;
     }
 
     // no matter which state compressor is in, check if it is up to max psi and turn it off if needed and return without any further execution. This is most important tank check and should ideally be ran first to turn off in any case where pressure is too high.
@@ -155,7 +155,6 @@ void Compressor::loop()
     {
         if (this->getTankPressure() < getcompressorOnPSI())
         {
-            // Serial.println("Compressor: ON");
             this->s_trigger.open();
         }
     }

@@ -41,8 +41,8 @@ enum BTOasIdentifier
     DETECTPRESSURESENSORS = 27,
     AISTATUSENABLED = 28,
     RESETAIPKT = 29,
+    BP32PKT = 30,
     BROADCASTNAME = 35,
-    BP32PKT = 30
 };
 
 enum StatusPacketBittset

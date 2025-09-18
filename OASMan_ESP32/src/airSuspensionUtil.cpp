@@ -78,7 +78,6 @@ void initializeADS()
         Serial.println(F("Failed to initialize ADS A"));
 #if ADS_MOCK_BYPASS == false
         ESP.restart();
-        error = true;
 #endif
     }
 #if USE_2_ADS == true
@@ -86,15 +85,10 @@ void initializeADS()
     {
         Serial.println(F("Failed to initialize ADS B"));
 #if ADS_MOCK_BYPASS == false
-        error = true;
         ESP.restart();
 #endif
     }
 #endif
-    if (error){
-        delay(1000);
-        ESP.restart();
-    }
 }
 #endif
 

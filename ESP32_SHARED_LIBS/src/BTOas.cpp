@@ -301,7 +301,10 @@ void AuthPacket::setBleAuthResult(AuthResult ar)
 BroadcastNamePacket::BroadcastNamePacket(String broadcastName)
 {
     this->cmd = BROADCASTNAME;
-    strcpy((char *)&this->args[0], broadcastName.c_str());
+    int len = broadcastName.length();
+    if (len > 8)
+        len = 8;
+    strncpy((char *)&this->args[0], broadcastName.c_str(), len);
 }
 String BroadcastNamePacket::getBroadcastName()
 {
