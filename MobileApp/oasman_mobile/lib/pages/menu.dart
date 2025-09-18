@@ -37,14 +37,14 @@ class CustomBottomNavigationBar extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    index == 0 ? Icons.home : Icons.settings,
+                    index == 0 ? Icons.gamepad : Icons.settings,
                     color: selectedIndex == index
                         ? Color(0xFFBB86FC) // Selected icon color
                         : Color.fromARGB(255, 239, 239, 239), // Unselected icon color
                   ),
                   SizedBox(width: 8), // Space between icon and text
                   Text(
-                    index == 0 ? 'Home' : 'Setup',
+                    index == 0 ? 'Controller' : 'Setup',
                     style: TextStyle(
                       color: selectedIndex == index
                           ? Color(0xFFBB86FC) // Selected text color

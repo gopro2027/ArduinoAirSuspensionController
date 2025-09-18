@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'models/appSettings.dart';
 import 'package:oasman_mobile/ble_manager.dart';
 import 'package:oasman_mobile/provider/unit_provider.dart'; // Import UnitProvider
 import 'package:oasman_mobile/pages/menu.dart';
@@ -7,23 +8,60 @@ import 'package:oasman_mobile/pages/buttons.dart';
 import 'package:oasman_mobile/pages/setup.dart';
 import 'package:oasman_mobile/pages/header.dart'; // Import your header
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => BLEManager()), // BLEManager globally available
-        ChangeNotifierProvider(create: (_) => UnitProvider()), // UnitProvider globally available
+        ChangeNotifierProvider(
+            create: (_) => BLEManager()), // BLEManager globally available
+        ChangeNotifierProvider(
+            create: (_) => UnitProvider()), // UnitProvider globally available
       ],
-      child: const MyApp(),
+      child: MyApp(),
     ),
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _isReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    await loadGlobalSettings(); // Load settings at startup
+    if (globalSettings?.pairedManifoldId != '') { //in case if saved/paired device exists
+      final bleManager = BLEManager();
+      await bleManager.startScan(); // Auto-connect logic inside startScan
+    }
+
+    setState(() => _isReady = true);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_isReady) {
+      // Show loading indicator while settings load
+      return const MaterialApp(
+        home: Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    // App is ready, use globalSettings
     return MaterialApp(
       title: 'OAS-Man',
       theme: ThemeData(
@@ -49,13 +87,18 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
 
+  final GlobalKey<SettingsPageState> _settingsKey =
+      GlobalKey<SettingsPageState>();
   // List of pages
-  static const List<Widget> _pages = <Widget>[
-    ButtonsPage(),
-    SettingsPage(),
-  ];
+  List<Widget> get _pages => <Widget>[
+        const ButtonsPage(),
+        SettingsPage(key: _settingsKey),
+      ];
 
   void _onItemTapped(int index) {
+    if (_selectedIndex == 1 && index != 1) {
+      _settingsKey.currentState?.onLeavePage();
+    }
     setState(() {
       _selectedIndex = index;
       print("Navigated to page index: $_selectedIndex");
@@ -71,14 +114,14 @@ class _MainPageState extends State<MainPage> {
       body: orientation == Orientation.portrait
           ? Column(
               children: [
-                const Header(), // Header at the top
+                if (_selectedIndex == 0) const Header(), // Header at the top
                 Expanded(child: _pages[_selectedIndex]), // Main page below
               ],
             )
           : Row(
               children: [
                 // Left side (40% of screen) for header in landscape mode
-                Container(
+                SizedBox(
                   width: size.width * 0.40,
                   child: const Header(), // Header on the left side in landscape
                 ),

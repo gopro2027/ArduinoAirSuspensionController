@@ -102,11 +102,6 @@ const static uint16_t valve_control_characteristic_client_configuration_handle =
 
 // Connection tracking
 const int MAX_CONNECTIONS = 5;
-static uint8_t adv_data[] = {
-    2, BLUETOOTH_DATA_TYPE_FLAGS, APP_AD_FLAGS, // General Discoverable Mode, BR/EDR Not Supported
-    7, BLUETOOTH_DATA_TYPE_COMPLETE_LOCAL_NAME, 'O', 'A', 'S', 'M', 'a', 'n',
-    17, BLUETOOTH_DATA_TYPE_COMPLETE_LIST_OF_128_BIT_SERVICE_CLASS_UUIDS, // 128-bit Service UUIDs (complete list)
-    0xf0, 0x25, 0xb6, 0x15, 0x3d, 0x3e, 0xb2, 0x9e, 0x91, 0x44, 0xb4, 0xd3, 0xc8, 0x25, 0x94, 0x67};
 
 uint64_t currentUserNum = 1;
 
@@ -412,9 +407,31 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
     }
 }
 #define ESP_GATT_MAX_MTU_SIZE 517
+#include "btstack.h"
+
+static std::vector<uint8_t> adv_data;
+void generateAdvData(String name)
+{
+    static bool advDataGenerated = false;
+    if (advDataGenerated)
+        return;
+    advDataGenerated = true;
+
+    uint8_t nameLength = name.length();
+    if (nameLength > 8)
+        nameLength = 8;
+
+    adv_data.insert(adv_data.end(), {2, BLUETOOTH_DATA_TYPE_FLAGS, APP_AD_FLAGS});
+    adv_data.insert(adv_data.end(), {(uint8_t)(nameLength + 1), BLUETOOTH_DATA_TYPE_COMPLETE_LOCAL_NAME});
+    for (uint8_t c : name)
+    {
+        adv_data.push_back(c);
+    }
+    adv_data.insert(adv_data.end(), {17, BLUETOOTH_DATA_TYPE_COMPLETE_LIST_OF_128_BIT_SERVICE_CLASS_UUIDS, 0xf0, 0x25, 0xb6, 0x15, 0x3d, 0x3e, 0xb2, 0x9e, 0x91, 0x44, 0xb4, 0xd3, 0xc8, 0x25, 0x94, 0x67}); // 128-bit Service UUIDs (complete list)
+}
+
 void ble_setup()
 {
-
     packetMover::setupRestSemaphore();
 
     // Initialize ATT Server with our database
@@ -423,7 +440,9 @@ void ble_setup()
     att_server_register_packet_handler(hci_event_handler);
 
     // Set device name
-    gap_set_local_name("OASMan"); // not working for some reason
+    // Update GAP local name (used by GATT Device Name characteristic)
+    gap_set_local_name(getbleName().c_str());
+    gap_discoverable_control(1);
 
     gap_set_max_number_peripheral_connections(MAX_CONNECTIONS);
 
@@ -439,9 +458,10 @@ void ble_setup()
 
     gap_advertisements_set_params(adv_int_min, adv_int_max, adv_type, 0, null_addr, 0x07, 0x00);
 
-    // Set advertisement data
-    gap_advertisements_set_data(sizeof(adv_data), adv_data);
+    generateAdvData(getbleName());
 
+    // Apply adv data
+    gap_advertisements_set_data(adv_data.size(), adv_data.data());
     gap_advertisements_enable(true);
 
     // Initialize characteristic data
@@ -451,6 +471,8 @@ void ble_setup()
     int valveValue = 0;
     little_endian_store_32(valve_control_characteristic_data, 0, valveValue);
 
+    Serial.print("Broadcast started, name:");
+    Serial.println(getbleName().c_str());
     Serial.println("Waiting a client connection to notify...");
 }
 
@@ -555,6 +577,10 @@ void ble_notify()
             statusBittset = statusBittset | (1 << StatusPacketBittset::AI_STATUS_ENABLED);
         }
 
+        // // pack these 2 values together at the top of the statusBittset
+        // int aiDataPacked = (AIPercentage << 4) + AIReadyBittset; // combine at bottom
+        // aiDataPacked = (aiDataPacked << 21);                     // move to top end (4 + 7 = 11; 32-11 = 21)
+        // statusBittset = statusBittset | aiDataPacked;
         StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue(), getCompressor()->getTankPressure(), statusBittset, AIPercentage, AIReadyBittset, getupdateResult());
 
         memcpy(status_characteristic_data, statusPacket.tx(), BTOAS_PACKET_SIZE);
@@ -569,6 +595,7 @@ void ble_notify()
 
 void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
 {
+    notifyKeepAlive();
     switch (packet->cmd)
     {
     case BTOasIdentifier::IDLE:
@@ -708,7 +735,19 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
     case BTOasIdentifier::AUTHPACKET:
         if (((AuthPacket *)packet)->getBleAuthResult() == AuthResult::AUTHRESULT_UPDATEKEY)
         {
-            setblePasskey(((AuthPacket *)packet)->getBlePasskey());
+            if (((AuthPacket *)packet)->getBlePasskey() != getblePasskey())
+            {
+                setblePasskey(((AuthPacket *)packet)->getBlePasskey());
+            }
+        }
+        break;
+    case BTOasIdentifier::BROADCASTNAME:
+
+        if (((BroadcastNamePacket *)packet)->getBroadcastName() != getbleName())
+        {
+            setbleName(((BroadcastNamePacket *)packet)->getBroadcastName());
+            Serial.print("new broacast name:");
+            Serial.println(getbleName());
         }
         break;
     case BTOasIdentifier::BP32PKT:
