@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "../../../GitHub/ArduinoAirSuspensionController/WirelessHeightSensor"
+		},
+		{
+			"name": "WirelessHeightSensor",
+			"path": "."
+		}
+	],
+	"settings": {}
+}
