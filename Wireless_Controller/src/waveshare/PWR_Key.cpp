@@ -138,7 +138,7 @@ void onWakeup()
     }
     else
     {
-        smartdisplay_lcd_set_backlight(0.8f);
+        smartdisplay_lcd_set_backlight(getBrightnessFloat());
         showDialog("Waking up, reconnecting...", lv_color_hex(0xFFFF00), 30000);
     }
 }
