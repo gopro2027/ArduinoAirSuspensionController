@@ -29,7 +29,7 @@ jobs:
       run: |
         cd OASMan_ESP32
         shopt -s globstar
-        pio clean
+        pio run clean
         pio run
         mkdir -p bins/
         for f in OASMan_ESP32/.pio/build/**/*.bin; do cp -- "$f" "bins/manifold_v2_$f"; done
