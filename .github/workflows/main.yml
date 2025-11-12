@@ -33,3 +33,19 @@ jobs:
       with:
         name: firmware
         path: OASMan_ESP32/.pio/build/**/*.bin
+
+    - name: Create Release
+      if: success() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: build-${{ github.run_number }}
+        name: Build #${{ github.run_number }}
+        body: |
+          Automated build from commit ${{ github.sha }}
+          
+          **Commit:** ${{ github.event.head_commit.message }}
+          **Date:** ${{ github.event.head_commit.timestamp }}
+        files: OASMan_ESP32/.pio/build/**/*.bin
+        prerelease: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
