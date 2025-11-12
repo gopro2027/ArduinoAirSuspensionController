@@ -32,10 +32,12 @@ jobs:
       run: |
         buildname="manifold_v2"
         cd OASMan_ESP32
-        pio run --target clean & rm -rf .pio/build/*
+        pio run --target clean
+        rm -rf .pio/build/*
         pio run
         find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
-        pio run --target clean & rm -rf .pio/build/*
+        pio run --target clean
+        rm -rf .pio/build/*
       # find .pio/build/ -type f -name '*.bin' -exec bash -c 'for f; do cp -- "$f" "../bins/${buildname}_${f##*/}"; done' _ {} +
       # for f in OASMan_ESP32/.pio/build/**/*.bin; do cp -- "$f" "bins/manifold_v2_$f"; done
       # mkdir -p bins/v2/
