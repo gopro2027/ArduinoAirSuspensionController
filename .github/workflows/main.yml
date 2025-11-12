@@ -1,4 +1,4 @@
-name: oasman-manifold-build
+name: oasman-manifold-build-and-release
 
 # permissions:
 #   contents: write  # Allow the workflow to push changes
