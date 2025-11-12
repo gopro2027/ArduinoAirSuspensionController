@@ -25,51 +25,71 @@ jobs:
         python -m pip install --upgrade pip
         pip install platformio
 
-    - name: Build PlatformIO Project
+    - name: Build PlatformIO manifold v2
       run: |
         cd OASMan_ESP32
         pio run
+        mkdir -p bins/
+        for f in OASMan_ESP32/.pio/build/**/*.bin; do cp -- "$f" "bins/manifold_v2_$f"; done
+      # mkdir -p bins/v2/
+      # cp OASMan_ESP32/.pio/build/**/*.bin bins/v2/ || true
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      if: success()
-      with:
-        name: firmware
-        path: OASMan_ESP32/.pio/build/**/*.bin
+    - name: Build PlatformIO controller cyd3p2
+      run: |
+        cd OASMan_ESP32
+        pio run -e esp32-2432S032C
+        mkdir -p bins/
+        for f in OASMan_ESP32/.pio/build/**/*.bin; do cp -- "$f" "bins/controller_cyd3p2_$f"; done
+      # mkdir -p bins/cyd3p2/
+      # cp OASMan_ESP32/.pio/build/**/*.bin bins/cyd3p2/ || true
+
+    - name: Build PlatformIO controller ws2p8
+      run: |
+        cd OASMan_ESP32
+        pio run -e esp32-s3touchlcd2p8
+        mkdir -p bins/
+        for f in OASMan_ESP32/.pio/build/**/*.bin; do cp -- "$f" "bins/controller_ws2p8_$f"; done
+
+    # - name: Upload build artifacts
+    #   uses: actions/upload-artifact@v4
+    #   if: success()
+    #   with:
+    #     name: firmware
+    #     path: OASMan_ESP32/.pio/build/**/*.bin
 
     - name: Create Release
       if: success() && github.ref == 'refs/heads/main' && github.event_name == 'push'
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: build-manifold-${{ github.run_number }}
-        name: Build #${{ github.run_number }}
+        tag_name: build-${{ github.run_number }}
+        name: Build ${{ github.run_number }}
         body: |
           Automated build from commit ${{ github.sha }}
           
           **Commit:** ${{ github.event.head_commit.message }}
           **Date:** ${{ github.event.head_commit.timestamp }}
-        files: OASMan_ESP32/.pio/build/**/*.bin
+        files: bins/*.bin
         prerelease: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Prepare firmware for GitHub Pages
-      if: success() && github.ref == 'refs/heads/main'
-      run: |
-        mkdir -p docs/firmware
-        cp OASMan_ESP32/.pio/build/**/*.bin docs/firmware/ || true
+    # - name: Prepare firmware for GitHub Pages
+    #   if: success() && github.ref == 'refs/heads/main'
+    #   run: |
+    #     mkdir -p docs/firmware
+    #     cp OASMan_ESP32/.pio/build/**/*.bin docs/firmware/ || true
         
-        # Create an index JSON file with build info
-        cat > docs/firmware/builds.json << EOF
-        {
-          "latest": {
-            "commit": "${{ github.sha }}",
-            "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "run_number": "${{ github.run_number }}",
-            "files": $(ls docs/firmware/*.bin | jq -R -s -c 'split("\n")[:-1]')
-          }
-        }
-        EOF
+    #     # Create an index JSON file with build info
+    #     cat > docs/firmware/builds.json << EOF
+    #     {
+    #       "latest": {
+    #         "commit": "${{ github.sha }}",
+    #         "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    #         "run_number": "${{ github.run_number }}",
+    #         "files": $(ls docs/firmware/*.bin | jq -R -s -c 'split("\n")[:-1]')
+    #       }
+    #     }
+    #     EOF
 
 # okay this last step is failing because the github actions doesn't have permissions to bypass the branch protections to main yet
     # - name: Commit firmware to docs
