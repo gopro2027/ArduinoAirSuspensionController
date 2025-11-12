@@ -33,18 +33,20 @@ jobs:
         pio run --target clean
         pio run
         find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
+        pio run --target clean
       # find .pio/build/ -type f -name '*.bin' -exec bash -c 'for f; do cp -- "$f" "../bins/${buildname}_${f##*/}"; done' _ {} +
       # for f in OASMan_ESP32/.pio/build/**/*.bin; do cp -- "$f" "bins/manifold_v2_$f"; done
       # mkdir -p bins/v2/
       # cp OASMan_ESP32/.pio/build/**/*.bin bins/v2/ || true
 
-    # - name: Build PlatformIO controller cyd3p2
-    #   run: |
-    #     buildname="controller_cyd3p2"
-    #     cd Wireless_Controller
-    #     pio run --target clean
-    #     pio run -e esp32-2432S032C
-    #     find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
+    - name: Build PlatformIO controller cyd3p2
+      run: |
+        buildname="controller_cyd3p2"
+        cd Wireless_Controller
+        pio run --target clean
+        pio run -e esp32-2432S032C
+        find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
+        pio run --target clean
 
     
     #     mkdir -p bins/
@@ -59,6 +61,7 @@ jobs:
         pio run --target clean
         pio run -e esp32-s3touchlcd2p8
         find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
+        pio run --target clean
       # find .pio/build/ -type f -name '*.bin' -exec bash -c 'for f; do cp -- "$f" "../bins/${buildname}_${f##*/}"; done' _ {} +
 
     # - name: Upload build artifacts
