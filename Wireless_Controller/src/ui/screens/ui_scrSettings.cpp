@@ -179,12 +179,12 @@ void ScrSettings::init()
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
     new Option(this->optionsContainer, OptionType::HEADER, "Config");
 
-    this->ui_config1 = new Option(this->optionsContainer, OptionType::SLIDER, "Bag Max PSI" /*"MAX_PRESSURE_SAFETY"*/, {.INT = 0}, [](void *data)
+    this->ui_config1 = new Option(this->optionsContainer, OptionType::SLIDER, "Bag Max PSI" /*"MAX_PRESSURE_SAFETY"*/, {.INT = 200}, [](void *data)
                                   { log_i("Pressed %i", ((uint32_t)data));
         *util_configValues._bagMaxPressure() = (uint32_t)data;
         sendConfigValuesPacket(true);
     alertValueUpdated(); });
-    this->ui_config1->setSliderParams(1, 300, true, LV_EVENT_RELEASED);
+    this->ui_config1->setSliderParams(1, 256, true, LV_EVENT_RELEASED);
 
     new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Bluetooth Passkey (6 digits)" /*"BLE_PASSKEY"*/, {.INT = getblePasskey()}, [](void *data)
                { log_i("Pressed %i", (data));
@@ -221,7 +221,7 @@ void ScrSettings::init()
         sendConfigValuesPacket(true);
     alertValueUpdated(); });
 
-    this->ui_config6 = new Option(this->optionsContainer, OptionType::SLIDER, "Bag Volume Percentage", {.INT = 0}, [](void *data)
+    this->ui_config6 = new Option(this->optionsContainer, OptionType::SLIDER, "Bag Volume Percentage", {.INT = 100}, [](void *data)
                                   { log_i("Pressed %i", ((uint32_t)data)); 
         *util_configValues._bagVolumePercentage() = (uint32_t)data;
         sendConfigValuesPacket(true);
