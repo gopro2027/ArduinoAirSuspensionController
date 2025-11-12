@@ -49,3 +49,31 @@ jobs:
         prerelease: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Prepare firmware for GitHub Pages
+      if: success() && github.ref == 'refs/heads/main'
+      run: |
+        mkdir -p docs/firmware
+        cp OASMan_ESP32/.pio/build/**/*.bin docs/firmware/ || true
+        
+        # Create an index JSON file with build info
+        cat > docs/firmware/builds.json << EOF
+        {
+          "latest": {
+            "commit": "${{ github.sha }}",
+            "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "run_number": "${{ github.run_number }}",
+            "files": $(ls docs/firmware/*.bin | jq -R -s -c 'split("\n")[:-1]')
+          }
+        }
+        EOF
+
+    - name: Commit firmware to docs
+      if: success() && github.ref == 'refs/heads/main'
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add docs/firmware/
+        git diff --staged --quiet || git commit -m "Update firmware build #${{ github.run_number }}"
+        git push
+
