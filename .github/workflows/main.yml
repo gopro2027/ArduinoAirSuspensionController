@@ -1,11 +1,13 @@
 name: oasman-manifold-build
 
-permissions:
-  contents: write  # Allow the workflow to push changes
+# permissions:
+#   contents: write  # Allow the workflow to push changes
 
+# on:
+#   push:
+#     branches: [ main ]
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -83,7 +85,7 @@ jobs:
           **Commit:** ${{ github.event.head_commit.message }}
           **Date:** ${{ github.event.head_commit.timestamp }}
         files: bins/*.bin
-        prerelease: true
+        # prerelease: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
