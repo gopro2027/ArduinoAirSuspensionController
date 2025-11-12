@@ -49,6 +49,8 @@ public:
     Option *ui_manifoldUpdateStatus;
     Option *ui_mac;
     Option *ui_volts;
+    Option *ui_brightnessSlider;
+
     void init();
     void runTouchInput(SimplePoint pos, bool down);
     void loop();

@@ -122,6 +122,7 @@ public:
     Preferencable wifiSSID;
     Preferencable wifiPassword;
     Preferencable updateResult;
+    Preferencable brightness;
 };
 
 extern SaveData _SaveData;
@@ -133,7 +134,10 @@ headerDefineSaveFunc(updateMode, bool);
 headerDefineSaveFunc(wifiSSID, String);
 headerDefineSaveFunc(wifiPassword, String);
 headerDefineSaveFunc(updateResult, byte);
+headerDefineSaveFunc(brightness, byte);
 
 void ta_event_cb(lv_event_t *e);
+void slider_event_cb(lv_event_t *e);
 bool isKeyboardHidden();
+float getBrightnessFloat();
 #endif
