@@ -1,5 +1,8 @@
 name: oasman-manifold-build
 
+permissions:
+  contents: write  # Allow the workflow to push changes
+
 on:
   push:
     branches: [ main ]
