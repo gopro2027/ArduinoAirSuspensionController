@@ -28,7 +28,7 @@ jobs:
 
     - name: Build PlatformIO manifold v2
       run: |
-        buildname=manifold_v2
+        buildname="manifold_v2"
         cd OASMan_ESP32
         pio run --target clean
         pio run
@@ -48,7 +48,7 @@ jobs:
 
     - name: Build PlatformIO controller ws2p8
       run: |
-        buildname=controller_ws2p8
+        buildname="controller_ws2p8"
         cd Wireless_Controller
         pio run --target clean
         pio run -e esp32-s3touchlcd2p8
