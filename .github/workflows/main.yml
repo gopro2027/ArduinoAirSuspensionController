@@ -38,13 +38,15 @@ jobs:
       # mkdir -p bins/v2/
       # cp OASMan_ESP32/.pio/build/**/*.bin bins/v2/ || true
 
-    - name: Build PlatformIO controller cyd3p2
-      run: |
-        buildname="controller_cyd3p2"
-        cd Wireless_Controller
-        pio run --target clean
-        pio run -e esp32-2432S032C
-        find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
+    # - name: Build PlatformIO controller cyd3p2
+    #   run: |
+    #     buildname="controller_cyd3p2"
+    #     cd Wireless_Controller
+    #     pio run --target clean
+    #     pio run -e esp32-2432S032C
+    #     find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
+
+    
     #     mkdir -p bins/
       # for f in Wireless_Controller/.pio/build/**/*.bin; do cp -- "$f" "bins/controller_cyd3p2_$f"; done
       # mkdir -p bins/cyd3p2/
