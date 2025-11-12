@@ -24,14 +24,15 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install platformio
+        mkdir -p bins/
 
     - name: Build PlatformIO manifold v2
       run: |
+        buildname=manifold_v2
         cd OASMan_ESP32
         pio run --target clean
         pio run
-        mkdir -p ../bins/
-        find .pio/build/ -type f -name '*.bin' -exec bash -c 'for f; do cp -- "$f" "../bins/manifold_v2_${f##*/}"; done' _ {} +
+        find .pio/build/ -type f -name '*.bin' -exec bash -c 'for f; do cp -- "$f" "../bins/${buildname}_${f##*/}"; done' _ {} +
       # for f in OASMan_ESP32/.pio/build/**/*.bin; do cp -- "$f" "bins/manifold_v2_$f"; done
       # mkdir -p bins/v2/
       # cp OASMan_ESP32/.pio/build/**/*.bin bins/v2/ || true
@@ -45,12 +46,13 @@ jobs:
       # mkdir -p bins/cyd3p2/
       # cp Wireless_Controller/.pio/build/**/*.bin bins/cyd3p2/ || true
 
-    # - name: Build PlatformIO controller ws2p8
-    #   run: |
-    #     cd Wireless_Controller
-    #     pio run -e esp32-s3touchlcd2p8
-    #     mkdir -p /bins/
-      # for f in Wireless_Controller/.pio/build/**/*.bin; do cp -- "$f" "bins/controller_ws2p8_$f"; done
+    - name: Build PlatformIO controller ws2p8
+      run: |
+        buildname=controller_ws2p8
+        cd Wireless_Controller
+        pio run --target clean
+        pio run -e esp32-s3touchlcd2p8
+        find .pio/build/ -type f -name '*.bin' -exec bash -c 'for f; do cp -- "$f" "../bins/${buildname}_${f##*/}"; done' _ {} +
 
     # - name: Upload build artifacts
     #   uses: actions/upload-artifact@v4
