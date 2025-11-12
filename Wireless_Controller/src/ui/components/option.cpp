@@ -53,7 +53,7 @@ void Option::indentText(int extraX)
     this->bar = lv_obj_create(this->root);
     lv_obj_remove_style_all(this->bar);
     lv_obj_set_style_bg_opa(this->bar, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_size(this->bar, 1, OPTION_ROW_HEIGHT);
+    lv_obj_set_size(this->bar, 1, this->optionRowHeight);
     lv_obj_set_style_bg_color(this->bar, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_x(this->bar, MARGIN);
 }
@@ -72,12 +72,19 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     this->text = NULL;
     this->event_cb = NULL;
     this->extraEventClickData = _extraEventClickData;
-
     this->type = type;
+    this->optionRowHeight = OPTION_ROW_HEIGHT;
+
+    // Some types need to be larger in height
+    if (this->type == OptionType::SLIDER)
+    {
+        this->optionRowHeight = OPTION_ROW_HEIGHT * 2;
+    }
+
     createStyle();
     this->root = lv_obj_create(parent);
     lv_obj_remove_style_all(this->root);
-    lv_obj_set_size(this->root, DISPLAY_WIDTH, OPTION_ROW_HEIGHT);
+    lv_obj_set_size(this->root, DISPLAY_WIDTH, this->optionRowHeight);
 
     if (type != OptionType::SPACE && type != OptionType::BUTTON)
     {
@@ -187,10 +194,60 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_obj_add_flag(this->rightHandObj, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
         lv_obj_add_event_cb(this->rightHandObj, ta_event_cb, LV_EVENT_ALL, this);
     }
+    else if (type == OptionType::SLIDER)
+    {
+        // This one is a different height (2x) so it gets some weird calculations for placement
+        this->indentText();
+
+        lv_obj_set_align(this->text, LV_ALIGN_TOP_MID);
+        lv_obj_set_y(this->text, OPTION_ROW_HEIGHT / 2);
+        lv_obj_set_x(this->text, 0);
+
+        this->rightHandObj = lv_slider_create(this->root);
+        lv_slider_set_range(this->rightHandObj, 0, 9999999); // will be updated later
+        lv_slider_set_value(this->rightHandObj, value.INT, LV_ANIM_OFF);
+
+        lv_obj_set_width(this->rightHandObj, DISPLAY_WIDTH - (MARGIN * 5));
+        lv_obj_set_x(this->rightHandObj, MARGIN / 2);
+        lv_obj_set_y(this->rightHandObj, -OPTION_ROW_HEIGHT / 4);
+        lv_obj_set_align(this->rightHandObj, LV_ALIGN_BOTTOM_MID);
+
+        // lv_obj_set_style_line_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR | LV_STATE_DEFAULT); // border
+
+        // lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);      // bg
+        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR | LV_STATE_DEFAULT); // border
+        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_DARK), LV_PART_KNOB | LV_STATE_DEFAULT);       // border
+
+        lv_obj_add_flag(this->rightHandObj, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
+        lv_obj_add_event_cb(this->rightHandObj, slider_event_cb, LV_EVENT_ALL, this);
+
+        setupPressureLabel(this->root, &this->ui_slider_value_text, 0, 5, LV_ALIGN_CENTER, itoa(value.INT, strbuf, 10));
+        lv_obj_set_style_text_color(this->ui_slider_value_text, lv_color_hex3(0x888), 0);
+    }
 
     if (_event_cb != NULL)
     {
         this->event_cb = _event_cb;
+    }
+}
+
+void Option::setSliderParams(int min, int max, bool display_above_value, lv_event_code_t trigger_event)
+{
+    if (this->type == OptionType::SLIDER)
+    {
+        this->slider_min = min;
+        this->slider_max = max;
+        this->slider_display_value_above = display_above_value;
+        this->slider_trigger_event = trigger_event;
+        lv_slider_set_range(this->rightHandObj, slider_min, slider_max);
+        if (this->slider_display_value_above)
+        {
+            lv_obj_clear_flag(this->ui_slider_value_text, LV_OBJ_FLAG_HIDDEN);
+        }
+        else
+        {
+            lv_obj_add_flag(this->ui_slider_value_text, LV_OBJ_FLAG_HIDDEN);
+        }
     }
 }
 
@@ -217,6 +274,17 @@ void Option::setRightHandText(const char *text)
         if (strcmp(lv_label_get_text(label), text) != 0)
         {
             lv_label_set_text(label, text);
+        }
+    }
+    else if (this->type == OptionType::SLIDER)
+    {
+        lv_slider_set_value(this->rightHandObj, atoi(text), LV_ANIM_ON);
+        if (this->slider_display_value_above)
+        {
+            if (strcmp(lv_label_get_text(this->ui_slider_value_text), text) != 0)
+            {
+                lv_label_set_text(this->ui_slider_value_text, text);
+            }
         }
     }
 }

@@ -170,14 +170,21 @@ void ScrSettings::init()
                { log_i("Pressed %i", ((uint32_t)data));
         setscreenDimTimeM((uint32_t)data); });
 
+    ui_brightnessSlider = new Option(this->optionsContainer, OptionType::SLIDER, "Brightness", {.INT = getbrightness()}, [](void *data)
+                                     { log_i("Brightness %i", ((uint32_t)data));
+        setbrightness((uint32_t)data);
+        smartdisplay_lcd_set_backlight(getBrightnessFloat()); });
+    ui_brightnessSlider->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
+
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
     new Option(this->optionsContainer, OptionType::HEADER, "Config");
 
-    this->ui_config1 = new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Bag Max PSI" /*"MAX_PRESSURE_SAFETY"*/, {.INT = 0}, [](void *data)
+    this->ui_config1 = new Option(this->optionsContainer, OptionType::SLIDER, "Bag Max PSI" /*"MAX_PRESSURE_SAFETY"*/, {.INT = 200}, [](void *data)
                                   { log_i("Pressed %i", ((uint32_t)data));
         *util_configValues._bagMaxPressure() = (uint32_t)data;
         sendConfigValuesPacket(true);
     alertValueUpdated(); });
+    this->ui_config1->setSliderParams(1, 256, true, LV_EVENT_RELEASED);
 
     new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Bluetooth Passkey (6 digits)" /*"BLE_PASSKEY"*/, {.INT = getblePasskey()}, [](void *data)
                { log_i("Pressed %i", (data));
@@ -214,11 +221,12 @@ void ScrSettings::init()
         sendConfigValuesPacket(true);
     alertValueUpdated(); });
 
-    this->ui_config6 = new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Bag Volume Percentage", {.INT = 0}, [](void *data)
+    this->ui_config6 = new Option(this->optionsContainer, OptionType::SLIDER, "Bag Volume Percentage", {.INT = 100}, [](void *data)
                                   { log_i("Pressed %i", ((uint32_t)data)); 
         *util_configValues._bagVolumePercentage() = (uint32_t)data;
         sendConfigValuesPacket(true);
     alertValueUpdated(); });
+    this->ui_config6->setSliderParams(10, 600, true, LV_EVENT_RELEASED);
 
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
     new Option(this->optionsContainer, OptionType::HEADER, "Wifi / Update");
@@ -326,6 +334,12 @@ void ScrSettings::init()
     macValue.STRING = ble_getMAC();
     this->ui_mac = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Manifold:", macValue);
 
+#if defined(WAVESHARE_BOARD)
+    OptionValue voltsValue;
+    voltsValue.STRING = getBatteryVoltageString();
+    this->ui_volts = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Battery:", voltsValue);
+#endif
+
     // add space at end of list
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
 
@@ -399,6 +413,10 @@ void ScrSettings::loop()
     this->ui_aiReady->setRightHandText(buf);
 
     this->ui_mac->setRightHandText(ble_getMAC());
+
+#if defined(WAVESHARE_BOARD)
+    this->ui_volts->setRightHandText(getBatteryVoltageString());
+#endif
 
     if (*util_configValues._setValues())
     {

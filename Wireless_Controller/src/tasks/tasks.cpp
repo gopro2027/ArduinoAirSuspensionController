@@ -17,6 +17,22 @@ void task_bluetooth(void *parameters)
     }
 }
 
+#if defined(WAVESHARE_BOARD)
+void task_waveshare(void *parameters)
+{
+
+    Serial.println(F("Waveshare Service Beginning"));
+
+    waveshare_init();
+    delay(10);
+    for (;;)
+    {
+        waveshare_loop();
+        delay(10);
+    }
+}
+#endif
+
 #define BLE_TASK_STACK_SIZE 512 * 6
 
 // Statically allocate the buffer for the task's stack.
@@ -37,6 +53,18 @@ void setup_tasks()
         NULL,
         1000,
         NULL);
+
+#if defined(WAVESHARE_BOARD)
+    //  Waveshare board/button Task
+    xTaskCreate(
+        task_waveshare,
+        "Waveshare",
+        512 * 6,
+        NULL,
+        1000,
+        NULL);
+
+#endif
 
     // myTaskStack = (StackType_t *)heap_caps_malloc((BLE_TASK_STACK_SIZE), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT); // default didn't work, internal does seem to work
 

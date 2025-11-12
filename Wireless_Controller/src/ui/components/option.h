@@ -26,7 +26,8 @@ enum OptionType
     RADIO,
     KEYBOARD_INPUT_NUMBER,
     KEYBOARD_INPUT_TEXT,
-    BUTTON
+    BUTTON,
+    SLIDER
 };
 
 union OptionValue
@@ -51,9 +52,16 @@ public:
     option_event_cb_t event_cb;
     OptionType type;
     bool boolValue = false;
+    int optionRowHeight;
+    lv_obj_t *ui_slider_value_text;
+    int slider_min = 1;
+    int slider_max = 100;
+    bool slider_display_value_above = false;
+    lv_event_code_t slider_trigger_event = LV_EVENT_VALUE_CHANGED; // LV_EVENT_RELEASED
 
     Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue value = VALUE_ZERO, option_event_cb_t _event_cb = NULL, void *_extraEventClickData = NULL);
     void setRightHandText(const char *str);
+    void setSliderParams(int min, int max, bool display_above_value, lv_event_code_t trigger_event = LV_EVENT_VALUE_CHANGED);
     void setBooleanValue(bool value, bool netSend = false);
     void indentText(int extraX = 0);
 };
