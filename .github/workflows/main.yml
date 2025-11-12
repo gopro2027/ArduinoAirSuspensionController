@@ -33,7 +33,6 @@ jobs:
         buildname="manifold_v2"
         cd OASMan_ESP32
         pio run --target clean
-        rm -rf .pio/build/*
         pio run
         find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
         pio run --target clean
@@ -47,7 +46,7 @@ jobs:
       run: |
         buildname="controller_cyd3p2"
         cd Wireless_Controller
-        pio run --target clean & rm -rf .pio/build/*
+        pio run --target clean
         pio run -e esp32-2432S032C
         find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
         pio run --target clean & rm -rf .pio/build/*
@@ -62,7 +61,7 @@ jobs:
       run: |
         buildname="controller_ws2p8"
         cd Wireless_Controller
-        pio run --target clean & rm -rf .pio/build/*
+        pio run --target clean
         pio run -e esp32-s3touchlcd2p8
         find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
         pio run --target clean & rm -rf .pio/build/*
