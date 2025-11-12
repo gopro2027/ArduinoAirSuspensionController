@@ -32,7 +32,6 @@ jobs:
       run: |
         buildname="manifold_v2"
         cd OASMan_ESP32
-        pio run --target clean
         pio run
         find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
         pio run --target clean
@@ -46,10 +45,9 @@ jobs:
       run: |
         buildname="controller_cyd3p2"
         cd Wireless_Controller
-        pio run --target clean
         pio run -e esp32-2432S032C
         find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
-        pio run --target clean & rm -rf .pio/build/*
+        pio run -e esp32-2432S032C --target clean
 
     
     #     mkdir -p bins/
@@ -61,10 +59,9 @@ jobs:
       run: |
         buildname="controller_ws2p8"
         cd Wireless_Controller
-        pio run --target clean
         pio run -e esp32-s3touchlcd2p8
         find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
-        pio run --target clean & rm -rf .pio/build/*
+        pio run -e esp32-s3touchlcd2p8 --target clean
       # find .pio/build/ -type f -name '*.bin' -exec bash -c 'for f; do cp -- "$f" "../bins/${buildname}_${f##*/}"; done' _ {} +
 
     # - name: Upload build artifacts
@@ -86,7 +83,7 @@ jobs:
           **Commit:** ${{ github.event.head_commit.message }}
           **Date:** ${{ github.event.head_commit.timestamp }}
         files: bins/*.bin
-        # prerelease: true
+        prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
