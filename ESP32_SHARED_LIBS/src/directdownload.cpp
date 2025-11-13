@@ -33,9 +33,6 @@ bool connectToWifi(String SSID, String PASS)
 
 String getDownloadFirmwareURL(WiFiClientSecure &client, HTTPClient &https)
 {
-    // https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases?per_page=1
-
-    // const char *json = "{\"sensor\":\"gps\",\"time\":1351824120,\"data\":[48.756080,2.302038]}";
 
     log_i("Downloading json from github api releases");
 
@@ -47,12 +44,24 @@ String getDownloadFirmwareURL(WiFiClientSecure &client, HTTPClient &https)
 
             JsonDocument doc;
             log_i("Got 200 response about to deserialize json");
-            deserializeJson(doc, https.getString());
-            // for (int i = 0; i < doc.size(); i++)
-            // {
-            // String tag_name = doc[i]["tag_name"];
-            // if (tag_name.indexOf(FIRMWARE_RELEASE_NAME) != -1)
-            // {
+            log_i("looking for %s in the json", FIRMWARE_RELEASE_NAME);
+
+            JsonDocument filter;
+            filter["assets"][0]["name"] = true;
+            filter["assets"][0]["browser_download_url"] = true;
+
+            // Stream parse instead of loading entire string
+            WiFiClient *stream = https.getStreamPtr();
+            DeserializationError error = deserializeJson(doc, *stream, DeserializationOption::Filter(filter));
+
+            if (error)
+            {
+                log_i("JSON parse error: %s", error.c_str());
+                https.end();
+                setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_VERSION_REQUEST);
+                ESP.restart();
+            }
+
             for (int j = 0; j < doc["assets"].size(); j++)
             {
                 log_i("Checking asset %d: %s", j, doc["assets"][j]["name"].as<const char *>());
@@ -66,8 +75,6 @@ String getDownloadFirmwareURL(WiFiClientSecure &client, HTTPClient &https)
                     return String(url);
                 }
             }
-            // }
-            // }
 
             log_i("Could not find correct firmware download url in github api response");
             setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_VERSION_REQUEST);
