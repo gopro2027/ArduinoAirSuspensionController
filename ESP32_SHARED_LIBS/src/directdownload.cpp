@@ -1,14 +1,19 @@
 #include "directdownload.h"
+#include <ArduinoJson.h>
 
-void downloadUpdate(String SSID, String PASS)
+bool connectToWifi(String SSID, String PASS)
 {
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
-    Serial.println("Connecting to network");
+    log_i("Connecting to network");
     WiFi.begin(SSID, PASS);
 
     const int maxtimeout = 20; // 500ms * 20 = 10 seconds
     int timeoutCounter = 0;
+
+    // WiFi.setTxPower(WIFI_POWER_19_5dBm);
+
+    // WiFi.setSleep(false);
 
     while (WiFi.status() != WL_CONNECTED)
     {
@@ -19,58 +24,95 @@ void downloadUpdate(String SSID, String PASS)
         {
             setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_CONNECTION);
             ESP.restart();
-            return;
+            return false;
         }
     }
 
-    Serial.println("Downloading version file");
-    WiFiClientSecure client;
-    client.setInsecure();
+    return true;
+}
 
-    char versionNum[10];
-    HTTPClient https;
-    if (https.begin(client, "https://oasman.dev/oasman/version.txt"))
+String getDownloadFirmwareURL(WiFiClientSecure &client, HTTPClient &https)
+{
+    // https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases?per_page=1
+
+    // const char *json = "{\"sensor\":\"gps\",\"time\":1351824120,\"data\":[48.756080,2.302038]}";
+
+    log_i("Downloading json from github api releases");
+
+    if (https.begin(client, "https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest"))
     {
         int httpResponseCode = https.GET();
         if (httpResponseCode == HTTP_CODE_OK)
         {
 
-            strcpy(versionNum, https.getString().c_str());
-            Serial.println(httpResponseCode);
-            Serial.println(versionNum);
+            JsonDocument doc;
+            log_i("Got 200 response about to deserialize json");
+            deserializeJson(doc, https.getString());
+            // for (int i = 0; i < doc.size(); i++)
+            // {
+            // String tag_name = doc[i]["tag_name"];
+            // if (tag_name.indexOf(FIRMWARE_RELEASE_NAME) != -1)
+            // {
+            for (int j = 0; j < doc["assets"].size(); j++)
+            {
+                log_i("Checking asset %d: %s", j, doc["assets"][j]["name"].as<const char *>());
+
+                if (doc["assets"][j]["name"] == String(FIRMWARE_RELEASE_NAME) + String("_") + String("firmware.bin"))
+                {
+                    const char *url = doc["assets"][j]["browser_download_url"];
+                    log_i("Found firmware download url: %s", url);
+                    https.end();
+                    doc.clear();
+                    return String(url);
+                }
+            }
+            // }
+            // }
+
+            log_i("Could not find correct firmware download url in github api response");
+            setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_VERSION_REQUEST);
+            ESP.restart();
         }
         else
         {
             Serial.print("Error code: ");
-            Serial.println(httpResponseCode);
+            log_i("%d", httpResponseCode);
             setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_VERSION_REQUEST);
             ESP.restart();
-            return;
         }
-        https.end();
     }
     else
     {
-        Serial.println("Connection failed");
+        log_i("Connection failed");
         setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_VERSION_REQUEST);
         ESP.restart();
-        return;
     }
+}
 
-    char url[100];
-    snprintf(url, sizeof(url), DOWNLOAD_FIRMWARE_BIN_URL, versionNum);
-    Serial.println(url);
+void installFirmware(WiFiClientSecure &client, HTTPClient &https, String url)
+{
     if (https.begin(client, url))
     {
         int httpCode = https.GET();
+        log_i("HTTP GET code: %d", httpCode);
+        if (httpCode == HTTP_CODE_FOUND)
+        {
+            String redirectUrl = https.getLocation();
+            log_i("Redirected to: %s", redirectUrl.c_str());
+            https.end();
+            installFirmware(client, https, redirectUrl); // recursive ass shit hopefully it works fine I don't feel like changing it
+            ESP.restart();
+            return;
+        }
+
         if (httpCode == HTTP_CODE_OK)
         {
             int fileSize = https.getSize(); // Total size in bytes
-            Serial.printf("File size: %d bytes\n", fileSize);
+            log_i("File size: %d bytes\n", fileSize);
 
             if (fileSize < 1000)
             {
-                Serial.println("Error with file size. Aborting update");
+                log_i("Error with file size. Aborting update");
                 setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST);
                 ESP.restart();
                 return;
@@ -82,11 +124,11 @@ void downloadUpdate(String SSID, String PASS)
 
                 if (written == fileSize)
                 {
-                    Serial.println("Written : " + String(written) + " successfully");
+                    log_i("Written : %d successfully", written);
                 }
                 else
                 {
-                    Serial.println("Written only : " + String(written) + "/" + String(fileSize) + ". Retry?");
+                    log_i("Written only : %d/%d. Retry?", written, fileSize);
                     setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST);
                     ESP.restart();
                     return;
@@ -94,7 +136,7 @@ void downloadUpdate(String SSID, String PASS)
             }
             else
             {
-                Serial.println("File too large");
+                log_i("File too large");
                 setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST);
                 ESP.restart();
                 return;
@@ -111,7 +153,7 @@ void downloadUpdate(String SSID, String PASS)
     }
     else
     {
-        Serial.println("Connection failed");
+        log_i("Connection failed");
         setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST);
         ESP.restart();
         return;
@@ -120,12 +162,12 @@ void downloadUpdate(String SSID, String PASS)
     if (Update.end())
     {
         // Update successful
-        Serial.println("Update was successful!");
+        log_i("Update was successful!");
     }
     else
     {
         // Update failed
-        Serial.println("Update download failed");
+        log_i("Update download failed");
         setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_GENERIC);
         ESP.restart();
         return;
@@ -134,4 +176,28 @@ void downloadUpdate(String SSID, String PASS)
     setupdateResult(UPDATE_STATUS::UPDATE_STATUS_SUCCESS);
 
     ESP.restart();
+}
+
+void downloadUpdate(String SSID, String PASS)
+{
+
+    if (!connectToWifi(SSID, PASS))
+    {
+        return;
+    }
+
+    WiFiClientSecure client;
+    client.setInsecure();
+    // client.setTimeout(120000); // 120 second timeout
+    HTTPClient https;
+    // https.setReuse(false); // Don't reuse connections
+    // https.setTimeout(15000);
+
+    String url = getDownloadFirmwareURL(client, https);
+    log_i("Downloading firmware from %s", url.c_str());
+
+    installFirmware(client, https, url);
+
+    ESP.restart();
+    return;
 }
