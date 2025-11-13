@@ -42,24 +42,25 @@ jobs:
     #     pio run --target clean
     #     rm -rf .pio/build/*
 
-    - name: Build PlatformIO controller cyd3p2
-      run: |
-        buildname="controller_cyd3p2"
-        cd Wireless_Controller
-        export version_num="${{ inputs.version_num }}"
-        pio run -e esp32-2432S032C
-        find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
-        pio run -e esp32-2432S032C --target clean
+    # - name: Build PlatformIO controller cyd3p2
+    #   run: |
+    #     buildname="controller_cyd3p2"
+    #     cd Wireless_Controller
+    #     export version_num="${{ inputs.version_num }}"
+    #     pio run -e esp32-2432S032C
+    #     find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
+    #     pio run -e esp32-2432S032C --target clean
 
     
 
-    # - name: Build PlatformIO controller ws2p8
-    #   run: |
-    #     buildname="controller_ws2p8"
-    #     cd Wireless_Controller
-    #     pio run -e esp32-s3touchlcd2p8
-    #     find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
-    #     pio run -e esp32-s3touchlcd2p8 --target clean
+    - name: Build PlatformIO controller ws2p8
+      run: |
+        buildname="controller_ws2p8"
+        cd Wireless_Controller
+        export version_num="${{ inputs.version_num }}"
+        pio run -e esp32-s3touchlcd2p8
+        find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
+        pio run -e esp32-s3touchlcd2p8 --target clean
 
 
     - name: Create Release
