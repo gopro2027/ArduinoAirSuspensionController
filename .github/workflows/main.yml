@@ -105,9 +105,12 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: build-${{ github.run_number }}
-        name: Build ${{ github.run_number }}
+        name: Release ${{ inputs.version_num }} (Build ${{ github.run_number }})
         body: |
           Automated build from commit ${{ github.sha }}
+
+          Release ID: ${{ inputs.version_num }}
+          Build number: ${{ github.run_number }}
           
           **Commit:** ${{ github.event.head_commit.message }}
           **Date:** ${{ github.event.head_commit.timestamp }}
