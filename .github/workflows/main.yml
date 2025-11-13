@@ -43,9 +43,9 @@ jobs:
         
         cd $folder
         export version_num="${{ inputs.version_num }}"
-        pio run -e ${buildname}
+        pio run -e ${buildname}_release
         find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
-        pio run -e ${buildname} --target clean
+        pio run -e ${buildname}_release --target clean
         cd ..
         EOF
         chmod +x build_firmware.sh
