@@ -8,6 +8,11 @@ name: oasman-manifold-build-and-release
 #     branches: [ main ]
 on:
   workflow_dispatch:
+    inputs:
+      version_num:
+        description: 'Version Number To Display On Screen'
+        type: string
+        required: true
 
 jobs:
   build:
@@ -28,48 +33,34 @@ jobs:
         pip install platformio
         mkdir -p bins/
 
-    - name: Build PlatformIO manifold v2
-      run: |
-        buildname="manifold_v2"
-        cd OASMan_ESP32
-        pio run
-        find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
-        pio run --target clean
-        rm -rf .pio/build/*
-      # find .pio/build/ -type f -name '*.bin' -exec bash -c 'for f; do cp -- "$f" "../bins/${buildname}_${f##*/}"; done' _ {} +
-      # for f in OASMan_ESP32/.pio/build/**/*.bin; do cp -- "$f" "bins/manifold_v2_$f"; done
-      # mkdir -p bins/v2/
-      # cp OASMan_ESP32/.pio/build/**/*.bin bins/v2/ || true
+    # - name: Build PlatformIO manifold v2
+    #   run: |
+    #     buildname="manifold_v2"
+    #     cd OASMan_ESP32
+    #     pio run
+    #     find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
+    #     pio run --target clean
+    #     rm -rf .pio/build/*
 
     - name: Build PlatformIO controller cyd3p2
       run: |
         buildname="controller_cyd3p2"
         cd Wireless_Controller
+        export version_num="${{ inputs.version_num }}"
         pio run -e esp32-2432S032C
         find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
         pio run -e esp32-2432S032C --target clean
 
     
-    #     mkdir -p bins/
-      # for f in Wireless_Controller/.pio/build/**/*.bin; do cp -- "$f" "bins/controller_cyd3p2_$f"; done
-      # mkdir -p bins/cyd3p2/
-      # cp Wireless_Controller/.pio/build/**/*.bin bins/cyd3p2/ || true
 
-    - name: Build PlatformIO controller ws2p8
-      run: |
-        buildname="controller_ws2p8"
-        cd Wireless_Controller
-        pio run -e esp32-s3touchlcd2p8
-        find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
-        pio run -e esp32-s3touchlcd2p8 --target clean
-      # find .pio/build/ -type f -name '*.bin' -exec bash -c 'for f; do cp -- "$f" "../bins/${buildname}_${f##*/}"; done' _ {} +
+    # - name: Build PlatformIO controller ws2p8
+    #   run: |
+    #     buildname="controller_ws2p8"
+    #     cd Wireless_Controller
+    #     pio run -e esp32-s3touchlcd2p8
+    #     find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
+    #     pio run -e esp32-s3touchlcd2p8 --target clean
 
-    # - name: Upload build artifacts
-    #   uses: actions/upload-artifact@v4
-    #   if: success()
-    #   with:
-    #     name: firmware
-    #     path: OASMan_ESP32/.pio/build/**/*.bin
 
     - name: Create Release
        # && github.event_name == 'push'
@@ -87,32 +78,4 @@ jobs:
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    # - name: Prepare firmware for GitHub Pages
-    #   if: success() && github.ref == 'refs/heads/main'
-    #   run: |
-    #     mkdir -p docs/firmware
-    #     cp OASMan_ESP32/.pio/build/**/*.bin docs/firmware/ || true
-        
-    #     # Create an index JSON file with build info
-    #     cat > docs/firmware/builds.json << EOF
-    #     {
-    #       "latest": {
-    #         "commit": "${{ github.sha }}",
-    #         "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-    #         "run_number": "${{ github.run_number }}",
-    #         "files": $(ls docs/firmware/*.bin | jq -R -s -c 'split("\n")[:-1]')
-    #       }
-    #     }
-    #     EOF
-
-# okay this last step is failing because the github actions doesn't have permissions to bypass the branch protections to main yet
-    # - name: Commit firmware to docs
-    #   if: success() && github.ref == 'refs/heads/main'
-    #   run: |
-    #     git config user.name "GitHub Actions"
-    #     git config user.email "actions@github.com"
-    #     git add docs/firmware/
-    #     git diff --staged --quiet || git commit -m "Update firmware build #${{ github.run_number }}"
-    #     git push
 
