@@ -156,6 +156,11 @@ int installFirmware(WiFiClientSecure &client, String &url)
                 ESP.restart();
             }
 
+            log_i("=== Before Update.begin ===");
+            log_i("Free heap: %d", ESP.getFreeHeap());
+            log_i("Largest free block: %d", heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+            log_i("Min free heap: %d", ESP.getMinFreeHeap());
+
             if (Update.begin(fileSize))
             { // UPDATE_SIZE_UNKNOWN could also be used
                 size_t written = Update.writeStream(https.getStream());
@@ -215,6 +220,21 @@ int installFirmware(WiFiClientSecure &client, String &url)
 
 void downloadUpdate(String SSID, String PASS)
 {
+
+    log_i("=== Initial Memory Status ===");
+    log_i("Free heap: %d", ESP.getFreeHeap());
+    log_i("Largest free block: %d", heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+    log_i("Min free heap: %d", ESP.getMinFreeHeap());
+
+    btStop();
+    log_i("Bluetooth stopped");
+
+    // Print detailed heap information
+    log_i("=== After bluetooth stop Memory Status ===");
+    log_i("Free heap: %d", ESP.getFreeHeap());
+    log_i("Largest free block: %d", heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+    log_i("Min free heap: %d", ESP.getMinFreeHeap());
+    // heap_caps_print_heap_info(MALLOC_CAP_8BIT);
 
     if (!connectToWifi(SSID, PASS))
     {
