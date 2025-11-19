@@ -5,7 +5,7 @@ byte currentProfile[4];
 bool sendProfileBT = false;
 
 int learnDataIndex[4];
-PressureLearnSaveStruct learnData[4][LEARN_SAVE_COUNT];
+PressureLearnSaveStruct learnData[4][LEARN_SAVE_COUNT];// TODO: This data needs to be moved to be a malloc or new array, so that when we do OTA stuff it doesn't take up memory (currently it is statically allocated and uses 8kb even during OTA updates which is quite a lot )
 static SemaphoreHandle_t learnDataMutex;
 
 PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX index)

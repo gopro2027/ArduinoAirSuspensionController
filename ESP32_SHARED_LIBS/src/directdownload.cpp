@@ -1,5 +1,4 @@
 #include "directdownload.h"
-#include <ArduinoJson.h>
 
 #define download_firmware_response_success 1
 #define download_firmware_response_retry 2
