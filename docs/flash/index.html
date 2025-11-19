@@ -77,15 +77,18 @@
 
 
 	<script>
-		function getResult(filterBy, objList) {
-				return objList.filter(function (obj) {
-					return obj.assets.some(function (item) {
-						return item.name.indexOf(filterBy) >= 0;
-					});
-				});
-			}
+		// function getResult(filterBy, objList) {
+		// 		return objList.filter(function (obj) {
+		// 			return obj.assets.filter(function (item) {
+		// 				console.log("Checking "+item.name+" for "+filterBy+"     "+ (item.name == filterBy));
+		// 				return item.name == filterBy;
+		// 			});
+		// 		});
+		// 	}
 
-		async function fetchFirmwareReleases(binname) {
+		var firmwareList = [];
+
+		async function fetchFirmwareReleases() {
 			const owner = 'gopro2027';
 			const repo = 'ArduinoAirSuspensionController';
 
@@ -95,7 +98,7 @@
 				);
 				const releases = await response.json();
 
-				const firmwareList = getResult(binname+"_firmware.bin",releases)
+				firmwareList = releases//getResult(binname+"_firmware.bin",releases)
 				.map(release => ({
 					name: release.name,
 					tag: release.tag_name,
@@ -108,36 +111,51 @@
 					}))
 				}));
 
-				displayFirmware(firmwareList);
+				console.log(firmwareList);
+
+				// displayFirmware(firmwareList);
+
+				updateFirmwareRelatedDetails();
 			} catch (error) {
 				console.error('Error fetching releases:', error);
 			}
 		}
 
-		function displayFirmware(releases) {
-			const container = document.getElementById('firmware-list');
-			container.innerHTML = releases.map(release => `
-	    <div class="release">
-	      <h3>${release.name}</h3>
-	      <p><small>${release.date.toLocaleString()}</small></p>
-	      <p>${release.body}</p>
-	      <h4>Download:</h4>
-	      <ul>
-	        ${release.assets.map(asset => `
-	          <li>
-	            <a href="${asset.downloadUrl}" download>
-	              ${asset.name}
-	            </a>
-	            (${(asset.size / 1024).toFixed(2)} KB)
-	          </li>
-	        `).join('')}
-	      </ul>
-	    </div>
-	  `).join('');
-		}
+	// 	function displayFirmware(releases) {
+	// 		const container = document.getElementById('firmware-list');
+	// 		container.innerHTML = releases.map(release => `
+	//     <div class="release">
+	//       <h3>${release.name}</h3>
+	//       <p><small>${release.date.toLocaleString()}</small></p>
+	//       <p>${release.body}</p>
+	//       <h4>Download:</h4>
+	//       <ul>
+	//         ${release.assets.map(asset => `
+	//           <li>
+	//             <a href="${asset.downloadUrl}" download>
+	//               ${asset.name}
+	//             </a>
+	//             (${(asset.size / 1024).toFixed(2)} KB)
+	//           </li>
+	//         `).join('')}
+	//       </ul>
+	//     </div>
+	//   `).join('');
+	// 	}
 
 		// Call on page load
-		fetchFirmwareReleases("controller_cyd3p2_resistive");
+		fetchFirmwareReleases();
+
+
+		function getReleaseAsset(boardName, releaseName, subscript) {
+			for (release of firmwareList) {
+				for (asset of release.assets) {
+					if (asset.name === (chosenBoard + subscript)) {
+						return asset.downloadUrl;
+					}
+				}
+			}
+		}
 	</script>
 
 
@@ -152,18 +170,21 @@
 					<label><input type="radio" name="type" value="manifold_v4" /> Board V4 Manifold Firmwares</label>
 				</li>
 				<li>
-					<label><input type="radio" name="type" value="manifold" /> Board V3 Manifold Firmwares</label>
+					<label><input type="radio" name="type" value="manifold_v3" /> Board V3 Manifold Firmwares</label>
 				</li>
 				<li>
-					<label><input type="radio" name="type" value="manifold_no_acc" /> Board V2 Manifold Firmwares (No acc wire functionality, will work for some v3 boards also)</label>
+					<label><input type="radio" name="type" value="manifold_v2" /> Board V2 Manifold Firmwares (No acc wire functionality, will work for some v3 boards also)</label>
 				</li>
 				
 				<hr>
 				<li>
-					<label><input type="radio" name="type" value="controller" /> 3.2" CYD Controller Firmwares</label>
+					<label><input type="radio" name="type" value="controller_cyd3p2" /> 3.2" CYD Capacitive Controller Firmwares</label>
 				</li>
 				<li>
-					<label><input type="radio" name="type" value="ws2p8controller" /> 2.8" Waveshare Controller Firmwares</label>
+					<label><input type="radio" name="type" value="controller_cyd3p2_resistive" /> 3.2" CYD Resistive Controller Firmwares</label>
+				</li>
+				<li>
+					<label><input type="radio" name="type" value="controller_ws2p8" /> 2.8" Waveshare Controller Firmwares</label>
 				</li>
 			</ul>
 
@@ -191,53 +212,26 @@
 		</div>
 		<script>
 
-			// rest link: https://api.github.com/repos/gopro2027/gopro2027.github.io/contents/oasman-nextjs/public/html/oasman/firmware/controller
+			
+			let versionnum = "";
+			let chosenBoard = "";
 
-
-			// load version txt file
-			function loadFile(filePath) {
-				var result = null;
-				var xmlhttp = new XMLHttpRequest();
-				xmlhttp.open("GET", filePath, false);
-				xmlhttp.send();
-				if (xmlhttp.status == 200) {
-					result = xmlhttp.responseText;
-				}
-				return result;
+			function updateFirmwareRelatedDetails() {
+				versionnum = firmwareList.length > 0 ? firmwareList[0].name : "Unknown";
+				const element = document.getElementById("versionnum");
+				element.textContent = "Latest Version: " + versionnum;
 			}
-			let versionnum = loadFile("https://oasman.dev/oasman/version.txt");
-			console.log(versionnum);
-			const element = document.getElementById("versionnum");
-			element.textContent = "Latest Version " + versionnum;
 
 			
 
-			// document.querySelectorAll('input[name="type"]').forEach((radio) =>
-			// 	radio.addEventListener("change", () => {
-			// 		const button = document.querySelector("esp-web-install-button");
-			// 		button.manifest = `../manifest_${radio.value}.json`;
-			// 		button.classList.remove("invisible");
-			// 	})
-			// );
 
-			var chosenType = "";
-			var chosenFileName = "";
-
-			function setSelectedFile(fileName) {
-				console.log(`Selected value: ${fileName}`);
-				chosenFileName = fileName;
-
-
-				const lastDotIndex = fileName.lastIndexOf('.');
-				const filenameWithoutExtension = lastDotIndex === -1 ? fileName : fileName.substring(0, lastDotIndex);
-				console.log("File name: "+filenameWithoutExtension);
-				const version = filenameWithoutExtension.substring(filenameWithoutExtension.lastIndexOf('_')+1, filenameWithoutExtension.length);
-				console.log("Version found: "+version);
+			function setSelectedFile(releaseName) {
+				console.log(`Selected value: ${releaseName}`);
 
 
 				const button = document.querySelector("esp-web-install-button");
-				if (fileName.length > 0) {
-					var genurl = generate_manifest(chosenType, "OASMan Firmware: "+chosenType,version,fileName);
+				if (releaseName.length > 0) {
+					var genurl = generate_manifest(chosenBoard, releaseName, getReleaseAsset(chosenBoard, releaseName, "_bootloader.bin"), getReleaseAsset(chosenBoard, releaseName, "_partitions.bin"), getReleaseAsset(chosenBoard, releaseName, "_firmware.bin"));
 					console.log(genurl);
 					button.manifest = genurl;
 					button.classList.remove("invisible");
@@ -246,37 +240,40 @@
 				}
 			}
 
-			function loadFirmwareFiles(link) {
+			function loadFirmwareFiles(board_name) {
+				chosenBoard = board_name;
 
 				setSelectedFile("");
-
-				var defaultSelectionFirmware = "firmware_"+versionnum+".bin";
-				filesData = JSON.parse(loadFile(link));
 
 				selectorObject = document.getElementById('firmwareFilesSelect');
 				selectorObject.hidden = false;
 				selectorObject.innerHTML = "";
 
-				var selectedOne = null;
+				for (release of firmwareList) {
 
-				for (a of filesData) {
-					console.log(a.name);
-					var opt = document.createElement('option');
-					opt.value = a.name;
-					opt.innerHTML = a.name;
-					//opt.selected = a.name.includes(versionnum);
-					selectorObject.appendChild(opt);
-					if (a.name.includes(defaultSelectionFirmware)) {
-						if (selectedOne == null || selectedOne.length > a.name.length) {
-							selectedOne = a.name;
+					// check if a firmware for this board is in this release
+					var found = false;
+					for (asset of release.assets) {
+						if (asset.name === (chosenBoard + "_firmware.bin")) {
+							found = true;
 						}
 					}
-				}
+					
+					// append this release name if found
+					if (found) {
+						console.log(release.name);
+						var opt = document.createElement('option');
+						opt.value = release.name;
+						opt.innerHTML = release.name;
+						selectorObject.appendChild(opt);
 
-				if (selectedOne != null) {
-					console.log("selecting "+selectedOne);
-					selectorObject.value = selectedOne;
-					setSelectedFile(selectedOne);
+						// if this is the latest version, set it as selected
+						if (release.name == versionnum) {
+							console.log("selecting " + release.name);
+							selectorObject.value = release.name;
+							setSelectedFile(release.name);
+						}
+					}
 				}
 			}
 
@@ -286,17 +283,11 @@
 
 			document.querySelectorAll('input[name="type"]').forEach((radio) =>
 				radio.addEventListener("change", () => {
-					chosenType = radio.value;
-					loadFirmwareFiles("https://api.github.com/repos/gopro2027/gopro2027.github.io/contents/oasman-nextjs/public/html/oasman/firmware/"+ chosenType);
+					loadFirmwareFiles(radio.value);
 				})
 			);
 
-			// check hidden test
-			const urlParams = new URLSearchParams(window.location.search);
-			const myParam = urlParams.get('test');
-			if (urlParams.has('test')) {
-				document.getElementById('hiddentestoption').hidden = false;
-			}
+			
 		</script>
 	</body>
 </html>

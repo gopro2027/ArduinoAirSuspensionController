@@ -1,20 +1,7 @@
 
 
 
-function generate_manifest(dirName, name, version, firmwareFileName) {
-    //bootloader.bin is the same
-    //partitions.bin is the same
-    //boot_app0.bin is the samew
-
-    // var dependenciesDir = "https://oasman.dev/oasman/firmware/manifold_dependencies/"
-    // var firmwareDir = "https://oasman.dev/oasman/firmware/manifold/"
-    // if (type == "controller") {
-    //     dependenciesDir = "https://oasman.dev/oasman/firmware/controller_dependencies/"
-    //     firmwareDir = "https://oasman.dev/oasman/firmware/controller/"
-    // }
-
-    var dependenciesDir = "https://oasman.dev/oasman/firmware/" + dirName + "_dependencies/";
-    var firmwareDir = "https://oasman.dev/oasman/firmware/" + dirName + "/";
+function generate_manifest(name, version, bootloader, partitions, firmware) {
 
     var manifest = {
         "name": name,
@@ -26,10 +13,10 @@ function generate_manifest(dirName, name, version, firmwareFileName) {
                 "chipFamily": "ESP32",
                 "improv": false,
                 "parts": [
-                    { "path": dependenciesDir+"bootloader.bin", "offset": 4096 }, // on the s3 this might be 0 but otherwise all the offsets are the same
-                    { "path": dependenciesDir+"partitions.bin", "offset": 32768 }, // 0x8000
-                    { "path": dependenciesDir+"boot_app0.bin", "offset": 57344 }, // 0xe000
-                    { "path": firmwareDir+firmwareFileName, "offset": 65536 } // 0x10000
+                    { "path": bootloader, "offset": 4096 }, // on the s3 this might be 0 but otherwise all the offsets are the same
+                    { "path": partitions, "offset": 32768 }, // 0x8000
+                    { "path": "https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/refs/heads/main/docs/flash/boot_app0.bin", "offset": 57344 }, // 0xe000
+                    { "path": firmware, "offset": 65536 } // 0x10000
                 ]
             }
         ]
