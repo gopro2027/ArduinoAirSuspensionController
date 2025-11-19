@@ -93,9 +93,7 @@
 			const repo = 'ArduinoAirSuspensionController';
 
 			try {
-				const response = await fetch(
-					`https://api.github.com/repos/${owner}/${repo}/releases`
-				);
+				const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases`);
 				const releases = await response.json();
 
 				firmwareList = releases//getResult(binname+"_firmware.bin",releases)
@@ -147,15 +145,64 @@
 		fetchFirmwareReleases();
 
 
-		function getReleaseAsset(boardName, releaseName, subscript) {
-			for (release of firmwareList) {
-				for (asset of release.assets) {
-					if (asset.name === (chosenBoard + subscript)) {
-						return asset.downloadUrl;
-					}
-				}
-			}
+		function getReleaseAsset(boardName, tag_name, subscript) {
+			// for (release of firmwareList) {
+			// 	for (asset of release.assets) {
+			// 		if (asset.name === (chosenBoard + subscript)) {
+			// 			return asset.downloadUrl;
+			// 		}
+			// 	}
+			// }
+			// unfortunately have to use this reverse proxy service I set up on cloudflare instead of using the downloadUrl. Github releases has blocked CORS
+			return `https://githubreleasesproxy.gopro2027.workers.dev/?user=gopro2027&repo=ArduinoAirSuspensionController&tag_name=${tag_name}&file_name=${boardName}${subscript}`;
 		}
+
+		//reverse proxy code:
+
+	// 	/**
+	//  * Welcome to Cloudflare Workers! This is your first worker.
+	//  *
+	//  * - Run "npm run dev" in your terminal to start a development server
+	//  * - Open a browser tab at http://localhost:8787/ to see your worker in action
+	//  * - Run "npm run deploy" to publish your worker
+	//  *
+	//  * Learn more at https://developers.cloudflare.com/workers/
+	//  */
+
+
+	// 		/**
+	// 		 * Reverse proxy for GitHub repository zip archive downloads.
+	// 		 */
+	// 		export default {
+	// 			async fetch(request, env, ctx) {
+	// 				//if (new URL(request.url).hostname == 'oasman.dev' || new URL(request.url).hostname == 'oasman.co') {
+	// 				//https://github.com/gopro2027/ArduinoAirSuspensionController/releases/download/build-46/controller_cyd3p2_resistive_firmware.bin
+	// 				const url = new URL(request.url);
+	// 				const user = url.searchParams.get('user');
+	// 				const repo = url.searchParams.get('repo');
+	// 				const tag_name = url.searchParams.get('tag_name');
+	// 				const file_name = url.searchParams.get('file_name');
+
+	// 				if (!user || !repo) {
+	// 					return new Response('Missing required parameters: user or repo or tag_name or file_name', { status: 400, statusText: 'Bad Request' });
+	// 				}
+
+	// 				return new Response(
+	// 					await (await fetch(`https://github.com/${user}/${repo}/releases/download/${tag_name}/${file_name}`)).arrayBuffer(),
+	// 					{
+	// 						headers: {
+	// 							"Access-Control-Allow-Headers": request.headers.get("Access-Control-Request-Headers"),
+	// 							"Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
+	// 							"Access-Control-Allow-Origin": "*",
+	// 							"Access-Control-Max-Age": "300",
+	// 							"content-type": "application/octet-stream",
+	// 						}
+	// 					}
+	// 				);
+	// 				//}
+	// 				// return new Response(`Forbidden request URL: ${request.url}`, {status: 403, statusText: 'Forbidden request URL.'});
+	// 			},
+	// 		};
 	</script>
 
 
@@ -215,6 +262,7 @@
 			
 			let versionnum = "";
 			let chosenBoard = "";
+			let selectedreleaseName = "";
 
 			function updateFirmwareRelatedDetails() {
 				versionnum = firmwareList.length > 0 ? firmwareList[0].name : "Unknown";
@@ -225,13 +273,13 @@
 			
 
 
-			function setSelectedFile(releaseName) {
-				console.log(`Selected value: ${releaseName}`);
+			function setSelectedFile(tagName) {
+				console.log(`Selected value: ${selectedreleaseName}`);
 
 
 				const button = document.querySelector("esp-web-install-button");
-				if (releaseName.length > 0) {
-					var genurl = generate_manifest(chosenBoard, releaseName, getReleaseAsset(chosenBoard, releaseName, "_bootloader.bin"), getReleaseAsset(chosenBoard, releaseName, "_partitions.bin"), getReleaseAsset(chosenBoard, releaseName, "_firmware.bin"));
+				if (selectedreleaseName.length > 0) {
+					var genurl = generate_manifest(chosenBoard, selectedreleaseName, getReleaseAsset(chosenBoard, tagName, "_bootloader.bin"), getReleaseAsset(chosenBoard, tagName, "_partitions.bin"), getReleaseAsset(chosenBoard, tagName, "_firmware.bin"));
 					console.log(genurl);
 					button.manifest = genurl;
 					button.classList.remove("invisible");
@@ -244,6 +292,7 @@
 				chosenBoard = board_name;
 
 				setSelectedFile("");
+				selectedreleaseName = "";
 
 				selectorObject = document.getElementById('firmwareFilesSelect');
 				selectorObject.hidden = false;
@@ -263,21 +312,23 @@
 					if (found) {
 						console.log(release.name);
 						var opt = document.createElement('option');
-						opt.value = release.name;
+						opt.value = release.tag;
 						opt.innerHTML = release.name;
 						selectorObject.appendChild(opt);
 
 						// if this is the latest version, set it as selected
 						if (release.name == versionnum) {
 							console.log("selecting " + release.name);
-							selectorObject.value = release.name;
-							setSelectedFile(release.name);
+							selectorObject.value = release.tag;
+							selectedreleaseName = release.name;
+							setSelectedFile(release.tag);
 						}
 					}
 				}
 			}
 
 			document.getElementById('firmwareFilesSelect').addEventListener('change', (event) => {
+				selectedreleaseName = event.target.innerHTML;
 				setSelectedFile(event.target.value);
 			});
 
