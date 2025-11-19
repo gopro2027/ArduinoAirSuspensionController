@@ -15,7 +15,7 @@
 
 void setupSpiffsLog();
 void writeToSpiffsLog(char *text);
-
+// #define FORCE_UPDATE_TEST
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
@@ -33,6 +33,18 @@ void setup()
         downloadUpdate(getwifiSSID(), getwifiPassword());
         return;
     }
+
+#ifdef FORCE_UPDATE_TEST
+    for (int i = 0; i < 10; i++)
+    {
+        log_i("T-%d", 10 - i);
+        delay(1000);
+    }
+    log_i("TEST updating");
+    setupdateMode(true);
+    delay(100);
+    ESP.restart();
+#endif
 
     setupSpiffsLog();
 
