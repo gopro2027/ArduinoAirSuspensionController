@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, shrink-to-fit=no" />
+		<base href="/oasman/docs/" />
+		<link href="assets/images/favicon.ico" rel="icon" />
+		<title>OAS-Man | Documentation</title>
+		<meta name="description" content="OAS-Man | Documentation" />
+		<meta name="author" content="harnishdesign.net" />
+
+		<!-- Stylesheet 
+============================== -->
+		<!-- Bootstrap -->
+		<link rel="stylesheet" type="text/css" href="assets/vendor/bootstrap/css/bootstrap.min.css" />
+		<!-- Font Awesome Icon -->
+		<link rel="stylesheet" type="text/css" href="assets/vendor/font-awesome/css/all.min.css" />
+		<!-- Magnific Popup -->
+		<link rel="stylesheet" type="text/css" href="assets/vendor/magnific-popup/magnific-popup.min.css" />
+		<!-- Highlight Syntax -->
+		<link rel="stylesheet" type="text/css" href="assets/vendor/highlight.js/styles/github.css" />
+		<!-- Custom Stylesheet -->
+		<link rel="stylesheet" type="text/css" href="assets/css/stylesheet.css" />
+	</head>
+
+	<!-- Markdown loader code -->
+	<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+	<script>
+		async function getRawFile(url) {
+			try {
+				const response = await fetch(url);
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+				const text = await response.text();
+				return text;
+			} catch (error) {
+				console.error("Error fetching the file:", error);
+				return null;
+			}
+		}
+
+		// Example usage:
+
+		const readme_list = {
+			"readme-home": "https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/refs/heads/main/README.md",
+			"readme-parts": "https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/refs/heads/main/tutorial/parts.md",
+			"readme-pcb-wiring": "https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/refs/heads/main/tutorial/pcb_assembly.md",
+			"readme-manifold-assembly": "https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/refs/heads/main/tutorial/manifold_assembly.md",
+			"readme-controller-assembly": "https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/refs/heads/main/tutorial/controller_assembly.md",
+			"readme-flash": "https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/refs/heads/main/tutorial/code_build_flash.md",
+			"readme-mobile-app": "https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/refs/heads/main/tutorial/android_app.md",
+			"readme-ps3": "https://raw.githubusercontent.com/gopro2027/ArduinoAirSuspensionController/refs/heads/main/PS3_Controller_Tool/README.md",
+			//"readme-": "",
+		};
+
+		function loadReadme(idx) {
+			getRawFile(readme_list[idx]).then((content) => {
+				if (content) {
+					document.getElementById(idx).innerHTML = marked.parse(content);
+					window.scrollTo(0, 1); // makes it refresh the nav bar, which is originally loaded prior to all the content being loaded (aka it is wrong until we scroll)
+					window.scrollTo(0, 0);
+					var loc = location.hash.slice(1);
+					if (loc.length > 0) {
+						window.location.href = "#" + loc;
+					}
+				} else {
+					console.log("Failed to get the file content." + idx);
+				}
+			});
+		}
+
+		document.addEventListener("DOMContentLoaded", function () {
+			for (idx in readme_list) {
+				loadReadme(idx);
+			}
+		});
+	</script>
+
+	<style>
+		.readmecontent img {
+			display: block;
+			float: none;
+			max-width: 100%;
+		}
+	</style>
+
+	<body data-spy="scroll" data-target=".idocs-navigation" data-offset="125">
+		<!-- Preloader -->
+		<div class="preloader">
+			<div class="lds-ellipsis">
+				<div></div>
+				<div></div>
+				<div></div>
+				<div></div>
+			</div>
+		</div>
+		<!-- Preloader End -->
+
+		<!-- Document Wrapper   
+=============================== -->
+		<div id="main-wrapper">
+			<!-- Header
+  ============================ -->
+			<header id="header" class="sticky-top">
+				<!-- Navbar -->
+				<nav class="primary-menu navbar navbar-expand-lg navbar-dropdown-dark">
+					<div class="container-fluid">
+						<!-- Sidebar Toggler -->
+						<button id="sidebarCollapse" class="navbar-toggler d-block d-md-none" type="button"><span></span><span class="w-75"></span><span class="w-50"></span></button>
+
+						<!-- Logo -->
+						<a class="logo ml-md-3" href="http://oasman.dev/" title="iDocs Template"> <img src="assets/images/oasman_logo.jpg" width="75px" alt="iDocs Template" /> </a>
+						<!--<span class="text-2 ml-2">v1.0</span>-->
+						<!-- Logo End -->
+
+						<!-- Navbar Toggler -->
+						<button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#header-nav"><span></span><span></span><span></span></button>
+
+						<div id="header-nav" class="collapse navbar-collapse justify-content-end">
+							<ul class="navbar-nav">
+								<li><a target="_blank" href="https://oasman.dev/oasman/flash">Software Update</a></li>
+								<li><a target="_blank" href="https://discord.gg/pUf7FmHKpg">Discord</a></li>
+								<li><a target="_blank" href="https://www.patreon.com/c/oasman">Support</a></li>
+								<li><a target="_blank" href="https://github.com/gopro2027/ArduinoAirSuspensionController">Github</a></li>
+							</ul>
+						</div>
+						<ul class="social-icons social-icons-sm ml-lg-2 mr-2">
+							<li>
+								<a data-toggle="tooltip" href="https://github.com/gopro2027/ArduinoAirSuspensionController" target="_blank" title="" data-original-title="GitHub"><i class="fab fa-github"></i></a>
+							</li>
+						</ul>
+					</div>
+				</nav>
+				<!-- Navbar End -->
+			</header>
+			<!-- Header End -->
+
+			<!-- Content
+  ============================ -->
+			<div id="content" role="main">
+				<!-- Sidebar Navigation
+	============================ -->
+				<div class="idocs-navigation bg-light">
+					<ul class="nav flex-column">
+						<li class="nav-item"><a class="nav-link active" href="#home">Home</a></li>
+						<li class="nav-item"><a class="nav-link" href="#readme-parts">Parts</a></li>
+						<li class="nav-item">
+							<a class="nav-link" href="#readme-assembly">Assembly</a>
+							<ul class="nav flex-column">
+								<li class="nav-item"><a class="nav-link" href="#readme-pcb-wiring">Wiring</a></li>
+								<li class="nav-item"><a class="nav-link" href="#readme-manifold-assembly">Manifold Assembly</a></li>
+								<li class="nav-item"><a class="nav-link" href="#readme-controller-assembly">Controller Assembly</a></li>
+							</ul>
+						</li>
+						<li class="nav-item"><a class="nav-link" href="#readme-flash">Flashing Code</a></li>
+						<li class="nav-item"><a class="nav-link" href="#readme-mobile-app">Mobile App</a></li>
+						<li class="nav-item"><a class="nav-link" href="#readme-ps3">Video Game Controller Setup</a></li>
+					</ul>
+				</div>
+
+				<!-- Docs Content
+	============================ -->
+				<div class="idocs-content">
+					<div class="container">
+						<section id="home">
+							<h1>Documentation</h1>
+							<h5>All documentation here is from the <a href="https://github.com/gopro2027/ArduinoAirSuspensionController">github repo here.</a></h5>
+							<hr class="divider" />
+							<div id="readme-home" class="readmecontent"></div>
+						</section>
+						<hr class="divider" />
+
+						<section id="readme-parts" class="readmecontent"></section>
+						<hr class="divider" />
+
+						<section id="readme-assembly" class="readmecontent"></section>
+						<section id="readme-pcb-wiring" class="readmecontent"></section>
+						<hr class="divider" />
+
+						<section id="readme-manifold-assembly" class="readmecontent"></section>
+						<hr class="divider" />
+
+						<section id="readme-controller-assembly" class="readmecontent"></section>
+						<hr class="divider" />
+
+						<section id="readme-flash" class="readmecontent"></section>
+						<hr class="divider" />
+
+						<section id="readme-mobile-app" class="readmecontent"></section>
+						<hr class="divider" />
+
+						<section id="readme-ps3" class="readmecontent"></section>
+					</div>
+				</div>
+			</div>
+			<!-- Content end -->
+
+			<!-- Footer
+  ============================ -->
+			<footer id="footer" class="section bg-dark footer-text-light">
+				<div class="container">
+					<ul class="social-icons social-icons-lg social-icons-muted justify-content-center mb-3">
+						<li>
+							<a data-toggle="tooltip" href="https://github.com/gopro2027/ArduinoAirSuspensionController" target="_blank" title="" data-original-title="GitHub"><i class="fab fa-github"></i></a>
+						</li>
+					</ul>
+					<p class="text-center">Copyright &copy; 2020 <a href="http://www.harnishdesign.net/idocs-one-page-documentation-html-template/">iDocs</a>. All Rights Reserved.</p>
+					<p class="text-2 text-center mb-0">Design &amp; Develop by <a class="btn-link" target="_blank" href="http://www.harnishdesign.net/">HarnishDesign</a>.</p>
+				</div>
+			</footer>
+			<!-- Footer end -->
+		</div>
+		<!-- Document Wrapper end -->
+
+		<!-- Back To Top -->
+		<a id="back-to-top" data-toggle="tooltip" title="Back to Top" href="javascript:void(0)"><i class="fa fa-chevron-up"></i></a>
+
+		<!-- JavaScript
+============================ -->
+		<script src="assets/vendor/jquery/jquery.min.js"></script>
+		<script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+		<!-- Highlight JS -->
+		<script src="assets/vendor/highlight.js/highlight.min.js"></script>
+		<!-- Easing -->
+		<script src="assets/vendor/jquery.easing/jquery.easing.min.js"></script>
+		<!-- Magnific Popup -->
+		<script src="assets/vendor/magnific-popup/jquery.magnific-popup.min.js"></script>
+		<!-- Custom Script -->
+		<script src="assets/js/theme.js"></script>
+	</body>
+</html>
