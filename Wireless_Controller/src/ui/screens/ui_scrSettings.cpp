@@ -377,29 +377,11 @@ void ScrSettings::loop()
     this->ui_s2->setBooleanValue(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON));
     this->ui_aiEnabled->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AI_STATUS_ENABLED));
 
-    char *manifoldUpdateStatusString;
-    switch (manifoldUpdateStatus)
+    if (util_statusRequestPacket._setStatus)
     {
-    case UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST:
-        manifoldUpdateStatusString = "FAIL_FILE_REQUEST";
-        break;
-    case UPDATE_STATUS::UPDATE_STATUS_FAIL_GENERIC:
-        manifoldUpdateStatusString = "FAIL_GENERIC";
-        break;
-    case UPDATE_STATUS::UPDATE_STATUS_FAIL_VERSION_REQUEST:
-        manifoldUpdateStatusString = "FAIL_VERSION_REQUEST";
-        break;
-    case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_CONNECTION:
-        manifoldUpdateStatusString = "FAIL_WIFI_CONNECTION";
-        break;
-    case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
-        manifoldUpdateStatusString = "SUCCESS";
-        break;
-    case UPDATE_STATUS_NONE:
-    default:
-        manifoldUpdateStatusString = "-";
+        util_statusRequestPacket._setStatus = false;
+        this->ui_manifoldUpdateStatus->setRightHandText(util_statusRequestPacket.getStatus().c_str());
     }
-    this->ui_manifoldUpdateStatus->setRightHandText(manifoldUpdateStatusString);
 
     // int aiPacked = statusBittset >> 21;
     // uint8_t AIReadyBittset = aiPacked & 0b1111;

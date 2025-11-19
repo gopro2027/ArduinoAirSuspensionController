@@ -51,7 +51,6 @@ int currentPressures[5];
 uint32_t statusBittset = 0;
 uint8_t AIPercentage = 0;
 uint8_t AIReadyBittset = 0;
-uint8_t manifoldUpdateStatus = 0;
 int profilePressures[5][4];
 bool profileUpdated = false;
 int currentPreset = -1;
@@ -67,6 +66,15 @@ void sendConfigValuesPacket(bool saveToManifold)
 {
     *util_configValues._setValues() = saveToManifold;
     sendRestPacket(&util_configValues);
+}
+
+UpdateStatusRequestPacket util_statusRequestPacket;
+
+void sendUpdateStatusRequestPacket()
+{
+    util_statusRequestPacket.setStatus("UNKNOWN");
+    util_statusRequestPacket._setStatus = true;
+    sendRestPacket(&util_statusRequestPacket);
 }
 
 Scr *screens[3];
@@ -405,6 +413,7 @@ bool isKeyboardHidden()
 
 void onBLEConnectionCompleted()
 {
-    sendConfigValuesPacket(false); // sends a request of the manifold to send out the manifolds save data
-    requestPreset();               // sends a request of the manifold to send out the current presets values
+    sendConfigValuesPacket(false);   // sends a request of the manifold to send out the manifolds save data
+    requestPreset();                 // sends a request of the manifold to send out the current presets values
+    sendUpdateStatusRequestPacket(); // sends a request of the manifold to send out the current update status
 }

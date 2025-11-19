@@ -38,6 +38,8 @@
 
 #include "bp32.h"
 
+#include "directdownload.h"
+
 void ble_setup();
 void ble_loop();
 
