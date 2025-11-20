@@ -89,11 +89,9 @@
 		var firmwareList = [];
 
 		async function fetchFirmwareReleases() {
-			const owner = 'gopro2027';
-			const repo = 'ArduinoAirSuspensionController';
 
 			try {
-				const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases`);
+				const response = await fetch(`https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases`);
 				const releases = await response.json();
 
 				firmwareList = releases//getResult(binname+"_firmware.bin",releases)
