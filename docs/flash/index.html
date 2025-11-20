@@ -154,55 +154,41 @@
 			// 	}
 			// }
 			// unfortunately have to use this reverse proxy service I set up on cloudflare instead of using the downloadUrl. Github releases has blocked CORS
-			return `https://githubreleasesproxy.gopro2027.workers.dev/?user=gopro2027&repo=ArduinoAirSuspensionController&tag_name=${tag_name}&file_name=${boardName}${subscript}`;
+			return `https://githubreleasesproxy.gopro2027.workers.dev/?tag_name=${tag_name}&file_name=${boardName}${subscript}`;
 		}
 
 		//reverse proxy code:
 
-	// 	/**
-	//  * Welcome to Cloudflare Workers! This is your first worker.
-	//  *
-	//  * - Run "npm run dev" in your terminal to start a development server
-	//  * - Open a browser tab at http://localhost:8787/ to see your worker in action
-	//  * - Run "npm run deploy" to publish your worker
-	//  *
-	//  * Learn more at https://developers.cloudflare.com/workers/
+	// /**
+	//  * Reverse proxy for GitHub releases
+	//  * Usage: https://WORKERNAME.CLOUDFLAREUSERNAME.workers.dev/?user=${user}&repo=${repo}&tag_name=${tag_name}&file_name=${file_name}
 	//  */
+	// export default {
+	// 	async fetch(request, env, ctx) {
+	// 		const url = new URL(request.url);
+	// 		const user = url.searchParams.get('user');
+	// 		const repo = url.searchParams.get('repo');
+	// 		const tag_name = url.searchParams.get('tag_name');
+	// 		const file_name = url.searchParams.get('file_name');
 
+	// 		if (!user || !repo || !tag_name || !file_name) {
+	// 			return new Response('Missing required parameters: user or repo or tag_name or file_name', { status: 400, statusText: 'Bad Request' });
+	// 		}
 
-	// 		/**
-	// 		 * Reverse proxy for GitHub repository zip archive downloads.
-	// 		 */
-	// 		export default {
-	// 			async fetch(request, env, ctx) {
-	// 				//if (new URL(request.url).hostname == 'oasman.dev' || new URL(request.url).hostname == 'oasman.co') {
-	// 				//https://github.com/gopro2027/ArduinoAirSuspensionController/releases/download/build-46/controller_cyd3p2_resistive_firmware.bin
-	// 				const url = new URL(request.url);
-	// 				const user = url.searchParams.get('user');
-	// 				const repo = url.searchParams.get('repo');
-	// 				const tag_name = url.searchParams.get('tag_name');
-	// 				const file_name = url.searchParams.get('file_name');
-
-	// 				if (!user || !repo) {
-	// 					return new Response('Missing required parameters: user or repo or tag_name or file_name', { status: 400, statusText: 'Bad Request' });
+	// 		return new Response(
+	// 			await (await fetch(`https://github.com/${user}/${repo}/releases/download/${tag_name}/${file_name}`)).arrayBuffer(),
+	// 			{
+	// 				headers: {
+	// 					"Access-Control-Allow-Headers": request.headers.get("Access-Control-Request-Headers"),
+	// 					"Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
+	// 					"Access-Control-Allow-Origin": "*",
+	// 					"Access-Control-Max-Age": "300",
+	// 					"content-type": "application/octet-stream",
 	// 				}
-
-	// 				return new Response(
-	// 					await (await fetch(`https://github.com/${user}/${repo}/releases/download/${tag_name}/${file_name}`)).arrayBuffer(),
-	// 					{
-	// 						headers: {
-	// 							"Access-Control-Allow-Headers": request.headers.get("Access-Control-Request-Headers"),
-	// 							"Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
-	// 							"Access-Control-Allow-Origin": "*",
-	// 							"Access-Control-Max-Age": "300",
-	// 							"content-type": "application/octet-stream",
-	// 						}
-	// 					}
-	// 				);
-	// 				//}
-	// 				// return new Response(`Forbidden request URL: ${request.url}`, {status: 403, statusText: 'Forbidden request URL.'});
-	// 			},
-	// 		};
+	// 			}
+	// 		);
+	// 	},
+	// };
 	</script>
 
 
