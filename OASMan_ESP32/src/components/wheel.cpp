@@ -258,6 +258,7 @@ void Wheel::loop()
         int oscillationPow = 0;
         const int startIteration = -1;
         int iteration = startIteration; // - values make it skip the first generation. It won't start dividing until iteration = 1
+        const int fullAirOutTime = 5000;
         bool previousDirection = false;
         for (;;)
         {
@@ -328,6 +329,14 @@ void Wheel::loop()
                     // save previous direction.
                     previousDirection = up;
 
+                    // If the goal pressure is 0 or 1psi, go ahead and just open the valve for a long time to ensure a smooth air out
+                    bool specialSmoothAirOut = false;
+                    if (!up && pressureGoal < 2 && valveTime < fullAirOutTime)
+                    {
+                        valveTime = fullAirOutTime;
+                        specialSmoothAirOut = true;
+                    }
+
                     if (valveTime > 0)
                     {
                         // Open valve for calculated time
@@ -338,8 +347,8 @@ void Wheel::loop()
                         // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
                         delay(250); // Changed to 250. 150 was... confusing
 
-                        // only bother saving data for first 2 iterations AND when the valve was opened for more than 10ms AND if the pressure change is greater than 3psi
-                        if (iteration < startIteration + 2 && valveTime > 10)
+                        // only bother saving data for first 2 iterations AND when the valve was opened for more than 10ms AND it wasn't just set to do a special low value full smooth air out AND if the pressure change is greater than 3psi
+                        if (iteration < startIteration + 2 && valveTime > 10 && !specialSmoothAirOut)
                         {
                             this->readInputs();
                             end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
