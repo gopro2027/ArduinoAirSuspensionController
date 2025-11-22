@@ -180,7 +180,7 @@ void ScrPresets::showPresetDialog()
     static char text[100];
     static char title[10];
     // This is honestly quite shit
-    snprintf(text, sizeof(text), "  fd: %i                        fp: %i\n  rd: %i                        rp: %i", profilePressures[currentPreset - 1][WHEEL_FRONT_DRIVER], profilePressures[currentPreset - 1][WHEEL_FRONT_PASSENGER], profilePressures[currentPreset - 1][WHEEL_REAR_DRIVER], profilePressures[currentPreset - 1][WHEEL_REAR_PASSENGER]);
+    snprintf(text, sizeof(text), "  FL: %i              FR: %i\n  RL: %i              RR: %i", profilePressures[currentPreset - 1][WHEEL_FRONT_DRIVER], profilePressures[currentPreset - 1][WHEEL_FRONT_PASSENGER], profilePressures[currentPreset - 1][WHEEL_REAR_DRIVER], profilePressures[currentPreset - 1][WHEEL_REAR_PASSENGER]); //Modified for universal driving position
     snprintf(title, sizeof(title), "Preset %i", currentPreset);
     this->showMsgBox(title, text, NULL, "OK", []() -> void {}, []() -> void {}, false);
 }

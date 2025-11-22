@@ -21,21 +21,21 @@ void drawPSIReadings()
     // Front
 
     display.setCursor(0, 2 * textHeightPx + 5);
-    display.print(F("FD: "));
-    display.print(int(getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue())); // front driver
+    display.print(F("FL: "));
+    display.print(int(getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue())); // Front Left - Front driver(Left hand drive)
 
     display.setCursor(secondRowXPos, 2 * textHeightPx + 5);
-    display.print(F("FP: "));
-    display.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue())); // front passenger
+    display.print(F("FR: "));
+    display.print(int(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue())); // Front Right - Front passenger(Left hand drive)
 
     // Rear
     display.setCursor(0, 3.5 * textHeightPx + 5);
-    display.print(F("RD: "));
-    display.print(int(getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue())); // rear driver
+    display.print(F("RL: "));
+    display.print(int(getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue())); // Rear Left - Rear driver(Left Hand Drive)
 
     display.setCursor(secondRowXPos, 3.5 * textHeightPx + 5);
-    display.print(F("RP: "));
-    display.print(int(getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue())); // rear passenger
+    display.print(F("RR: "));
+    display.print(int(getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue())); // Rear Right - Rear passenger(Left Hand Drive)
 
     display.display();
 }
