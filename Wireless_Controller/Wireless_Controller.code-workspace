@@ -2,6 +2,9 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../ESP32_SHARED_LIBS"
 		}
 	],
 	"settings": {

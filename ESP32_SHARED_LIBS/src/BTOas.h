@@ -43,6 +43,7 @@ enum BTOasIdentifier
     RESETAIPKT = 29,
     BP32PKT = 30,
     BROADCASTNAME = 35,
+    UPDATESTATUSREQUEST = 36,
 };
 
 enum StatusPacketBittset
@@ -115,7 +116,7 @@ struct BTOasPacket
 // Outgoing packets
 struct StatusPacket : BTOasPacket
 {
-    StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage, uint8_t AIReadyBittset, uint8_t updateStatus);
+    StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage, uint8_t AIReadyBittset);
 };
 
 struct PresetPacket : BTOasPacket
@@ -273,6 +274,15 @@ struct BroadcastNamePacket : BTOasPacket
 {
     BroadcastNamePacket(String bleBroadcast);
     String getBroadcastName();
+};
+
+struct UpdateStatusRequestPacket : BTOasPacket
+{
+    bool _setStatus;
+    UpdateStatusRequestPacket();
+    UpdateStatusRequestPacket(String status);
+    String getStatus();
+    void setStatus(String status);
 };
 
 #endif

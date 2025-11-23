@@ -5,7 +5,7 @@ byte currentProfile[4];
 bool sendProfileBT = false;
 
 int learnDataIndex[4];
-PressureLearnSaveStruct learnData[4][LEARN_SAVE_COUNT];
+PressureLearnSaveStruct learnData[4][LEARN_SAVE_COUNT];// TODO: This data needs to be moved to be a malloc or new array, so that when we do OTA stuff it doesn't take up memory (currently it is statically allocated and uses 8kb even during OTA updates which is quite a lot )
 static SemaphoreHandle_t learnDataMutex;
 
 PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX index)
@@ -110,6 +110,18 @@ void loadAILearnedDataPreferences()
 
 void beginSaveData()
 {
+
+    // update related data
+    _SaveData.updateMode.load("updateMode", false);
+    _SaveData.wifiSSID.loadString("wifiSSID", "");
+    _SaveData.wifiPassword.loadString("wifiPassword", "");
+    _SaveData.updateResult.load("updateResult", 0);
+
+    if (getupdateMode())
+    {
+        return;
+    }
+
     _SaveData.riseOnStart.load("riseOnStart", false);
     _SaveData.maintainPressure.load("maintainPressure", false);
     _SaveData.airOutOnShutoff.load("airOutOnShutoff", false);
@@ -120,10 +132,6 @@ void beginSaveData()
     _SaveData.learnPressureSensors.load("learnPressureSensors", false);
     _SaveData.safetyMode.load("safetyMode", true);
     _SaveData.aiEnabled.load("aiEnabled", true);
-    _SaveData.updateMode.load("updateMode", false);
-    _SaveData.wifiSSID.loadString("wifiSSID", "");
-    _SaveData.wifiPassword.loadString("wifiPassword", "");
-    _SaveData.updateResult.load("updateResult", 0);
 
     // pressure sensor values
     _SaveData.pressureInputFrontPassenger.load("PIFP", 0);
@@ -359,7 +367,7 @@ createSaveFuncInt(pressureInputTank, byte);
 
 // values moved from the user defines file
 createSaveFuncInt(bagMaxPressure, uint8_t);
-createSaveFuncInt(blePasskey, uint32_t);         // 6 digits base 10
+createSaveFuncInt(blePasskey, uint32_t); // 6 digits base 10
 createSaveFuncString(bleName);
 createSaveFuncInt(systemShutoffTimeM, uint32_t); // may have to change
 createSaveFuncInt(compressorOnPSI, uint8_t);

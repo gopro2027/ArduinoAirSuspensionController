@@ -38,7 +38,7 @@ void BTOasPacket::dump()
 }
 
 // Outgoing packets
-StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage, uint8_t AIReadyBittset, uint8_t updateStatus)
+StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage, uint8_t AIReadyBittset)
 {
     this->cmd = STATUSREPORT;
     // 0 through 4
@@ -50,7 +50,6 @@ StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REA
     this->args8()[10].i = AIPercentage;
     this->args8()[11].i = AIReadyBittset;
     this->args32()[3].i = bittset;
-    this->args8()[0x10].i = updateStatus;
 
     // doesn't matter for this because it is generic broadcasted for everyone
     this->sender = 0;
@@ -315,4 +314,28 @@ BP32Packet::BP32Packet(BP32CMD bp32Cmd, bool value)
     this->cmd = BP32PKT;
     this->args16()[0].i = bp32Cmd;
     this->args16()[1].i = value;
+}
+
+UpdateStatusRequestPacket::UpdateStatusRequestPacket()
+{
+    this->cmd = UPDATESTATUSREQUEST;
+    memset(this->args, 0, sizeof(this->args));
+    this->_setStatus = false;
+}
+UpdateStatusRequestPacket::UpdateStatusRequestPacket(String status)
+{
+    this->cmd = UPDATESTATUSREQUEST;
+    this->setStatus(status);
+    this->_setStatus = false;
+}
+String UpdateStatusRequestPacket::getStatus()
+{
+    return String((char *)&this->args[0]);
+}
+void UpdateStatusRequestPacket::setStatus(String status)
+{
+    int len = status.length();
+    if (len > sizeof(this->args))
+        len = sizeof(this->args);
+    strncpy((char *)&this->args[0], status.c_str(), len);
 }

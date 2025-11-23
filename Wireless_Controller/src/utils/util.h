@@ -7,9 +7,6 @@
 #include "lvgl.h"
 #include "ui/components/option.h"
 
-#define STRINGIFY(x) #x
-#define EVALUATE_AND_STRINGIFY(x) STRINGIFY(x)
-
 class Scr;
 class Option;
 
@@ -79,12 +76,12 @@ extern int currentPressures[5];
 extern uint32_t statusBittset;
 extern uint8_t AIPercentage;
 extern uint8_t AIReadyBittset;
-extern uint8_t manifoldUpdateStatus;
 extern int profilePressures[5][4];
 extern bool profileUpdated;
 extern int currentPreset;
 void requestPreset();
 extern ConfigValuesPacket util_configValues;
+extern UpdateStatusRequestPacket util_statusRequestPacket;
 void sendConfigValuesPacket(bool saveToManifold);
 void onBLEConnectionCompleted();
 

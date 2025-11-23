@@ -5,22 +5,13 @@
 #include "WiFi.h"
 #include "HTTPClient.h"
 #include <Update.h>
+#include <ArduinoJson.h>
 
+#ifndef FIRMWARE_RELEASE_NAME
 #ifdef PROJECT_IS_MANIFOLD
-#ifdef BOARD_VERSION_ATLEAST_4
-#define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/manifold_v4/firmware_%s.bin"
-#elif defined ACCESSORY_WIRE_FUNCTIONALITY
-#define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/manifold/firmware_%s.bin"
+#define FIRMWARE_RELEASE_NAME "manifold_v2"
 #else
-#define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/manifold_no_acc/firmware_%s.bin"
-#endif
-#endif
-
-#ifdef PROJECT_IS_CONTROLLER
-#ifdef WAVESHARE_BOARD
-#define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/ws2p8controller/firmware_%s.bin"
-#else
-#define DOWNLOAD_FIRMWARE_BIN_URL "https://oasman.dev/oasman/firmware/controller/firmware_%s.bin"
+#define FIRMWARE_RELEASE_NAME "controller_ws2p8"
 #endif
 #endif
 

@@ -12,12 +12,30 @@ Here is a video of me assembling my 2.0 board, if you wish to follow along:<br>
 <br> -->
 
 ### I/O Pin Wiring
-For your main 4 pin i/o:<br>
-For the power wires and compressor wires you will want to use a 4 wire bundled wire as listed in the parts<br>
-Attach all 4 wires from the power connector, one to constant 12v battery, one to ground, and one to the accessory wire which turns on with the key, and then the negative terminal of the compressor relay (85)<br>
-The negative wire is the signal wire that turns the compressor relay on/off. The positive wire to the compressor relay can be shared with the constant +12v/vcc wire of the power connector or come from a constant 12v from somewhere else in the system such as the acc wire.<br>
-For the compressor relay, both 30 and 86 go to battery 12v power, 85 to oasman manifold board compressor output, 87 to compressor. 86 can be a smaller wire. 86 and 85 are also switchable/reversable.<br>
-See video [here](https://www.youtube.com/watch?v=QAD8vDHTbzo&ab_channel=WiringRescue) for additional wiring info on a negative triggered relay, where the oasman compressor output wire is acting as the switch in this video.
+For your main 6 pin i/o:<br>
+For the power wires and compressor and auxillary wires you will want to use a 6 wire bundled 18 guage wire as listed in the parts<br>
+Attach all 6 wires from the power connector, one to constant 12v battery, one to ground, and one to the accessory wire which turns on with the key<br>
+Suggested / typical color coding:
+- Red: 12v battery
+- Black: ground
+- Yellow: ACC
+- White: Compressor
+- Orange: Auxillary (Optional)
+- Green: E-brake (Optional)
+
+The compressor output should be wired to a relay as follows:
+- Relay pin 86: Wire to the oasman board compressor output, 18 guage
+- Relay pin 85: Wire to cars ACC wire (or constant 12v), 18 guage
+- Relay pin 30: Wire to cars battery with a wire thich enough to handle the amps of the compressor.
+- Relay pin 87: Wire to compressor positive wire.
+Please make sure you have the proper fuses for the compressor and battery wires.
+
+<sup>* Note: Although 85 typically goes to gnd, if we wired it this way the relays internal flyback diode dumps to the compressor and causes the compressor to briefly blip on upon shutdown. We instead wire it as mentioned above and utilize the oasman boards internal flyback diode to not cause this issue with the compressor.</sup><br>
+<sup>See video [here](https://www.youtube.com/watch?v=QAD8vDHTbzo&ab_channel=WiringRescue) for additional wiring info on a negative triggered relay, where the oasman compressor output wire is acting as the switch in this video.</sup>
+
+For the Auxillary wire, it is optional. But you would ideally connect it to a relay in the same manner that you could with the compressor output. You may use the auxillary wire to control anything you'd like from your wireless oasman controller, such as an electric water trap or a light bar. Completely optional though!
+
+The e-brake wire is also optional. It should be connected so that when you pull the e-brake, this wire is connected directly to gnd.
 <!-- Note to self: my car is this but im not sure it's correct even though it works: 86 goes to manifold compressor output, 85 goes to +12v battery, 30 to gnd, 87 to compressor -->
 <br>
 
@@ -79,3 +97,4 @@ After completing all the jst connectors, I put hot glue on the ends of them to k
 <br>
 
 ### Congratulations on assembling the wiring!
+

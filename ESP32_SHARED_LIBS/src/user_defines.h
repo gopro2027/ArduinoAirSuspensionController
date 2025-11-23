@@ -156,6 +156,9 @@ enum SOLENOID_AI_INDEX
 };
 #define SOLENOID_COUNT 8
 
+#define STRINGIFY(x) #x
+#define EVALUATE_AND_STRINGIFY(x) STRINGIFY(x)
+
 // platformio.ini toggleables
 
 #if defined(OFFICIAL_RELEASE)

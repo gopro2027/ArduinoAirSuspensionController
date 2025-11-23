@@ -581,7 +581,7 @@ void ble_notify()
         // int aiDataPacked = (AIPercentage << 4) + AIReadyBittset; // combine at bottom
         // aiDataPacked = (aiDataPacked << 21);                     // move to top end (4 + 7 = 11; 32-11 = 21)
         // statusBittset = statusBittset | aiDataPacked;
-        StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue(), getCompressor()->getTankPressure(), statusBittset, AIPercentage, AIReadyBittset, getupdateResult());
+        StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue(), getCompressor()->getTankPressure(), statusBittset, AIPercentage, AIReadyBittset);
 
         memcpy(status_characteristic_data, statusPacket.tx(), BTOAS_PACKET_SIZE);
 
@@ -771,6 +771,32 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         }
     }
     break;
+    case UPDATESTATUSREQUEST:
+    {
+        UpdateStatusRequestPacket pkt;
+        byte updateResult = getupdateResult();
+        switch (updateResult)
+        {
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST:
+            pkt.setStatus("[F] FW DL");
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_GENERIC:
+            pkt.setStatus("[F] Install");
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_VERSION_REQUEST:
+            pkt.setStatus("[F] Finding");
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_CONNECTION:
+            pkt.setStatus("[F] No WiFi");
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_NONE:
+        case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
+            pkt.setStatus("v" EVALUATE_AND_STRINGIFY(RELEASE_VERSION));
+            break;
+        }
+
+        packetMover::sendRestPacket(&pkt, con_handle);
+    }
     }
 }
 
