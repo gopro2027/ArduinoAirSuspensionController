@@ -31,13 +31,16 @@ public:
     Option *ui_aiPercentage;
     Option *ui_aiEnabled;
     Option *ui_s3;
+    Option *ui_ebrakeStatus;
     Option *ui_rebootbutton;
     Option *ui_s4;
     Option *ui_s5;
     Option *ui_maintainprssure;
     Option *ui_riseonstart;
     Option *ui_safetymode;
+#if ENABLE_AIR_OUT_ON_SHUTOFF
     Option *ui_airoutonshutoff;
+#endif
     RadioOption *ui_heightsensormode;
     Option *ui_config1;
     Option *ui_config2;
