@@ -37,6 +37,7 @@ void ScrSettings::init()
     new Option(this->optionsContainer, OptionType::HEADER, "Status");
     this->ui_s1 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Compressor Frozen:", defaultCharVal);
     this->ui_s3 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "ACC Status:", defaultCharVal);
+    this->ui_ebrakeStatus = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "E-Brake Status:", defaultCharVal);
     // this->ui_s4 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Timer Expired:", defaultCharVal);
     // this->ui_s5 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Clock:", defaultCharVal);
     this->ui_s2 = new Option(this->optionsContainer, OptionType::ON_OFF, "Compressor Status:", defaultCharVal, [](void *data)
@@ -116,11 +117,13 @@ void ScrSettings::init()
                 RiseOnStartPacket pkt(((bool)data));
                 sendRestPacket(&pkt);
                 log_i("Pressed riseonstart %i", ((bool)data)); });
-    // this->ui_airoutonshutoff = new Option(this->optionsContainer, OptionType::ON_OFF, "Fall on shutdown", defaultCharVal, [](void *data)
-    //                                       {
-    //             FallOnShutdownPacket pkt(((bool)data));
-    //             sendRestPacket(&pkt);
-    //             log_i("Pressed fallonshutdown %i", ((bool)data)); });
+#if ENABLE_AIR_OUT_ON_SHUTOFF
+    this->ui_airoutonshutoff = new Option(this->optionsContainer, OptionType::ON_OFF, "Fall on shutdown", defaultCharVal, [](void *data)
+                                          {
+                FallOnShutdownPacket pkt(((bool)data));
+                sendRestPacket(&pkt);
+                log_i("Pressed fallonshutdown %i", ((bool)data)); });
+#endif
 
     this->ui_safetymode = new Option(this->optionsContainer, OptionType::ON_OFF, "Safety Mode", defaultCharVal, [](void *data)
                                      { 
@@ -357,6 +360,8 @@ void ScrSettings::loop()
     this->ui_s1->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_FROZEN) ? "Yes" : "No");
     // this->ui_s2->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON) ? "On" : "Off");
     this->ui_s3->setRightHandText(statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON) ? "On" : "Off");
+    this->ui_ebrakeStatus->setRightHandText(statusBittset & (1 << StatusPacketBittset::EBRAKE_STATUS_ON) ? "On" : "Off");
+
     if (statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON))
     {
         this->ui_rebootbutton->setRightHandText("Reboot");
@@ -369,7 +374,9 @@ void ScrSettings::loop()
     // this->ui_s5->setRightHandText(statusBittset & (1 << CLOCK) ? "1" : "0");
     this->ui_riseonstart->setBooleanValue(statusBittset & (1 << StatusPacketBittset::RISE_ON_START));
     this->ui_maintainprssure->setBooleanValue(statusBittset & (1 << StatusPacketBittset::MAINTAIN_PRESSURE));
-    // this->ui_airoutonshutoff->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF));
+#if ENABLE_AIR_OUT_ON_SHUTOFF
+    this->ui_airoutonshutoff->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF));
+#endif
     this->ui_heightsensormode->setSelectedOption((statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE)) != 0 ? 1 : 0);
 
     this->ui_safetymode->setBooleanValue(statusBittset & (1 << StatusPacketBittset::SAFETY_MODE));

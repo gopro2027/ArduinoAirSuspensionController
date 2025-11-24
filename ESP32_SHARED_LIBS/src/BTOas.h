@@ -58,7 +58,8 @@ enum StatusPacketBittset
     AIR_OUT_ON_SHUTOFF,
     HEIGHT_SENSOR_MODE,
     SAFETY_MODE,
-    AI_STATUS_ENABLED
+    AI_STATUS_ENABLED,
+    EBRAKE_STATUS_ON
 };
 
 enum AuthResult

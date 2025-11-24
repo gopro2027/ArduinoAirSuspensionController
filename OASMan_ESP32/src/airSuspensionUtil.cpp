@@ -110,6 +110,49 @@ void setupManifold()
 
 #pragma endregion
 
+#pragma region ebrake
+
+#if EBRAKE_WIRE_FUNCTIONALITY
+
+const int ebrakeSampleSize = 5;
+bool ebrakeHistory[ebrakeSampleSize];
+int ebrakeCounter = 0;
+bool ebrakeOn = false;
+
+InputType *ebrakeWire;
+void ebrakeWireSetup()
+{
+    ebrakeWire = ebrakeInput;
+}
+
+void ebrakeWireLoop()
+{
+    // when e brake is not engaged, the 3.3v through the 10k resistor goes to the esp32. That means we get a high reading when ebrake is off. When ebrake is on, we get a low reading
+    sampleReading(ebrakeOn, ebrakeWire->digitalRead() == LOW, ebrakeHistory, ebrakeCounter, ebrakeSampleSize);
+}
+
+bool isEBrakeOn()
+{
+    return ebrakeOn;
+}
+
+#else
+
+void ebrakeWireSetup()
+{
+}
+void ebrakeWireLoop()
+{
+}
+bool isEBrakeOn()
+{
+    return false;
+}
+
+#endif
+
+#pragma endregion
+
 #pragma region wheel_functions
 
 bool isAnyWheelActive()
@@ -149,22 +192,18 @@ void airUpRelativeToAverage(int value)
     getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue() + value, true);
 }
 
-bool isCarMoving()
-{
-    // TODO: add gps code to check if we are driving
-    return true;
-}
-
 void airOutWithSafetyCheck()
 {
-    // only air out if car is not moving!
-    if (!isCarMoving())
+    // only air out if car is in park
+    if (isEBrakeOn())
     {
+#if ENABLE_AIR_OUT_ON_SHUTOFF
         if (getairOutOnShutoff())
         {
             readProfile(0); // packet 0 should be the lowest setting!
             airUp(false);
         }
+#endif
     }
 }
 
