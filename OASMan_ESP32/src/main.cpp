@@ -15,14 +15,12 @@
 
 void setupSpiffsLog();
 void writeToSpiffsLog(char *text);
-
 void setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
     Serial.println(F("Startup!"));
 
     SPIFFS.begin(true);
-
     beginSaveData();
 
     // Check if in update mode and ignore everything else and just start the web server.
@@ -31,6 +29,7 @@ void setup()
         setupdateMode(false);
         Serial.println("Gonna try to download update");
         downloadUpdate(getwifiSSID(), getwifiPassword());
+        setinternalReboot(false);
         return;
     }
 
@@ -93,8 +92,11 @@ void setup()
 
     setinternalReboot(false);
 
-    Serial.println(F("Startup Complete"));
+    startHotspot(getbleName());
+    webota.init(80, "/update");
+    WiFi.mode(WIFI_OFF);  
 
+    Serial.println(F("Startup Complete"));
     // for (int i = 0; i < 200; i++) {
     //     for (int j = 0; j < 2; j++) {
     //         appendPressureDataToFile((SOLENOID_AI_INDEX)j, 0,1,2,3);
@@ -109,11 +111,13 @@ void setup()
 
 void loop()
 {
-    accessoryWireLoop();
+    //accessoryWireLoop();
     if (getinternalReboot() == true)
     {
         ESP.restart();
     }
 
-    delay(100);
+    delay(10);
+
+    webota.handle();
 }

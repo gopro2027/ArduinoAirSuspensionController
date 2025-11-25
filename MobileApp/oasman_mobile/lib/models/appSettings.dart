@@ -6,12 +6,16 @@ class AppSettings {
   String units = 'Psi';
   String passkeyText = '202777';
   String pairedManifoldId = '';
+  bool autoConnect = true;
+  bool wifiHotspot = false;
 
   AppSettings({
     required this.units,
     required this.passkeyText,
     required this.uploadedPicture,
     required this.pairedManifoldId,
+    required this.autoConnect,
+    required this.wifiHotspot,
   });
 
   factory AppSettings.fromPrefs(SharedPreferences prefs) {
@@ -21,6 +25,8 @@ class AppSettings {
       passkeyText : prefs.getString('_passkeyText') ?? '202777',
       uploadedPicture: prefs.getString('uploaded_image') ?? '',
       pairedManifoldId: prefs.getString('_pairedManifoldId') ?? '',
+      autoConnect: prefs.getBool('_autoConnect') ?? true,
+      wifiHotspot: prefs.getBool('_wifiHotspot') ?? false,
     );
   }
 }
@@ -36,5 +42,7 @@ Future<void> loadGlobalSettings() async {
       passkeyText : prefs.getString('_passkeyText') ?? '202777',
       uploadedPicture: prefs.getString('uploaded_image') ?? '',
       pairedManifoldId: prefs.getString('_pairedManifoldId') ?? '',
+      autoConnect: prefs.getBool('_autoConnect') ?? true,
+      wifiHotspot: prefs.getBool('_wifiHotspot') ?? false,
   );
 }

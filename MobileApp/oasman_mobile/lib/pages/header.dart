@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:oasman_mobile/models/appSettings.dart';
 import 'package:provider/provider.dart';
 import 'popup/bluetooth.dart';
 import '../ble_manager.dart';
@@ -64,7 +65,13 @@ class Header extends StatelessWidget {
                           Icons.key_off,
                           color: Colors.pink,
                           size: iconSize,
-                        )
+                        ),
+                      if (globalSettings!.wifiHotspot)
+                        Icon(
+                          Icons.wifi,
+                          color: Colors.green,
+                          size: iconSize,
+                        ),
                     ],
                   )),
             ],

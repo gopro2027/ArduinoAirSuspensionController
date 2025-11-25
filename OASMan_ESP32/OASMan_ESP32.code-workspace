@@ -85,7 +85,18 @@
 			"rope": "cpp",
 			"slist": "cpp",
 			"scoped_allocator": "cpp",
-			"shared_mutex": "cpp"
+			"shared_mutex": "cpp",
+			"format": "cpp",
+			"xlocmes": "cpp",
+			"xlocmon": "cpp",
+			"xlocnum": "cpp",
+			"xloctime": "cpp",
+			"xutility": "cpp",
+			"filesystem": "cpp",
+			"span": "cpp",
+			"xhash": "cpp",
+			"xstring": "cpp",
+			"xtree": "cpp"
 		}
 	}
 }

@@ -436,7 +436,6 @@ void ble_setup()
     size_t name_len = bleName.length();
     // Update GAP local name (used by GATT Device Name characteristic)
     gap_set_local_name(name);
-    gap_discoverable_control(1);
 
     gap_set_max_number_peripheral_connections(MAX_CONNECTIONS);
 
@@ -452,8 +451,8 @@ void ble_setup()
 
     gap_advertisements_set_params(adv_int_min, adv_int_max, adv_type, 0, null_addr, 0x07, 0x00);
 
-    if (name_len > 29)
-        name_len = 29; // BLE adv limit
+    if (name_len > 8)
+        name_len = 8; // BLE adv limit
 
     uint8_t adv_data[31];
     int pos = 0;
@@ -477,7 +476,7 @@ void ble_setup()
     memcpy(&adv_data[pos], uuid, 16);
     pos += 16;
 
-    printAdvData(adv_data, pos);
+     printAdvData(adv_data, pos);
 
     // Apply adv data
     gap_advertisements_set_data(pos, adv_data);
@@ -748,7 +747,6 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         packetMover::sendRestPacket(&pkt, con_handle);
         //  memcpy(rest_characteristic_data, pkt.tx(), BTOAS_PACKET_SIZE);
         //  att_server_notify_SAFE(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
-        delay(500);
         break;
     }
     case BTOasIdentifier::AUTHPACKET:
@@ -759,6 +757,11 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
                 setblePasskey(((AuthPacket *)packet)->getBlePasskey());
             }
         }
+        break;
+    case BTOasIdentifier::TURNONWIFI:
+        startHotspot(getbleName());
+        //setupdateMode(true);
+        //setinternalReboot(true);
         break;
     case BTOasIdentifier::BROADCASTNAME:
 

@@ -1,10 +1,13 @@
 #ifndef directdownload_h
 #define directdownload_h
 
+#include "user_defines.h"
 #include "Arduino.h"
 #include "WiFi.h"
 #include "HTTPClient.h"
 #include <Update.h>
+
+#include <C:\Users\Mark\Desktop\ArduinoAirSuspensionController\OASMan_ESP32\lib\ESP-WebOTA-master\WebOTA.h>
 
 #ifdef PROJECT_IS_MANIFOLD
 #ifdef BOARD_VERSION_ATLEAST_4
@@ -37,5 +40,7 @@ enum UPDATE_STATUS
 extern void setupdateResult(byte value);
 
 void downloadUpdate(String SSID, String PASS);
+extern bool hotspotActive;
+void startHotspot(String wifiName);
 
 #endif
