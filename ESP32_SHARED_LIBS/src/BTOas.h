@@ -70,6 +70,28 @@ enum AuthResult
     AUTHRESULT_UPDATEKEY
 };
 
+enum AuxillaryOutputMode
+{
+    AUX_MODE_MANUAL_SWITCHED,
+    AUX_MODE_MANUAL_TIMED,
+    AUX_MODE_STARTUP_TIMED,
+    AUX_MODE_SHUTDOWN_TIMED,
+};
+
+enum AuxillaryOutputModeTimeUnit
+{
+    AUX_MODE_TIME_SECONDS,
+    AUX_MODE_TIME_MINUTES,
+    AUX_MODE_TIME_HOURS
+};
+
+struct AuxillaryOutputModePayload
+{
+    AuxillaryOutputMode mode;
+    AuxillaryOutputModeTimeUnit timeUnit;
+    uint32_t time;
+};
+
 enum BP32CMD
 {
     BP32CMD_ENABLE_NEW_CONN,
@@ -284,6 +306,12 @@ struct UpdateStatusRequestPacket : BTOasPacket
     UpdateStatusRequestPacket(String status);
     String getStatus();
     void setStatus(String status);
+};
+
+struct AuxillaryOutputModePacket : BTOasPacket
+{
+    AuxillaryOutputModePacket();
+    AuxillaryOutputModePacket(AuxillaryOutputModePayload payload) ;
 };
 
 #endif
