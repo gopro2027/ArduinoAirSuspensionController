@@ -72,13 +72,11 @@ void setRideHeightRearDriver(byte value)
 #if USE_ADS == true
 void initializeADS()
 {
-    bool error = false;
     if (!ADS1115A.begin(ADS_A_ADDRESS))
     {
         Serial.println(F("Failed to initialize ADS A"));
 #if ADS_MOCK_BYPASS == false
         ESP.restart();
-        error = true;
 #endif
     }
 #if USE_2_ADS == true
@@ -86,15 +84,10 @@ void initializeADS()
     {
         Serial.println(F("Failed to initialize ADS B"));
 #if ADS_MOCK_BYPASS == false
-        error = true;
         ESP.restart();
 #endif
     }
 #endif
-    if (error){
-        delay(1000);
-        ESP.restart();
-    }
 }
 #endif
 
@@ -236,7 +229,6 @@ void accessoryWireLoop()
             // one time check that it just happened for the first time
             if (hasJustShutoff == false)
             {
-                Serial.println("ACC: OFF");
                 hasJustShutoff = true;
                 // actually check if air out code is enabled and do as asked
                 airOutWithSafetyCheck();

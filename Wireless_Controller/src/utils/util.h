@@ -7,9 +7,6 @@
 #include "lvgl.h"
 #include "ui/components/option.h"
 
-#define STRINGIFY(x) #x
-#define EVALUATE_AND_STRINGIFY(x) STRINGIFY(x)
-
 class Scr;
 class Option;
 
@@ -79,12 +76,12 @@ extern int currentPressures[5];
 extern uint32_t statusBittset;
 extern uint8_t AIPercentage;
 extern uint8_t AIReadyBittset;
-extern uint8_t manifoldUpdateStatus;
 extern int profilePressures[5][4];
 extern bool profileUpdated;
 extern int currentPreset;
 void requestPreset();
 extern ConfigValuesPacket util_configValues;
+extern UpdateStatusRequestPacket util_statusRequestPacket;
 void sendConfigValuesPacket(bool saveToManifold);
 void onBLEConnectionCompleted();
 
@@ -122,6 +119,7 @@ public:
     Preferencable wifiSSID;
     Preferencable wifiPassword;
     Preferencable updateResult;
+    Preferencable brightness;
 };
 
 extern SaveData _SaveData;
@@ -133,7 +131,10 @@ headerDefineSaveFunc(updateMode, bool);
 headerDefineSaveFunc(wifiSSID, String);
 headerDefineSaveFunc(wifiPassword, String);
 headerDefineSaveFunc(updateResult, byte);
+headerDefineSaveFunc(brightness, byte);
 
 void ta_event_cb(lv_event_t *e);
+void slider_event_cb(lv_event_t *e);
 bool isKeyboardHidden();
+float getBrightnessFloat();
 #endif

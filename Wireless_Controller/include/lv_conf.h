@@ -47,7 +47,7 @@
 
 #if LV_USE_STDLIB_MALLOC == LV_STDLIB_BUILTIN
     /*Size of the memory available for `lv_malloc()` in bytes (>= 2kB)*/
-    #define LV_MEM_SIZE ((64 + 11) * 1024U)          /*[bytes]*/ // this freaks tf out if i lower it below (64 * 1024U). Random things stop working. UPDATE: increased +11 which nearly maxes out memory on the CYD, to fix the issue with msgbox not working when we switched back to builtin. Using builtin stores the memory in a different area than CLIB. The esp32-s3 can do at least 128 * 1024 total memory
+    #define LV_MEM_SIZE ((64 + 10) * 1024U)          /*[bytes]*/ // this freaks tf out if i lower it below (64 * 1024U). Random things stop working. UPDATE: increased +11 which nearly maxes out memory on the CYD, to fix the issue with msgbox not working when we switched back to builtin. Using builtin stores the memory in a different area than CLIB. The esp32-s3 can do at least 128 * 1024 total memory
 
     /*Size of the memory expand for `lv_malloc()` in bytes*/
     #define LV_MEM_POOL_EXPAND_SIZE 0
@@ -548,7 +548,7 @@
 
 #define LV_USE_SCALE      0
 
-#define LV_USE_SLIDER     0   /*Requires: lv_bar*/
+#define LV_USE_SLIDER     1   /*Requires: lv_bar*/
 
 #define LV_USE_SPAN       0
 #if LV_USE_SPAN

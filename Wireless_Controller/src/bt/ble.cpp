@@ -140,7 +140,6 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
             statusBittset = status->args32()[3].i;
             AIPercentage = status->args8()[10].i;
             AIReadyBittset = status->args8()[11].i;
-            manifoldUpdateStatus = status->args8()[0x10].i;
         }
     }
     if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Rest.toString())
@@ -175,6 +174,10 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
             case GETCONFIGVALUES:
                 memcpy(util_configValues.args, pkt->args, sizeof(BTOasPacket::args));
                 *util_configValues._setValues() = true;
+                break;
+            case UPDATESTATUSREQUEST:
+                memcpy(util_statusRequestPacket.args, pkt->args, sizeof(BTOasPacket::args));
+                util_statusRequestPacket._setStatus = true;
                 break;
             }
         }

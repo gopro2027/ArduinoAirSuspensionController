@@ -144,7 +144,7 @@ headerDefineSaveFunc(pressureInputTank, byte);
 
 // values moved from the user defines file
 headerDefineSaveFunc(bagMaxPressure, uint8_t);
-headerDefineSaveFunc(blePasskey, uint32_t);         // 6 digits base 10
+headerDefineSaveFunc(blePasskey, uint32_t); // 6 digits base 10
 headerDefineSaveFunc(bleName, String);
 headerDefineSaveFunc(systemShutoffTimeM, uint32_t); // may have to change
 headerDefineSaveFunc(compressorOnPSI, uint8_t);

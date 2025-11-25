@@ -170,14 +170,21 @@ void ScrSettings::init()
                { log_i("Pressed %i", ((uint32_t)data));
         setscreenDimTimeM((uint32_t)data); });
 
+    ui_brightnessSlider = new Option(this->optionsContainer, OptionType::SLIDER, "Brightness", {.INT = getbrightness()}, [](void *data)
+                                     { log_i("Brightness %i", ((uint32_t)data));
+        setbrightness((uint32_t)data);
+        smartdisplay_lcd_set_backlight(getBrightnessFloat()); });
+    ui_brightnessSlider->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
+
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
     new Option(this->optionsContainer, OptionType::HEADER, "Config");
 
-    this->ui_config1 = new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Bag Max PSI" /*"MAX_PRESSURE_SAFETY"*/, {.INT = 0}, [](void *data)
+    this->ui_config1 = new Option(this->optionsContainer, OptionType::SLIDER, "Bag Max PSI" /*"MAX_PRESSURE_SAFETY"*/, {.INT = 200}, [](void *data)
                                   { log_i("Pressed %i", ((uint32_t)data));
         *util_configValues._bagMaxPressure() = (uint32_t)data;
         sendConfigValuesPacket(true);
     alertValueUpdated(); });
+    this->ui_config1->setSliderParams(1, 256, true, LV_EVENT_RELEASED);
 
     new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Bluetooth Passkey (6 digits)" /*"BLE_PASSKEY"*/, {.INT = getblePasskey()}, [](void *data)
                { log_i("Pressed %i", (data));
@@ -214,11 +221,12 @@ void ScrSettings::init()
         sendConfigValuesPacket(true);
     alertValueUpdated(); });
 
-    this->ui_config6 = new Option(this->optionsContainer, OptionType::KEYBOARD_INPUT_NUMBER, "Bag Volume Percentage", {.INT = 0}, [](void *data)
+    this->ui_config6 = new Option(this->optionsContainer, OptionType::SLIDER, "Bag Volume Percentage", {.INT = 100}, [](void *data)
                                   { log_i("Pressed %i", ((uint32_t)data)); 
         *util_configValues._bagVolumePercentage() = (uint32_t)data;
         sendConfigValuesPacket(true);
     alertValueUpdated(); });
+    this->ui_config6->setSliderParams(10, 600, true, LV_EVENT_RELEASED);
 
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
     new Option(this->optionsContainer, OptionType::HEADER, "Wifi / Update");
@@ -270,14 +278,14 @@ void ScrSettings::init()
                                                                                   currentScr->showMsgBox("Updating in progress...", "Both the manifold & controller are installing their updates. Both will reboot when completed.", NULL, "OK", []() -> void {}, []() -> void {}, false); // Open your phone and go to http://oasman.dev and download the latest manifold firmware.bin, then connect to the OASMAN-XXXXX wifi network. Then open your web browser and go to the website\nhttp://oasman.local to upload the firmware.bin
 
                                                                                   runNextFrame([]() -> void
-                                                                                               { setupdateMode(true);
+                                                                                               { delay(250);setupdateMode(true);
                                                                     runNextFrame([]() -> void
                                                                                 { ESP.restart(); }); });
 
                                                                                   Serial.println("Attempted to download update"); });
 
 #else
-                                                                 currentScr->showMsgBox("Updating in progress...", "Both the manifold is installing the latest update. Your controller does not support OTA updates. Please go to http://oasman.dev on your computer to flash the latest update to your controller.", NULL, "OK", []() -> void
+                                                                 currentScr->showMsgBox("Updating in progress...", "The manifold is installing the latest update. Your controller does not support OTA updates. Please go to http://oasman.dev on your computer to flash the latest update to your controller.", NULL, "OK", []() -> void
                                                                                         { ESP.restart(); }, []() -> void
                                                                                         { ESP.restart(); }, true); // Open your phone and go to http://oasman.dev and download the latest manifold firmware.bin, then connect to the OASMAN-XXXXX wifi network. Then open your web browser and go to the website\nhttp://oasman.local to upload the firmware.bin
 
@@ -326,6 +334,12 @@ void ScrSettings::init()
     macValue.STRING = ble_getMAC();
     this->ui_mac = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Manifold:", macValue);
 
+#if defined(WAVESHARE_BOARD)
+    OptionValue voltsValue;
+    voltsValue.STRING = getBatteryVoltageString();
+    this->ui_volts = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Battery:", voltsValue);
+#endif
+
     // add space at end of list
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
 
@@ -363,29 +377,11 @@ void ScrSettings::loop()
     this->ui_s2->setBooleanValue(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON));
     this->ui_aiEnabled->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AI_STATUS_ENABLED));
 
-    char *manifoldUpdateStatusString;
-    switch (manifoldUpdateStatus)
+    if (util_statusRequestPacket._setStatus)
     {
-    case UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST:
-        manifoldUpdateStatusString = "FAIL_FILE_REQUEST";
-        break;
-    case UPDATE_STATUS::UPDATE_STATUS_FAIL_GENERIC:
-        manifoldUpdateStatusString = "FAIL_GENERIC";
-        break;
-    case UPDATE_STATUS::UPDATE_STATUS_FAIL_VERSION_REQUEST:
-        manifoldUpdateStatusString = "FAIL_VERSION_REQUEST";
-        break;
-    case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_CONNECTION:
-        manifoldUpdateStatusString = "FAIL_WIFI_CONNECTION";
-        break;
-    case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
-        manifoldUpdateStatusString = "SUCCESS";
-        break;
-    case UPDATE_STATUS_NONE:
-    default:
-        manifoldUpdateStatusString = "-";
+        util_statusRequestPacket._setStatus = false;
+        this->ui_manifoldUpdateStatus->setRightHandText(util_statusRequestPacket.getStatus().c_str());
     }
-    this->ui_manifoldUpdateStatus->setRightHandText(manifoldUpdateStatusString);
 
     // int aiPacked = statusBittset >> 21;
     // uint8_t AIReadyBittset = aiPacked & 0b1111;
@@ -399,6 +395,10 @@ void ScrSettings::loop()
     this->ui_aiReady->setRightHandText(buf);
 
     this->ui_mac->setRightHandText(ble_getMAC());
+
+#if defined(WAVESHARE_BOARD)
+    this->ui_volts->setRightHandText(getBatteryVoltageString());
+#endif
 
     if (*util_configValues._setValues())
     {
