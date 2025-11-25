@@ -2,6 +2,9 @@
 
 #ifndef sampleReading_h
 #define sampleReading_h
+
+// Takes the average of the vales.
+// In the case of booleans, if any of the sampeles are false, when it truncates it will round down to false
 template <typename T>
 void sampleReading(T &result, T reading, T *arr, int &counter, const int arrSize)
 {
