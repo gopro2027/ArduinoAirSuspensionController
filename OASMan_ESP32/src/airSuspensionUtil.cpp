@@ -110,51 +110,41 @@ void setupManifold()
 
 #pragma endregion
 
-#pragma region door_lock
+#pragma region ebrake
 
-const int doorlockSampleSize = 5;
-bool doorlockHistory[doorlockSampleSize];
-int doorlockCounter = 0;
-bool doorlockOn = false;
-unsigned long lastTimeLocked = 0;
-unsigned long currentTimeLocked = 0;
+#if EBRAKE_WIRE_FUNCTIONALITY
 
-#if DOORLOCK_WIRE_FUNCTIONALITY
+const int ebrakeSampleSize = 5;
+bool ebrakeHistory[ebrakeSampleSize];
+int ebrakeCounter = 0;
+bool ebrakeOn = false;
 
-
-InputType *doorlockWire;
-void doorlockWireSetup()
+InputType *ebrakeWire;
+void ebrakeWireSetup()
 {
-    doorlockWire = ebrakeInput;
+    ebrakeWire = ebrakeInput;
 }
 
-void doorlockWireLoop()
+void ebrakeWireLoop()
 {
-    // Sample the door lock wire input and debounce it and log time
-    sampleReading(doorlockOn, doorlockWire->digitalRead() == LOW, doorlockHistory, doorlockCounter, doorlockSampleSize);
-    lastTimeLocked = currentTimeLocked();
-    currentTimeLocked = millis();
-    if !isVehicleOn() and readytodrop() and justshutoff()
-    {
-        doorLockDrop();
-    }
+    // when e brake is not engaged, the 3.3v through the 10k resistor goes to the esp32. That means we get a high reading when ebrake is off. When ebrake is on, we get a low reading
+    sampleReading(ebrakeOn, ebrakeWire->digitalRead() == LOW, ebrakeHistory, ebrakeCounter, ebrakeSampleSize);
 }
 
-bool doorlock()
+bool isEBrakeOn()
 {
-    return doorlock;
+    return ebrakeOn;
 }
 
 #else
 
-void doorlockWireSetup()
+void ebrakeWireSetup()
 {
 }
-void doorlockWireLoop()
+void ebrakeWireLoop()
 {
-
 }
-bool doorlock()
+bool isEBrakeOn()
 {
     return false;
 }
@@ -175,11 +165,6 @@ bool isAnyWheelActive()
         }
     }
     return false;
-}
-// returns true if it was locked within the last second
-bool readytodrop()
-{
-    return currentTimeLocked < (lastTimeLocked + 1000);
 }
 
 void airUp(bool quick)
@@ -207,13 +192,19 @@ void airUpRelativeToAverage(int value)
     getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue() + value, true);
 }
 
-void doorLockDrop()
+void airOutWithSafetyCheck()
 {
-    // Air out if door lock is pressed twice within 1 second
-#if ENABLE_DOOR_LOCK_DROP
+    // only air out if car is in park
+    if (isEBrakeOn())
+    {
+#if ENABLE_AIR_OUT_ON_SHUTOFF
+        if (getairOutOnShutoff())
+        {
             readProfile(0); // packet 0 should be the lowest setting!
             airUp(false);
+        }
 #endif
+    }
 }
 
 #pragma endregion
@@ -232,11 +223,10 @@ bool isKeepAliveTimerExpired()
     return millis() > (lastTimeLive + getsystemShutoffTimeM() * 60 * 1000);
 }
 
-/*bool isKeepAliveTimeReadyForShutdownRoutine()
+bool isKeepAliveTimeReadyForShutdownRoutine()
 {
     return millis() > (lastTimeLive + AIR_OUT_AFTER_SHUTDOWN_MS); // 5 seconds before choosing it is actually shut down... sure why not
 }
-*/
 
 // in the future we can call this from bluetooth functions to keep the device alive longer if actively using bluetooth while the vehicle is off
 void notifyKeepAlive()
@@ -273,14 +263,16 @@ void accessoryWireLoop()
     else
     {
         // vehicle is off... first check if 5 seconds have passed
-        //if (isKeepAliveTimeReadyForShutdownRoutine())
-        //{
+        if (isKeepAliveTimeReadyForShutdownRoutine())
+        {
             // one time check that it just happened for the first time
             if (hasJustShutoff == false)
             {
                 hasJustShutoff = true;
+                // actually check if air out code is enabled and do as asked
+                airOutWithSafetyCheck();
             }
-        //}
+        }
     }
     if (isKeepAliveTimerExpired() || forceShutoff)
     {
