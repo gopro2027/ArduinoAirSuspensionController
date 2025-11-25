@@ -44,8 +44,8 @@ enum BTOasIdentifier
     BP32PKT = 30,
     BROADCASTNAME = 35,
     BP32PKT = 30,
-    TURNONWIFI = 36
-    UPDATESTATUSREQUEST = 36,
+    TURNONWIFI = 37,
+    UPDATESTATUSREQUEST = 36
 };
 
 enum StatusPacketBittset
