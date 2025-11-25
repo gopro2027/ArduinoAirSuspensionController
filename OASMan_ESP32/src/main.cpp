@@ -85,7 +85,7 @@ void setup()
     }
 
     accessoryWireSetup();
-    ebrakeWireSetup();
+    doorlockWireSetup();
 
     // TODO: make base profile work (look in other spots in app for this)
     // readProfile(getbaseProfile());// TODO: add functionality for this in the controller
@@ -123,7 +123,7 @@ void setup()
 void loop()
 {
     accessoryWireLoop();
-    ebrakeWireLoop();
+    doorlockWireLoop();
     if (getinternalReboot() == true)
     {
         ESP.restart();

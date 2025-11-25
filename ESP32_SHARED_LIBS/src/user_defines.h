@@ -9,7 +9,7 @@
 
 // Set this to true if you want to enable this feature. Requires compiling both the board and manifold.
 // Will always be set to false in any official oasman release. Use at your own risk. OASMan is not responsible for damage caused by using this feature
-#define ENABLE_AIR_OUT_ON_SHUTOFF false
+#define ENABLE_DOOR_LOCK_DROP true
 
 // original full amount is 500
 #define LEARN_SAVE_COUNT 250

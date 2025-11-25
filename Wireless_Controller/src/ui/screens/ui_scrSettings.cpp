@@ -37,7 +37,7 @@ void ScrSettings::init()
     new Option(this->optionsContainer, OptionType::HEADER, "Status");
     this->ui_s1 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Compressor Frozen:", defaultCharVal);
     this->ui_s3 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "ACC Status:", defaultCharVal);
-    this->ui_ebrakeStatus = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "E-Brake Status:", defaultCharVal);
+    this->ui_doorlockStatus = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Door Lock status:", defaultCharVal);
     // this->ui_s4 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Timer Expired:", defaultCharVal);
     // this->ui_s5 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Clock:", defaultCharVal);
     this->ui_s2 = new Option(this->optionsContainer, OptionType::ON_OFF, "Compressor Status:", defaultCharVal, [](void *data)
@@ -360,7 +360,7 @@ void ScrSettings::loop()
     this->ui_s1->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_FROZEN) ? "Yes" : "No");
     // this->ui_s2->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON) ? "On" : "Off");
     this->ui_s3->setRightHandText(statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON) ? "On" : "Off");
-    this->ui_ebrakeStatus->setRightHandText(statusBittset & (1 << StatusPacketBittset::EBRAKE_STATUS_ON) ? "On" : "Off");
+    this->ui_doorlockStatus->setRightHandText(statusBittset & (1 << StatusPacketBittset::DOORLOCK_STATUS_ON) ? "On" : "Off");
 
     if (statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON))
     {
