@@ -2,7 +2,7 @@
 #define touch_lib_h
 
 #include <Arduino.h>
-#include <esp32_smartdisplay.h>
+#include "waveshare/board_driver_util.h"
 
 void setup_touchscreen_hook();
 

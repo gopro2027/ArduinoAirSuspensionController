@@ -70,7 +70,6 @@
 			"ui_scrmain.h": "c",
 			"arduino.h": "c",
 			"lvgl.h": "c",
-			"esp32_smartdisplay.h": "c",
 			"esp_lcd_panel_ops.h": "c",
 			"lv_display_private.h": "c",
 			"util.h": "c",

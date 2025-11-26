@@ -9,7 +9,6 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "esp_sleep.h"
-#include <esp32_smartdisplay.h>
 
 // -----------------------------------------------------------------------------
 #ifndef PWR_KEY_ACTIVE_LOW
@@ -96,7 +95,7 @@ void PWR_Loop(void)
             {
                 // tell it to shutdown once button is released
                 Device_State = 2;
-                smartdisplay_lcd_set_backlight(0); // this is so the user knows the device is about to turn off so they can let go of the button. Once they let go, device state being 2 makes the device shut down. The reason being, we want to make sure the user is not actively pressing the button upon shutdown time to ensure that is is not woken back up immediately after shutdown accidentally
+                set_brightness(0); // this is so the user knows the device is about to turn off so they can let go of the button. Once they let go, device state being 2 makes the device shut down. The reason being, we want to make sure the user is not actively pressing the button upon shutdown time to ensure that is is not woken back up immediately after shutdown accidentally
             }
         }
     }
@@ -138,7 +137,7 @@ void onWakeup()
     }
     else
     {
-        smartdisplay_lcd_set_backlight(getBrightnessFloat());
+        set_brightness(getBrightnessFloat());
         showDialog("Waking up, reconnecting...", lv_color_hex(0xFFFF00), 30000);
     }
 }
@@ -147,7 +146,7 @@ void Fall_Asleep(void)
 {
     log_i("Falling asleep");
     disconnect(false); // disconnect from any BLE connections
-    smartdisplay_lcd_set_backlight(0);
+    set_brightness(0);
     vTaskDelay(pdMS_TO_TICKS(50)); // give time for backlight to turn off before sleeping
 
     esp_sleep_enable_timer_wakeup(10 * 60 * 1000000); // 10 minutes in sleep will shutdown the device fully
@@ -161,7 +160,7 @@ void Shutdown(void)
 {
     log_i("Shutting down");
     // Turn off UI/backlight, drop the power latch
-    smartdisplay_lcd_set_backlight(0);
+    set_brightness(0);
     latch_off();
     vTaskDelay(pdMS_TO_TICKS(50));
 

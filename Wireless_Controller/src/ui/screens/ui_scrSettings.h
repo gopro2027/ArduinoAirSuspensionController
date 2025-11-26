@@ -15,6 +15,7 @@
 
 #if defined(WAVESHARE_BOARD)
 #include "waveshare/waveshare.h"
+#include "waveshare/board_driver_util.h"
 #endif
 
 class ScrSettings : public Scr

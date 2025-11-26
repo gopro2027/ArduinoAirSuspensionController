@@ -216,13 +216,23 @@ void LCD_addWindow(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yen
 
 // backlight
 uint8_t LCD_Backlight = 50;
+#define PWM_CHANNEL_BCKL (SOC_LEDC_CHANNEL_NUM - 1)
 void Backlight_Init()
 {
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+  ledcAttach(LCD_Backlight_PIN, Frequency, Resolution);
   // currently using outdated Arduino libraries. Had to downgrade. see here https://community.platformio.org/t/how-can-i-upgrade-my-platformio-vs-code-ide-to-use-the-v-3-0-arduino-esp32-apis/46754
-  ledcSetup(0, Frequency, Resolution); // Set frequency to 50Hz, resolution to 10 bits
-  ledcAttachPin(LCD_Backlight_PIN, 0); // Associate GPIO pin with LEDC channel
-  // ledcAttach(LCD_Backlight_PIN, Frequency, Resolution);
-  ledcWrite(LCD_Backlight_PIN, Dutyfactor);
+#else
+  ledcSetup(PWM_CHANNEL_BCKL, Frequency, Resolution); // Set frequency to 50Hz, resolution to 10 bits
+  ledcAttachPin(LCD_Backlight_PIN, PWM_CHANNEL_BCKL); // Associate GPIO pin with LEDC channel
+#endif
+
+  // ledcWrite(LCD_Backlight_PIN, Dutyfactor);
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+  ledcWrite(LCD_Backlight_PIN, duty * PWM_MAX_BCKL);
+#else
+  ledcWrite(PWM_CHANNEL_BCKL, Dutyfactor);
+#endif
   Set_Backlight(LCD_Backlight); // 0~100
 }
 
@@ -235,6 +245,11 @@ void Set_Backlight(uint8_t Light)
     uint32_t Backlight = Light * 10;
     if (Backlight == 1000)
       Backlight = 1024;
-    ledcWrite(LCD_Backlight_PIN, Backlight);
+    // ledcWrite(LCD_Backlight_PIN, Backlight);
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+    ledcWrite(LCD_Backlight_PIN, duty * PWM_MAX_BCKL);
+#else
+    ledcWrite(PWM_CHANNEL_BCKL, Backlight);
+#endif
   }
 }

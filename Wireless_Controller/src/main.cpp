@@ -1,15 +1,12 @@
 #include <Arduino.h>
 #include <Preferences.h> // have to include it here or it isn't found in the shared libs
 
-#include <esp32_smartdisplay.h>
 #include <ui/ui.h>
 
 #include "utils/touch_lib.h"
 #include "tasks/tasks.h"
 
 #include "utils/util.h"
-
-#include "Arduino/examples/LVGL_Arduino/Display_ST7789.h"
 
 void OnAddOneClicked(lv_event_t *e)
 {
@@ -31,7 +28,6 @@ bool dimmed = false;
 void setup()
 {
 
-    LCD_Init();
 #ifdef ARDUINO_USB_CDC_ON_BOOT
     // delay(5000);
 #endif
@@ -62,9 +58,7 @@ void setup()
 
     setup_tasks();
 
-    // out display file for the lcd:
-    // Wireless_Controller\.pio\libdeps\esp32-2432S032C\esp32_smartdisplay\src\lvgl_panel_st7789_spi.c
-    smartdisplay_init();
+    board_drivers_init();
 
     __attribute__((unused)) auto disp = lv_disp_get_default();
     // lv_disp_set_rotation(disp, LV_DISP_ROT_90);
@@ -73,7 +67,7 @@ void setup()
 
     ui_init();
 
-    smartdisplay_lcd_set_backlight(getBrightnessFloat());
+    set_brightness(getBrightnessFloat());
 
 #ifdef BOARD_HAS_TOUCH
     setup_touchscreen_hook();
@@ -122,7 +116,7 @@ void loop()
     {
         if (dimmed)
         {
-            smartdisplay_lcd_set_backlight(getBrightnessFloat());
+            set_brightness(getBrightnessFloat());
             dimmed = false;
         }
         dimScreenTime = now + DIM_SCREEN_TIME;
@@ -130,7 +124,7 @@ void loop()
 
     if (dimScreenTime < now && dimmed == false)
     {
-        smartdisplay_lcd_set_backlight(0.01f);
+        set_brightness(0.01f);
         dimmed = true;
     }
 

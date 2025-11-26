@@ -176,7 +176,7 @@ void ScrSettings::init()
     ui_brightnessSlider = new Option(this->optionsContainer, OptionType::SLIDER, "Brightness", {.INT = getbrightness()}, [](void *data)
                                      { log_i("Brightness %i", ((uint32_t)data));
         setbrightness((uint32_t)data);
-        smartdisplay_lcd_set_backlight(getBrightnessFloat()); });
+        set_brightness(getBrightnessFloat()); });
     ui_brightnessSlider->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
 
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);

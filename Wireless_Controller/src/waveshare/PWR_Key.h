@@ -7,6 +7,8 @@
 
 #include "bt/ble.h"
 
+#include "board_driver_util.h"
+
 #define PWR_KEY_Input_PIN 6     // Key_BAT
 #define PWR_Control_PIN 7       // BAT_Control
 #define PWR_KEY_ACTIVE_LOW 1    // button pulls low when pressed
