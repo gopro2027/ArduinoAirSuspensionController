@@ -1,0 +1,57 @@
+menu "Example Configuration"
+    config LV_MEM_SIZE_KILOBYTES
+        int "Size of the memory used by `lv_mem_alloc` in kilobytes (>= 2kB)"
+        default 48
+            
+    config LV_USE_DEMO_WIDGETS
+        bool "Show some widget"
+        default y
+        
+    config LV_DEMO_WIDGETS_SLIDESHOW
+        bool "Enable slide show"
+        depends on LV_USE_DEMO_WIDGETS
+        default y
+
+    config LV_USE_DEMO_KEYPAD_AND_ENCODER
+        bool "Demonstrate the usage of encoder and keyboard"
+        default y
+
+    config LV_USE_DEMO_BENCHMARK
+        bool "Benchmark your system"
+        default y
+
+    config LV_USE_DEMO_STRESS
+        bool "Stress test for LVGL"
+        default y
+
+    config LV_USE_DEMO_MUSIC
+        bool "Music player demo"
+        default y
+
+    
+    config LV_FONT_MONTSERRAT_12
+        bool "Enable Montserrat 12"
+        default y if !LV_CONF_MINIMAL
+
+    config LV_FONT_MONTSERRAT_14
+        bool "Enable Montserrat 14"
+        default y if !LV_CONF_MINIMAL
+
+    config LV_FONT_MONTSERRAT_16
+        bool "Enable Montserrat 16"
+        default y if !LV_CONF_MINIMAL
+        
+
+
+    config BT_ENABLED
+        bool "Select this option to enable Bluetooth"
+        default y 
+
+    config BT_BLE_50_FEATURES_SUPPORTED
+        bool "Enabling this option activates BLE 5.0 features"
+        default y 
+        
+    config BT_BLE_42_FEATURES_SUPPORTED
+        bool "This enables BLE 4.2 features."
+        default y 
+endmenu

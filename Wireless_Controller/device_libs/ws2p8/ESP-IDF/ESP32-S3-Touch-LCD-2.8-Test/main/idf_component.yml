@@ -1,0 +1,5 @@
+dependencies:
+  idf: ">=4.4"
+  lvgl/lvgl: "~8.3.0"
+  chmorgan/esp-audio-player: "==1.0.7"
+  chmorgan/esp-libhelix-mp3: "==1.0.3"

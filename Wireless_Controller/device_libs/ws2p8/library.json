@@ -1,0 +1,17 @@
+{
+  "name": "ws2p8",
+  "version": "1.0",
+  "includeDir": "Arduino/examples/LVGL_Arduino/",
+  "build": {
+		"includeDir": "Arduino/examples/LVGL_Arduino/",
+        "srcFilter": [
+            "-<*>",
+            "+<Arduino/examples/LVGL_Arduino/Display_ST7789.cpp>",
+            "+<Arduino/examples/LVGL_Arduino/Touch_CST328.cpp>"
+        ]
+	},
+  
+  "dependencies": {
+    "Wire":""
+  }
+}
