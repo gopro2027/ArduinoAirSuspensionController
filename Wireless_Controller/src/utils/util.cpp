@@ -244,8 +244,8 @@ createSaveFuncInt(brightness, byte);
 float getBrightnessFloat()
 {
     int brightnessInt = getbrightness();
-    if (brightnessInt < 0)
-        brightnessInt = 0;
+    if (brightnessInt < 1)
+        brightnessInt = 1;
     if (brightnessInt > 100)
         brightnessInt = 100;
     return brightnessInt / 100.0f;

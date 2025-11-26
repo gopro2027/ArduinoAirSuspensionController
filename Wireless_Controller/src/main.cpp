@@ -64,8 +64,6 @@ void setup()
 
     ui_init();
 
-    set_brightness(getBrightnessFloat());
-
     setup_touchscreen_hook();
 
     dimScreenTime = millis() + DIM_SCREEN_TIME;
@@ -100,6 +98,7 @@ void setup()
         }
         setupdateResult(0);
     }
+    set_brightness(getBrightnessFloat());
 }
 
 auto lv_last_tick = millis();

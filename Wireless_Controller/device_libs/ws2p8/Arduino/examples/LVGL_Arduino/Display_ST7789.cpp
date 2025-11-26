@@ -214,8 +214,6 @@ void LCD_addWindow(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yen
   LCD_WriteData_nbyte((uint8_t *)color, NULL, numBytes);
 }
 
-// backlight
-uint8_t LCD_Backlight = 50;
 #define PWM_CHANNEL_BCKL (SOC_LEDC_CHANNEL_NUM - 1)
 void Backlight_Init()
 {
@@ -225,6 +223,7 @@ void Backlight_Init()
 #else
   ledcSetup(PWM_CHANNEL_BCKL, Frequency, Resolution); // Set frequency to 50Hz, resolution to 10 bits
   ledcAttachPin(LCD_Backlight_PIN, PWM_CHANNEL_BCKL); // Associate GPIO pin with LEDC channel
+  digitalWrite(LCD_Backlight_PIN, LOW);
 #endif
 
   // ledcWrite(LCD_Backlight_PIN, Dutyfactor);
@@ -233,7 +232,7 @@ void Backlight_Init()
 #else
   ledcWrite(PWM_CHANNEL_BCKL, Dutyfactor);
 #endif
-  Set_Backlight(LCD_Backlight); // 0~100
+  Set_Backlight(0); // 0~100
 }
 
 void Set_Backlight(uint8_t Light)

@@ -63,21 +63,38 @@ touch_calibration_data_t smartdisplay_compute_touch_calibration(const lv_point_t
     return touch_calibration_data;
 };
 
+LV_IMG_DECLARE(oasman_splash);
 void board_drivers_init()
 {
     log_i("Setting up board drivers");
 
+    // Setup backlight
+    Backlight_Init();
+
+    // various i2c features (notably, i2c is required for touch)
     I2C_Init();
+
+    // screen setup (lcd and touch)
     LCD_Init();
 
+    // lvgl setup
     touch_and_screen tas = Lvgl_Init();
     display = tas.screen;
     indev = tas.touch;
+
+    // immediately render something simple so it doesn't show random pixels....
+    // Might as well render the logo!
+    lv_obj_t *screen = lv_scr_act();
+    lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_t *splashscreen = lv_image_create(screen);
+    lv_image_set_src(splashscreen, &oasman_splash);
+    lv_obj_set_align(splashscreen, LV_ALIGN_CENTER);
+    lv_refr_now(NULL); // Force refresh immediately
+    set_brightness(1); // blind them with the oasman logo
+    
 #ifdef BCKL_DELAY_MS
     vTaskDelay(pdMS_TO_TICKS(BCKL_DELAY_MS));
 #endif
-    // Setup backlight
-    Backlight_Init();
 
     // Setup TFT display
     // display = lvgl_lcd_init();
@@ -87,8 +104,6 @@ void board_drivers_init()
 
     //  Clear screen
     lv_obj_clean(lv_scr_act());
-    // Turn backlight on (50%)
-    set_brightness(0.5f);
 
 // If there is a touch controller defined
     // Setup touch
