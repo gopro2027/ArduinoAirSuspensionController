@@ -9,6 +9,8 @@
 
 #include "utils/util.h"
 
+#include "Arduino/examples/LVGL_Arduino/Display_ST7789.h"
+
 void OnAddOneClicked(lv_event_t *e)
 {
     static uint32_t cnt = 0;
@@ -29,6 +31,7 @@ bool dimmed = false;
 void setup()
 {
 
+    LCD_Init();
 #ifdef ARDUINO_USB_CDC_ON_BOOT
     // delay(5000);
 #endif
