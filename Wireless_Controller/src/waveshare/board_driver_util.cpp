@@ -90,6 +90,7 @@ void board_drivers_init()
     lv_image_set_src(splashscreen, &oasman_splash);
     lv_obj_set_align(splashscreen, LV_ALIGN_CENTER);
     lv_refr_now(NULL); // Force refresh immediately
+    delay(50);// just a small delay to give the screen time to finish rendering the logo, otherwise we get a few artifacts
     set_brightness(1); // blind them with the oasman logo
     
 #ifdef BCKL_DELAY_MS
