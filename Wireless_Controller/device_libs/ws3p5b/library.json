@@ -1,0 +1,15 @@
+{
+  "name": "ws3p5b",
+  "version": "1.0",
+  "includeDir": "Arduino/examples/LVGL_Arduino/",
+  "build": {
+		"includeDir": "Arduino/examples/LVGL_Arduino/",
+        "srcFilter": [
+            "-<*>"
+        ]
+	},
+  
+  "dependencies": {
+    "Wire":""
+  }
+}
