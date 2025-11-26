@@ -13,7 +13,7 @@
 
 #include "utils/util.h"
 
-#include "Arduino/examples/LVGL_Arduino/Display_ST7789.h"
+#include "device_lib_exports.h"
 
 class Scr;
 

@@ -1,4 +1,3 @@
-#if defined(WAVESHARE_BOARD)
 
 #include "BAT_Driver.h"
 
@@ -26,5 +25,3 @@ float BAT_Get_Volts(void)
   return BAT_analogVolts;
   // return Volts;
 }
-
-#endif

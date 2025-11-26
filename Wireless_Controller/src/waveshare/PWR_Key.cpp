@@ -1,4 +1,3 @@
-#if defined(WAVESHARE_BOARD)
 
 // PWR_Key.c
 #include "PWR_Key.h"
@@ -188,4 +187,3 @@ void Shutdown(void)
     // esp_restart();
 }
 
-#endif

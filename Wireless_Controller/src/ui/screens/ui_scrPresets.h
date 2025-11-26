@@ -2,7 +2,7 @@
 #define ui_scrPresets_h
 
 #include "ui/components/Scr.h"
-#include "Arduino/examples/LVGL_Arduino/Display_ST7789.h"
+#include "device_lib_exports.h"
 
 class ScrPresets : public Scr
 {

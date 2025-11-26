@@ -1,4 +1,3 @@
-#if defined(WAVESHARE_BOARD)
 #include "BAT_Driver.h"
 #include "PWR_Key.h"
 
@@ -53,4 +52,3 @@ char *getBatteryVoltageString()
 {
     return voltsString;
 }
-#endif

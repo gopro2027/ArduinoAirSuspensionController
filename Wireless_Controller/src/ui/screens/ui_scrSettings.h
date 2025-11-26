@@ -13,12 +13,10 @@
 
 #include "bt/ble.h"
 
-#if defined(WAVESHARE_BOARD)
 #include "waveshare/waveshare.h"
 #include "waveshare/board_driver_util.h"
-#endif
 
-#include "Arduino/examples/LVGL_Arduino/Display_ST7789.h"
+#include "device_lib_exports.h"
 
 class ScrSettings : public Scr
 {

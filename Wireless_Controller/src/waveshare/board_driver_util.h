@@ -7,9 +7,7 @@
 #include <misc/lv_timer_private.h>
 #include <indev/lv_indev_private.h>
 
-#include "Arduino/examples/LVGL_Arduino/Display_ST7789.h"
-#include "Arduino/examples/LVGL_Arduino/LVGL_Driver.h"
-#include "Arduino/examples/LVGL_Arduino/I2C_Driver.h"
+#include "device_lib_exports.h"
 
 // Structure to store the data from the three point calibration data
 typedef struct

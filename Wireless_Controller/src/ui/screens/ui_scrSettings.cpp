@@ -337,11 +337,9 @@ void ScrSettings::init()
     macValue.STRING = ble_getMAC();
     this->ui_mac = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Manifold:", macValue);
 
-#if defined(WAVESHARE_BOARD)
     OptionValue voltsValue;
     voltsValue.STRING = getBatteryVoltageString();
     this->ui_volts = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Battery:", voltsValue);
-#endif
 
     // add space at end of list
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
@@ -403,9 +401,7 @@ void ScrSettings::loop()
 
     this->ui_mac->setRightHandText(ble_getMAC());
 
-#if defined(WAVESHARE_BOARD)
     this->ui_volts->setRightHandText(getBatteryVoltageString());
-#endif
 
     if (*util_configValues._setValues())
     {
