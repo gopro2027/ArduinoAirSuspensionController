@@ -12,8 +12,8 @@ LV_IMG_DECLARE(selected_3);
 LV_IMG_DECLARE(selected_4);
 LV_IMG_DECLARE(selected_5);
 
-const int car_x = DISPLAY_WIDTH / 2 - img_car.header.w / 2;
-const int wheels_x = DISPLAY_WIDTH / 2 - img_wheels.header.w / 2;
+const int car_x = LCD_WIDTH / 2 - img_car.header.w / 2;
+const int wheels_x = LCD_WIDTH / 2 - img_wheels.header.w / 2;
 const int wheels_y = 88;
 const int car_y_1 = wheels_y - 21;
 const int car_y_2 = car_y_1 - 4;

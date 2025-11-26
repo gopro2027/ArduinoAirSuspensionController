@@ -15,8 +15,6 @@ void set_brightness(float level)
 #define BRIGHTNESS_DARK_ZONE 250
 
 // Functions to be defined in the tft/touch driver
-extern lv_display_t *lvgl_lcd_init();
-extern lv_indev_t *lvgl_touch_init();
 
 lv_display_t *display;
 
@@ -67,11 +65,14 @@ touch_calibration_data_t smartdisplay_compute_touch_calibration(const lv_point_t
 
 void board_drivers_init()
 {
-    log_d("smartdisplay_init");
+    log_i("Setting up board drivers");
 
+    I2C_Init();
     LCD_Init();
 
-    Lvgl_Init();
+    touch_and_screen tas = Lvgl_Init();
+    display = tas.screen;
+    indev = tas.touch;
 #ifdef BCKL_DELAY_MS
     vTaskDelay(pdMS_TO_TICKS(BCKL_DELAY_MS));
 #endif
@@ -79,7 +80,7 @@ void board_drivers_init()
     Backlight_Init();
 
     // Setup TFT display
-    display = lvgl_lcd_init();
+    // display = lvgl_lcd_init();
 
     // Register callback for hardware rotation
     lv_display_add_event_cb(display, lvgl_display_resolution_changed_callback, LV_EVENT_RESOLUTION_CHANGED, NULL);
@@ -90,15 +91,13 @@ void board_drivers_init()
     set_brightness(0.5f);
 
 // If there is a touch controller defined
-#ifdef BOARD_HAS_TOUCH
     // Setup touch
-    indev = lvgl_touch_init();
+    // indev = lvgl_touch_init();
     indev->disp = display;
     // Intercept callback
     driver_touch_read_cb = indev->read_cb;
     indev->read_cb = lvgl_touch_calibration_transform;
     lv_indev_enable(indev, true);
-#endif
 }
 
 // Called when driver resolution is updated (including rotation)

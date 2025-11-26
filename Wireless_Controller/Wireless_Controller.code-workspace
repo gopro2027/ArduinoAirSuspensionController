@@ -8,6 +8,9 @@
 		}
 	],
 	"settings": {
+		"search.exclude": {
+			"device_libs": true
+		},
 		"files.associations": {
 			"*.dbclient-js": "javascript",
 			"jinja-html": "html",

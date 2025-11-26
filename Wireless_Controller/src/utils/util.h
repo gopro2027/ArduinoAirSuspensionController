@@ -7,6 +7,8 @@
 #include "lvgl.h"
 #include "ui/components/option.h"
 
+#include "Arduino/examples/LVGL_Arduino/Display_ST7789.h"
+
 class Scr;
 class Option;
 

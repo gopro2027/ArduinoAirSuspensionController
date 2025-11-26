@@ -147,7 +147,7 @@ void Scr::showMsgBox(const char *title, const char *text, const char *yesText, c
     // lv_obj_set_flex_grow(footer, 1);
     //  lv_msgbox_add_close_button(this->mb_dialog); // x button crashes it due to our implementation... I'm guessing it is trying to delete ittself after we have already deleted it? we don't really need it and ui looks better without it anyways.
 
-    lv_obj_set_width(this->mb_dialog, DISPLAY_WIDTH - 20);
+    lv_obj_set_width(this->mb_dialog, LCD_WIDTH - 20);
 
     lv_obj_set_style_bg_color(this->mb_dialog, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT); // darker, bg of main
     if (lv_msgbox_get_header(this->mb_dialog) != NULL)

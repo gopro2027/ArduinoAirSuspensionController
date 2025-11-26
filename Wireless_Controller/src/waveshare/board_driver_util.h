@@ -9,6 +9,7 @@
 
 #include "Arduino/examples/LVGL_Arduino/Display_ST7789.h"
 #include "Arduino/examples/LVGL_Arduino/LVGL_Driver.h"
+#include "Arduino/examples/LVGL_Arduino/I2C_Driver.h"
 
 // Structure to store the data from the three point calibration data
 typedef struct

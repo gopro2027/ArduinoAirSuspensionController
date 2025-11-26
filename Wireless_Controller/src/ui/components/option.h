@@ -13,6 +13,8 @@
 
 #include "utils/util.h"
 
+#include "Arduino/examples/LVGL_Arduino/Display_ST7789.h"
+
 class Scr;
 
 typedef void (*option_event_cb_t)(void *data);

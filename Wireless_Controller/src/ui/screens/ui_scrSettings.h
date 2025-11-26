@@ -18,6 +18,8 @@
 #include "waveshare/board_driver_util.h"
 #endif
 
+#include "Arduino/examples/LVGL_Arduino/Display_ST7789.h"
+
 class ScrSettings : public Scr
 {
     using Scr::Scr;

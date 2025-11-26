@@ -28,9 +28,6 @@ bool dimmed = false;
 void setup()
 {
 
-#ifdef ARDUINO_USB_CDC_ON_BOOT
-    // delay(5000);
-#endif
     Serial.begin(115200);
     // esp_bt_controller_mem_release(ESP_BT_MODE_BLE);
     esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT); // should free a tad bit of memory
@@ -69,9 +66,7 @@ void setup()
 
     set_brightness(getBrightnessFloat());
 
-#ifdef BOARD_HAS_TOUCH
     setup_touchscreen_hook();
-#endif
 
     dimScreenTime = millis() + DIM_SCREEN_TIME;
 
@@ -98,7 +93,7 @@ void setup()
             break;
         case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
             showDialog("Update success!", lv_color_hex(0x00FF00));
-            char buf[160];
+            char buf[170];
             snprintf(buf, sizeof(buf), "You are now on version %s!\nPlease check the manifold update status in the update section of settings to verify the manifold was updated successfully too.", EVALUATE_AND_STRINGIFY(RELEASE_VERSION));
             currentScr->showMsgBox("Update success!", buf, NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
@@ -137,14 +132,17 @@ void loop()
     //     log_i("Just Released %d %d ", touchX(), touchY());
     // }
 
+
     // screen code
     screenLoop();
     dialogLoop();
     safetyModeMsgBoxCheck();
 
+
     // Update the ticker
-    lv_tick_inc(now - lv_last_tick);
-    lv_last_tick = now;
+    // lv_tick_inc(now - lv_last_tick);
+    // lv_last_tick = now;
     // Update the UI
     lv_timer_handler();
+    vTaskDelay(pdMS_TO_TICKS(5));
 }

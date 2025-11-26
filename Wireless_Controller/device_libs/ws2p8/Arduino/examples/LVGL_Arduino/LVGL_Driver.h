@@ -7,17 +7,24 @@
 #include "Display_ST7789.h"
 #include "Touch_CST328.h"
 
-#define LVGL_WIDTH     LCD_WIDTH
-#define LVGL_HEIGHT    LCD_HEIGHT
-#define LVGL_BUF_LEN  (LVGL_WIDTH * LVGL_HEIGHT / 20)
+#define LVGL_WIDTH LCD_WIDTH
+#define LVGL_HEIGHT LCD_HEIGHT
+#define LVGL_BUF_LEN (LVGL_WIDTH * LVGL_HEIGHT * 2) // originally /20, /4 also wouldn't work, *1 worked with lots of lag and crashes, *2 works smoothly
 
-#define EXAMPLE_LVGL_TICK_PERIOD_MS  2
+#define EXAMPLE_LVGL_TICK_PERIOD_MS 2
 
-
-void Lvgl_print(const char * buf);
-void Lvgl_Display_LCD( lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p ); // Displays LVGL content on the LCD.    This function implements associating LVGL data to the LCD screen
-void Lvgl_Touchpad_Read( lv_indev_drv_t * indev_drv, lv_indev_data_t * data );                // Read the touchpad
+void Lvgl_print(const char *buf);
+// void Lvgl_Display_LCD( lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *color_p ); // Displays LVGL content on the LCD.    This function implements associating LVGL data to the LCD screen
+void Lvgl_Display_LCD(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map);
+// void Lvgl_Touchpad_Read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data); // Read the touchpad
+void Lvgl_Touchpad_Read(lv_indev_t *indev, lv_indev_data_t *data);
 void example_increase_lvgl_tick(void *arg);
 
-void Lvgl_Init(void);
+struct touch_and_screen
+{
+    lv_indev_t *touch;
+    lv_display_t *screen;
+};
+
+touch_and_screen Lvgl_Init(void);
 void Lvgl_Loop(void);
