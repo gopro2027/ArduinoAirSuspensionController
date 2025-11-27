@@ -145,15 +145,14 @@ void ST7701_Init()
       },
     },
     .data_width = ESP_PANEL_LCD_RGB_DATA_WIDTH,                                                   
-    .bits_per_pixel = ESP_PANEL_LCD_RGB_PIXEL_BITS,                                               
-    .num_fbs = ESP_PANEL_LCD_RGB_FRAME_BUF_NUM,                                                   
-    .bounce_buffer_size_px = ESP_PANEL_LCD_RGB_BOUNCE_BUF_SIZE,                                   
+    // .bits_per_pixel = ESP_PANEL_LCD_RGB_PIXEL_BITS,                                               
+    // .num_fbs = ESP_PANEL_LCD_RGB_FRAME_BUF_NUM,                                                   
+    // .bounce_buffer_size_px = ESP_PANEL_LCD_RGB_BOUNCE_BUF_SIZE,                                   
     .psram_trans_align = 64,                                                                      
     .hsync_gpio_num = ESP_PANEL_LCD_PIN_NUM_RGB_HSYNC,                                            
     .vsync_gpio_num = ESP_PANEL_LCD_PIN_NUM_RGB_VSYNC,                                            
     .de_gpio_num = ESP_PANEL_LCD_PIN_NUM_RGB_DE,                                                  
-    .pclk_gpio_num = ESP_PANEL_LCD_PIN_NUM_RGB_PCLK,                                              
-    .disp_gpio_num = ESP_PANEL_LCD_PIN_NUM_RGB_DISP,                                              
+    .pclk_gpio_num = ESP_PANEL_LCD_PIN_NUM_RGB_PCLK,                                                                                       
     .data_gpio_nums = {                                                                                                                           
       ESP_PANEL_LCD_PIN_NUM_RGB_DATA0,                                                            
       ESP_PANEL_LCD_PIN_NUM_RGB_DATA1,                                                            
@@ -172,6 +171,7 @@ void ST7701_Init()
       ESP_PANEL_LCD_PIN_NUM_RGB_DATA14,                                                           
       ESP_PANEL_LCD_PIN_NUM_RGB_DATA15,                                                           
     },
+    .disp_gpio_num = ESP_PANEL_LCD_PIN_NUM_RGB_DISP,     
     .flags = {                                                                                    
       .fb_in_psram = true,                                                                        // 如果启用此标志，帧缓冲区将优先从PSRAM分配
     },
@@ -191,6 +191,8 @@ bool example_on_vsync_event(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_pane
   return high_task_awoken == pdTRUE;
 }
 void LCD_Init() {
+  TCA9554PWR_Init(0x00);
+  Set_EXIO(EXIO_PIN8,Low);
   ST7701_Reset();
   ST7701_Init();
   Touch_Init();
@@ -208,12 +210,22 @@ void LCD_addWindow(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yen
 }
 
 
-// backlight
+// backlight (this might need improved upon!)
+#define PWM_CHANNEL_BCKL (SOC_LEDC_CHANNEL_NUM - 1)
 void Backlight_Init()
 {
+  #if ESP_ARDUINO_VERSION_MAJOR >= 3
   ledcAttach(LCD_Backlight_PIN, Frequency, Resolution);   
   ledcWrite(LCD_Backlight_PIN, Dutyfactor);
-  Set_Backlight(LCD_Backlight);      //0~100                 
+  #else        
+    ledcSetup(PWM_CHANNEL_BCKL, Frequency, Resolution); // Set frequency to 50Hz, resolution to 10 bits
+  ledcAttachPin(LCD_Backlight_PIN, PWM_CHANNEL_BCKL); // Associate GPIO pin with LEDC channel
+  digitalWrite(PWM_CHANNEL_BCKL, LOW);
+  
+  
+  #endif
+
+    Set_Backlight(LCD_Backlight);      //0~100    
 }
 
 void Set_Backlight(uint8_t Light)                       
@@ -225,7 +237,11 @@ void Set_Backlight(uint8_t Light)
     uint32_t Backlight = Light*10;
     if(Backlight == 1000)
       Backlight = 1024;
-    ledcWrite(LCD_Backlight_PIN, Backlight);
+    ledcWrite(PWM_CHANNEL_BCKL, Backlight);
   }
 }
+
+
+
+
 

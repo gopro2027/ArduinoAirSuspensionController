@@ -47,6 +47,9 @@
                                                           // To enable the bounce buffer, set it to a non-zero value. Typically set to `ESP_PANEL_LCD_WIDTH * 10`
                                                           // The size of the Bounce Buffer must satisfy `width_of_lcd * height_of_lcd = size_of_buffer * N`,
                                                           // where N is an even number.
+// for oasman
+#define LCD_WIDTH ESP_PANEL_LCD_WIDTH
+#define LCD_HEIGHT ESP_PANEL_LCD_HEIGHT
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

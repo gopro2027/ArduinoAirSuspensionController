@@ -1,6 +1,16 @@
 
+
 // PWR_Key.c
 #include "PWR_Key.h"
+#ifdef POWER_SWITCH_NOT_BUTTON
+
+void PWR_Init(void){}
+void PWR_Loop(void){}
+void Fall_Asleep(void){}
+void Shutdown(void){}
+
+#else
+
 #include <stdbool.h>
 #include <stdint.h>
 #include "driver/gpio.h"
@@ -187,3 +197,5 @@ void Shutdown(void)
     // esp_restart();
 }
 
+
+#endif

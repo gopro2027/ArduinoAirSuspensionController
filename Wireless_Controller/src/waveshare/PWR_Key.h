@@ -1,3 +1,6 @@
+#ifndef PWR_Key_h
+#define PWR_Key_h
+
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -20,3 +23,6 @@ void PWR_Loop(void);
 // Optional lifecycle hooks (override in your app if you want custom behavior)
 void Fall_Asleep(void);
 void Shutdown(void);
+
+
+#endif
