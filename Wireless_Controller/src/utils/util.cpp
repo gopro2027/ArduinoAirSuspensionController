@@ -1,4 +1,15 @@
 #include "util.h"
+
+void scale_obj(lv_obj_t *obj, int w, int h) {
+    // lv_image_set_scale_x(obj, SCALE_X * 256);
+    // lv_image_set_scale_y(obj, SCALE_Y * 256);
+    // lv_obj_set_size(obj, w * SCALE_X, h * SCALE_Y);
+}
+
+void scale_img(lv_obj_t *obj, lv_image_dsc_t img) {
+    // scale_obj(obj, img.header.w, img.header.h);
+}
+
 int sr_contains(SimpleRect r, SimplePoint p)
 {
     return p.x >= r.x && p.y >= r.y && p.x < r.x + r.w && p.y < r.y + r.h;
@@ -11,41 +22,41 @@ int cr_contains(CenterRect cr, SimplePoint p)
 }
 
 // first column (left)
-CenterRect ctr_row0col0up = {48, 89, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row0col0down = {48, 137, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+CenterRect ctr_row0col0up = {48 * SCALE_X, 89 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+CenterRect ctr_row0col0down = {48 * SCALE_X, 137 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
 
-CenterRect ctr_row1col0up = {48, 193, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row1col0down = {48, 241, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+CenterRect ctr_row1col0up = {48 * SCALE_X, 193 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+CenterRect ctr_row1col0down = {48 * SCALE_X, 241 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
 
 // second column (center)
-CenterRect ctr_row0col1up = {118, 78, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row0col1down = {118, 126, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+CenterRect ctr_row0col1up = {118 * SCALE_X, 78 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+CenterRect ctr_row0col1down = {118 * SCALE_X, 126 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
 
-CenterRect ctr_row1col1up = {118, 204, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row1col1down = {118, 252, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+CenterRect ctr_row1col1up = {118 * SCALE_X, 204 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+CenterRect ctr_row1col1down = {118 * SCALE_X, 252 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
 
 // third column (right)
-CenterRect ctr_row0col2up = {189, 89, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row0col2down = {189, 137, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+CenterRect ctr_row0col2up = {189 * SCALE_X, 89 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+CenterRect ctr_row0col2down = {189 * SCALE_X, 137 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
 
-CenterRect ctr_row1col2up = {189, 193, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row1col2down = {189, 241, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+CenterRect ctr_row1col2up = {189 * SCALE_X, 193 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+CenterRect ctr_row1col2down = {189 * SCALE_X, 241 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
 
 // bottom nav
-SimpleRect navbarbtn_home = {0, 291, 80, 29};
-SimpleRect navbarbtn_presets = {80, 291, 80, 29};
-SimpleRect navbarbtn_settings = {160, 291, 80, 29};
+SimpleRect navbarbtn_home = {0 * SCALE_X, 291 * SCALE_Y, 80 * SCALE_X, 29 * SCALE_Y};
+SimpleRect navbarbtn_presets = {80 * SCALE_X, 291 * SCALE_Y, 80 * SCALE_X, 29 * SCALE_Y};
+SimpleRect navbarbtn_settings = {160 * SCALE_X, 291 * SCALE_Y, 80 * SCALE_X, 29 * SCALE_Y};
 
 // presets buttons
-CenterRect ctr_preset_1 = {48 / 2 + 48 * 0, 182, 48, 48};
-CenterRect ctr_preset_2 = {48 / 2 + 48 * 1, 182, 48, 48};
-CenterRect ctr_preset_3 = {48 / 2 + 48 * 2, 182, 48, 48};
-CenterRect ctr_preset_4 = {48 / 2 + 48 * 3, 182, 48, 48};
-CenterRect ctr_preset_5 = {48 / 2 + 48 * 4, 182, 48, 48};
+CenterRect ctr_preset_1 = {(48 / 2 + 48 * 0) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
+CenterRect ctr_preset_2 = {(48 / 2 + 48 * 1) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
+CenterRect ctr_preset_3 = {(48 / 2 + 48 * 2) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
+CenterRect ctr_preset_4 = {(48 / 2 + 48 * 3) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
+CenterRect ctr_preset_5 = {(48 / 2 + 48 * 4) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
 
 // preset save and load
-SimpleRect preset_save = {18, 235, 91 - 18, 251 - 235};
-SimpleRect preset_load = {110, 225, 221 - 110, 256 - 225};
+SimpleRect preset_save = {18 * SCALE_X, 235 * SCALE_Y, (91 - 18) * SCALE_X, (251 - 235) * SCALE_Y};
+SimpleRect preset_load = {110 * SCALE_X, 225 * SCALE_Y, (221 - 110) * SCALE_X, (256 - 225) * SCALE_Y};
 
 int currentPressures[5];
 uint32_t statusBittset = 0;

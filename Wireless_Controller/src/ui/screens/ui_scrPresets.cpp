@@ -59,6 +59,7 @@ void ScrPresets::init()
     // background image
     this->rect_bg = lv_image_create(this->scr);
     lv_image_set_src(this->rect_bg, &presets_bg);
+    scale_img(this->rect_bg,presets_bg);
     lv_obj_set_align(this->rect_bg, LV_ALIGN_TOP_MID);
 
     // wheel well 1
@@ -66,6 +67,7 @@ void ScrPresets::init()
     lv_obj_remove_style_all(this->ww1);
     lv_obj_get_style_border_width(this->ww1, 0);
     lv_obj_set_size(this->ww1, fender1Offset.w, fender1Offset.h);
+    scale_obj(this->ww1, fender1Offset.w, fender1Offset.h);
     lv_obj_set_style_bg_color(this->ww1, lv_color_hex(0x0), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_remove_flag(this->ww1, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE)); /// Flags
     lv_obj_set_style_bg_opa(this->ww1, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -77,6 +79,7 @@ void ScrPresets::init()
     lv_obj_remove_style_all(this->ww2);
     lv_obj_get_style_border_width(this->ww2, 0);
     lv_obj_set_size(this->ww2, fender2Offset.w, fender2Offset.h);
+    scale_obj(this->ww2, fender2Offset.w, fender2Offset.h);
     lv_obj_set_style_bg_color(this->ww2, lv_color_hex(0x0), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_remove_flag(this->ww2, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE)); /// Flags
     lv_obj_set_style_bg_opa(this->ww2, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -86,12 +89,14 @@ void ScrPresets::init()
     // wheels
     this->wheels = lv_image_create(this->scr);
     lv_image_set_src(this->wheels, &img_wheels);
+    scale_img(this->wheels, img_wheels);
     lv_obj_set_x(this->wheels, wheels_x);
     lv_obj_set_y(this->wheels, wheels_y);
 
     // car
     this->car = lv_image_create(this->scr);
     lv_image_set_src(this->car, &img_car);
+    scale_img(this->car, img_car);
     // lv_obj_set_align(this->car, LV_ALIGN_CENTER);
     lv_obj_set_x(this->car, car_x);
     lv_obj_set_y(this->car, car_y_1);
@@ -99,26 +104,31 @@ void ScrPresets::init()
     // preset selector overlays
     this->btnPreset1 = lv_image_create(this->scr);
     lv_image_set_src(this->btnPreset1, &selected_1);
+    scale_img(this->btnPreset1, selected_1);
     lv_obj_set_x(this->btnPreset1, ctr_preset_1.cx - selected_1.header.w / 2);
     lv_obj_set_y(this->btnPreset1, ctr_preset_1.cy - selected_1.header.h / 2);
 
     this->btnPreset2 = lv_image_create(this->scr);
     lv_image_set_src(this->btnPreset2, &selected_2);
+    scale_img(this->btnPreset2, selected_2);
     lv_obj_set_x(this->btnPreset2, ctr_preset_2.cx - selected_2.header.w / 2);
     lv_obj_set_y(this->btnPreset2, ctr_preset_2.cy - selected_2.header.h / 2);
 
     this->btnPreset3 = lv_image_create(this->scr);
     lv_image_set_src(this->btnPreset3, &selected_3);
+    scale_img(this->btnPreset3, selected_3);
     lv_obj_set_x(this->btnPreset3, ctr_preset_3.cx - selected_3.header.w / 2);
     lv_obj_set_y(this->btnPreset3, ctr_preset_3.cy - selected_3.header.h / 2);
 
     this->btnPreset4 = lv_image_create(this->scr);
     lv_image_set_src(this->btnPreset4, &selected_4);
+    scale_img(this->btnPreset4, selected_4);
     lv_obj_set_x(this->btnPreset4, ctr_preset_4.cx - selected_4.header.w / 2);
     lv_obj_set_y(this->btnPreset4, ctr_preset_4.cy - selected_4.header.h / 2);
 
     this->btnPreset5 = lv_image_create(this->scr);
     lv_image_set_src(this->btnPreset5, &selected_5);
+    scale_img(this->btnPreset5, selected_5);
     lv_obj_set_x(this->btnPreset5, ctr_preset_5.cx - selected_5.header.w / 2);
     lv_obj_set_y(this->btnPreset5, ctr_preset_5.cy - selected_5.header.h / 2);
 

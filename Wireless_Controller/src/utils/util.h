@@ -9,6 +9,12 @@
 
 #include "device_lib_exports.h"
 
+#define SCALE_X (LCD_WIDTH / 240.0f)
+#define SCALE_Y (LCD_HEIGHT/ 320.0f)
+
+void scale_obj(lv_obj_t *obj, int w, int h);
+void scale_img(lv_obj_t *obj, lv_image_dsc_t img);
+
 class Scr;
 class Option;
 
@@ -31,8 +37,8 @@ int sr_contains(SimpleRect r, SimplePoint p);
 
 int cr_contains(CenterRect cr, SimplePoint p);
 
-#define ARROW_BUTTON_WIDTH 54
-#define ARROW_BUTTON_HEIGHT 44
+#define ARROW_BUTTON_WIDTH 54 * SCALE_X
+#define ARROW_BUTTON_HEIGHT 44 * SCALE_Y
 
 // first column (left)
 extern CenterRect ctr_row0col0up;
