@@ -27,8 +27,8 @@ void _ui_basic_set_property(lv_obj_t *target, int id, int val)
 
 void _ui_dropdown_set_property(lv_obj_t *target, int id, int val)
 {
-    if (id == _UI_DROPDOWN_PROPERTY_SELECTED)
-        lv_dropdown_set_selected(target, val);
+    // if (id == _UI_DROPDOWN_PROPERTY_SELECTED)
+    //     lv_dropdown_set_selected(target, val);
 }
 
 void _ui_image_set_property(lv_obj_t *target, int id, uint8_t *val)
@@ -45,10 +45,10 @@ void _ui_label_set_property(lv_obj_t *target, int id, const char *val)
 
 void _ui_roller_set_property(lv_obj_t *target, int id, int val)
 {
-    if (id == _UI_ROLLER_PROPERTY_SELECTED_WITH_ANIM)
-        lv_roller_set_selected(target, val, LV_ANIM_ON);
-    if (id == _UI_ROLLER_PROPERTY_SELECTED)
-        lv_roller_set_selected(target, val, LV_ANIM_OFF);
+    // if (id == _UI_ROLLER_PROPERTY_SELECTED_WITH_ANIM)
+    //     lv_roller_set_selected(target, val, LV_ANIM_ON);
+    // if (id == _UI_ROLLER_PROPERTY_SELECTED)
+    //     lv_roller_set_selected(target, val, LV_ANIM_OFF);
 }
 
 void _ui_slider_set_property(lv_obj_t *target, int id, int val)
@@ -328,11 +328,11 @@ void _ui_spinbox_step(lv_obj_t *target, int val)
 
 {
 
-    if (val > 0)
-        lv_spinbox_increment(target);
+    // if (val > 0)
+    //     lv_spinbox_increment(target);
 
-    else
-        lv_spinbox_decrement(target);
+    // else
+    //     lv_spinbox_decrement(target);
 
     lv_obj_send_event(target, LV_EVENT_VALUE_CHANGED, 0);
 }

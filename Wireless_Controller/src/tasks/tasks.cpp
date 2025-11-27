@@ -49,7 +49,7 @@ void setup_tasks()
         "Bluetooth",
         BLE_TASK_STACK_SIZE,
         NULL,
-        1000,
+        24,
         NULL);
 
     //  Waveshare board/button Task
@@ -58,7 +58,7 @@ void setup_tasks()
         "Waveshare",
         512 * 6,
         NULL,
-        1000,
+        24,
         NULL);
 
 

@@ -64,14 +64,15 @@ touch_and_screen Lvgl_Init(void)
   lv_init();
   // esp_lcd_rgb_panel_get_frame_buffer(panel_handle, 2, &buf1, &buf2);                                          
   
-  buf1 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN, MALLOC_CAP_SPIRAM);
+  buf1 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN, MALLOC_CAP_SPIRAM); 
   buf2 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN, MALLOC_CAP_SPIRAM);
 
   /*Initialize the display*/
   disp = lv_display_create(LVGL_WIDTH, LVGL_HEIGHT);
   lv_display_set_flush_cb(disp, Lvgl_Display_LCD);
   lv_display_set_buffers(disp, buf1, buf2, LVGL_BUF_LEN, LV_DISPLAY_RENDER_MODE_PARTIAL);
-  lv_display_set_user_data(disp, panel_handle);
+  lv_display_set_render_mode(disp, LV_DISPLAY_RENDER_MODE_FULL);
+  lv_display_set_user_data(disp, panel_handle); // unsure if this is necessary
 
   /*Initialize the (dummy) input device driver*/
   lv_indev_t *indev = lv_indev_create();
