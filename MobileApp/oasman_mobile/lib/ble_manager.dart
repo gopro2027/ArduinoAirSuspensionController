@@ -42,7 +42,8 @@ class BTOasIdentifier {
   static const int RESETAIPKT = 29;
   static const int BP32PKT = 30;
   static const int BROADCASTNAME = 35;
-  static const int TURNONWIFI = 36;
+  static const int UPDATESTATUSREQUEST = 36;
+  static const int TURNONWIFI = 37;  
 }
 
 class BLEByte {

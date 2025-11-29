@@ -609,7 +609,7 @@ class SettingsPageState extends State<SettingsPage> {
                             showInfoDialog(
                               context,
                               'Wifi OTA webserver',
-                              'Once connected to the Wi-Fi hotspot, open the update page at http:\\192.168.4.1 to upload and install the new manifold firmware. The wifi hotspot name will be \'${bleBroadcastName}\' and tha password is \'12345678\'. The hotspot automatically will be turned off after restart.',
+                              'Once connected to the Wi-Fi hotspot, open the update page at http:\\192.168.4.1 to upload and install the new manifold firmware. The wifi hotspot name will be \'${bleBroadcastName}\' and the password is \'12345678\'. The hotspot automatically will be turned off after restart.',
                             );
                           },
                         ),

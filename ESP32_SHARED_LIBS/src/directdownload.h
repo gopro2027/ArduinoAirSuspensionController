@@ -8,8 +8,6 @@
 #include <Update.h>
 #include <ArduinoJson.h>
 
-#include <C:\Users\Mark\Desktop\ArduinoAirSuspensionController\OASMan_ESP32\lib\ESP-WebOTA-master\WebOTA.h>
-
 #ifndef FIRMWARE_RELEASE_NAME
 #ifdef PROJECT_IS_MANIFOLD
 #define FIRMWARE_RELEASE_NAME "manifold_v2"
@@ -31,7 +29,8 @@ enum UPDATE_STATUS
 extern void setupdateResult(byte value);
 
 void downloadUpdate(String SSID, String PASS);
-extern bool hotspotActive;
+#ifdef WIFI_OTA_ENABLE
 void startHotspot(String wifiName);
+#endif
 
 #endif

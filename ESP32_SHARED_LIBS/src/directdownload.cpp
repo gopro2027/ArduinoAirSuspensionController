@@ -290,6 +290,7 @@ void downloadUpdate(String SSID, String PASS)
     ESP.restart();
 }
 
+#ifdef WIFI_OTA_ENABLE
 void startHotspot(String wifiName)
 {
     WiFi.mode(WIFI_MODE_AP);
@@ -299,3 +300,4 @@ void startHotspot(String wifiName)
     Serial.println(myIP);
 
 }
+#endif

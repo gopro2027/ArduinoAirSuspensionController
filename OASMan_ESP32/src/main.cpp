@@ -59,10 +59,6 @@ void setup()
 
     setupManifold();
 
-#if SCREEN_ENABLED == true
-
-#endif
-
     delay(20);
 
     pressureInputs[0] = pressureSensorInput0;
@@ -105,9 +101,11 @@ void setup()
 
     setinternalReboot(false);
 
+    #ifdef WIFI_OTA_ENABLE
     startHotspot(getbleName());
     webota.init(80, "/update");
     WiFi.mode(WIFI_OFF);  
+    #endif
 
     Serial.println(F("Startup Complete"));
     // for (int i = 0; i < 200; i++) {
@@ -124,13 +122,15 @@ void setup()
 
 void loop()
 {
-    //accessoryWireLoop();
+    accessoryWireLoop();
     if (getinternalReboot() == true)
     {
         ESP.restart();
     }
 
-    delay(10);
+    delay(100);
 
+    #ifdef WIFI_OTA_ENABLE
     webota.handle();
+    #endif
 }
