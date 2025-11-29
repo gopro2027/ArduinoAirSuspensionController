@@ -26,7 +26,7 @@ class InvalidPasskeyPopup extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             const Text(
-              "Please set the correct passkey in your settings",
+              "Please set the correct passkey in your settings. The factory passkey is \'202777\'.",
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 14,

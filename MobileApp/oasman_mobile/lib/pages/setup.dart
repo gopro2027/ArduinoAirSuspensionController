@@ -70,6 +70,8 @@ class SettingsPageState extends State<SettingsPage> {
   //String units = "Psi";
   String passkeyText = "";
   bool safetyMode = true;
+  bool autoConnect = true;
+  bool wifiHotspot = false;
   String bleBroadcastName = '';
   int compressorOnPSI = 120;
   int compressorOffPSI = 140;
@@ -125,6 +127,9 @@ class SettingsPageState extends State<SettingsPage> {
     setState(() {
       globalSettings!.units = prefs.getString('_units') ?? 'Psi';
       passkeyText = prefs.getString('_passkeyText') ?? '202777';
+      autoConnect = prefs.getBool('_autoConnect') ?? true;
+      wifiHotspot = globalSettings!.wifiHotspot;
+      //wifiHotspot = prefs.getBool('_wifiHotspot') ?? false;
     });
     print("App's settings loaded");
 
@@ -157,9 +162,12 @@ class SettingsPageState extends State<SettingsPage> {
     //Save settings to phone's
     final prefs = await SharedPreferences.getInstance();
     final units = globalSettings!.units;
-    passkeyText = globalSettings!.passkeyText;
+    globalSettings?.passkeyText = passkeyText;
+    globalSettings?.autoConnect = autoConnect;
+    globalSettings?.wifiHotspot = wifiHotspot;
     await prefs.setString('_units', units);
     await prefs.setString('_passkeyText', passkeyText);
+    await prefs.setBool('_autoConnect', autoConnect);
 
     //Save settings to manifold
     if (bleManager.isConnected()) {
@@ -410,10 +418,10 @@ class SettingsPageState extends State<SettingsPage> {
                       bleBroadcastName = value;
                     });
                   },
-                      limitChar: 10,
+                      limitChar: 8,
                       tooltipTitle: "Manifold's bluetooth name",
                       tooltip:
-                          "Change the name of bluetooth broadcast name of the manifold. The change takes place after a reboot or next start. Max 10 characters."),
+                          "Change the name of bluetooth broadcast name of the manifold. The change takes place after a reboot or next start. Max 8 characters."),
                 ],
               ],
             ),
@@ -514,6 +522,43 @@ class SettingsPageState extends State<SettingsPage> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         const Text(
+                          'Auto connect',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.help_outline,
+                              size: 20, color: Colors.grey),
+                          onPressed: () {
+                            showInfoDialog(
+                              context,
+                              'Bluetooth auto connect',
+                              'When auto connect is enabled, the app will try to find and connect to the last connected manifold.',
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    _buildSwitch(
+                      '',
+                      autoConnect,
+                      (value) {
+                        setState(() {
+                          autoConnect = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Text(
                           'Safety mode',
                           style: TextStyle(
                             color: Colors.white,
@@ -551,7 +596,7 @@ class SettingsPageState extends State<SettingsPage> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         const Text(
-                          'Compressor @ ACC',
+                          'Wifi Hotspot for OTA',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -563,8 +608,8 @@ class SettingsPageState extends State<SettingsPage> {
                           onPressed: () {
                             showInfoDialog(
                               context,
-                              'Compressor run mode',
-                              'The compressor can only be turned on when the car\'s engine is running. This option can reduce the stress on the car\'s battery. ',
+                              'Wifi OTA webserver',
+                              'Once connected to the Wi-Fi hotspot, open the update page at http:\\192.168.4.1 to upload and install the new manifold firmware. The wifi hotspot name will be \'${bleBroadcastName}\' and the password is \'12345678\'. The hotspot automatically will be turned off after restart.',
                             );
                           },
                         ),
@@ -572,12 +617,18 @@ class SettingsPageState extends State<SettingsPage> {
                     ),
                     _buildSwitch(
                       '',
-                      compressorWhenEngineOn,
-                      (value) {
-                        setState(() {
-                          compressorWhenEngineOn = value;
-                        });
-                      },
+                      wifiHotspot,
+                      wifiHotspot
+                          ? null // disable switch once ON
+                          : (value) {
+                              setState(() {
+                                wifiHotspot = value;
+                                if (wifiHotspot) {
+                                  bleManager.sendRestCommand(
+                                      [BTOasIdentifier.TURNONWIFI]);
+                                }
+                              });
+                            },
                     ),
                   ],
                 ),
@@ -611,7 +662,8 @@ class SettingsPageState extends State<SettingsPage> {
                         isNumberInput: true,
                         limitChar: 3,
                         units: "min",
-                        tooltip: "Define the number of minutes the air ride system remains powered after the ignition is switched off.",
+                        tooltip:
+                            "Define the number of minutes the air ride system remains powered after the ignition is switched off.",
                       ),
                     ),
                   ],
@@ -1126,7 +1178,7 @@ class SettingsPageState extends State<SettingsPage> {
                 hintStyle: TextStyle(color: Colors.white54),
                 suffixText: units,
               ),
-              onChanged: onChanged, 
+              onChanged: onChanged,
             ),
           ),
         ],
@@ -1135,7 +1187,7 @@ class SettingsPageState extends State<SettingsPage> {
   }
 }
 
-Widget _buildSwitch(String label, bool value, ValueChanged<bool> onChanged) {
+Widget _buildSwitch(String label, bool value, ValueChanged<bool>? onChanged) {
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 8.0),
     child: Row(
@@ -1147,7 +1199,10 @@ Widget _buildSwitch(String label, bool value, ValueChanged<bool> onChanged) {
             style: TextStyle(color: Colors.white, fontSize: 16),
           ),
         Switch(
-            value: value, onChanged: onChanged, activeColor: Color(0xFFBB86FC)),
+          value: value,
+          onChanged: onChanged, // if null -> disabled
+          activeColor: Color(0xFFBB86FC),
+        ),
       ],
     ),
   );

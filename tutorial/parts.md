@@ -7,7 +7,7 @@ Here are the parts required to build the system.
 | Part Name  | qty | image | Link | info |
 | --------- | ------- | ------- | ------- | ------- |
 | Main PCB | 1 | ![image](https://github.com/user-attachments/assets/8d91a93b-89ca-4a08-99f7-6e687507e0a2) | [files](https://github.com/gopro2027/ArduinoAirSuspensionController/tree/main/PCB/ESP32_30PIN_PCB/) | The new pre assembled SMD pcb cost a decent amount to order straight from JLCPCB so join the discord and find a reseller to pick one up cheaper than ordering the minimum qty from jlcpcb directly if possible. Please read the readme files! As of 9/3/2025 the latest version is 4.0 |
-| ESP32 30pin |     1    | ![image](https://github.com/user-attachments/assets/a30c7c9f-4fdf-4c74-ace4-a51401cb46fd) | [amazon](https://www.amazon.com/Teyleten-Robot-ESP-WROOM-32-Development-Microcontroller/dp/B08246MCL5/) [aliexpress](https://www.aliexpress.us/item/3256806150650156.html) | The project currently uses an esp32 wroom 30pin |
+| ESP32 30pin |     1    | ![image](https://github.com/user-attachments/assets/a30c7c9f-4fdf-4c74-ace4-a51401cb46fd) | [amazon](https://www.amazon.com/Teyleten-Robot-ESP-WROOM-32-Development-Microcontroller/dp/B08246MCL5/) | The project currently uses an esp32 wroom 30pin. Avoid the boards with the rectangular CH340 chip. Purchase boards with the square CP2102 chips. CH340 is a cheap chip and is indicitive of a bad quality board and may cause bluetooth issues. |
 | HCTL HC-MX3.0-2&ast;6Y | 2 | ![image](https://github.com/user-attachments/assets/b91a25e4-a98d-498c-987d-d6b55054c640) | [lcsc](https://www.lcsc.com/product-detail/C3294363.html) | 2x6 molex microfit connector. For manifold connector and pressure sensors |
 | HCTL HC-MX3.0-2&ast;3Y | 1 | ![image](https://github.com/user-attachments/assets/dc12fea9-44bb-4c35-8d8e-2015494024d7) | [lcsc](https://www.lcsc.com/product-detail/C3294360.html) | 2x3 molex microfit connector. For IO port |
 | HCTL HC-MX3.0-2&ast;4Y | 2 | ![image](https://github.com/user-attachments/assets/eff183eb-cc7f-4257-a0db-4dbdadb847c3) | [lcsc](https://www.lcsc.com/product-detail/C3294361.html) | -*Optional*- 2x4 molex microfit connector. For level sensors, 128x64 oled display, and gps |
@@ -58,5 +58,7 @@ Here are the parts required to build the system.
 | 1/4w 12x 10K, 11x 150R, 1x 1K, 1x 2K |   Assorted      | ![image](https://github.com/user-attachments/assets/7492bb33-a26f-439b-a489-2b17d04ce9f2) | [lcsc 10k](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-10K-1-ST52_C2903232.html)<br> [lcsc 150R](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-150-1-ST52_C2903242.html)<br> [lcsc 1K](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-1K-1-ST52_C2903245.html)<br> [lcsc 2K](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-2K-1-ST52_C2903278.html) | 1/4w, 1% resistors (blue), purchase 100 of each from lcsc for cheap | 
 | 1N4007 diode |    13     | ![image](https://github.com/user-attachments/assets/daae6c1d-b7ca-4330-b604-794b2f88379b) | [ebay](https://www.ebay.com/itm/235235061574) [aliexpress](https://pl.aliexpress.com/item/1005006003747959.html) [lcsc](https://www.lcsc.com/product-detail/Diodes-General-Purpose_Yangzhou-Yangjie-Elec-Tech-1N4007_C2986225.html) | Linked is a pack of 100 | 
 -->
+
+
 
 

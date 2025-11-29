@@ -377,6 +377,7 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
     if (packet_type != HCI_EVENT_PACKET)
         return;
 
+    notifyKeepAlive();
     switch (hci_event_packet_get_type(packet))
     {
     case HCI_EVENT_DISCONNECTION_COMPLETE:
@@ -409,25 +410,17 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
 #define ESP_GATT_MAX_MTU_SIZE 517
 #include "btstack.h"
 
-static std::vector<uint8_t> adv_data;
-void generateAdvData(String name)
+void printAdvData(const uint8_t *adv_data, size_t len)
 {
-    static bool advDataGenerated = false;
-    if (advDataGenerated)
-        return;
-    advDataGenerated = true;
-
-    uint8_t nameLength = name.length();
-    if (nameLength > 8)
-        nameLength = 8;
-
-    adv_data.insert(adv_data.end(), {2, BLUETOOTH_DATA_TYPE_FLAGS, APP_AD_FLAGS});
-    adv_data.insert(adv_data.end(), {(uint8_t)(nameLength + 1), BLUETOOTH_DATA_TYPE_COMPLETE_LOCAL_NAME});
-    for (uint8_t c : name)
+    Serial.print("adv_data: ");
+    for (size_t i = 0; i < len; i++)
     {
-        adv_data.push_back(c);
+        if (adv_data[i] < 0x10)
+            Serial.print("0"); // leading zero for single-digit hex
+        Serial.print(adv_data[i], HEX);
+        Serial.print(" ");
     }
-    adv_data.insert(adv_data.end(), {17, BLUETOOTH_DATA_TYPE_COMPLETE_LIST_OF_128_BIT_SERVICE_CLASS_UUIDS, 0xf0, 0x25, 0xb6, 0x15, 0x3d, 0x3e, 0xb2, 0x9e, 0x91, 0x44, 0xb4, 0xd3, 0xc8, 0x25, 0x94, 0x67}); // 128-bit Service UUIDs (complete list)
+    Serial.println();
 }
 
 void ble_setup()
@@ -440,9 +433,11 @@ void ble_setup()
     att_server_register_packet_handler(hci_event_handler);
 
     // Set device name
+    String bleName = getbleName();
+    const char *name = bleName.c_str();
+    size_t name_len = bleName.length();
     // Update GAP local name (used by GATT Device Name characteristic)
-    gap_set_local_name(getbleName().c_str());
-    gap_discoverable_control(1);
+    gap_set_local_name(name);
 
     gap_set_max_number_peripheral_connections(MAX_CONNECTIONS);
 
@@ -458,10 +453,35 @@ void ble_setup()
 
     gap_advertisements_set_params(adv_int_min, adv_int_max, adv_type, 0, null_addr, 0x07, 0x00);
 
-    generateAdvData(getbleName());
+    if (name_len > 8)
+        name_len = 8; // BLE adv limit
+
+    uint8_t adv_data[31];
+    int pos = 0;
+
+    // Flags
+    adv_data[pos++] = 2;
+    adv_data[pos++] = BLUETOOTH_DATA_TYPE_FLAGS;
+    adv_data[pos++] = APP_AD_FLAGS;
+
+    // Local name
+    adv_data[pos++] = name_len + 1; // length byte = name + type
+    adv_data[pos++] = BLUETOOTH_DATA_TYPE_COMPLETE_LOCAL_NAME;
+    memcpy(&adv_data[pos], name, name_len);
+    pos += name_len;
+
+    // 128-bit Service UUID
+    adv_data[pos++] = 17; // length = 16 bytes + type
+    adv_data[pos++] = BLUETOOTH_DATA_TYPE_COMPLETE_LIST_OF_128_BIT_SERVICE_CLASS_UUIDS;
+    uint8_t uuid[16] = {0xf0, 0x25, 0xb6, 0x15, 0x3d, 0x3e, 0xb2, 0x9e,
+                        0x91, 0x44, 0xb4, 0xd3, 0xc8, 0x25, 0x94, 0x67};
+    memcpy(&adv_data[pos], uuid, 16);
+    pos += 16;
+
+    printAdvData(adv_data, pos);
 
     // Apply adv data
-    gap_advertisements_set_data(adv_data.size(), adv_data.data());
+    gap_advertisements_set_data(pos, adv_data);
     gap_advertisements_enable(true);
 
     // Initialize characteristic data
@@ -472,7 +492,7 @@ void ble_setup()
     little_endian_store_32(valve_control_characteristic_data, 0, valveValue);
 
     Serial.print("Broadcast started, name:");
-    Serial.println(getbleName().c_str());
+    Serial.println(name);
     Serial.println("Waiting a client connection to notify...");
 }
 
@@ -747,6 +767,11 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             }
         }
         break;
+    #ifdef WIFI_OTA_ENABLE
+    case BTOasIdentifier::TURNONWIFI:
+        startHotspot(getbleName());
+        break;
+    #endif
     case BTOasIdentifier::BROADCASTNAME:
 
         if (((BroadcastNamePacket *)packet)->getBroadcastName() != getbleName())
