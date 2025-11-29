@@ -6,6 +6,7 @@
 		"includeDir": "Arduino/examples/LVGL_Arduino/",
         "srcFilter": [
             "-<*>",
+            "+<images/*>",
             "+<Arduino/examples/LVGL_Arduino/Display_ST7789.cpp>",
             "+<Arduino/examples/LVGL_Arduino/Touch_CST328.cpp>",
             "+<Arduino/examples/LVGL_Arduino/LVGL_Driver.cpp>",
