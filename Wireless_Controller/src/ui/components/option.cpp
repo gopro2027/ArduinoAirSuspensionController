@@ -3,8 +3,8 @@ lv_style_t headerStyle;
 static bool styleCreated = false;
 LV_IMG_DECLARE(imgOn);
 LV_IMG_DECLARE(imgOff);
-#define OPTION_ROW_HEIGHT 36
-#define MARGIN 10 // originally 16
+#define OPTION_ROW_HEIGHT (36 * SCALE_Y)
+#define MARGIN (10 * SCALE_X) // originally 16
 static char strbuf[20];
 
 void createStyle()
@@ -18,6 +18,10 @@ void createStyle()
         // lv_style_set_border_width(&headerStyle, 2);
         // lv_style_set_border_color(&headerStyle, lv_color_black());
         lv_style_set_text_font(&headerStyle, &lv_font_montserrat_20);
+
+        // scale per devices
+        lv_style_set_transform_scale_x(&headerStyle, SCALE_X * 256);
+        lv_style_set_transform_scale_y(&headerStyle, SCALE_Y * 256);
 
         styleCreated = true;
     }
