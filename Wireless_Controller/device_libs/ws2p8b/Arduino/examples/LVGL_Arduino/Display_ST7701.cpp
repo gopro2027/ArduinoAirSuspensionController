@@ -32,6 +32,7 @@ void ST7701_CS_EN(){
 void ST7701_CS_Dis(){
   Set_EXIO(EXIO_PIN3,High);
   vTaskDelay(pdMS_TO_TICKS(10));
+  vTaskDelay(pdMS_TO_TICKS(120));
 }
 void ST7701_Reset(){
   Set_EXIO(EXIO_PIN1,Low);
@@ -174,13 +175,14 @@ void ST7701_Init()
     },  
     .flags = {                                                                                    
       .fb_in_psram = true,                                                                        // 如果启用此标志，帧缓冲区将优先从PSRAM分配
+      .double_fb = true
     },
   };
   esp_lcd_new_rgb_panel(&rgb_config, &panel_handle); 
-  // esp_lcd_rgb_panel_event_callbacks_t cbs = {
-  //   .on_vsync = example_on_vsync_event,
-  // };
-  // esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &cbs, &disp_drv);
+  esp_lcd_rgb_panel_event_callbacks_t cbs = {
+    .on_vsync = example_on_vsync_event,
+  };
+  esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &cbs, NULL);
   esp_lcd_panel_reset(panel_handle);
   esp_lcd_panel_init(panel_handle);
 }

@@ -101,7 +101,7 @@ void setup()
     set_brightness(getBrightnessFloat());
 }
 
-auto lv_last_tick = millis();
+// auto lv_last_tick = millis();
 void loop()
 {
     auto const now = millis();
