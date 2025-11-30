@@ -30,8 +30,10 @@ void Lvgl_print(const char * buf)
 */
 void Lvgl_Display_LCD(lv_display_t *display, const lv_area_t *area, uint8_t *px_map)
 {
-  LCD_addWindow(area->x1, area->y1, area->x2, area->y2, px_map);
-  lv_display_flush_ready(display);
+  //if (lv_display_flush_is_last(display)) {
+    LCD_addWindow(area->x1, area->y1, area->x2, area->y2, px_map);
+    lv_display_flush_ready(display);
+  //}
 }
 
 /*Read the touchpad*/
@@ -62,16 +64,17 @@ void example_increase_lvgl_tick(void *arg)
 touch_and_screen Lvgl_Init(void)
 {
   lv_init();
-  // esp_lcd_rgb_panel_get_frame_buffer(panel_handle, 2, &buf1, &buf2);                                          
+  esp_lcd_rgb_panel_get_frame_buffer(panel_handle, 2, &buf1, &buf2);
+  // esp_lcd_rgb_panel_get_frame_buffer(panel_handle, 1, &buf1);                                          
   
-  buf1 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN, MALLOC_CAP_SPIRAM); 
-  buf2 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN, MALLOC_CAP_SPIRAM);
+  // buf1 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN * sizeof(lv_color_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA); 
+  // buf2 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN * sizeof(lv_color_t), MALLOC_CAP_SPIRAM);
 
   /*Initialize the display*/
   disp = lv_display_create(LVGL_WIDTH, LVGL_HEIGHT);
   lv_display_set_flush_cb(disp, Lvgl_Display_LCD);
-  lv_display_set_buffers(disp, buf1, buf2, LVGL_BUF_LEN, LV_DISPLAY_RENDER_MODE_PARTIAL);
-  lv_display_set_render_mode(disp, LV_DISPLAY_RENDER_MODE_FULL);
+  lv_display_set_buffers(disp, buf1, buf2, LVGL_BUF_LEN * sizeof(lv_color_t), LV_DISPLAY_RENDER_MODE_FULL);
+  // lv_display_set_render_mode(disp, LV_DISPLAY_RENDER_MODE_FULL);
   lv_display_set_user_data(disp, panel_handle); // unsure if this is necessary
 
   /*Initialize the (dummy) input device driver*/
@@ -97,6 +100,6 @@ touch_and_screen Lvgl_Init(void)
 
 void Lvgl_Loop(void)
 {
-  lv_timer_handler(); /* let the GUI do its work */
-  // delay( 5 );
+  uint32_t time_till_next = lv_timer_handler();
+  delay(time_till_next);  // Sleep until next update needed
 }

@@ -49,7 +49,7 @@ void ST7701_Init()
     .sclk_io_num = LCD_CLK_PIN,
     .quadwp_io_num = -1,
     .quadhd_io_num = -1,
-    .max_transfer_sz = 64, // ESP32 S3 max size is 64Kbytes
+    .max_transfer_sz = ESP_PANEL_LCD_WIDTH * ESP_PANEL_LCD_HEIGHT * sizeof(uint16_t), // ESP32 S3 max size is 64Kbytes
   };
   spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO);
   spi_device_interface_config_t devcfg = {
@@ -173,7 +173,8 @@ void ST7701_Init()
       ESP_PANEL_LCD_PIN_NUM_RGB_DATA14,                                                           
       ESP_PANEL_LCD_PIN_NUM_RGB_DATA15,                                                           
     },  
-    .flags = {                                                                                    
+    .flags = {          
+      // .refresh_on_demand = false,                                                                          
       .fb_in_psram = true,                                                                        // 如果启用此标志，帧缓冲区将优先从PSRAM分配
       .double_fb = true
     },

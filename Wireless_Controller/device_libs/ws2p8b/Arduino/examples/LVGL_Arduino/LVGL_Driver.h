@@ -9,7 +9,9 @@
 
 #define LVGL_WIDTH     ESP_PANEL_LCD_WIDTH
 #define LVGL_HEIGHT    ESP_PANEL_LCD_HEIGHT
-#define LVGL_BUF_LEN  (LVGL_WIDTH * LVGL_HEIGHT * sizeof(lv_color_t))
+// #define LVGL_BUF_LEN  (LVGL_WIDTH * LVGL_HEIGHT * sizeof(lv_color_t))
+// #define LVGL_BUF_LEN (LVGL_WIDTH * 40)
+#define LVGL_BUF_LEN (LVGL_WIDTH * LVGL_HEIGHT)
 
 #define EXAMPLE_LVGL_TICK_PERIOD_MS  2
 
