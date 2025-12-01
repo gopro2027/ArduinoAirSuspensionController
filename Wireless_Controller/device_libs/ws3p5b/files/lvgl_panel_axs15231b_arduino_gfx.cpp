@@ -13,7 +13,7 @@
 #include <Arduino_GFX_Library.h>
 #include <Wire.h>
 #include "TCA9554.h"
-#include <esp32_smartdisplay.h>   // for smartdisplay_lcd_set_backlight()
+// #include <esp32_smartdisplay.h>   // for smartdisplay_lcd_set_backlight()
 
 extern "C" lv_indev_t *indev;   // owned by your smartdisplay glue (kept for compatibility)
 
