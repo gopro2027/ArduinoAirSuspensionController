@@ -1,0 +1,24 @@
+{
+  "name": "ws2p8",
+  "version": "1.0",
+  "includeDir": "files/",
+  "build": {
+		"includeDir": "files/",
+        "srcFilter": [
+            "-<*>",
+            "+<images/*>",
+            "+<files/Display_ST7789.cpp>",
+            "+<files/Touch_CST328.cpp>",
+            "+<files/LVGL_Driver.cpp>",
+            "+<files/I2C_Driver.cpp>",
+            "+<files/PWR_Key.cpp>",
+            "+<files/BAT_Driver.cpp>"
+        ]
+	},
+  "frameworks": "arduino",
+  "platforms": "espressif32",
+  "dependencies": {
+    "Wire":"",
+    "lvgl/lvgl":"9.2.2"
+  }
+}

@@ -3,8 +3,8 @@ lv_style_t headerStyle;
 static bool styleCreated = false;
 LV_IMG_DECLARE(imgOn);
 LV_IMG_DECLARE(imgOff);
-#define OPTION_ROW_HEIGHT 36
-#define MARGIN 10 // originally 16
+#define OPTION_ROW_HEIGHT (36 * SCALE_Y)
+#define MARGIN (10 * SCALE_X) // originally 16
 static char strbuf[20];
 
 void createStyle()
@@ -18,6 +18,10 @@ void createStyle()
         // lv_style_set_border_width(&headerStyle, 2);
         // lv_style_set_border_color(&headerStyle, lv_color_black());
         lv_style_set_text_font(&headerStyle, &lv_font_montserrat_20);
+
+        // scale per devices
+        lv_style_set_transform_scale_x(&headerStyle, SCALE_X * 256);
+        lv_style_set_transform_scale_y(&headerStyle, SCALE_Y * 256);
 
         styleCreated = true;
     }
@@ -84,7 +88,7 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     createStyle();
     this->root = lv_obj_create(parent);
     lv_obj_remove_style_all(this->root);
-    lv_obj_set_size(this->root, DISPLAY_WIDTH, this->optionRowHeight);
+    lv_obj_set_size(this->root, LCD_WIDTH, this->optionRowHeight);
 
     if (type != OptionType::SPACE && type != OptionType::BUTTON)
     {
@@ -167,7 +171,7 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     {
         this->indentText();
         const int textAreaWidth = (type == OptionType::KEYBOARD_INPUT_TEXT) ? 150 : 70;
-        const int textMaxWidth = DISPLAY_WIDTH - (MARGIN * 2 + MARGIN + textAreaWidth) - 6;
+        const int textMaxWidth = LCD_WIDTH - (MARGIN * 2 + MARGIN + textAreaWidth) - 6;
         lv_obj_set_width(this->text, textMaxWidth); // space between the start position and the text input
 
         this->rightHandObj = lv_textarea_create(this->root);
@@ -207,7 +211,7 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_slider_set_range(this->rightHandObj, 0, 9999999); // will be updated later
         lv_slider_set_value(this->rightHandObj, value.INT, LV_ANIM_OFF);
 
-        lv_obj_set_width(this->rightHandObj, DISPLAY_WIDTH - (MARGIN * 5));
+        lv_obj_set_width(this->rightHandObj, LCD_WIDTH - (MARGIN * 5));
         lv_obj_set_x(this->rightHandObj, MARGIN / 2);
         lv_obj_set_y(this->rightHandObj, -OPTION_ROW_HEIGHT / 4);
         lv_obj_set_align(this->rightHandObj, LV_ALIGN_BOTTOM_MID);

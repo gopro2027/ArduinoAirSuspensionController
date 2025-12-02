@@ -2,6 +2,7 @@
 #define ui_scrPresets_h
 
 #include "ui/components/Scr.h"
+#include "device_lib_exports.h"
 
 class ScrPresets : public Scr
 {

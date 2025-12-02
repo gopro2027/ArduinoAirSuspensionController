@@ -23,7 +23,7 @@ void Scr::init()
     // background color
     this->rect_bg = lv_obj_create(this->scr);
     lv_obj_remove_style_all(this->rect_bg);
-    lv_obj_set_size(this->rect_bg, 240, 320);
+    lv_obj_set_size(this->rect_bg, LCD_WIDTH, LCD_HEIGHT);
     lv_obj_set_align(this->rect_bg, LV_ALIGN_TOP_MID);
     lv_obj_get_style_border_width(this->rect_bg, 0);
     lv_obj_set_style_bg_color(this->rect_bg, lv_color_hex(GENERIC_GREY_DARK), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -33,6 +33,7 @@ void Scr::init()
     // navbar image
     this->icon_navbar = lv_image_create(this->scr);
     lv_image_set_src(this->icon_navbar, &this->navbarImage);
+    scale_img(this->icon_navbar,this->navbarImage);
     lv_obj_set_align(this->icon_navbar, LV_ALIGN_BOTTOM_MID);
 
     this->alert = new Alert(this);
@@ -147,7 +148,7 @@ void Scr::showMsgBox(const char *title, const char *text, const char *yesText, c
     // lv_obj_set_flex_grow(footer, 1);
     //  lv_msgbox_add_close_button(this->mb_dialog); // x button crashes it due to our implementation... I'm guessing it is trying to delete ittself after we have already deleted it? we don't really need it and ui looks better without it anyways.
 
-    lv_obj_set_width(this->mb_dialog, DISPLAY_WIDTH - 20);
+    lv_obj_set_width(this->mb_dialog, LCD_WIDTH - 20);
 
     lv_obj_set_style_bg_color(this->mb_dialog, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT); // darker, bg of main
     if (lv_msgbox_get_header(this->mb_dialog) != NULL)

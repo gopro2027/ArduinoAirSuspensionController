@@ -13,9 +13,10 @@
 
 #include "bt/ble.h"
 
-#if defined(WAVESHARE_BOARD)
 #include "waveshare/waveshare.h"
-#endif
+#include "waveshare/board_driver_util.h"
+
+#include "device_lib_exports.h"
 
 class ScrSettings : public Scr
 {

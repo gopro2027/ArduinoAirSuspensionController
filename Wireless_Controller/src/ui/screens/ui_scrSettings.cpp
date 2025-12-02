@@ -27,7 +27,7 @@ void ScrSettings::init()
 
     this->optionsContainer = lv_obj_create(this->scr);
     lv_obj_remove_style_all(this->optionsContainer);
-    lv_obj_set_size(this->optionsContainer, DISPLAY_WIDTH, DISPLAY_HEIGHT - NAVBAR_HEIGHT);
+    lv_obj_set_size(this->optionsContainer, LCD_WIDTH, LCD_HEIGHT - NAVBAR_HEIGHT);
     lv_obj_align(this->optionsContainer, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_set_layout(this->optionsContainer, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(this->optionsContainer, LV_FLEX_FLOW_COLUMN);
@@ -176,7 +176,7 @@ void ScrSettings::init()
     ui_brightnessSlider = new Option(this->optionsContainer, OptionType::SLIDER, "Brightness", {.INT = getbrightness()}, [](void *data)
                                      { log_i("Brightness %i", ((uint32_t)data));
         setbrightness((uint32_t)data);
-        smartdisplay_lcd_set_backlight(getBrightnessFloat()); });
+        set_brightness(getBrightnessFloat()); });
     ui_brightnessSlider->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
 
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
@@ -306,7 +306,7 @@ void ScrSettings::init()
     lv_obj_t *qrCodeParent = lv_obj_create(this->optionsContainer);
     lv_obj_remove_style_all(qrCodeParent);
     // lv_obj_set_style_bg_opa(qrCodeParent, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_size(qrCodeParent, DISPLAY_WIDTH, 100);
+    lv_obj_set_size(qrCodeParent, LCD_WIDTH, 100);
     // lv_obj_set_style_bg_color(qrCodeParent, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);
     // lv_obj_set_x(qrCodeParent, DISPLAY_WIDTH - 100 / 2);
     // lv_obj_set_align(qrCodeParent, LV_ALIGN_TOP_MID);
@@ -319,7 +319,7 @@ void ScrSettings::init()
     const char *qr_data = "https://oasman.dev";
     lv_qrcode_update(this->ui_qrcode, qr_data, strlen(qr_data));
     // lv_obj_set_align(this->ui_qrcode, LV_ALIGN_TOP_MID);
-    lv_obj_set_x(this->ui_qrcode, DISPLAY_WIDTH / 2 - 50);
+    lv_obj_set_x(this->ui_qrcode, LCD_WIDTH / 2 - 50);
     //  lv_obj_center(this->ui_qrcode);
     //  lv_obj_set_y(this->ui_qrcode, DISPLAY_HEIGHT - 10);
 
@@ -337,11 +337,9 @@ void ScrSettings::init()
     macValue.STRING = ble_getMAC();
     this->ui_mac = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Manifold:", macValue);
 
-#if defined(WAVESHARE_BOARD)
     OptionValue voltsValue;
     voltsValue.STRING = getBatteryVoltageString();
     this->ui_volts = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Battery:", voltsValue);
-#endif
 
     // add space at end of list
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
@@ -403,9 +401,7 @@ void ScrSettings::loop()
 
     this->ui_mac->setRightHandText(ble_getMAC());
 
-#if defined(WAVESHARE_BOARD)
     this->ui_volts->setRightHandText(getBatteryVoltageString());
-#endif
 
     if (*util_configValues._setValues())
     {

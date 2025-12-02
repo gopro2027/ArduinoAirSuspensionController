@@ -1,4 +1,6 @@
-#if defined(WAVESHARE_BOARD)
+#ifndef PWR_Key_h
+#define PWR_Key_h
+
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -7,10 +9,10 @@
 
 #include "bt/ble.h"
 
-#define PWR_KEY_Input_PIN 6     // Key_BAT
-#define PWR_Control_PIN 7       // BAT_Control
-#define PWR_KEY_ACTIVE_LOW 1    // button pulls low when pressed
-#define PWR_LATCH_ACTIVE_HIGH 1 // drive HIGH to hold power
+#include "board_driver_util.h"
+
+#include "device_lib_exports.h"
+
 
 // Long-press thresholds are in loop "ticks" (calls to PWR_Loop)
 #define Device_Shutdown_Time 10
@@ -22,4 +24,5 @@ void PWR_Loop(void);
 void Fall_Asleep(void);
 void Shutdown(void);
 
+ 
 #endif
