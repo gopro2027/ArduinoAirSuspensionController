@@ -12,6 +12,7 @@
             "+<files/LVGL_Driver.cpp>",
             "+<files/I2C_Driver.cpp>",
             "+<files/TCA9554PWR.cpp>",
+            "+<files/PWR_Key_Dummy.cpp>",
             "+<files/BAT_Driver.cpp>"
         ]
 	}, 

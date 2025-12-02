@@ -9,4 +9,5 @@
 // power key and battery definitions
 #include "files/BAT_Driver.h"
 
-#define POWER_SWITCH_NOT_BUTTON
+// include blank power key implementation
+#include "files/PWR_Key_Dummy.h"

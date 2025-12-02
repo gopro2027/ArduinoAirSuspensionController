@@ -11,6 +11,7 @@
             "+<files/Touch_CST328.cpp>",
             "+<files/LVGL_Driver.cpp>",
             "+<files/I2C_Driver.cpp>",
+            "+<files/PWR_Key.cpp>",
             "+<files/BAT_Driver.cpp>"
         ]
 	},

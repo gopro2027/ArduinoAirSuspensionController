@@ -2,19 +2,19 @@
 #include "Arduino.h"
 #include "Display_ST7789.h"
 
+#define PWR_KEY_ACTIVE_LOW 1    // button pulls low when pressed
+#define PWR_LATCH_ACTIVE_HIGH 1 // drive HIGH to hold power
+
 #define PWR_KEY_Input_PIN   6
 #define PWR_Control_PIN     7
 
 #define Measurement_offset 0.990476     
-#define EXAMPLE_BAT_TICK_PERIOD_MS 50
 
-#define Device_Sleep_Time    10
-#define Device_Restart_Time  15
-#define Device_Shutdown_Time 20
-
-void Fall_Asleep(void);
-void Shutdown(void);
-void Restart(void);
-
-void PWR_Init(void);
-void PWR_Loop(void);
+void power_key_setup(void);
+bool power_key_pressed(void);
+void power_latch_on(void);
+void power_latch_off(void);
+void power_enable_wakeup_lightsleep();
+void power_disable_wakeup_lightsleep();
+void power_enable_wakeup_deepsleep();
+// no need for power_disable_wakeup_deepsleep, deep sleep reboots on wake

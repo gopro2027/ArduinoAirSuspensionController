@@ -11,8 +11,8 @@
 
 #include "board_driver_util.h"
 
-#define PWR_KEY_ACTIVE_LOW 1    // button pulls low when pressed
-#define PWR_LATCH_ACTIVE_HIGH 1 // drive HIGH to hold power
+#include "device_lib_exports.h"
+
 
 // Long-press thresholds are in loop "ticks" (calls to PWR_Loop)
 #define Device_Shutdown_Time 10
@@ -24,5 +24,5 @@ void PWR_Loop(void);
 void Fall_Asleep(void);
 void Shutdown(void);
 
-
+ 
 #endif
