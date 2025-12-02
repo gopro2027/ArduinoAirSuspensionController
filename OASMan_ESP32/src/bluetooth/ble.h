@@ -38,6 +38,10 @@
 
 #include "bp32.h"
 
+#ifdef WIFI_OTA_ENABLE
+#include "webOTA/webOTA.h"
+#endif
+
 #include "directdownload.h"
 
 void ble_setup();

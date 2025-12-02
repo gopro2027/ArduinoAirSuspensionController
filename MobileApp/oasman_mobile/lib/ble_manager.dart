@@ -42,6 +42,8 @@ class BTOasIdentifier {
   static const int RESETAIPKT = 29;
   static const int BP32PKT = 30;
   static const int BROADCASTNAME = 35;
+  static const int UPDATESTATUSREQUEST = 36;
+  static const int TURNONWIFI = 37;  
 }
 
 class BLEByte {
@@ -104,6 +106,7 @@ class BLEManager extends ChangeNotifier {
         vehicleOn = false;
         restCharacteristic = null;
         statusCharacteristic = null;
+        globalSettings?.wifiHotspot = false;
         notifyListeners();
       }
     });
@@ -299,6 +302,8 @@ class BLEManager extends ChangeNotifier {
         connectedDevice = null;
         restCharacteristic = null;
         statusCharacteristic = null;
+        vehicleOn = false;
+        globalSettings?.wifiHotspot = false;
         notifyListeners();
       }
     }
@@ -635,7 +640,8 @@ class BLEManager extends ChangeNotifier {
       airOutOnShutoff ? 1 : 0
     ]);
     sendRestCommandString(
-        _encodeInt32(BTOasIdentifier.BROADCASTNAME), bleBroadcastName);
+        _encodeInt32(BTOasIdentifier.BROADCASTNAME), bleBroadcastName + '\u0000'); //I had to add \u0000 (0x00 or NUL) to have a termination for the manifold.
+        print(bleBroadcastName);
     sendRestCommand([
       ..._encodeInt32(BTOasIdentifier.AUTHPACKET),
       ..._encodeInt32(passkey),

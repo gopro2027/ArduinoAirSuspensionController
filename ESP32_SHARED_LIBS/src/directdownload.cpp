@@ -288,5 +288,16 @@ void downloadUpdate(String SSID, String PASS)
     }
 
     ESP.restart();
-    return;
 }
+
+#ifdef WIFI_OTA_ENABLE
+void startHotspot(String wifiName)
+{
+    WiFi.mode(WIFI_MODE_AP);
+    WiFi.softAP(wifiName, PASSWORD);
+    IPAddress myIP = WiFi.softAPIP();
+    Serial.print("AP IP address: ");
+    Serial.println(myIP);
+
+}
+#endif

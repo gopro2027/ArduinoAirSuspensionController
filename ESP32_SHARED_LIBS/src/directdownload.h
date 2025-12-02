@@ -1,6 +1,7 @@
 #ifndef directdownload_h
 #define directdownload_h
 
+#include "user_defines.h"
 #include "Arduino.h"
 #include "WiFi.h"
 #include "HTTPClient.h"
@@ -29,5 +30,8 @@ enum UPDATE_STATUS
 extern void setupdateResult(byte value);
 
 void downloadUpdate(String SSID, String PASS);
+#ifdef WIFI_OTA_ENABLE
+void startHotspot(String wifiName);
+#endif
 
 #endif
