@@ -2,7 +2,7 @@
 
 # ESP32 Flashing Steps
 ### Quick Flashing
-You can quickly and easily flash your main board and wireless controller through your web browser [here oasman.dev](https://oasman.dev/oasman/flash) <br>
+You can quickly and easily flash your main board and wireless controller through your web browser [here oasman.dev](https://oasman.dev/flash) <br>
 If you wish to make any customizations to the code, please follow the following information below.
 ### Cloning the project code
 1. Use git to clone the project normally. It is recommended you clone it and not download it, so that you can get future updates easily.

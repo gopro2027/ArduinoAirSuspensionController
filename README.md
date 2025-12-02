@@ -5,7 +5,7 @@
 
 ###  [ <img src="https://github.com/user-attachments/assets/d6edf30f-0ae1-477c-ac8e-d6a4e7444bd0" alt="discord icon" width="40"/> Please click here to join the Discord server](https://discord.gg/pUf7FmHKpg) 
 ###  [ <img src="https://github.com/user-attachments/assets/04ea84f8-5977-46fa-a044-c5cdf82e4bf3" alt="tutorial icon" width="40"/> Click here to view the comprehensive build tutorial and documentation!](https://oasman.dev)
-###  [ <img src="https://github.com/user-attachments/assets/82590a11-25d7-4a6f-9b23-a3656df55c48" alt="update icon" width="40"/> Click here for the oasman installer/update page](https://oasman.dev/oasman/flash)
+###  [ <img src="https://github.com/user-attachments/assets/82590a11-25d7-4a6f-9b23-a3656df55c48" alt="update icon" width="40"/> Click here for the oasman installer/update page](https://oasman.dev/flash)
 
 ### Important Info To Potential Creators:
 Please join the discord for more specific information before you built it!<br>
