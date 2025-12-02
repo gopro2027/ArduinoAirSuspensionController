@@ -1,11 +1,11 @@
 #pragma once
 
 // requirements for screen
-#include "Arduino/examples/LVGL_Arduino/Display_ST7789.h"
-#include "Arduino/examples/LVGL_Arduino/Touch_CST328.h"
-#include "Arduino/examples/LVGL_Arduino/LVGL_Driver.h"
-#include "Arduino/examples/LVGL_Arduino/I2C_Driver.h"
+#include "files/Display_ST7789.h"
+#include "files/Touch_CST328.h"
+#include "files/LVGL_Driver.h"
+#include "files/I2C_Driver.h"
 
 // power key and battery definitions
-#include "Arduino/examples/LVGL_Arduino/PWR_key.h"
-#include "Arduino/examples/LVGL_Arduino/BAT_Driver.h"
+#include "files/PWR_key.h"
+#include "files/BAT_Driver.h"

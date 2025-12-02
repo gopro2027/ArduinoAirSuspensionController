@@ -1,4 +1,4 @@
-#include "BAT_Driver.h"
+#include "device_lib_exports.h"
 #include "PWR_Key.h"
 
 void waveshare_init()

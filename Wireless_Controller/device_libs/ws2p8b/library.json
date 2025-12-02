@@ -1,17 +1,18 @@
 {
   "name": "ws2p8b",
   "version": "1.0",
-  "includeDir": "Arduino/examples/LVGL_Arduino/",
+  "includeDir": "files/",
   "build": {
-		"includeDir": "Arduino/examples/LVGL_Arduino/",
+		"includeDir": "files/",
         "srcFilter": [
             "-<*>",
             "+<images/*>",
-            "+<Arduino/examples/LVGL_Arduino/Display_ST7701.cpp>",
-            "+<Arduino/examples/LVGL_Arduino/Touch_GT911.cpp>",
-            "+<Arduino/examples/LVGL_Arduino/LVGL_Driver.cpp>",
-            "+<Arduino/examples/LVGL_Arduino/I2C_Driver.cpp>",
-            "+<Arduino/examples/LVGL_Arduino/TCA9554PWR.cpp>"
+            "+<files/Display_ST7701.cpp>",
+            "+<files/Touch_GT911.cpp>",
+            "+<files/LVGL_Driver.cpp>",
+            "+<files/I2C_Driver.cpp>",
+            "+<files/TCA9554PWR.cpp>",
+            "+<files/BAT_Driver.cpp>"
         ]
 	}, 
   "frameworks": "arduino",

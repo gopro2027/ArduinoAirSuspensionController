@@ -1,16 +1,17 @@
 {
   "name": "ws2p8",
   "version": "1.0",
-  "includeDir": "Arduino/examples/LVGL_Arduino/",
+  "includeDir": "files/",
   "build": {
-		"includeDir": "Arduino/examples/LVGL_Arduino/",
+		"includeDir": "files/",
         "srcFilter": [
             "-<*>",
             "+<images/*>",
-            "+<Arduino/examples/LVGL_Arduino/Display_ST7789.cpp>",
-            "+<Arduino/examples/LVGL_Arduino/Touch_CST328.cpp>",
-            "+<Arduino/examples/LVGL_Arduino/LVGL_Driver.cpp>",
-            "+<Arduino/examples/LVGL_Arduino/I2C_Driver.cpp>"
+            "+<files/Display_ST7789.cpp>",
+            "+<files/Touch_CST328.cpp>",
+            "+<files/LVGL_Driver.cpp>",
+            "+<files/I2C_Driver.cpp>",
+            "+<files/BAT_Driver.cpp>"
         ]
 	},
   "frameworks": "arduino",
