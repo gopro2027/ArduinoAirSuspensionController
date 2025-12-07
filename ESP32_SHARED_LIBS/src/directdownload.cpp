@@ -129,9 +129,10 @@ int getDownloadFirmwareURL(WiFiClientSecure &client, String &responseURLString)
     return download_firmware_response_retry;
 }
 
-int installFirmware(WiFiClientSecure &client, String &url)
+int installFirmware(String &url)
 {
-    if (!https.begin(client, url))
+    // Note: Not using the WiFiClientSecure here now because we are using the cloudflare http proxy to save memory. Jumps from 32980 free heap to 78256 free heap.
+    if (!https.begin(url))
     {
         log_i("Connection failed");
         return download_firmware_response_retry;
@@ -272,8 +273,10 @@ void downloadUpdate(String SSID, String PASS)
 
     log_i("Downloading firmware from %s", url.c_str());
 
+    url = String("http://githubreleasebinary-http-proxy.gopro2027.workers.dev/?url=") + url;
+
     counter = 0;
-    while (installFirmware(client, url) != download_firmware_response_success)
+    while (installFirmware(url) != download_firmware_response_success)
     {
         if (counter > 5)
         {
@@ -290,3 +293,51 @@ void downloadUpdate(String SSID, String PASS)
     ESP.restart();
     return;
 }
+
+/**
+ * 
+ * Cloudflare Worker code for the proxy:
+ * http://githubreleasebinary-http-proxy.gopro2027.workers.dev/?url=
+ * 
+ export default {
+  async fetch(request, env, ctx) {
+    // Only allow your specific origin or use authentication
+    const url = new URL(request.url);
+    
+    // Extract the GitHub URL from query parameter
+    // Example: http://your-worker.workers.dev/?url=https://github.com/user/repo/releases/download/v1.0/firmware.bin
+    const targetUrl = url.searchParams.get('url');
+    
+    if (!targetUrl || !targetUrl.startsWith('https://github.com/')) {
+      return new Response('Invalid URL', { status: 400 });
+    }
+    
+    // Fetch from GitHub with HTTPS
+    const response = await fetch(targetUrl);
+    
+    // Return the binary data to ESP32 over HTTP
+    return new Response(response.body, {
+      status: response.status,
+      headers: {
+        'Content-Type': response.headers.get('Content-Type') || 'application/octet-stream',
+        'Content-Length': response.headers.get('Content-Length'),
+        'Access-Control-Allow-Origin': '*', // If needed
+      }
+    });
+  }
+};
+
+
+Memory difference notes:
+Before (using https, aka WiFiClientSecure on the .begin function): 
+Free heap: 32980
+Largest free block: 17396
+Min free heap: 12780
+
+After (cloudflare proxy using http):
+Free heap: 78256
+Largest free block: 34804
+Min free heap: 13884
+
+
+ */
