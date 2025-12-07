@@ -132,7 +132,6 @@ int getDownloadFirmwareURL(String &responseURLString)
 
 int installFirmware(String &url)
 {
-    // Note: Not using the WiFiClientSecure here now because we are using the cloudflare http proxy to save memory. Jumps from 32980 free heap to 78256 free heap.
     if (!https.begin(url))
     {
         log_i("Connection failed");
@@ -337,6 +336,10 @@ Free heap: 78256
 Largest free block: 34804
 Min free heap: 13884
 
+After adding second proxy for the releases list:
+Free heap: 80348
+Largest free block: 65524
+Min free heap: 76444
 
 http proxy for the list of releases:
 http://githubreleaselist-http-proxy.gopro2027.workers.dev/?url=https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest
