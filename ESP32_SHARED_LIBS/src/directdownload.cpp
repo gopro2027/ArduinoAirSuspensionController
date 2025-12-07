@@ -46,11 +46,11 @@ bool check300Redirect(int httpCode, String &responseURLString)
     return false;
 }
 
-int getDownloadFirmwareURL(WiFiClientSecure &client, String &responseURLString)
+int getDownloadFirmwareURL(String &responseURLString)
 {
-    log_i("Downloading json from github api releases");
+    log_i("Downloading json from github api releases (through proxy)");
 
-    if (!https.begin(client, "https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest"))
+    if (!https.begin("http://githubreleaselist-http-proxy.gopro2027.workers.dev/?url=https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest"))
     {
         log_i("Connection failed");
         return download_firmware_response_retry;
@@ -66,6 +66,7 @@ int getDownloadFirmwareURL(WiFiClientSecure &client, String &responseURLString)
     if (httpResponseCode != HTTP_CODE_OK)
     {
         log_i("HTTP Response code: %d", httpResponseCode);
+        log_i("Error Response: %s", https.getString().c_str());
         https.end();
         return download_firmware_response_retry;
     }
@@ -244,18 +245,15 @@ void downloadUpdate(String SSID, String PASS)
         }
 
         log_i("Retrying to connect to wifi...");
-        delay(1000);
+        delay(2500);
 
         counter++;
     }
 
-    WiFiClientSecure client;
-    client.setInsecure();
-
     String url;
     int code = 0;
     counter = 0;
-    while (getDownloadFirmwareURL(client, url) != download_firmware_response_success)
+    while (getDownloadFirmwareURL(url) != download_firmware_response_success)
     {
         if (counter > 5)
         {
@@ -266,7 +264,7 @@ void downloadUpdate(String SSID, String PASS)
         }
 
         log_i("Retrying to get firmware download URL...");
-        delay(1000);
+        delay(5000);
 
         counter++;
     }
@@ -285,7 +283,7 @@ void downloadUpdate(String SSID, String PASS)
             ESP.restart();
         }
         log_i("Firmware install requested retry...");
-        delay(1000);
+        delay(5000);
 
         counter++;
     }
@@ -339,5 +337,38 @@ Free heap: 78256
 Largest free block: 34804
 Min free heap: 13884
 
+
+http proxy for the list of releases:
+http://githubreleaselist-http-proxy.gopro2027.workers.dev/?url=https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    
+    // Extract the GitHub URL from query parameter
+    const targetUrl = url.searchParams.get('url');
+    
+    if (!targetUrl || !targetUrl.startsWith('https://api.github.com/')) {
+      return new Response('Invalid URL', { status: 400 });
+    }
+    
+    // Fetch from GitHub with HTTPS
+    const response = await fetch(targetUrl, {
+      headers: {
+        'User-Agent': 'ESP32-Firmware-Updater',
+        'Accept': 'application/vnd.github+json'
+      }
+    });
+    
+    // read it all in so it's not chunked or something weird, esp32 has issues with chunked/streamed responses on the json decoder
+    const buffer = await response.arrayBuffer();
+    return new Response(buffer, {
+      status: response.status,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+  }
+};
 
  */
