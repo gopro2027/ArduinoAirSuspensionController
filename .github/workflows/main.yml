@@ -33,6 +33,7 @@ jobs:
         pip install platformio
         mkdir -p bins/
         export version_num="${{ inputs.version_num }}"
+        export release_tag_name="build-${{ github.run_number }}"
         
     - name: Create build script
       run: |
@@ -43,6 +44,7 @@ jobs:
         
         cd $folder
         export version_num="${{ inputs.version_num }}"
+        export release_tag_name="build-${{ github.run_number }}"
         pio run -e ${buildname}_release
         find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
         pio run -e ${buildname}_release --target clean
@@ -69,42 +71,12 @@ jobs:
       run: ./build_firmware.sh "Wireless_Controller" "controller_ws2p8"
 
 
-    # - name: Build PlatformIO manifold v2
-    #   run: |
-    #     buildname="manifold_v2"
-    #     cd OASMan_ESP32
-    #     export version_num="${{ inputs.version_num }}"
-    #     pio run -e ${buildname}
-    #     find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
-    #     pio run -e ${buildname} --target clean
-
-    # - name: Build PlatformIO controller cyd3p2
-    #   run: |
-    #     buildname="controller_cyd3p2"
-    #     cd Wireless_Controller
-    #     export version_num="${{ inputs.version_num }}"
-    #     pio run -e ${buildname}
-    #     find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
-    #     pio run -e ${buildname} --target clean
-
-    
-
-    # - name: Build PlatformIO controller ws2p8
-    #   run: |
-    #     buildname="controller_ws2p8"
-    #     cd Wireless_Controller
-    #     export version_num="${{ inputs.version_num }}"
-    #     pio run -e ${buildname}
-    #     find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
-    #     pio run -e ${buildname} --target clean
-
-
     - name: Create Release
        # && github.event_name == 'push'
       if: success() && github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: build-${{ github.run_number }}
+        tag_name: build-${{ github.run_number }} # do not ever change this. It is used in the update process to decide if the current build is already installed
         name: Release ${{ inputs.version_num }} (Build ${{ github.run_number }})
         body: |
           Automated build from commit ${{ github.sha }}
