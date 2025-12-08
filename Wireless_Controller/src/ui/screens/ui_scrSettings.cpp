@@ -75,6 +75,7 @@ static void section_dropdown_event_cb(lv_event_t *e)
         current_page = (lv_obj_t *)settings->pages[id];
         if (current_page) {
             lv_obj_remove_flag(current_page, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_scroll_to_y(lv_obj_get_parent(current_page), 0, LV_ANIM_OFF);
         }
     }
     else if (code == LV_EVENT_READY) {
