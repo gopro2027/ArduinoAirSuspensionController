@@ -96,7 +96,7 @@ void setup()
         case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
             showDialog("Update success!", lv_color_hex(0x00FF00));
             char buf[170];
-            snprintf(buf, sizeof(buf), "You are now on version %s!\nPlease check the manifold update status in the update section of settings to verify the manifold was updated successfully too.", EVALUATE_AND_STRINGIFY(RELEASE_VERSION));
+            snprintf(buf, sizeof(buf), "Welcome to version %s!\nPlease check the manifold update status in the update section of settings to verify the manifold was updated successfully too.", EVALUATE_AND_STRINGIFY(RELEASE_VERSION));
             currentScr->showMsgBox("Update success!", buf, NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         }
