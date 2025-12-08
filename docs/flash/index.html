@@ -151,8 +151,12 @@
 			// 		}
 			// 	}
 			// }
+			// updated to use this proxy URL because it has caching and it's the same one I use on the esp32's
+			// I'm not sure what the limitations are for caching on this github api but maybe this will help. Either way, CORS is blocked on github releases direct links so we need a reverse proxy of some sort.
+			return `http://githubreleasebinary-http-proxy.gopro2027.workers.dev/?url=https://github.com/gopro2027/ArduinoAirSuspensionController/releases/download/${tag_name}/${boardName}${subscript}`;
 			// unfortunately have to use this reverse proxy service I set up on cloudflare instead of using the downloadUrl. Github releases has blocked CORS
-			return `https://githubreleasesproxy.gopro2027.workers.dev/?tag_name=${tag_name}&file_name=${boardName}${subscript}`;
+			// This is the original proxy I used without caching
+			//return `https://githubreleasesproxy.gopro2027.workers.dev/?tag_name=${tag_name}&file_name=${boardName}${subscript}`;
 		}
 
 		//reverse proxy code:
