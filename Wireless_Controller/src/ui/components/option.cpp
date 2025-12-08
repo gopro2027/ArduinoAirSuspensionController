@@ -205,8 +205,8 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_slider_set_range(this->rightHandObj, 0, 9999999); // will be updated later
         lv_slider_set_value(this->rightHandObj, value.INT, LV_ANIM_OFF);
 
-        lv_obj_set_width(this->rightHandObj, LCD_WIDTH - (MARGIN * 5));
-        lv_obj_set_x(this->rightHandObj, MARGIN / 2);
+        lv_obj_set_width(this->rightHandObj, LCD_WIDTH - (MARGIN * 4));
+        lv_obj_set_x(this->rightHandObj, 0);
         lv_obj_set_y(this->rightHandObj, -OPTION_ROW_HEIGHT / 4);
         lv_obj_set_align(this->rightHandObj, LV_ALIGN_BOTTOM_MID);
 
