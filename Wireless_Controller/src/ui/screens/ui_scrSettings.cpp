@@ -20,6 +20,39 @@ static const char *section_names[] = {
 };
 static const int NUM_SECTIONS = 9;
 
+// Helper function to style dropdown list
+static void style_dropdown_list(lv_obj_t *dropdown)
+{
+    lv_obj_t *list = lv_dropdown_get_list(dropdown);
+    if (list) {
+        // Style the list container
+        lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_DARK), 0);
+        lv_obj_set_style_bg_opa(list, LV_OPA_COVER, 0);
+        lv_obj_set_style_border_color(list, lv_color_hex(THEME_COLOR_LIGHT), 0);
+        lv_obj_set_style_border_width(list, 2, 0);
+        lv_obj_set_style_radius(list, 0, 0); // Remove rounded corners
+        lv_obj_set_style_text_font(list, &lv_font_montserrat_20, 0);
+        lv_obj_set_style_text_color(list, lv_color_white(), 0);
+        
+        // Style selected item
+        lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_SELECTED | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_opa(list, LV_OPA_COVER, LV_PART_SELECTED | LV_STATE_DEFAULT);
+        lv_obj_set_style_text_color(list, lv_color_white(), LV_PART_SELECTED | LV_STATE_DEFAULT);
+        
+        // Style list items
+        uint32_t child_cnt = lv_obj_get_child_cnt(list);
+        for (uint32_t i = 0; i < child_cnt; i++) {
+            lv_obj_t *child = lv_obj_get_child(list, i);
+            if (child) {
+                lv_obj_set_style_bg_opa(child, LV_OPA_TRANSP, 0);
+                lv_obj_set_style_text_font(child, &lv_font_montserrat_20, 0);
+                lv_obj_set_style_text_color(child, lv_color_white(), 0);
+                lv_obj_set_style_pad_all(child, 10, 0);
+            }
+        }
+    }
+}
+
 // Dropdown event handler
 static void section_dropdown_event_cb(lv_event_t *e)
 {
@@ -40,6 +73,10 @@ static void section_dropdown_event_cb(lv_event_t *e)
         if (current_page) {
             lv_obj_remove_flag(current_page, LV_OBJ_FLAG_HIDDEN);
         }
+    }
+    else if (code == LV_EVENT_READY) {
+        // Style the list when dropdown opens
+        style_dropdown_list(dropdown);
     }
 }
 
@@ -108,7 +145,7 @@ void ScrSettings::init()
 {
     Scr::init();
 
-    // Create main container for settings
+    // Create main container for settings (not scrollable)
     menu_container = lv_obj_create(this->scr);
     lv_obj_remove_style_all(menu_container);
     lv_obj_set_size(menu_container, LCD_WIDTH, LCD_HEIGHT - NAVBAR_HEIGHT);
@@ -116,34 +153,44 @@ void ScrSettings::init()
     lv_obj_set_style_bg_opa(menu_container, LV_OPA_TRANSP, 0);
     lv_obj_set_layout(menu_container, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(menu_container, LV_FLEX_FLOW_COLUMN);
+    lv_obj_clear_flag(menu_container, LV_OBJ_FLAG_SCROLLABLE); // Prevent scrolling on main container
 
-    // Create top menu bar with dropdown
+    // Create top menu bar with dropdown (fixed, not scrollable)
     lv_obj_t *menu_bar = lv_obj_create(menu_container);
     lv_obj_remove_style_all(menu_bar);
-    lv_obj_set_size(menu_bar, LCD_WIDTH, 40);
+    lv_obj_set_size(menu_bar, LCD_WIDTH, 50);
     lv_obj_set_style_bg_color(menu_bar, lv_color_hex(THEME_COLOR_DARK), 0);
     lv_obj_set_style_bg_opa(menu_bar, LV_OPA_COVER, 0);
     lv_obj_set_layout(menu_bar, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(menu_bar, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(menu_bar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_all(menu_bar, 5, 0);
+    lv_obj_clear_flag(menu_bar, LV_OBJ_FLAG_SCROLLABLE); // Prevent scrolling on menu bar
 
-    // Create dropdown for section selection
+    // Create dropdown for section selection (square corners, no rounded corners)
     lv_obj_t *dropdown = lv_dropdown_create(menu_bar);
     lv_dropdown_set_options(dropdown, "Status\nGame Controller\nML/AI\nBasic settings\nLevelling Mode\nUnits\nController Settings\nConfig\nWifi / Update");
     lv_obj_set_width(dropdown, LCD_WIDTH - 10);
+    lv_obj_set_height(dropdown, 40); // Reasonable height for easy pressing
     lv_obj_set_style_bg_color(dropdown, lv_color_hex(THEME_COLOR_LIGHT), 0);
     lv_obj_set_style_text_color(dropdown, lv_color_white(), 0);
+    lv_obj_set_style_text_font(dropdown, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_radius(dropdown, 0, 0); // Remove rounded corners - perfect square corners
+    lv_obj_set_style_pad_all(dropdown, 10, 0);
+    
+    // Add event handlers for value changed and when dropdown opens
     lv_obj_add_event_cb(dropdown, section_dropdown_event_cb, LV_EVENT_VALUE_CHANGED, this);
+    lv_obj_add_event_cb(dropdown, section_dropdown_event_cb, LV_EVENT_READY, this);
 
-    // Create pages container (scrollable area for content)
+    // Create pages container (scrollable area for content only)
     lv_obj_t *pages_container = lv_obj_create(menu_container);
     lv_obj_remove_style_all(pages_container);
-    lv_obj_set_size(pages_container, LCD_WIDTH, LCD_HEIGHT - NAVBAR_HEIGHT - 40);
+    lv_obj_set_size(pages_container, LCD_WIDTH, LCD_HEIGHT - NAVBAR_HEIGHT - 50); // Adjusted for menu bar only
     lv_obj_set_style_bg_opa(pages_container, LV_OPA_TRANSP, 0);
     lv_obj_set_layout(pages_container, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(pages_container, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_scrollbar_mode(pages_container, LV_SCROLLBAR_MODE_AUTO);
+    lv_obj_set_scroll_dir(pages_container, LV_DIR_VER); // Only vertical scrolling
 
     // Initialize pages array
     for (int i = 0; i < NUM_SECTIONS; i++) {

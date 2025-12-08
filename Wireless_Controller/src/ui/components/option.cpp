@@ -54,12 +54,8 @@ void Option::indentText(int extraX)
     {
         lv_obj_set_x(this->text, MARGIN * 2 + extraX);
     }
-    this->bar = lv_obj_create(this->root);
-    lv_obj_remove_style_all(this->bar);
-    lv_obj_set_style_bg_opa(this->bar, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_size(this->bar, 1, this->optionRowHeight);
-    lv_obj_set_style_bg_color(this->bar, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_x(this->bar, MARGIN);
+    // Bar (vertical line) removed - no longer needed
+    this->bar = NULL;
 }
 void ui_clicked_button(lv_event_t *e)
 {
