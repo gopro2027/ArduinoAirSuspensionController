@@ -110,6 +110,78 @@ void setupManifold()
 
 #pragma endregion
 
+#pragma region ebrake
+
+#if EBRAKE_WIRE_FUNCTIONALITY
+
+const int ebrakeSampleSize = AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE == true ? 2 : 5; // when normal ebrake on, use long sample of 5 samples. When doing double lock mode, only take 2 samples (100ms per sample) to make it a bit more snappy on time
+bool ebrakeHistory[ebrakeSampleSize];
+int ebrakeCounter = 0;
+bool ebrakeOn = false;
+
+InputType *ebrakeWire;
+void ebrakeWireSetup()
+{
+    ebrakeWire = ebrakeInput;
+}
+
+void ebrakeWireLoop()
+{
+    // when e brake is not engaged, the 3.3v through the 10k resistor goes to the esp32. That means we get a high reading when ebrake is off. When ebrake is on, we get a low reading
+    bool previousReading = ebrakeOn;
+    sampleReading(ebrakeOn, ebrakeWire->digitalRead() == LOW, ebrakeHistory, ebrakeCounter, ebrakeSampleSize);
+
+#if ENABLE_AIR_OUT_ON_SHUTOFF
+#if AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE
+
+    if (!isVehicleOn())
+    {
+        static long lastOnTime = millis();
+        if (ebrakeOn)
+        {
+            long currentReadTime = millis();
+            if (previousReading == false)
+            {
+                if (currentReadTime - lastOnTime < AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE_TIME)
+                {
+                    // pressed twice within timeframe
+                    // check air out on shutoff enabled
+                    if (getairOutOnShutoff())
+                    {
+                        readProfile(0); // packet 0 should be the lowest setting!
+                        airUp(false);
+                    }
+                }
+            }
+            lastOnTime = currentReadTime;
+        }
+    }
+#endif
+#endif
+}
+
+bool isEBrakeOn()
+{
+    return ebrakeOn;
+}
+
+#else
+
+void ebrakeWireSetup()
+{
+}
+void ebrakeWireLoop()
+{
+}
+bool isEBrakeOn()
+{
+    return false;
+}
+
+#endif
+
+#pragma endregion
+
 #pragma region wheel_functions
 
 bool isAnyWheelActive()
@@ -149,16 +221,12 @@ void airUpRelativeToAverage(int value)
     getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue() + value, true);
 }
 
-bool isCarMoving()
-{
-    // TODO: add gps code to check if we are driving
-    return true;
-}
-
 void airOutWithSafetyCheck()
 {
-    // only air out if car is not moving!
-    if (!isCarMoving())
+#if ENABLE_AIR_OUT_ON_SHUTOFF
+#if !AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE
+    // only air out if car is in park
+    if (isEBrakeOn())
     {
         if (getairOutOnShutoff())
         {
@@ -166,6 +234,8 @@ void airOutWithSafetyCheck()
             airUp(false);
         }
     }
+#endif
+#endif
 }
 
 #pragma endregion

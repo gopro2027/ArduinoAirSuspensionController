@@ -47,7 +47,7 @@
 
 #if LV_USE_STDLIB_MALLOC == LV_STDLIB_BUILTIN
     /*Size of the memory available for `lv_malloc()` in bytes (>= 2kB)*/
-    #define LV_MEM_SIZE ((64 + 10) * 1024U)          /*[bytes]*/ // this freaks tf out if i lower it below (64 * 1024U). Random things stop working. UPDATE: increased +11 which nearly maxes out memory on the CYD, to fix the issue with msgbox not working when we switched back to builtin. Using builtin stores the memory in a different area than CLIB. The esp32-s3 can do at least 128 * 1024 total memory
+    #define LV_MEM_SIZE ((64 + 64) * 1024U)          /*[bytes]*/ // this freaks tf out if i lower it below (64 * 1024U). Random things stop working. UPDATE: increased +11 which nearly maxes out memory on the CYD, to fix the issue with msgbox not working when we switched back to builtin. Using builtin stores the memory in a different area than CLIB. The esp32-s3 can do at least 128 * 1024 total memory
 
     /*Size of the memory expand for `lv_malloc()` in bytes*/
     #define LV_MEM_POOL_EXPAND_SIZE 0
@@ -218,11 +218,11 @@
     *LV_LOG_LEVEL_ERROR       Only critical issue, when the system may fail
     *LV_LOG_LEVEL_USER        Only logs added by the user
     *LV_LOG_LEVEL_NONE        Do not log anything*/
-    #define LV_LOG_LEVEL LV_LOG_LEVEL_WARN
+    #define LV_LOG_LEVEL LV_LOG_LEVEL_INFO 
 
     /*1: Print the log with 'printf';
     *0: User need to register a callback with `lv_log_register_print_cb()`*/
-    #define LV_LOG_PRINTF 0
+    #define LV_LOG_PRINTF 1
 
     /*1: Enable print timestamp;
      *0: Disable print timestamp*/

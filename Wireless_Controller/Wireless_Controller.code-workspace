@@ -8,6 +8,9 @@
 		}
 	],
 	"settings": {
+		"search.exclude": {
+			"device_libs": true
+		},
 		"files.associations": {
 			"*.dbclient-js": "javascript",
 			"jinja-html": "html",
@@ -70,7 +73,6 @@
 			"ui_scrmain.h": "c",
 			"arduino.h": "c",
 			"lvgl.h": "c",
-			"esp32_smartdisplay.h": "c",
 			"esp_lcd_panel_ops.h": "c",
 			"lv_display_private.h": "c",
 			"util.h": "c",
@@ -108,7 +110,11 @@
 			"esp32-hal.h": "c",
 			"esp8266-compat.h": "c",
 			"queue.h": "c",
-			"esp_log.h": "c"
+			"esp_log.h": "c",
+			"esp_lcd_touch_axs15231b.h": "c",
+			"format": "cpp",
+			"span": "cpp",
+			"text_encoding": "cpp"
 		}
 	}
 }

@@ -161,11 +161,6 @@ void ui_scrMain_loop()
         sprintf(text_buffer, "%lu", now);
         lv_label_set_text(scrMain.ui_lblMillisecondsValue, text_buffer);
 
-        // #ifdef BOARD_HAS_RGB_LED
-        //         auto const rgb = (now / 2000) % 8;
-        //         smartdisplay_led_set_rgb(rgb & 0x01, rgb & 0xi02, rgb & 0x04);
-        // #endif
-
         // #ifdef BOARD_HAS_CDS
         //         auto cdr = analogReadMilliVolts(CDS);
         //         sprintf(text_buffer, "%d", cdr);

@@ -27,7 +27,7 @@ void ScrSettings::init()
 
     this->optionsContainer = lv_obj_create(this->scr);
     lv_obj_remove_style_all(this->optionsContainer);
-    lv_obj_set_size(this->optionsContainer, DISPLAY_WIDTH, DISPLAY_HEIGHT - NAVBAR_HEIGHT);
+    lv_obj_set_size(this->optionsContainer, LCD_WIDTH, LCD_HEIGHT - NAVBAR_HEIGHT);
     lv_obj_align(this->optionsContainer, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_set_layout(this->optionsContainer, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(this->optionsContainer, LV_FLEX_FLOW_COLUMN);
@@ -37,6 +37,7 @@ void ScrSettings::init()
     new Option(this->optionsContainer, OptionType::HEADER, "Status");
     this->ui_s1 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Compressor Frozen:", defaultCharVal);
     this->ui_s3 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "ACC Status:", defaultCharVal);
+    this->ui_ebrakeStatus = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE == true ? "Door Lock Status:" : "E-Brake Status:", defaultCharVal);
     // this->ui_s4 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Timer Expired:", defaultCharVal);
     // this->ui_s5 = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Clock:", defaultCharVal);
     this->ui_s2 = new Option(this->optionsContainer, OptionType::ON_OFF, "Compressor Status:", defaultCharVal, [](void *data)
@@ -116,11 +117,13 @@ void ScrSettings::init()
                 RiseOnStartPacket pkt(((bool)data));
                 sendRestPacket(&pkt);
                 log_i("Pressed riseonstart %i", ((bool)data)); });
-    // this->ui_airoutonshutoff = new Option(this->optionsContainer, OptionType::ON_OFF, "Fall on shutdown", defaultCharVal, [](void *data)
-    //                                       {
-    //             FallOnShutdownPacket pkt(((bool)data));
-    //             sendRestPacket(&pkt);
-    //             log_i("Pressed fallonshutdown %i", ((bool)data)); });
+#if ENABLE_AIR_OUT_ON_SHUTOFF
+    this->ui_airoutonshutoff = new Option(this->optionsContainer, OptionType::ON_OFF, "Fall on shutdown", defaultCharVal, [](void *data)
+                                          {
+                FallOnShutdownPacket pkt(((bool)data));
+                sendRestPacket(&pkt);
+                log_i("Pressed fallonshutdown %i", ((bool)data)); });
+#endif
 
     this->ui_safetymode = new Option(this->optionsContainer, OptionType::ON_OFF, "Safety Mode", defaultCharVal, [](void *data)
                                      { 
@@ -173,7 +176,7 @@ void ScrSettings::init()
     ui_brightnessSlider = new Option(this->optionsContainer, OptionType::SLIDER, "Brightness", {.INT = getbrightness()}, [](void *data)
                                      { log_i("Brightness %i", ((uint32_t)data));
         setbrightness((uint32_t)data);
-        smartdisplay_lcd_set_backlight(getBrightnessFloat()); });
+        set_brightness(getBrightnessFloat()); });
     ui_brightnessSlider->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
 
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
@@ -303,7 +306,7 @@ void ScrSettings::init()
     lv_obj_t *qrCodeParent = lv_obj_create(this->optionsContainer);
     lv_obj_remove_style_all(qrCodeParent);
     // lv_obj_set_style_bg_opa(qrCodeParent, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_size(qrCodeParent, DISPLAY_WIDTH, 100);
+    lv_obj_set_size(qrCodeParent, LCD_WIDTH, 100);
     // lv_obj_set_style_bg_color(qrCodeParent, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);
     // lv_obj_set_x(qrCodeParent, DISPLAY_WIDTH - 100 / 2);
     // lv_obj_set_align(qrCodeParent, LV_ALIGN_TOP_MID);
@@ -316,7 +319,7 @@ void ScrSettings::init()
     const char *qr_data = "https://oasman.dev";
     lv_qrcode_update(this->ui_qrcode, qr_data, strlen(qr_data));
     // lv_obj_set_align(this->ui_qrcode, LV_ALIGN_TOP_MID);
-    lv_obj_set_x(this->ui_qrcode, DISPLAY_WIDTH / 2 - 50);
+    lv_obj_set_x(this->ui_qrcode, LCD_WIDTH / 2 - 50);
     //  lv_obj_center(this->ui_qrcode);
     //  lv_obj_set_y(this->ui_qrcode, DISPLAY_HEIGHT - 10);
 
@@ -334,11 +337,9 @@ void ScrSettings::init()
     macValue.STRING = ble_getMAC();
     this->ui_mac = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Manifold:", macValue);
 
-#if defined(WAVESHARE_BOARD)
     OptionValue voltsValue;
     voltsValue.STRING = getBatteryVoltageString();
     this->ui_volts = new Option(this->optionsContainer, OptionType::TEXT_WITH_VALUE, "Battery:", voltsValue);
-#endif
 
     // add space at end of list
     new Option(this->optionsContainer, OptionType::SPACE, "", defaultCharVal);
@@ -357,6 +358,8 @@ void ScrSettings::loop()
     this->ui_s1->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_FROZEN) ? "Yes" : "No");
     // this->ui_s2->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON) ? "On" : "Off");
     this->ui_s3->setRightHandText(statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON) ? "On" : "Off");
+    this->ui_ebrakeStatus->setRightHandText(statusBittset & (1 << StatusPacketBittset::EBRAKE_STATUS_ON) ? "On" : "Off");
+
     if (statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON))
     {
         this->ui_rebootbutton->setRightHandText("Reboot");
@@ -369,7 +372,9 @@ void ScrSettings::loop()
     // this->ui_s5->setRightHandText(statusBittset & (1 << CLOCK) ? "1" : "0");
     this->ui_riseonstart->setBooleanValue(statusBittset & (1 << StatusPacketBittset::RISE_ON_START));
     this->ui_maintainprssure->setBooleanValue(statusBittset & (1 << StatusPacketBittset::MAINTAIN_PRESSURE));
-    // this->ui_airoutonshutoff->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF));
+#if ENABLE_AIR_OUT_ON_SHUTOFF
+    this->ui_airoutonshutoff->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF));
+#endif
     this->ui_heightsensormode->setSelectedOption((statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE)) != 0 ? 1 : 0);
 
     this->ui_safetymode->setBooleanValue(statusBittset & (1 << StatusPacketBittset::SAFETY_MODE));
@@ -396,9 +401,7 @@ void ScrSettings::loop()
 
     this->ui_mac->setRightHandText(ble_getMAC());
 
-#if defined(WAVESHARE_BOARD)
     this->ui_volts->setRightHandText(getBatteryVoltageString());
-#endif
 
     if (*util_configValues._setValues())
     {

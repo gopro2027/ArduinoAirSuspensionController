@@ -544,6 +544,10 @@ void ble_notify()
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::ACC_STATUS_ON);
         }
+        if (isEBrakeOn())
+        {
+            statusBittset = statusBittset | (1 << StatusPacketBittset::EBRAKE_STATUS_ON);
+        }
         if (isKeepAliveTimerExpired())
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::TIMER_STATUS_EXPIRED);
@@ -656,9 +660,11 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
     case BTOasIdentifier::RISEONSTART:
         setriseOnStart(((RiseOnStartPacket *)packet)->getBoolean());
         break;
+#if ENABLE_AIR_OUT_ON_SHUTOFF
     case BTOasIdentifier::FALLONSHUTDOWN:
         setairOutOnShutoff(((FallOnShutdownPacket *)packet)->getBoolean());
         break;
+#endif
     case BTOasIdentifier::HEIGHTSENSORMODE:
         setheightSensorMode(((HeightSensorModePacket *)packet)->getBoolean());
         break;
@@ -789,6 +795,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_CONNECTION:
             pkt.setStatus("[F] No WiFi");
             break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
         case UPDATE_STATUS::UPDATE_STATUS_NONE:
         case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
             pkt.setStatus("v" EVALUATE_AND_STRINGIFY(RELEASE_VERSION));

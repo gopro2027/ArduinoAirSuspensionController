@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <Preferences.h> // have to include it here or it isn't found in the shared libs
 
-#include <esp32_smartdisplay.h>
 #include <ui/ui.h>
 
 #include "utils/touch_lib.h"
@@ -29,9 +28,6 @@ bool dimmed = false;
 void setup()
 {
 
-#ifdef ARDUINO_USB_CDC_ON_BOOT
-    // delay(5000);
-#endif
     Serial.begin(115200);
     // esp_bt_controller_mem_release(ESP_BT_MODE_BLE);
     esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT); // should free a tad bit of memory
@@ -59,9 +55,7 @@ void setup()
 
     setup_tasks();
 
-    // out display file for the lcd:
-    // Wireless_Controller\.pio\libdeps\esp32-2432S032C\esp32_smartdisplay\src\lvgl_panel_st7789_spi.c
-    smartdisplay_init();
+    board_drivers_init();
 
     __attribute__((unused)) auto disp = lv_disp_get_default();
     // lv_disp_set_rotation(disp, LV_DISP_ROT_90);
@@ -70,11 +64,7 @@ void setup()
 
     ui_init();
 
-    smartdisplay_lcd_set_backlight(getBrightnessFloat());
-
-#ifdef BOARD_HAS_TOUCH
     setup_touchscreen_hook();
-#endif
 
     dimScreenTime = millis() + DIM_SCREEN_TIME;
 
@@ -99,18 +89,23 @@ void setup()
             showDialog("Update failed (wifi connection)", lv_color_hex(0xFF0000));
             currentScr->showMsgBox("Update failed", "Could not connect to wifi network. Please check your wifi SSID and password", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
+            showDialog("Update not needed", lv_color_hex(0xFFFF00));
+            currentScr->showMsgBox("Update aborted", "You are already on the latest release", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
         case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
             showDialog("Update success!", lv_color_hex(0x00FF00));
-            char buf[160];
-            snprintf(buf, sizeof(buf), "You are now on version %s!\nPlease check the manifold update status in the update section of settings to verify the manifold was updated successfully too.", EVALUATE_AND_STRINGIFY(RELEASE_VERSION));
+            char buf[170];
+            snprintf(buf, sizeof(buf), "Welcome to version %s!\nPlease check the manifold update status in the update section of settings to verify the manifold was updated successfully too.", EVALUATE_AND_STRINGIFY(RELEASE_VERSION));
             currentScr->showMsgBox("Update success!", buf, NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         }
         setupdateResult(0);
     }
+    set_brightness(getBrightnessFloat());
 }
 
-auto lv_last_tick = millis();
+// auto lv_last_tick = millis();
 void loop()
 {
     auto const now = millis();
@@ -119,7 +114,7 @@ void loop()
     {
         if (dimmed)
         {
-            smartdisplay_lcd_set_backlight(getBrightnessFloat());
+            set_brightness(getBrightnessFloat());
             dimmed = false;
         }
         dimScreenTime = now + DIM_SCREEN_TIME;
@@ -127,7 +122,7 @@ void loop()
 
     if (dimScreenTime < now && dimmed == false)
     {
-        smartdisplay_lcd_set_backlight(0.01f);
+        set_brightness(0.01f);
         dimmed = true;
     }
 
@@ -140,14 +135,17 @@ void loop()
     //     log_i("Just Released %d %d ", touchX(), touchY());
     // }
 
+
     // screen code
     screenLoop();
     dialogLoop();
     safetyModeMsgBoxCheck();
 
+
     // Update the ticker
-    lv_tick_inc(now - lv_last_tick);
-    lv_last_tick = now;
+    // lv_tick_inc(now - lv_last_tick);
+    // lv_last_tick = now;
     // Update the UI
     lv_timer_handler();
+    vTaskDelay(pdMS_TO_TICKS(5));
 }

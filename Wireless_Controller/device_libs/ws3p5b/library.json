@@ -1,0 +1,27 @@
+{
+  "name": "ws3p5b",
+  "version": "1.0",
+  "includeDir": "files/",
+  "build": {
+		"includeDir": "files/",
+        "srcFilter": [
+            "-<*>",
+            "+<images/*>",
+            "+<files/esp_lcd_touch_axs15231b.cpp>",
+            "+<files/indev_global.cpp>",
+            "+<files/lvgl_panel_axs15231b_arduino_gfx.cpp>"
+            
+        ]
+	}, 
+  "frameworks": "arduino",
+  "platforms": "espressif32",
+  "dependencies": {
+    "Wire":"",
+    "lvgl/lvgl":"9.2.2",
+    "RobTillaart/TCA9554":"0.1.2",
+    "moononournation/GFX Library for Arduino":"1.6.0",
+    "lewisxhe/XPowersLib":"0.2.6"
+  }
+}
+
+

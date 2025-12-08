@@ -15,7 +15,7 @@ Alert::Alert(Scr *scr)
     this->rect = lv_obj_create(scr->scr);
     lv_obj_remove_style_all(this->rect);
     lv_obj_set_style_bg_opa(this->rect, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_size(this->rect, DISPLAY_WIDTH, 20);
+    lv_obj_set_size(this->rect, LCD_WIDTH, 20);
     lv_obj_set_align(this->rect, LV_ALIGN_TOP_MID);
     lv_obj_set_style_bg_color(this->rect, lv_color_hex(esp_random()), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_opa(this->rect, LV_OPA_50, 0);

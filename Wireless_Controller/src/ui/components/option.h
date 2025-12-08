@@ -13,6 +13,8 @@
 
 #include "utils/util.h"
 
+#include "device_lib_exports.h"
+
 class Scr;
 
 typedef void (*option_event_cb_t)(void *data);
