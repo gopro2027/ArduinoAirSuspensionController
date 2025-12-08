@@ -313,7 +313,7 @@ void downloadUpdate(String SSID, String PASS)
  * Cloudflare Worker code for the proxy:
  * http://githubreleasebinary-http-proxy.gopro2027.workers.dev/?url=
  * 
- export default {
+export default {
   async fetch(request, env, ctx) {
     // Only allow your specific origin or use authentication
     const url = new URL(request.url);
@@ -322,7 +322,7 @@ void downloadUpdate(String SSID, String PASS)
     // Example: http://your-worker.workers.dev/?url=https://github.com/user/repo/releases/download/v1.0/firmware.bin
     const targetUrl = url.searchParams.get('url');
     
-    if (!targetUrl || !targetUrl.startsWith('https://github.com/')) {
+    if (!targetUrl || !targetUrl.startsWith('https://github.com/gopro2027/ArduinoAirSuspensionController/releases/download/')) {
       return new Response('Invalid URL', { status: 400 });
     }
     
