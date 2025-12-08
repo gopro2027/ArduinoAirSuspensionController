@@ -54,7 +54,7 @@ int getDownloadFirmwareURL(String &responseURLString)
 {
     log_i("Downloading json from github api releases (through proxy)");
 
-    if (!https.begin("http://githubreleaselist-http-proxy.gopro2027.workers.dev/?url=https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest"))
+    if (!https.begin("http://githubreleaselist-http-proxy.gopro2027.workers.dev/"))
     {
         log_i("Connection failed");
         return download_firmware_response_retry;
@@ -366,7 +366,8 @@ export default {
     const url = new URL(request.url);
     
     // Extract the GitHub URL from query parameter
-    const targetUrl = url.searchParams.get('url');
+    // const targetUrl = url.searchParams.get('url');
+    const targetUrl = "https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest";
     
     if (!targetUrl || !targetUrl.startsWith('https://api.github.com/')) {
       return new Response('Invalid URL', { status: 400 });
