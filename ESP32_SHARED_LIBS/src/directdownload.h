@@ -6,6 +6,7 @@
 #include "HTTPClient.h"
 #include <Update.h>
 #include <ArduinoJson.h>
+#include "user_defines.h"
 
 #ifndef FIRMWARE_RELEASE_NAME
 #ifdef PROJECT_IS_MANIFOLD
@@ -22,7 +23,8 @@ enum UPDATE_STATUS
     UPDATE_STATUS_FAIL_WIFI_CONNECTION,
     UPDATE_STATUS_FAIL_VERSION_REQUEST,
     UPDATE_STATUS_FAIL_FILE_REQUEST,
-    UPDATE_STATUS_FAIL_GENERIC
+    UPDATE_STATUS_FAIL_GENERIC,
+    UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE
 };
 
 extern void setupdateResult(byte value);

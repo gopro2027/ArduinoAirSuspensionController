@@ -89,6 +89,10 @@ void setup()
             showDialog("Update failed (wifi connection)", lv_color_hex(0xFF0000));
             currentScr->showMsgBox("Update failed", "Could not connect to wifi network. Please check your wifi SSID and password", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
+            showDialog("Update not needed", lv_color_hex(0xFFFF00));
+            currentScr->showMsgBox("Update aborted", "You are already on the latest release", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
         case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
             showDialog("Update success!", lv_color_hex(0x00FF00));
             char buf[170];
