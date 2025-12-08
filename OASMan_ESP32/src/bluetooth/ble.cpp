@@ -795,6 +795,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_CONNECTION:
             pkt.setStatus("[F] No WiFi");
             break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
         case UPDATE_STATUS::UPDATE_STATUS_NONE:
         case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
             pkt.setStatus("v" EVALUATE_AND_STRINGIFY(RELEASE_VERSION));

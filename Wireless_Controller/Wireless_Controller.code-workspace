@@ -111,7 +111,10 @@
 			"esp8266-compat.h": "c",
 			"queue.h": "c",
 			"esp_log.h": "c",
-			"esp_lcd_touch_axs15231b.h": "c"
+			"esp_lcd_touch_axs15231b.h": "c",
+			"format": "cpp",
+			"span": "cpp",
+			"text_encoding": "cpp"
 		}
 	}
 }

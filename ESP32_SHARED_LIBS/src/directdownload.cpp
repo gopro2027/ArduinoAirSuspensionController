@@ -1,5 +1,9 @@
 #include "directdownload.h"
 
+#ifndef RELEASE_TAG_NAME
+#define RELEASE_TAG_NAME "build-dev" 
+#endif
+
 #define download_firmware_response_success 1
 #define download_firmware_response_retry 2
 #define download_firmware_response_fail -1
@@ -46,14 +50,28 @@ bool check300Redirect(int httpCode, String &responseURLString)
     return false;
 }
 
-int getDownloadFirmwareURL(WiFiClientSecure &client, String &responseURLString)
+int getDownloadFirmwareURL(String &responseURLString)
 {
+    static bool rateLimited = false;
     log_i("Downloading json from github api releases");
 
-    if (!https.begin(client, "https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest"))
-    {
-        log_i("Connection failed");
-        return download_firmware_response_retry;
+    if (rateLimited) {
+        log_i("Using direct secure connection to github api due to prior rate limiting");
+
+        WiFiClientSecure client;
+        client.setInsecure();
+        
+        if (!https.begin(client, "https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest"))
+        {
+            log_i("Connection failed");
+            return download_firmware_response_retry;
+        }
+    } else {
+        if (!https.begin("http://githubreleaselist-http-proxy.gopro2027.workers.dev/"))
+        {
+            log_i("Connection failed");
+            return download_firmware_response_retry;
+        }
     }
 
     delay(50);
@@ -63,9 +81,20 @@ int getDownloadFirmwareURL(WiFiClientSecure &client, String &responseURLString)
         return download_firmware_response_retry;
     }
 
+    if (httpResponseCode == HTTP_CODE_FORBIDDEN || httpResponseCode == HTTP_CODE_TOO_MANY_REQUESTS)
+    {
+        rateLimited = true;
+        log_i("Rate limited by GitHub API, switching to direct secure connection for future requests");
+        log_i("HTTP Response code: %d", httpResponseCode);
+        log_i("Error Response: %s", https.getString().c_str());
+        https.end();
+        return download_firmware_response_retry;
+    }
+
     if (httpResponseCode != HTTP_CODE_OK)
     {
         log_i("HTTP Response code: %d", httpResponseCode);
+        log_i("Error Response: %s", https.getString().c_str());
         https.end();
         return download_firmware_response_retry;
     }
@@ -75,6 +104,7 @@ int getDownloadFirmwareURL(WiFiClientSecure &client, String &responseURLString)
     log_i("looking for %s in the json", FIRMWARE_RELEASE_NAME);
 
     JsonDocument filter;
+    filter["tag_name"] = true;
     filter["assets"][0]["name"] = true;
     filter["assets"][0]["browser_download_url"] = true;
 
@@ -106,6 +136,18 @@ int getDownloadFirmwareURL(WiFiClientSecure &client, String &responseURLString)
     }
 
     delay(10);
+    if (doc["tag_name"] == String(EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME)))
+    {
+        log_i("Latest already installed. Found tag_name name %s matches installed %s.", doc["tag_name"].as<const char *>(), EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME));
+        https.end();
+        doc.clear();
+        setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE);
+        ESP.restart();
+        return download_firmware_response_fail;
+    }
+
+    log_i("Found update: %s. Current update: %s", doc["tag_name"].as<const char *>(), EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME));
+
     for (int j = 0; j < doc["assets"].size(); j++)
     {
         log_i("Checking asset %d: %s", j, doc["assets"][j]["name"].as<const char *>());
@@ -129,9 +171,9 @@ int getDownloadFirmwareURL(WiFiClientSecure &client, String &responseURLString)
     return download_firmware_response_retry;
 }
 
-int installFirmware(WiFiClientSecure &client, String &url)
+int installFirmware(String &url)
 {
-    if (!https.begin(client, url))
+    if (!https.begin(url))
     {
         log_i("Connection failed");
         return download_firmware_response_retry;
@@ -243,18 +285,15 @@ void downloadUpdate(String SSID, String PASS)
         }
 
         log_i("Retrying to connect to wifi...");
-        delay(1000);
+        delay(2500);
 
         counter++;
     }
 
-    WiFiClientSecure client;
-    client.setInsecure();
-
     String url;
     int code = 0;
     counter = 0;
-    while (getDownloadFirmwareURL(client, url) != download_firmware_response_success)
+    while (getDownloadFirmwareURL(url) != download_firmware_response_success)
     {
         if (counter > 5)
         {
@@ -265,15 +304,17 @@ void downloadUpdate(String SSID, String PASS)
         }
 
         log_i("Retrying to get firmware download URL...");
-        delay(1000);
+        delay(5000);
 
         counter++;
     }
 
     log_i("Downloading firmware from %s", url.c_str());
 
+    url = String("http://githubreleasebinary-http-proxy.gopro2027.workers.dev/?url=") + url;
+
     counter = 0;
-    while (installFirmware(client, url) != download_firmware_response_success)
+    while (installFirmware(url) != download_firmware_response_success)
     {
         if (counter > 5)
         {
@@ -282,7 +323,7 @@ void downloadUpdate(String SSID, String PASS)
             ESP.restart();
         }
         log_i("Firmware install requested retry...");
-        delay(1000);
+        delay(5000);
 
         counter++;
     }
@@ -290,3 +331,32 @@ void downloadUpdate(String SSID, String PASS)
     ESP.restart();
     return;
 }
+
+/**
+ * 
+ * Cloudflare Worker code for the proxy:
+ * http://githubreleasebinary-http-proxy.gopro2027.workers.dev/?url=
+ *  See file: githubreleasebinary-http-proxy_worker.js
+ * 
+ *  http proxy for the list of releases:
+ *  http://githubreleaselist-http-proxy.gopro2027.workers.dev/?url=https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest
+ *  See file: githubreleaselist-http-proxy_worker.js
+ *
+ *  Memory difference notes:
+ *  Before (using https, aka WiFiClientSecure on the .begin function): 
+ *  Free heap: 32980
+ *  Largest free block: 17396
+ *  Min free heap: 12780
+ *
+ *  After (cloudflare proxy using http):
+ *  Free heap: 78256
+ *  Largest free block: 34804
+ *  Min free heap: 13884
+ * 
+ *  After adding second proxy for the releases list:
+ *  Free heap: 80348
+ *  Largest free block: 65524
+ *  Min free heap: 76444
+ *
+ *
+ */
