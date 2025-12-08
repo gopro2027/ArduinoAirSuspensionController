@@ -52,18 +52,42 @@ bool check300Redirect(int httpCode, String &responseURLString)
 
 int getDownloadFirmwareURL(String &responseURLString)
 {
-    log_i("Downloading json from github api releases (through proxy)");
+    static bool rateLimited = false;
+    log_i("Downloading json from github api releases");
 
-    if (!https.begin("http://githubreleaselist-http-proxy.gopro2027.workers.dev/"))
-    {
-        log_i("Connection failed");
-        return download_firmware_response_retry;
+    if (rateLimited) {
+        log_i("Using direct secure connection to github api due to prior rate limiting");
+
+        WiFiClientSecure client;
+        client.setInsecure();
+        
+        if (!https.begin(client, "https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest"))
+        {
+            log_i("Connection failed");
+            return download_firmware_response_retry;
+        }
+    } else {
+        if (!https.begin("http://githubreleaselist-http-proxy.gopro2027.workers.dev/"))
+        {
+            log_i("Connection failed");
+            return download_firmware_response_retry;
+        }
     }
 
     delay(50);
     int httpResponseCode = https.GET();
     if (check300Redirect(httpResponseCode, responseURLString)) /* any 300 code lets try to redirect */
     {
+        return download_firmware_response_retry;
+    }
+
+    if (httpResponseCode == HTTP_CODE_FORBIDDEN || httpResponseCode == HTTP_CODE_TOO_MANY_REQUESTS)
+    {
+        rateLimited = true;
+        log_i("Rate limited by GitHub API, switching to direct secure connection for future requests");
+        log_i("HTTP Response code: %d", httpResponseCode);
+        log_i("Error Response: %s", https.getString().c_str());
+        https.end();
         return download_firmware_response_retry;
     }
 
@@ -312,84 +336,27 @@ void downloadUpdate(String SSID, String PASS)
  * 
  * Cloudflare Worker code for the proxy:
  * http://githubreleasebinary-http-proxy.gopro2027.workers.dev/?url=
+ *  See file: githubreleasebinary-http-proxy_worker.js
  * 
-export default {
-  async fetch(request, env, ctx) {
-    // Only allow your specific origin or use authentication
-    const url = new URL(request.url);
-    
-    // Extract the GitHub URL from query parameter
-    // Example: http://your-worker.workers.dev/?url=https://github.com/user/repo/releases/download/v1.0/firmware.bin
-    const targetUrl = url.searchParams.get('url');
-    
-    if (!targetUrl || !targetUrl.startsWith('https://github.com/gopro2027/ArduinoAirSuspensionController/releases/download/')) {
-      return new Response('Invalid URL', { status: 400 });
-    }
-    
-    // Fetch from GitHub with HTTPS
-    const response = await fetch(targetUrl);
-    
-    // Return the binary data to ESP32 over HTTP
-    return new Response(response.body, {
-      status: response.status,
-      headers: {
-        'Content-Type': response.headers.get('Content-Type') || 'application/octet-stream',
-        'Content-Length': response.headers.get('Content-Length'),
-        'Access-Control-Allow-Origin': '*', // If needed
-      }
-    });
-  }
-};
-
-
-Memory difference notes:
-Before (using https, aka WiFiClientSecure on the .begin function): 
-Free heap: 32980
-Largest free block: 17396
-Min free heap: 12780
-
-After (cloudflare proxy using http):
-Free heap: 78256
-Largest free block: 34804
-Min free heap: 13884
-
-After adding second proxy for the releases list:
-Free heap: 80348
-Largest free block: 65524
-Min free heap: 76444
-
-http proxy for the list of releases:
-http://githubreleaselist-http-proxy.gopro2027.workers.dev/?url=https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest
-
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    
-    // Extract the GitHub URL from query parameter
-    // const targetUrl = url.searchParams.get('url');
-    const targetUrl = "https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest";
-    
-    if (!targetUrl || !targetUrl.startsWith('https://api.github.com/')) {
-      return new Response('Invalid URL', { status: 400 });
-    }
-    
-    // Fetch from GitHub with HTTPS
-    const response = await fetch(targetUrl, {
-      headers: {
-        'User-Agent': 'ESP32-Firmware-Updater',
-        'Accept': 'application/vnd.github+json'
-      }
-    });
-    
-    // read it all in so it's not chunked or something weird, esp32 has issues with chunked/streamed responses on the json decoder
-    const buffer = await response.arrayBuffer();
-    return new Response(buffer, {
-      status: response.status,
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    });
-  }
-};
-
+ *  http proxy for the list of releases:
+ *  http://githubreleaselist-http-proxy.gopro2027.workers.dev/?url=https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest
+ *  See file: githubreleaselist-http-proxy_worker.js
+ *
+ *  Memory difference notes:
+ *  Before (using https, aka WiFiClientSecure on the .begin function): 
+ *  Free heap: 32980
+ *  Largest free block: 17396
+ *  Min free heap: 12780
+ *
+ *  After (cloudflare proxy using http):
+ *  Free heap: 78256
+ *  Largest free block: 34804
+ *  Min free heap: 13884
+ * 
+ *  After adding second proxy for the releases list:
+ *  Free heap: 80348
+ *  Largest free block: 65524
+ *  Min free heap: 76444
+ *
+ *
  */
