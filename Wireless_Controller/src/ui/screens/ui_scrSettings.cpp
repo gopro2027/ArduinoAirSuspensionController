@@ -161,7 +161,7 @@ void ScrSettings::init()
     // Create top menu bar with dropdown (fixed, not scrollable)
     lv_obj_t *menu_bar = lv_obj_create(menu_container);
     lv_obj_remove_style_all(menu_bar);
-    lv_obj_set_size(menu_bar, LCD_WIDTH, 50);
+    lv_obj_set_size(menu_bar, LCD_WIDTH, 50 * SCALE_Y);
     lv_obj_set_style_bg_color(menu_bar, lv_color_hex(THEME_COLOR_DARK), 0);
     lv_obj_set_style_bg_opa(menu_bar, LV_OPA_COVER, 0);
     lv_obj_set_layout(menu_bar, LV_LAYOUT_FLEX);
@@ -174,7 +174,7 @@ void ScrSettings::init()
     lv_obj_t *dropdown = lv_dropdown_create(menu_bar);
     lv_dropdown_set_options(dropdown, "Status\nGame Controller\nML/AI\nBasic settings\nLevelling Mode\nUnits\nGame Controller\nConfig\nWifi / Update");
     lv_obj_set_width(dropdown, LCD_WIDTH - 10);
-    lv_obj_set_height(dropdown, 40); // Reasonable height for easy pressing
+    lv_obj_set_height(dropdown, 40 * SCALE_Y); // Reasonable height for easy pressing
     lv_obj_set_style_bg_color(dropdown, lv_color_hex(THEME_COLOR_LIGHT), 0);
     lv_obj_set_style_text_color(dropdown, lv_color_white(), 0);
     lv_obj_set_style_text_font(dropdown, &lv_font_montserrat_20, 0);
@@ -189,7 +189,7 @@ void ScrSettings::init()
     // Create pages container (scrollable area for content only)
     lv_obj_t *pages_container = lv_obj_create(menu_container);
     lv_obj_remove_style_all(pages_container);
-    lv_obj_set_size(pages_container, LCD_WIDTH, LCD_HEIGHT - NAVBAR_HEIGHT - 50); // Adjusted for menu bar only
+    lv_obj_set_size(pages_container, LCD_WIDTH, LCD_HEIGHT - NAVBAR_HEIGHT - 50 * SCALE_Y); // Adjusted for menu bar only
     lv_obj_set_style_bg_opa(pages_container, LV_OPA_TRANSP, 0);
     lv_obj_set_layout(pages_container, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(pages_container, LV_FLEX_FLOW_COLUMN);
