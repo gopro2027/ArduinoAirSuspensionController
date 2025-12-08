@@ -38,6 +38,8 @@ static void style_dropdown_list(lv_obj_t *dropdown)
         lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_SELECTED | LV_STATE_DEFAULT);
         lv_obj_set_style_bg_opa(list, LV_OPA_COVER, LV_PART_SELECTED | LV_STATE_DEFAULT);
         lv_obj_set_style_text_color(list, lv_color_white(), LV_PART_SELECTED | LV_STATE_DEFAULT);
+
+        int dropdown_height = lv_obj_get_height(dropdown);
         
         // Style list items
         uint32_t child_cnt = lv_obj_get_child_cnt(list);
@@ -47,7 +49,8 @@ static void style_dropdown_list(lv_obj_t *dropdown)
                 lv_obj_set_style_bg_opa(child, LV_OPA_TRANSP, 0);
                 lv_obj_set_style_text_font(child, &lv_font_montserrat_20, 0);
                 lv_obj_set_style_text_color(child, lv_color_white(), 0);
-                lv_obj_set_style_pad_all(child, 10, 0);
+                // lv_obj_align(child, LV_ALIGN_TOP_LEFT, 0, 0);
+                lv_obj_set_style_pad_all(child, 10, dropdown_height);
             }
         }
     }
@@ -169,7 +172,7 @@ void ScrSettings::init()
 
     // Create dropdown for section selection (square corners, no rounded corners)
     lv_obj_t *dropdown = lv_dropdown_create(menu_bar);
-    lv_dropdown_set_options(dropdown, "Status\nGame Controller\nML/AI\nBasic settings\nLevelling Mode\nUnits\nController Settings\nConfig\nWifi / Update");
+    lv_dropdown_set_options(dropdown, "Status\nGame Controller\nML/AI\nBasic settings\nLevelling Mode\nUnits\nGame Controller\nConfig\nWifi / Update");
     lv_obj_set_width(dropdown, LCD_WIDTH - 10);
     lv_obj_set_height(dropdown, 40); // Reasonable height for easy pressing
     lv_obj_set_style_bg_color(dropdown, lv_color_hex(THEME_COLOR_LIGHT), 0);
@@ -177,6 +180,7 @@ void ScrSettings::init()
     lv_obj_set_style_text_font(dropdown, &lv_font_montserrat_20, 0);
     lv_obj_set_style_radius(dropdown, 0, 0); // Remove rounded corners - perfect square corners
     lv_obj_set_style_pad_all(dropdown, 10, 0);
+    // lv_obj_set_style_transform_angle(dropdown, 1800, LV_PART_INDICATOR | LV_STATE_CHECKED);
     
     // Add event handlers for value changed and when dropdown opens
     lv_obj_add_event_cb(dropdown, section_dropdown_event_cb, LV_EVENT_VALUE_CHANGED, this);
@@ -203,7 +207,7 @@ void ScrSettings::init()
     lv_obj_set_size(status_page, LCD_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_layout(status_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(status_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(status_page, 10, 0);
+    // lv_obj_set_style_pad_all(status_page, 5, 0);
     this->pages[0] = status_page;
     this->ui_s1 = new Option(status_page, OptionType::TEXT_WITH_VALUE, "Compressor Frozen:", {.STRING = test});
     this->ui_s3 = new Option(status_page, OptionType::TEXT_WITH_VALUE, "ACC Status:", {.STRING = test});
@@ -233,7 +237,7 @@ void ScrSettings::init()
     lv_obj_set_size(game_controller_page, LCD_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_layout(game_controller_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(game_controller_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(game_controller_page, 10, 0);
+    // lv_obj_set_style_pad_all(game_controller_page, 5, 0);
     lv_obj_add_flag(game_controller_page, LV_OBJ_FLAG_HIDDEN);
     this->pages[1] = game_controller_page;
     new Option(game_controller_page, OptionType::BUTTON, "Allow New Controller", {.STRING = test}, [](void *data)
@@ -261,7 +265,7 @@ void ScrSettings::init()
     lv_obj_set_size(ml_ai_page, LCD_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_layout(ml_ai_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(ml_ai_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(ml_ai_page, 10, 0);
+    // lv_obj_set_style_pad_all(ml_ai_page, 5, 0);
     lv_obj_add_flag(ml_ai_page, LV_OBJ_FLAG_HIDDEN);
     this->pages[2] = ml_ai_page;
     this->ui_aiPercentage = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Learn Progress:", {.STRING = test});
@@ -280,7 +284,7 @@ void ScrSettings::init()
     lv_obj_set_size(basic_settings_page, LCD_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_layout(basic_settings_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(basic_settings_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(basic_settings_page, 10, 0);
+    // lv_obj_set_style_pad_all(basic_settings_page, 5, 0);
     lv_obj_add_flag(basic_settings_page, LV_OBJ_FLAG_HIDDEN);
     this->pages[3] = basic_settings_page;
     this->ui_maintainprssure = new Option(basic_settings_page, OptionType::ON_OFF, "Maintain Preset", {.STRING = test}, maintain_pressure_handler);
@@ -303,7 +307,7 @@ void ScrSettings::init()
     lv_obj_set_size(levelling_page, LCD_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_layout(levelling_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(levelling_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(levelling_page, 10, 0);
+    // lv_obj_set_style_pad_all(levelling_page, 5, 0);
     lv_obj_add_flag(levelling_page, LV_OBJ_FLAG_HIDDEN);
     this->pages[4] = levelling_page;
     const char *levelTypeRadioText[2] = {"Pressure Sensor", "Level Sensor"};
@@ -320,7 +324,7 @@ void ScrSettings::init()
     lv_obj_set_size(units_page, LCD_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_layout(units_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(units_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(units_page, 10, 0);
+    // lv_obj_set_style_pad_all(units_page, 5, 0);
     lv_obj_add_flag(units_page, LV_OBJ_FLAG_HIDDEN);
     this->pages[5] = units_page;
     const char *unitsRadioText[2] = {"PSI", "Bar"};
@@ -334,7 +338,7 @@ void ScrSettings::init()
     lv_obj_set_size(controller_settings_page, LCD_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_layout(controller_settings_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(controller_settings_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(controller_settings_page, 10, 0);
+    // lv_obj_set_style_pad_all(controller_settings_page, 5, 0);
     lv_obj_add_flag(controller_settings_page, LV_OBJ_FLAG_HIDDEN);
     this->pages[6] = controller_settings_page;
     new Option(controller_settings_page, OptionType::KEYBOARD_INPUT_NUMBER, "Dim Screen (Minutes)", {.INT = getscreenDimTimeM()}, [](void *data)
@@ -352,7 +356,7 @@ void ScrSettings::init()
     lv_obj_set_size(config_page, LCD_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_layout(config_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(config_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(config_page, 10, 0);
+    // lv_obj_set_style_pad_all(config_page, 5, 0);
     lv_obj_add_flag(config_page, LV_OBJ_FLAG_HIDDEN);
     this->pages[7] = config_page;
     this->ui_config1 = new Option(config_page, OptionType::SLIDER, "Bag Max PSI", {.INT = 200}, [](void *data)
@@ -404,7 +408,7 @@ void ScrSettings::init()
     lv_obj_set_size(wifi_update_page, LCD_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_layout(wifi_update_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(wifi_update_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(wifi_update_page, 10, 0);
+    // lv_obj_set_style_pad_all(wifi_update_page, 5, 0);
     lv_obj_add_flag(wifi_update_page, LV_OBJ_FLAG_HIDDEN);
     this->pages[8] = wifi_update_page;
     char buf[50];

@@ -48,11 +48,11 @@ void ui_clicked_imgOn(lv_event_t *e)
         option->setBooleanValue(false, true);
     }
 }
-void Option::indentText(int extraX)
+void Option::indentText(int multiplier)
 {
     if (this->text != NULL)
     {
-        lv_obj_set_x(this->text, MARGIN * 2 + extraX);
+        lv_obj_set_x(this->text, MARGIN * multiplier);
     }
     // Bar (vertical line) removed - no longer needed
     this->bar = NULL;
@@ -92,7 +92,6 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     }
     if (type == OptionType::TEXT_WITH_VALUE)
     {
-        this->indentText();
         setupPressureLabel(this->root, &this->rightHandObj, -MARGIN, 0, LV_ALIGN_RIGHT_MID, value.STRING);
     }
     else if (type == OptionType::HEADER)
@@ -101,7 +100,6 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     }
     else if (type == OptionType::ON_OFF)
     {
-        this->indentText();
 
         this->ui_imgOn = lv_image_create(this->root);
         lv_image_set_src(this->ui_imgOn, &imgOn);
@@ -144,16 +142,16 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_obj_add_flag(this->text, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
         lv_obj_add_event_cb(this->text, ui_clicked_button, LV_EVENT_ALL, this);
 
-        this->indentText();
+        this->indentText(1);
     }
     else if (type == OptionType::RADIO)
     {
-        this->indentText(MARGIN + 16); // lots of indent for the radio
+        this->indentText(4); // lots of indent for the radio
 
         this->ui_imgOn = lv_checkbox_create(this->root);
         lv_checkbox_set_text(this->ui_imgOn, ""); // set blank because we render the text separately
         lv_obj_set_align(this->ui_imgOn, LV_ALIGN_LEFT_MID);
-        lv_obj_set_x(this->ui_imgOn, MARGIN * 2);
+        lv_obj_set_x(this->ui_imgOn, MARGIN);
 
         lv_obj_set_style_bg_color(this->ui_imgOn, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR | LV_STATE_CHECKED);
         lv_obj_set_style_border_color(this->ui_imgOn, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR | LV_STATE_DEFAULT);
@@ -165,7 +163,7 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     }
     else if (type == OptionType::KEYBOARD_INPUT_NUMBER || type == OptionType::KEYBOARD_INPUT_TEXT)
     {
-        this->indentText();
+        this->indentText(1);
         const int textAreaWidth = (type == OptionType::KEYBOARD_INPUT_TEXT) ? 150 : 70;
         const int textMaxWidth = LCD_WIDTH - (MARGIN * 2 + MARGIN + textAreaWidth) - 6;
         lv_obj_set_width(this->text, textMaxWidth); // space between the start position and the text input
@@ -197,7 +195,7 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     else if (type == OptionType::SLIDER)
     {
         // This one is a different height (2x) so it gets some weird calculations for placement
-        this->indentText();
+        // this->indentText(1);
 
         lv_obj_set_align(this->text, LV_ALIGN_TOP_MID);
         lv_obj_set_y(this->text, OPTION_ROW_HEIGHT / 2);
