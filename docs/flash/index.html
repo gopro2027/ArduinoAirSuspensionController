@@ -14,7 +14,7 @@
 				line-height: 1.4;
 			}
 			.content {
-				max-width: 600px;
+				max-width: 800px;
 				margin: 0 auto;
 				padding: 12px;
 			}
@@ -69,6 +69,12 @@
 				a {
 					color: #58a6ff;
 				}
+			}
+			.grey-text {
+				color: #A0A0A0;
+			}
+			.center {
+				text-align: center;
 			}
 		</style>
 		<script type="module" src="https://unpkg.com/esp-web-tools@10.1.1/dist/web/install-button.js?module"></script> <!-- Can change version number to 'latest' if I have issues in the future -->
@@ -201,6 +207,7 @@
 			<p>Select your product</p>
 
 			<ul class="radios" id="firmwareRadioOptions">
+				<h4>Manifold</h4>
 				<li>
 					<label><input type="radio" name="type" value="manifold_v4" /> Board V4 Manifold Firmwares</label>
 				</li>
@@ -212,26 +219,35 @@
 				</li>
 				
 				<hr>
-				<li>
-					<label><input type="radio" name="type" value="controller_cyd3p2" /> 3.2" CYD Capacitive Controller Firmwares</label>
-				</li>
-				<li>
-					<label><input type="radio" name="type" value="controller_cyd3p2_resistive" /> 3.2" CYD Resistive Controller Firmwares</label>
-				</li>
+				<h4>Controller</h4>
 				<li>
 					<label><input type="radio" name="type" value="controller_ws2p8" /> 2.8" Waveshare Controller Firmwares</label>
 				</li>
+				<li>
+					<label><input type="radio" name="type" value="controller_ws2p8b" /> 2.8" B Model Waveshare Controller Firmwares</label>
+				</li>
+				<hr>
+				<h4 class="grey-text">Legacy Devices</h4>
+				<li>
+					<label class="grey-text"><input type="radio" name="type" value="controller_cyd3p2" /> 3.2" CYD Capacitive Controller Firmwares</label>
+				</li>
+				<li>
+					<label class="grey-text"><input type="radio" name="type" value="controller_cyd3p2_resistive" /> 3.2" CYD Resistive Controller Firmwares</label>
+				</li>
 			</ul>
 
-			<select id="firmwareFilesSelect" hidden>
-				<option value="NONE">NOTHING SELECTED</option>
-			</select>
+			
 
 
-			<small id="versionnum">Version --</small>
-			<p class="button-row" align="center">
-				<esp-web-install-button class="invisible"></esp-web-install-button>
-			</p>
+			<div class="center">
+				<select id="firmwareFilesSelect" hidden>
+					<option value="NONE">NOTHING SELECTED</option>
+				</select>
+				<small id="versionnum" class="center">Version --</small>
+				<p class="button-row" class="center">
+					<esp-web-install-button class="invisible"></esp-web-install-button>
+				</p>
+			</div>
 
 			<div class="footer"><a href="https://github.com/gopro2027/ArduinoAirSuspensionController">OAS-Man</a> &mdash; Installer powered by <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a>.</div>
 
@@ -286,6 +302,8 @@
 				selectorObject.hidden = false;
 				selectorObject.innerHTML = "";
 
+				var hasSelected = false;
+
 				for (release of firmwareList) {
 
 					// check if a firmware for this board is in this release
@@ -295,7 +313,7 @@
 							found = true;
 						}
 					}
-					
+
 					// append this release name if found
 					if (found) {
 						console.log(release.name);
@@ -305,11 +323,12 @@
 						selectorObject.appendChild(opt);
 
 						// if this is the latest version, set it as selected
-						if (release.name == versionnum) {
+						if (release.name == versionnum || hasSelected == false) {
 							console.log("selecting " + release.name);
 							selectorObject.value = release.tag;
 							selectedreleaseName = release.name;
 							setSelectedFile(release.tag);
+							hasSelected = true;
 						}
 					}
 				}
