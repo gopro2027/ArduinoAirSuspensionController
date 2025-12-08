@@ -7,7 +7,7 @@ Here are the parts required to build the system.
 | Part Name  | qty | image | Link | info |
 | --------- | ------- | ------- | ------- | ------- |
 | Main PCB | 1 | ![image](https://github.com/user-attachments/assets/8d91a93b-89ca-4a08-99f7-6e687507e0a2) | [files](https://github.com/gopro2027/ArduinoAirSuspensionController/tree/main/PCB/ESP32_30PIN_PCB/) | The new pre assembled SMD pcb cost a decent amount to order straight from JLCPCB so join the discord and find a reseller to pick one up cheaper than ordering the minimum qty from jlcpcb directly if possible. Please read the readme files! As of 9/3/2025 the latest version is 4.0 |
-| ESP32 30pin |     1    | ![image](https://github.com/user-attachments/assets/a30c7c9f-4fdf-4c74-ace4-a51401cb46fd) | [amazon](https://www.amazon.com/Teyleten-Robot-ESP-WROOM-32-Development-Microcontroller/dp/B08246MCL5/) [aliexpress](https://www.aliexpress.us/item/3256806150650156.html) | The project currently uses an esp32 wroom 30pin |
+| ESP32 30pin |     1    | ![image](https://github.com/user-attachments/assets/a30c7c9f-4fdf-4c74-ace4-a51401cb46fd) | [amazon](https://www.amazon.com/Teyleten-Robot-ESP-WROOM-32-Development-Microcontroller/dp/B08246MCL5/) | The project currently uses an esp32 wroom 30pin. Avoid the boards with the rectangular CH340 chip. Purchase boards with the square CP2102 chips. CH340 is a cheap chip and is indicitive of a bad quality board and may cause bluetooth issues. |
 | HCTL HC-MX3.0-2&ast;6Y | 2 | ![image](https://github.com/user-attachments/assets/b91a25e4-a98d-498c-987d-d6b55054c640) | [lcsc](https://www.lcsc.com/product-detail/C3294363.html) | 2x6 molex microfit connector. For manifold connector and pressure sensors |
 | HCTL HC-MX3.0-2&ast;3Y | 1 | ![image](https://github.com/user-attachments/assets/dc12fea9-44bb-4c35-8d8e-2015494024d7) | [lcsc](https://www.lcsc.com/product-detail/C3294360.html) | 2x3 molex microfit connector. For IO port |
 | HCTL HC-MX3.0-2&ast;4Y | 2 | ![image](https://github.com/user-attachments/assets/eff183eb-cc7f-4257-a0db-4dbdadb847c3) | [lcsc](https://www.lcsc.com/product-detail/C3294361.html) | -*Optional*- 2x4 molex microfit connector. For level sensors, 128x64 oled display, and gps |
@@ -21,8 +21,7 @@ Here are the parts required to build the system.
 ### Controller Parts
 | Part Name  | qty | image | Link | info |
 | --------- | ------- | ------- | ------- | ------- |
-| ESP32-2432S032C | 1 | ![image](https://github.com/user-attachments/assets/ebe637e1-e9b9-4a58-8b3b-ed3ad396a6df) | [amazon](https://www.amazon.com/dp/B0CLGDHS16) | This is the original oasman controller, a 3.2" screen that the controller code was designed for. You can find it on many websites. Although this screen works and is cheap, it tends to have issues with the power button, which will affect it's ability to be used without being plugged in to power if you are unlucky |
-| Waveshare 2.8" ESP32-S3 | 1 | ![image](https://github.com/user-attachments/assets/31013aed-c386-4a04-9225-bc04f9f52ae5) | [amazon](https://www.amazon.com/Capacitive-Development-Peripheral-Interfaces-Resolution/dp/B0D8KKRV5V/) | This is a better controller. It is slightly smaller but has the same resolution. It contains a faster processor and the screen runs smoother. It also has better button functionality. If you can spend a bit more and are okay with a smaller device, this one is recommended for it's higher quality. |
+| Waveshare 2.8" ESP32-S3 | 1 | ![image](https://github.com/user-attachments/assets/31013aed-c386-4a04-9225-bc04f9f52ae5) | [amazon](https://www.amazon.com/Capacitive-Development-Peripheral-Interfaces-Resolution/dp/B0D8KKRV5V/) | This is our default controller for OASMan. It is built with quality and runs smoothly. If you have fat fingers you may find it a bit small, join the discord and ask about possible larger devices we support. |
 | Battery | 1 | ![image](https://github.com/user-attachments/assets/f6bf7070-4a0c-4cad-a41a-d973b082fe83) | [amazon](https://www.amazon.com/dp/B0DPZVBKMY) | -*Optional*- You need a small battery (600ma or more) with a jst 1.25 connector if you want the controller to work without being plugged in (aka wirelessly). Works on either controller. |
 | 3D printed case | 1 | - | - | You are going to want to 3d print the files for assembling the case. If you don't own a 3d printer, you will want to order these files printed online or from one of the discord members |
 
@@ -58,5 +57,8 @@ Here are the parts required to build the system.
 | 1/4w 12x 10K, 11x 150R, 1x 1K, 1x 2K |   Assorted      | ![image](https://github.com/user-attachments/assets/7492bb33-a26f-439b-a489-2b17d04ce9f2) | [lcsc 10k](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-10K-1-ST52_C2903232.html)<br> [lcsc 150R](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-150-1-ST52_C2903242.html)<br> [lcsc 1K](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-1K-1-ST52_C2903245.html)<br> [lcsc 2K](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-2K-1-ST52_C2903278.html) | 1/4w, 1% resistors (blue), purchase 100 of each from lcsc for cheap | 
 | 1N4007 diode |    13     | ![image](https://github.com/user-attachments/assets/daae6c1d-b7ca-4330-b604-794b2f88379b) | [ebay](https://www.ebay.com/itm/235235061574) [aliexpress](https://pl.aliexpress.com/item/1005006003747959.html) [lcsc](https://www.lcsc.com/product-detail/Diodes-General-Purpose_Yangzhou-Yangjie-Elec-Tech-1N4007_C2986225.html) | Linked is a pack of 100 | 
 -->
+
+
+
 
 

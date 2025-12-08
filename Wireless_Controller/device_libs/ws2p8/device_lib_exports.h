@@ -7,5 +7,5 @@
 #include "files/I2C_Driver.h"
 
 // power key and battery definitions
-#include "files/PWR_key.h"
+#include "files/PWR_Key.h"
 #include "files/BAT_Driver.h"
