@@ -7,7 +7,7 @@ namespace pmic {
 #define I2C_UNLOCK()   i2c_unlock()
 
 static XPowersPMU g_pmu;
-static int  g_irq     = -1;
+static int  g_irq     = -1;   // kept for API compatibility; may be -1
 static bool g_inited  = false;
 
 static PekShortCb s_cb_short = nullptr;
@@ -16,7 +16,7 @@ static volatile bool s_flag_short = false;
 static volatile bool s_flag_long  = false;
 
 #ifndef PMIC_MEAS_PERIOD_MS
-  #define PMIC_MEAS_PERIOD_MS 1500u
+  #define PMIC_MEAS_PERIOD_MS 1500u   // 1.5s between real I2C reads
 #endif
 
 static uint32_t s_meas_period_ms = PMIC_MEAS_PERIOD_MS;
@@ -36,42 +36,17 @@ static inline void ensure_meas_fresh() {
   uint32_t now = millis();
   if ((uint32_t)(now - s_meas_cache.last_ms) < s_meas_period_ms) return;
 
-  // CRITICAL FIX: Increase timeout to 200ms to allow for ADC conversions
-  // Also add proper error handling
-  if (!i2c_lock(200)) {
-    Serial.println("[PMIC] Failed to acquire I2C lock for measurements");
-    return;  // Keep old cache values
-  }
-
-  // Wrap in try-catch equivalent for safety
-  float vbus_mV = NAN;
-  float batt_mV = NAN;
-  int   pct     = -1;
-  bool  i2c_success = true;
-
-  // Read with timeout awareness
-  uint32_t start = millis();
-  vbus_mV = g_pmu.getVbusVoltage();
-  if ((millis() - start) > 100) {
-    Serial.println("[PMIC] VBUS read took too long");
-    i2c_success = false;
-  }
-
-  if (i2c_success) {
-    batt_mV = g_pmu.getBattVoltage();
-    if (g_pmu.isBatteryConnect()) {
-      pct = (int)g_pmu.getBatteryPercent();
-    }
-  }
-
-  i2c_unlock();
+  I2C_LOCK(10);
+  float vbus_mV = g_pmu.getVbusVoltage();
+  float batt_mV = g_pmu.getBattVoltage();
+  int   pct     = g_pmu.isBatteryConnect() ? (int)g_pmu.getBatteryPercent() : -1;
+  I2C_UNLOCK();
 
   // Basic sanity: reject obviously bad reads
   bool bad =
       !isfinite(vbus_mV) ||
       !isfinite(batt_mV) ||
-      (vbus_mV <= 0.0f && !g_pmu.isVbusIn()) ||
-      !i2c_success;
+      (vbus_mV <= 0.0f && !g_pmu.isVbusIn());
 
   if (bad) {
     static uint32_t bad_count = 0;
@@ -91,6 +66,7 @@ static inline void ensure_meas_fresh() {
 
 void set_measure_period_ms(uint32_t ms) { s_meas_period_ms = ms ? ms : 1; }
 
+
 // ----------------- Power-key handler registration -----------------
 
 void set_power_key_handlers(PekShortCb on_short, PekLongCb on_long) {
@@ -105,10 +81,14 @@ bool consume_power_key_long()  { bool f = s_flag_long;  s_flag_long  = false; re
 
 static void configure_common()
 {
+  // USB input limits similar to Waveshare demo
   g_pmu.setVbusVoltageLimit(XPOWERS_AXP2101_VBUS_VOL_LIM_4V36);
   g_pmu.setVbusCurrentLimit(XPOWERS_AXP2101_VBUS_CUR_LIM_1500MA);
+
+  // System shutdown threshold
   g_pmu.setSysPowerDownVoltage(2600);
 
+  // ADCs we care about
   g_pmu.enableBattDetection();
   g_pmu.enableVbusVoltageMeasure();
   g_pmu.enableBattVoltageMeasure();
@@ -118,13 +98,18 @@ static void configure_common()
   g_pmu.setPowerKeyPressOnTime(XPOWERS_POWERON_128MS);
 }
 
+// Keep it minimal/safe unless you turn on the demo profile
 static void configure_rails_safe_minimal()
 {
+  // 3V3 rails commonly needed by LCD/peripherals
   g_pmu.setDC1Voltage(3300); g_pmu.enableDC1();
   g_pmu.setDC3Voltage(3300); g_pmu.enableDC3();
+
+  // Optional 3V3 LDOs (uncomment if your TP/logic needs them)
   g_pmu.setALDO1Voltage(3300); g_pmu.enableALDO1();
   g_pmu.setALDO2Voltage(3300); g_pmu.enableALDO2();
 }
+
 
 // ----------------- Public API: begin -----------------
 
@@ -134,24 +119,10 @@ bool begin(TwoWire *wire, int sda, int scl, int irqPin)
 
   if (!wire) wire = &Wire;
 
-  // CRITICAL: Add longer timeout for initial I2C probe
-  if (!i2c_lock(500)) {
-    Serial.println("[PMIC] Failed to acquire I2C lock for initialization");
-    return false;
-  }
-
+  // I2C bus is already initialised via i2c_guard_init(); don't fight it.
   const bool ok = g_pmu.begin(*wire, AXP2101_SLAVE_ADDRESS, sda, scl);
-  
-  i2c_unlock();
-
   if (!ok) {
     Serial.println("[PMIC] AXP2101 not found on I2C");
-    return false;
-  }
-
-  // Lock again for configuration
-  if (!i2c_lock(300)) {
-    Serial.println("[PMIC] Failed to acquire I2C lock for configuration");
     return false;
   }
 
@@ -159,6 +130,9 @@ bool begin(TwoWire *wire, int sda, int scl, int irqPin)
 
   g_irq = irqPin;
 
+  // --- Enable AXP2101 IRQ sources even if we *don't* have a GPIO IRQ line ---
+  // We will poll the IRQ status register over I2C instead of relying on the
+  // chip's IRQ pin being wired to the MCU.
   g_pmu.disableIRQ(XPOWERS_AXP2101_ALL_IRQ);
 
   uint32_t mask =
@@ -167,6 +141,7 @@ bool begin(TwoWire *wire, int sda, int scl, int irqPin)
       XPOWERS_AXP2101_VBUS_INSERT_IRQ |
       XPOWERS_AXP2101_VBUS_REMOVE_IRQ;
 
+  // Add whichever key IRQ names your XPowersLib exposes:
   #ifdef XPOWERS_AXP2101_PKEY_SHORT_IRQ
     mask |= XPOWERS_AXP2101_PKEY_SHORT_IRQ;
   #endif
@@ -183,9 +158,9 @@ bool begin(TwoWire *wire, int sda, int scl, int irqPin)
   g_pmu.enableIRQ(mask);
   g_pmu.clearIrqStatus();
 
-  i2c_unlock();
-
   if (g_irq >= 0) {
+    // If the board *does* wire IRQ to a GPIO, we still set it as input,
+    // but our logic works even when g_irq == -1.
     pinMode(g_irq, INPUT_PULLUP);
     Serial.printf("[PMIC] Using GPIO%d as AXP2101 IRQ (optional)\n", g_irq);
   } else {
@@ -197,20 +172,16 @@ bool begin(TwoWire *wire, int sda, int scl, int irqPin)
   return true;
 }
 
+
 // ----------------- Rail control -----------------
 
 void enable_display_power(bool on)
 {
   if (!g_inited) return;
-  
-  if (!i2c_lock(200)) {
-    Serial.println("[PMIC] Failed to lock I2C for display power");
-    return;
-  }
-
   if (on) {
     configure_rails_safe_minimal();
   } else {
+    // Turn off in a safe order
     g_pmu.disableBLDO2();
     g_pmu.disableBLDO1();
     g_pmu.disableALDO4();
@@ -223,27 +194,25 @@ void enable_display_power(bool on)
     g_pmu.disableDC2();
     g_pmu.disableDC1();
   }
-  
-  i2c_unlock();
 }
 
-void set_backlight_rail(bool on) { (void)on; }
+void set_backlight_rail(bool on)
+{
+  // NOP unless you power BL anode from a PMIC LDO you want to gate.
+  (void)on;
+}
 
 void set_touch_rail(bool on)
 {
   if (!g_inited) return;
-  
-  if (!i2c_lock(100)) return;
-  
   if (on) {
     g_pmu.setALDO2Voltage(3300);
     g_pmu.enableALDO2();
   } else {
     g_pmu.disableALDO2();
   }
-  
-  i2c_unlock();
 }
+
 
 // ----------------- Measurement getters -----------------
 
@@ -268,24 +237,24 @@ float vbus_voltage()
   return s_meas_cache.vbus_v;
 }
 
+
 // ----------------- Poll: NO-IRQ SHORT/LONG PRESS HANDLING -----------------
 
 void poll()
 {
   if (!g_inited) return;
 
+  // Throttle IRQ polling to avoid saturating the I2C bus.
   static uint32_t last_ms = 0;
   uint32_t now = millis();
   if (last_ms != 0 && (now - last_ms) < 50) {
-    return;
+    return;   // ~20 Hz polling
   }
   last_ms = now;
 
-  // Use shorter timeout for polling to avoid blocking
-  if (!i2c_lock(50)) {
-    return;  // Skip this poll cycle if bus is busy
-  }
+  I2C_LOCK(10);
 
+  // Read/latched IRQ status from the AXP2101.
   g_pmu.getIrqStatus();
 
   bool any_key = false;
@@ -310,10 +279,19 @@ void poll()
     }
   }
 
+  // Clear ALL IRQ flags we enabled earlier.
   g_pmu.clearIrqStatus();
 
-  i2c_unlock();
+  I2C_UNLOCK();
+
+  // Optional debug
+  if (any_key) {
+    //Serial.println("[PMIC] Key IRQ handled via polled mode");
+  }
 }
+
+
+// ----------------- Raw handle accessor -----------------
 
 XPowersPMU &handle() { return g_pmu; }
 
