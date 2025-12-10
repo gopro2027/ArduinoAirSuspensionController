@@ -10,7 +10,37 @@
 #include "device_lib_exports.h"
 
 #define SCALE_X (LCD_WIDTH / 240.0f)
-#define SCALE_Y (LCD_HEIGHT/ 320.0f)
+#define SCALE_Y (LCD_HEIGHT / 320.0f)
+
+// ---------- Layout offsets for preset screen (design space 240x320) ----------
+// These are expressed in "design" pixels (240x320) and then converted
+// to device pixels using SCALE_X / SCALE_Y in the UI code.
+//
+// For each known resolution, you can hand-tune the offsets.
+// For anything else, the fallback scales them proportionally.
+
+#if (LCD_WIDTH == 240) && (LCD_HEIGHT == 320)
+// Original device: no extra offsets
+  #define CAR_PAGE_OFFSET_DESIGN_X         0.0f
+  #define CAR_PAGE_OFFSET_DESIGN_Y         0.0f
+  #define PRESET_OVERLAY_OFFSET_DESIGN_X   0.0f
+  #define PRESET_OVERLAY_OFFSET_DESIGN_Y   0.0f
+
+#elif (LCD_WIDTH == 320) && (LCD_HEIGHT == 480)
+// New 320x480 device: values you tuned to look correct
+  #define CAR_PAGE_OFFSET_DESIGN_X         40.0f
+  #define CAR_PAGE_OFFSET_DESIGN_Y         0.0f
+  #define PRESET_OVERLAY_OFFSET_DESIGN_X   5.0f
+  #define PRESET_OVERLAY_OFFSET_DESIGN_Y   10.0f
+
+#else
+// Fallback for other resolutions: scale relative to a 320x480 baseline.
+// You can tweak these formulas or add more #elif blocks for specific panels.
+  #define CAR_PAGE_OFFSET_DESIGN_X       (40.0f * (LCD_WIDTH  / 320.0f))
+  #define CAR_PAGE_OFFSET_DESIGN_Y       ( 0.0f * (LCD_HEIGHT / 480.0f))
+  #define PRESET_OVERLAY_OFFSET_DESIGN_X ( 5.0f * (LCD_WIDTH  / 320.0f))
+  #define PRESET_OVERLAY_OFFSET_DESIGN_Y (10.0f * (LCD_HEIGHT / 480.0f))
+#endif
 
 void scale_obj(lv_obj_t *obj, int w, int h);
 void scale_img(lv_obj_t *obj, lv_image_dsc_t img);
