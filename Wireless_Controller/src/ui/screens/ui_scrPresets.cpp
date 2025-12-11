@@ -14,15 +14,15 @@ LV_IMG_DECLARE(selected_5);
 
 const int car_x = LCD_WIDTH / 2 - img_car.header.w / 2;
 const int wheels_x = LCD_WIDTH / 2 - img_wheels.header.w / 2;
-const int wheels_y = 88;
-const int car_y_1 = wheels_y - 21;
-const int car_y_2 = car_y_1 - 4;
-const int car_y_3 = car_y_2 - 4;
-const int car_y_4 = car_y_3 - 4;
-const int car_y_5 = car_y_4 - 4;
+const int wheels_y = 88 * SCALE_Y;
+const int car_y_1 = wheels_y - 21 * SCALE_Y;
+const int car_y_2 = car_y_1 - 4 * SCALE_Y;
+const int car_y_3 = car_y_2 - 4 * SCALE_Y;
+const int car_y_4 = car_y_3 - 4 * SCALE_Y;
+const int car_y_5 = car_y_4 - 4 * SCALE_Y;
 
-SimpleRect fender1Offset = {40, 37, 72 - 40, 63 - 37};
-SimpleRect fender2Offset = {166, 35, 199 - 166, 60 - 35};
+SimpleRect fender1Offset = {40 * SCALE_X, 37 * SCALE_Y, 72 * SCALE_X - 40 * SCALE_X, 63 * SCALE_Y - 37 * SCALE_Y};
+SimpleRect fender2Offset = {166 * SCALE_X, 35 * SCALE_Y, 199 * SCALE_X - 166 * SCALE_X, 60 * SCALE_Y - 35 * SCALE_Y};
 
 // square 1: 40,37 -> 71, 63
 // square 2: 166,35 -> 198, 60
