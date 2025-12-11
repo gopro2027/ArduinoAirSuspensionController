@@ -12,7 +12,7 @@ Here are the parts required to build the system.
 | HCTL HC-MX3.0-2&ast;3Y | 1 | ![image](https://github.com/user-attachments/assets/dc12fea9-44bb-4c35-8d8e-2015494024d7) | [lcsc](https://www.lcsc.com/product-detail/C3294360.html) | 2x3 molex microfit connector. For IO port |
 | HCTL HC-MX3.0-2&ast;4Y | 2 | ![image](https://github.com/user-attachments/assets/eff183eb-cc7f-4257-a0db-4dbdadb847c3) | [lcsc](https://www.lcsc.com/product-detail/C3294361.html) | -*Optional*- 2x4 molex microfit connector. For level sensors, 128x64 oled display, and gps |
 | CJT(Changjiang Connectors) C3030F-TP-A (MOLEX MICROFIT PINS) | 48 (30 without optional microfits) | ![image](https://github.com/user-attachments/assets/ab7e9c33-ece1-4ede-95e0-09abcc4c9855) | [lcsc](https://www.lcsc.com/product-image/C882167.html) | You need a minimum of 30 of these for the required connectors, or 48 for every connector. Please ensure you buy a few more than you will need in case you mess up some. |
-| 3a fuse | 1 | ![image](https://github.com/user-attachments/assets/53e73bb0-d1ce-4a3c-92dd-98fcaf59c8d1) | - | 3 amp fuse for the board |
+| 5a mini fuse | 1 | ![image](https://github.com/user-attachments/assets/ca7562d1-bb63-421d-921d-852d9ed26e56) | - | 5 amp fuse for the board. Previously 3amp but some solenoids solenoids (manifold) will pull more than that. |
 | 128x64 I2C OLED |     1    | ![image](https://github.com/user-attachments/assets/6c5eb13b-6e0c-4c4f-b4ad-c075ef5d964e) | [amazon](https://www.amazon.com/gp/product/B09JWLDK9F/) [aliexpress](https://www.aliexpress.com/item/1005005241315177.html) | -*Optional*- Depending on which one you purchase, you may need to change the i2c address in the esp32 configuration file. Some have solderable address configuration on the back of the screen/board |
 
 <!--| JST-XH 2.54mm  |    Assorted (2-6)     | ![image](https://github.com/user-attachments/assets/f83d2230-f445-4e51-9718-cc29dfb26ecd) | [amazon](https://www.amazon.com/Connector-Housing-Adapter-Terminal-Connectors/dp/B0BZDCGJ32/) | You will need multiple of each size, so it's best to purchase an assorted pack that includes 2,3,4, and 6.<br> 4pin x 1 for main i/o<br>4pin x 1 for screen<br>3pin x 11 for valvetable, pressure sensors, height sensors, power<br> 6pin x 1 for other half of valvetable | -->
@@ -21,9 +21,10 @@ Here are the parts required to build the system.
 ### Controller Parts
 | Part Name  | qty | image | Link | info |
 | --------- | ------- | ------- | ------- | ------- |
-| Waveshare 2.8" ESP32-S3 | 1 | ![image](https://github.com/user-attachments/assets/31013aed-c386-4a04-9225-bc04f9f52ae5) | [amazon](https://www.amazon.com/Capacitive-Development-Peripheral-Interfaces-Resolution/dp/B0D8KKRV5V/) | This is our default controller for OASMan. It is built with quality and runs smoothly. If you have fat fingers you may find it a bit small, join the discord and ask about possible larger devices we support. |
+| Waveshare 2.8" ESP32-S3 | 1 | ![image](https://github.com/user-attachments/assets/31013aed-c386-4a04-9225-bc04f9f52ae5) | [amazon](https://www.amazon.com/Capacitive-Development-Peripheral-Interfaces-Resolution/dp/B0D8KKRV5V/) | This is our default controller for OASMan. It is built with quality and runs smoothly. If you have fat fingers you may find it a bit small, join the discord and ask larger devices we support. |
 | Battery | 1 | ![image](https://github.com/user-attachments/assets/f6bf7070-4a0c-4cad-a41a-d973b082fe83) | [amazon](https://www.amazon.com/dp/B0DPZVBKMY) | -*Optional*- You need a small battery (600ma or more) with a jst 1.25 connector if you want the controller to work without being plugged in (aka wirelessly). Works on either controller. |
-| 3D printed case | 1 | - | - | You are going to want to 3d print the files for assembling the case. If you don't own a 3d printer, you will want to order these files printed online or from one of the discord members |
+| M2.5x12mm Countersunk Socket Cap Screws | 4 | ![image](https://github.com/user-attachments/assets/44fb5911-c949-45ce-8176-975392baa20c) | [amazon exact length](https://www.amazon.com/PATIKIL-M2-5x12-Countersunk-Machine-Spanner/dp/B0FSL8TN4C?th=1) <br><br> [amazon variety length pack](https://www.amazon.com/dp/B07Y6ZZ674) | -*Optional*- Specifically for the waveshare 2.8" device. If you measure them with a caliper they will come out closer to 11.75mm in length. Screws may vary depending on which one you use. |
+| 3D printed case | 1 | - | - | -*Optional*- You are going to want to 3d print the files for assembling the case. If you don't own a 3d printer, you will want to order these files printed online or from one of the discord members |
 
 
 ### Manifold Parts
@@ -57,6 +58,7 @@ Here are the parts required to build the system.
 | 1/4w 12x 10K, 11x 150R, 1x 1K, 1x 2K |   Assorted      | ![image](https://github.com/user-attachments/assets/7492bb33-a26f-439b-a489-2b17d04ce9f2) | [lcsc 10k](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-10K-1-ST52_C2903232.html)<br> [lcsc 150R](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-150-1-ST52_C2903242.html)<br> [lcsc 1K](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-1K-1-ST52_C2903245.html)<br> [lcsc 2K](https://www.lcsc.com/product-detail/Through-Hole-Resistors_VO-MF1-4W-2K-1-ST52_C2903278.html) | 1/4w, 1% resistors (blue), purchase 100 of each from lcsc for cheap | 
 | 1N4007 diode |    13     | ![image](https://github.com/user-attachments/assets/daae6c1d-b7ca-4330-b604-794b2f88379b) | [ebay](https://www.ebay.com/itm/235235061574) [aliexpress](https://pl.aliexpress.com/item/1005006003747959.html) [lcsc](https://www.lcsc.com/product-detail/Diodes-General-Purpose_Yangzhou-Yangjie-Elec-Tech-1N4007_C2986225.html) | Linked is a pack of 100 | 
 -->
+
 
 
 
