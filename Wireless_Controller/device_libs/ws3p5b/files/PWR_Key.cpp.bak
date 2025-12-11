@@ -1,0 +1,69 @@
+#include "PWR_Key.h"
+
+// Helper: drive latch pin if present
+static inline void write_latch(bool on)
+{
+    if (PWR_LATCH_PIN < 0) {
+        return; // no latch configured
+    }
+    pinMode(PWR_LATCH_PIN, OUTPUT);
+    digitalWrite(PWR_LATCH_PIN, on ? PWR_LATCH_ACTIVE_LEVEL
+                                   : !PWR_LATCH_ACTIVE_LEVEL);
+}
+
+void power_key_setup()
+{
+#if PWR_KEY_ACTIVE_LOW
+    pinMode(PWR_KEY_PIN, INPUT_PULLUP);
+#else
+    pinMode(PWR_KEY_PIN, INPUT);
+#endif
+
+    // Default: keep the board latched ON after boot
+    write_latch(true);
+}
+
+bool power_key_pressed()
+{
+#if PWR_KEY_ACTIVE_LOW
+    return digitalRead(PWR_KEY_PIN) == LOW;
+#else
+    return digitalRead(PWR_KEY_PIN) == HIGH;
+#endif
+}
+
+void power_latch_on()
+{
+    write_latch(true);
+}
+
+void power_latch_off()
+{
+    write_latch(false);
+}
+
+// ----------------- Sleep / wakeup helpers -----------------
+
+void power_enable_wakeup_lightsleep()
+{
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
+    // Wake from light sleep when the power key is pressed
+    esp_sleep_enable_ext0_wakeup((gpio_num_t)PWR_KEY_PIN,
+                                 PWR_KEY_ACTIVE_LOW ? 0 : 1);
+#endif
+}
+
+void power_disable_wakeup_lightsleep()
+{
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_EXT0);
+#endif
+}
+
+void power_enable_wakeup_deepsleep()
+{
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
+    esp_sleep_enable_ext0_wakeup((gpio_num_t)PWR_KEY_PIN,
+                                 PWR_KEY_ACTIVE_LOW ? 0 : 1);
+#endif
+}

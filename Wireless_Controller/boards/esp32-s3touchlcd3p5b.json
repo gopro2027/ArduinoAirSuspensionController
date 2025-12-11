@@ -55,7 +55,9 @@
 
       "-DDISPLAY_SWAP_XY=false",
       "-DDISPLAY_MIRROR_X=false",
-      "-DDISPLAY_MIRROR_Y=false"
+      "-DDISPLAY_MIRROR_Y=false",
+
+      "-DIMU_INT_GPIO=0"
     ]
   },
   "upload": {
