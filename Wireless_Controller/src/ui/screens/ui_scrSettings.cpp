@@ -173,7 +173,7 @@ void ScrSettings::init()
 
     // Create dropdown for section selection (square corners, no rounded corners)
     lv_obj_t *dropdown = lv_dropdown_create(menu_bar);
-    lv_dropdown_set_options(dropdown, "Status\nGame Controller\nML/AI\nBasic settings\nLevelling Mode\nUnits\nGame Controller\nConfig\nWifi / Update");
+    lv_dropdown_set_options(dropdown, "Status\nGame Controller\nML/AI\nBasic settings\nLevelling Mode\nUnits\nController Settings\nConfig\nWifi / Update");
     lv_obj_set_width(dropdown, LCD_WIDTH - 10);
     lv_obj_set_height(dropdown, 40 * SCALE_Y); // Reasonable height for easy pressing
     lv_obj_set_style_bg_color(dropdown, lv_color_hex(THEME_COLOR_LIGHT), 0);
