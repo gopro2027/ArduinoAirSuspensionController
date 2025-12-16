@@ -1,5 +1,5 @@
 {
-  "name": "Waveshare ESP32-S3 Touch LCD 3.5 (AXS15231B QSPI, custom panel)",
+  "name": "Waveshare ESP32-S3 Touch LCD 3.5 AXS15231B QSPI custom panel",
   "url": "https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-3.5",
   "vendor": "Waveshare",
   "frameworks": ["arduino"],
