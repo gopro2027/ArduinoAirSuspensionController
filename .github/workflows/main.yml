@@ -45,6 +45,7 @@ jobs:
         cd $folder
         export version_num="${{ inputs.version_num }}"
         export release_tag_name="build-${{ github.run_number }}"
+        set -x
         pio run -e ${buildname}_release
         find .pio/build/ -type f -name '*.bin' -exec sh -c 'cp -- "$1" "../bins/'"${buildname}"'_${1##*/}"' _ {} \;
         pio run -e ${buildname}_release --target clean
