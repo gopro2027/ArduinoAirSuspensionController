@@ -8,9 +8,14 @@
             "-<*>",
             "+<images/*>",
             "+<files/esp_lcd_touch_axs15231b.cpp>",
-            "+<files/indev_global.cpp>",
-            "+<files/lvgl_panel_axs15231b_arduino_gfx.cpp>"
-            
+            "+<files/i2c_guard.cpp>",
+            "+<files/pmic_cache.cpp>",
+            "+<files/axp2101_pmic.cpp>",
+            "+<files/lvgl_panel_axs15231b_arduino_gfx.cpp>",
+            "+<files/PMU_AXP2101.cpp>",
+            "+<files/LVGL_Driver.cpp>",
+            "+<files/PWR_Key.cpp>"
+                        
         ]
 	}, 
   "frameworks": "arduino",
@@ -20,7 +25,8 @@
     "lvgl/lvgl":"9.2.2",
     "RobTillaart/TCA9554":"0.1.2",
     "moononournation/GFX Library for Arduino":"1.6.0",
-    "lewisxhe/XPowersLib":"0.2.6"
+    "lewisxhe/XPowersLib":"0.2.6",
+    "lewisxhe/SensorLib":""
   }
 }
 

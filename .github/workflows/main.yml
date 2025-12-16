@@ -73,6 +73,12 @@ jobs:
     - name: Build PlatformIO controller ws2p8b
       run: ./build_firmware.sh "Wireless_Controller" "controller_ws2p8b"
 
+    - name: Build PlatformIO controller ws3p5
+      run: ./build_firmware.sh "Wireless_Controller" "controller_ws3p5"
+
+    - name: Build PlatformIO controller ws3p5b
+      run: ./build_firmware.sh "Wireless_Controller" "controller_ws3p5b"
+
 
     - name: Create Release
        # && github.event_name == 'push'

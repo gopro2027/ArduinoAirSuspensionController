@@ -1,0 +1,30 @@
+{
+  "name": "ws3p5",
+  "version": "1.0",
+  "includeDir": "files/",
+  "build": {
+    "includeDir": "files/",
+    "srcFilter": [
+      "-<*>",
+      "+<images/*>",
+      "+<files/i2c_guard.cpp>",
+      "+<files/pmic_cache.cpp>",
+      "+<files/axp2101_pmic.cpp>",
+      "+<files/lvgl_panel_st7796_ft6336.cpp>",
+      "+<files/PMU_AXP2101.cpp>",
+      "+<files/LVGL_Driver.cpp>",
+      "+<files/PWR_Key.cpp>",
+      "+<files/esp_lcd_touch_ft6336.cpp>"
+    ]
+  }, 
+  "frameworks": "arduino",
+  "platforms": "espressif32",
+  "dependencies": {
+    "Wire": "",
+    "lvgl/lvgl": "9.2.2",
+    "robtillaart/TCA9554": "0.1.2",
+    "moononournation/GFX Library for Arduino": "1.5.5",
+    "lewisxhe/XPowersLib": "0.2.6",
+    "lewisxhe/SensorLib": ""
+  }
+}
