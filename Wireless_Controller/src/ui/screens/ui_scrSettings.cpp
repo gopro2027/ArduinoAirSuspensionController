@@ -52,7 +52,7 @@ static void style_dropdown_list(lv_obj_t *dd)
     if(!list) return;
 
     // Popup panel
-    lv_obj_set_style_bg_color(list, lv_color_hex(0x0F1318), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(list, lv_color_hex(0x161A1F), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(list, LV_OPA_COVER, LV_PART_MAIN);
 
     lv_obj_set_style_border_width(list, 2, LV_PART_MAIN);
@@ -66,21 +66,33 @@ static void style_dropdown_list(lv_obj_t *dd)
     lv_obj_set_style_text_color(list, lv_color_white(),
                                 LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(list, lv_color_white(),
-                                LV_PART_ITEMS | LV_STATE_DEFAULT);
+                                LV_PART_SELECTED | LV_STATE_DEFAULT);
 
-    lv_obj_set_style_pad_left(list, 16, LV_PART_ITEMS);
-    lv_obj_set_style_pad_right(list, 16, LV_PART_ITEMS);
-    lv_obj_set_style_pad_top(list, 12, LV_PART_ITEMS);
-    lv_obj_set_style_pad_bottom(list, 12, LV_PART_ITEMS);
+    lv_obj_set_style_pad_left(list, 16, LV_PART_SELECTED);
+    lv_obj_set_style_pad_right(list, 16, LV_PART_SELECTED);
+    lv_obj_set_style_pad_top(list, 12, LV_PART_SELECTED);
+    lv_obj_set_style_pad_bottom(list, 12, LV_PART_SELECTED);
 
     // No hard separators
-    lv_obj_set_style_border_width(list, 0, LV_PART_ITEMS);
+    lv_obj_set_style_border_width(list, 0, LV_PART_SELECTED);
 
-    // Selected item = subtle pill
-    lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_SELECTED);
-    lv_obj_set_style_bg_opa(list, LV_OPA_COVER, LV_PART_SELECTED);
-    lv_obj_set_style_radius(list, 12, LV_PART_SELECTED);
-    lv_obj_set_style_text_color(list, lv_color_white(), LV_PART_SELECTED);
+    // Selected item (checked) = subtle pill
+    lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_LIGHT), 
+                              LV_PART_SELECTED | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_opa(list, LV_OPA_COVER, 
+                            LV_PART_SELECTED | LV_STATE_CHECKED);
+    lv_obj_set_style_radius(list, 12, LV_PART_SELECTED | LV_STATE_CHECKED);
+    lv_obj_set_style_text_color(list, lv_color_white(), 
+                                LV_PART_SELECTED | LV_STATE_CHECKED);
+
+    // Pressed item = same as selected (maintains color when pressing)
+    lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_LIGHT), 
+                              LV_PART_SELECTED | LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(list, LV_OPA_COVER, 
+                            LV_PART_SELECTED | LV_STATE_PRESSED);
+    lv_obj_set_style_radius(list, 12, LV_PART_SELECTED | LV_STATE_PRESSED);
+    lv_obj_set_style_text_color(list, lv_color_white(), 
+                                LV_PART_SELECTED | LV_STATE_PRESSED);
 
     // Scrollbar subtle
     lv_obj_set_style_bg_opa(list, LV_OPA_20, LV_PART_SCROLLBAR);
