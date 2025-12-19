@@ -90,13 +90,35 @@ void Set_Backlight(uint8_t Light);        // from LVGL_Driver.cpp
 #endif
 
 // ========== BUFFER SETTINGS FOR FULL REFRESH ==========
+// Bytes per pixel for RGB565
 #define BYTES_PER_PIXEL      2
-#define LVGL_BUFFER_PIXELS   (DISPLAY_WIDTH * DISPLAY_HEIGHT)
-#define LVGL_BUFFER_BYTES    (LVGL_BUFFER_PIXELS * BYTES_PER_PIXEL)
+
+// Allow overriding the effective buffer size from build flags or headers.
+// By default we use a full-frame buffer (required by the AXS15231B).
+#ifndef LVGL_BUFFER_PIXELS
+  #define LVGL_BUFFER_PIXELS   (DISPLAY_WIDTH * DISPLAY_HEIGHT)
+#endif
+
+#ifndef LVGL_BUFFER_BYTES
+  #define LVGL_BUFFER_BYTES    (LVGL_BUFFER_PIXELS * BYTES_PER_PIXEL)
+#endif
+
+// Toggle double vs single buffering for full-frame rendering.
+// 1 = double buffer (two full-frame buffers, smoother, more RAM)
+// 0 = single buffer  (one full-frame buffer, less RAM, higher tear risk)
+#ifndef LVGL_USE_DOUBLE_BUFFER
+  #define LVGL_USE_DOUBLE_BUFFER  1
+#endif
+
+// Sampling stride for the frame checksum used by frame skipping.
+// Larger values = fewer samples (faster, less sensitive).
+#ifndef FRAMECHECK_SAMPLE_STRIDE
+  #define FRAMECHECK_SAMPLE_STRIDE 128
+#endif
 
 // OPTIMIZED: Smart frame skipping
 #ifndef ENABLE_FRAME_SKIP
-  #define ENABLE_FRAME_SKIP 1
+  #define ENABLE_FRAME_SKIP 0
 #endif
 
 // Motion detection timeout (ms)
@@ -112,11 +134,11 @@ static uint32_t s_last_frame_checksum = 0;
 static uint32_t s_last_motion_time = 0;
 static volatile bool s_is_animating = false;
 
-// Ultra-fast checksum (samples every 256 pixels)
+// Ultra-fast checksum (samples every FRAMECHECK_SAMPLE_STRIDE pixels)
 static inline uint32_t calculate_frame_checksum(const uint16_t *data, size_t len)
 {
   uint32_t sum = 0;
-  for (size_t i = 0; i < len; i += 256) {
+  for (size_t i = 0; i < len; i += FRAMECHECK_SAMPLE_STRIDE) {
     sum = (sum << 5) - sum + data[i];  // sum * 31 + data[i]
   }
   return sum;
@@ -124,11 +146,11 @@ static inline uint32_t calculate_frame_checksum(const uint16_t *data, size_t len
 #endif
 
 // ----------------- Backlight helper -----------------
-static inline void driver_set_backlight_pct(uint8_t pct)
-{
-  if (pct > 100) pct = 100;
-  Set_Backlight(pct);
-}
+// static inline void driver_set_backlight_pct(uint8_t pct)
+// {
+//   if (pct > 100) pct = 100;
+//   Set_Backlight(pct);
+// }
 
 // ------------- TCA9554 reset pulse ------------
 static void panel_reset_via_tca()
@@ -150,7 +172,6 @@ static void panel_reset_via_tca()
   tca.write1(TCA_LCD_RSTBIT, 0); delay(10);
   tca.write1(TCA_LCD_RSTBIT, 1); delay(180);
 }
-
 
 // ---------------- LVGL tick callback ----------------
 static uint32_t millis_cb(void)
@@ -297,20 +318,26 @@ extern "C" lv_display_t *lvgl_lcd_init_perf(void)
   // OPTIMIZED: 32-byte aligned buffers in SPIRAM (matching manufacturer but optimized)
   lv_color_t *buf1 = (lv_color_t *)heap_caps_aligned_alloc(
       32,  // 32-byte alignment for DMA
-      LVGL_BUFFER_BYTES, 
+      LVGL_BUFFER_BYTES,
       MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-      
-  lv_color_t *buf2 = (lv_color_t *)heap_caps_aligned_alloc(
-      32,
-      LVGL_BUFFER_BYTES, 
-      MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+
+  lv_color_t *buf2 = nullptr;
+
+#if LVGL_USE_DOUBLE_BUFFER
+  if (buf1) {
+    buf2 = (lv_color_t *)heap_caps_aligned_alloc(
+        32,
+        LVGL_BUFFER_BYTES,
+        MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+  }
+#endif
 
   if (!buf1) {
     Serial.println("[LVGL] CRITICAL: Primary buffer allocation failed!");
     return nullptr;
   }
 
-  if (buf1 && buf2) {
+  if (buf2) {
     lv_display_set_buffers(
         lvdisp,
         buf1,
@@ -368,11 +395,11 @@ extern "C" void lvgl_loop(void)
 #if ENABLE_FRAME_SKIP
   // Adaptive delay: faster during scrolling/animation, slower when idle
   if (s_is_animating) {
-    vTaskDelay(pdMS_TO_TICKS(2));  // 2ms when animating (~500Hz)
+    vTaskDelay(pdMS_TO_TICKS(0));  // 2ms when animating (~500Hz)
   } else {
-    vTaskDelay(pdMS_TO_TICKS(5));  // 5ms when idle (~200Hz)
+    vTaskDelay(pdMS_TO_TICKS(2));  // 5ms when idle (~200Hz)
   }
 #else
-  vTaskDelay(pdMS_TO_TICKS(5));    // 5ms constant like manufacturer
+  vTaskDelay(pdMS_TO_TICKS(0));    // 5ms constant like manufacturer
 #endif
 }
