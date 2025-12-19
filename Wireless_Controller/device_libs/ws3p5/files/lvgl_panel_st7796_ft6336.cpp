@@ -106,7 +106,7 @@ extern "C" lv_display_t *lvgl_lcd_init_perf(void)
   if (!gfx) gfx = new Arduino_ST7796(bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT);
 
   Serial.println("[PANEL] gfx->begin()");
-  if (!gfx->begin(100000000)) {
+  if (!gfx->begin(80000000)) {
     Serial.println("[PANEL] WARNING: gfx->begin() failed");
   }
 
@@ -117,8 +117,8 @@ extern "C" lv_display_t *lvgl_lcd_init_perf(void)
   // Only change this if you *know* you need it.
   gfx->invertDisplay(true);
 
-  pinMode(GPIO_BCKL, OUTPUT);
-  digitalWrite(GPIO_BCKL, HIGH);
+  // pinMode(GPIO_BCKL, OUTPUT);
+  // digitalWrite(GPIO_BCKL, HIGH);
 
   lv_tick_set_cb(lvgl_tick_cb);
 
