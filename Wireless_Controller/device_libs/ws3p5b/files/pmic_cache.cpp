@@ -27,9 +27,9 @@ static void pmic_cache_task(void *arg)
 
   for (;;) {
     // Feed watchdog to prevent timeout
-    #ifdef CONFIG_ESP_TASK_WDT_EN
-    esp_task_wdt_reset();
-    #endif
+    // #ifdef CONFIG_ESP_TASK_WDT_EN
+    // esp_task_wdt_reset();
+    // #endif
 
     PmicCache c;
 
@@ -42,7 +42,7 @@ static void pmic_cache_task(void *arg)
 
     uint32_t read_duration = millis() - read_start;
     if (read_duration > 300) {
-      Serial.printf("[PMIC Cache] WARNING: Reads took %ums (expected <100ms)\n", read_duration);
+      // Serial.printf("[PMIC Cache] WARNING: Reads took %ums (expected <100ms)\n", read_duration);
     }
 
     c.vbus_present = is_vbus_ok(c.vbus_v);
@@ -57,8 +57,8 @@ static void pmic_cache_task(void *arg)
     // Debug logging (throttled)
     static uint32_t log_counter = 0;
     if ((log_counter++ % 10) == 0) {
-      Serial.printf("[PMIC Cache] VBUS=%.2fV, Batt=%.2fV (%d%%)\n", 
-                    c.vbus_v, c.batt_v, c.batt_pct);
+      // Serial.printf("[PMIC Cache] VBUS=%.2fV, Batt=%.2fV (%d%%)\n", 
+                    // c.vbus_v, c.batt_v, c.batt_pct);
     }
 
     vTaskDelay(pdMS_TO_TICKS(period_ms));
