@@ -6,14 +6,13 @@
 InputType *pressureInputs[5];
 Manifold *manifold;
 Compressor *compressor;
+RfReceiver *rfReceiver;
 Wheel *wheel[4];
 
-#if USE_ADS == true
 Adafruit_ADS1115 ADS1115A;
-#if USE_2_ADS == true
 Adafruit_ADS1115 ADS1115B;
-#endif
-#endif
+Adafruit_ADS1115 ADS1115C;
+bool ADS1115C_exists;
 
 Manifold *getManifold()
 {
@@ -22,6 +21,10 @@ Manifold *getManifold()
 Compressor *getCompressor()
 {
     return compressor;
+}
+RfReceiver *getRfReceiver()
+{
+    return rfReceiver;
 }
 // InputType *manifoldSafetyWire;
 
@@ -69,33 +72,37 @@ void setRideHeightRearDriver(byte value)
 
 #pragma region initialization
 
-#if USE_ADS == true
 void initializeADS()
 {
     if (!ADS1115A.begin(ADS_A_ADDRESS))
     {
-        Serial.println(F("Failed to initialize ADS A"));
+        Serial.println(F("Failed to initialize ADS A (pressure sensors)"));
 #if ADS_MOCK_BYPASS == false
         ESP.restart();
 #endif
     }
-#if USE_2_ADS == true
+
     if (!ADS1115B.begin(ADS_B_ADDRESS))
     {
-        Serial.println(F("Failed to initialize ADS B"));
+        Serial.println(F("Failed to initialize ADS B (height sensors)"));
 #if ADS_MOCK_BYPASS == false
         ESP.restart();
 #endif
     }
-#endif
+
+    if (!ADS1115C.begin(ADS_C_ADDRESS))
+    {
+        ADS1115C_exists = false;
+        Serial.println(F("Failed to initialize ADS C (rf receiver)"));
+    } else {
+        ADS1115C_exists = true;
+    }
+
 }
-#endif
 
 void setupManifold()
 {
-#if USE_ADS == true
     initializeADS();
-#endif
 
     manifold = new Manifold(
         solenoidFrontPassengerInPin,

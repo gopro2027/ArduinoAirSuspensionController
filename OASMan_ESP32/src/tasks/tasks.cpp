@@ -79,6 +79,15 @@ void task_compressor(void *parameters)
     }
 }
 
+void task_rfReceiver(void *parameters)
+{
+    for (;;)
+    {
+        getRfReceiver()->loop();
+        delay(100);
+    }
+}
+
 // NOTICE: Parameters is supposed to be an array, but idc im just gonna make it the Wheel * because I can. No need to actually create an array to pass it in.
 void task_wheel(void *parameters)
 {
@@ -123,6 +132,15 @@ void setup_tasks()
     xTaskCreate(
         task_compressor,
         "Compressor Control",
+        512 * 4,
+        NULL,
+        1000,
+        NULL);
+
+    // Rf Receiver Task
+    xTaskCreate(
+        task_rfReceiver,
+        "RF Receiver",
         512 * 4,
         NULL,
         1000,

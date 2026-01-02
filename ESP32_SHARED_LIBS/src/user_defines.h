@@ -88,6 +88,14 @@
 /* E Brake Wire */
 #define ebrakeInput new InputType(34, INPUT)
 
+/* RF Communication */
+#define rfInputA new InputType(0, &ADS1115C) // ADSC/0
+#define rfInputB new InputType(1, &ADS1115C) // ADSC/1
+#define rfInputC new InputType(2, &ADS1115C) // ADSC/2
+#define rfInputD new InputType(3, &ADS1115C) // ADSC/3
+#define rfProgramPin new InputType(15, OUTPUT) // ADSC/4
+
+
 // These will not be exact depending on how accurate your pressure sensors are.
 // For example: Mine will read 220psi when the actual pressure is 180psi
 #define COMPRESSOR_ON_BELOW_PSI 140
@@ -99,12 +107,10 @@
 #define levelInputFrontDriver new InputType(2, &ADS1115B)    // ADSB/2
 #define levelInputRearDriver new InputType(1, &ADS1115B)     // ADSB/1
 
-/* Set to true if in any of the InputType's above you use ADS (Adafruit_ADS1115) */
-#define USE_ADS true
-/* Set to true if you use 2 ads board (low and high) */
-#define USE_2_ADS true
+/* ADS1115 I2C Addresses */
 #define ADS_A_ADDRESS 0x48 // 0x48 is address pin to low
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
+#define ADS_C_ADDRESS 0x4A // 0x4A is address pin to SDA
 
 /* Disable the hang if ads fails to load */
 #define ADS_MOCK_BYPASS true
