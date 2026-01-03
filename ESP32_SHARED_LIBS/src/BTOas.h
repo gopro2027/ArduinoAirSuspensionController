@@ -44,6 +44,7 @@ enum BTOasIdentifier
     BP32PKT = 30,
     BROADCASTNAME = 35,
     UPDATESTATUSREQUEST = 36,
+    RFCOMMAND = 37
 };
 
 enum StatusPacketBittset
@@ -90,6 +91,14 @@ struct AuxillaryOutputModePayload
     AuxillaryOutputMode mode;
     AuxillaryOutputModeTimeUnit timeUnit;
     uint32_t time;
+};
+
+enum RfCommandNumber
+{
+    RF_CMD_DELETE = 1,
+    RF_CMD_LEARN_MOMENTARY = 2,
+    RF_CMD_LEARN_TOGGLE = 3,
+    RF_CMD_LEARN_RADIOBUTTON = 4
 };
 
 enum BP32CMD
@@ -312,6 +321,12 @@ struct AuxillaryOutputModePacket : BTOasPacket
 {
     AuxillaryOutputModePacket();
     AuxillaryOutputModePacket(AuxillaryOutputModePayload payload) ;
+};
+
+struct RfCommandPacket : BTOasPacket
+{
+    RfCommandPacket(int commandNumber);
+    int getCommandNumber();
 };
 
 #endif

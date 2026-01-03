@@ -27,6 +27,8 @@ public:
     void sendProgramCommand(int numSignals, int msOn, int msOff);
     void programDelete();
     void programLearnMomentary();
+    void programLearnToggle();
+    void programLearnRadioButton();
 };
 extern bool isVehicleOn();                                     // defined in airSuspensionUtil.h
 #endif

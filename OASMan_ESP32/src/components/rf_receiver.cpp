@@ -33,6 +33,13 @@ void RfReceiver::programDelete() {
 void RfReceiver::programLearnMomentary() {
     sendProgramCommand(1, DEFAULT_SIGNAL_ON_MS, DEFAULT_SIGNAL_OFF_MS);
 }
+void RfReceiver::programLearnToggle() {
+    sendProgramCommand(2, DEFAULT_SIGNAL_ON_MS, DEFAULT_SIGNAL_OFF_MS);
+}
+void RfReceiver::programLearnRadioButton() {
+    sendProgramCommand(3, DEFAULT_SIGNAL_ON_MS, DEFAULT_SIGNAL_OFF_MS);
+}
+
 
 
 void RfReceiver::loop()

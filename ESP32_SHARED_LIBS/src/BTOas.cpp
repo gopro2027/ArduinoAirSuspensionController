@@ -339,3 +339,13 @@ void UpdateStatusRequestPacket::setStatus(String status)
         len = sizeof(this->args);
     strncpy((char *)&this->args[0], status.c_str(), len);
 }
+
+RfCommandPacket::RfCommandPacket(int commandNumber)
+{
+    this->cmd = RFCOMMAND;
+    this->args32()[0].i = commandNumber;
+}
+int RfCommandPacket::getCommandNumber()
+{
+    return this->args32()[0].i;
+}

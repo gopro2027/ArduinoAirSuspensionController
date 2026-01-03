@@ -804,6 +804,32 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
 
         packetMover::sendRestPacket(&pkt, con_handle);
     }
+    break;
+    case BTOasIdentifier::RFCOMMAND:
+    {
+        RfCommandPacket *rfpkt = (RfCommandPacket *)packet;
+        switch (rfpkt->getCommandNumber())
+        {
+        case RfCommandNumber::RF_CMD_DELETE:
+            Serial.println("Starting RF Delete");
+            getRfReceiver()->programDelete();
+            break;
+        case RfCommandNumber::RF_CMD_LEARN_MOMENTARY:
+            Serial.println("Starting RF Learn Momentary Mode");
+            getRfReceiver()->programLearnMomentary();
+            break;
+        case RfCommandNumber::RF_CMD_LEARN_TOGGLE:
+            Serial.println("Starting RF Learn Toggle Mode");
+            getRfReceiver()->programLearnToggle();
+            break;
+        case RfCommandNumber::RF_CMD_LEARN_RADIOBUTTON:
+            Serial.println("Starting RF Learn RadioButton Mode");
+            getRfReceiver()->programLearnRadioButton();
+            break;
+        }
+        
+    }
+    break;
     }
 }
 
