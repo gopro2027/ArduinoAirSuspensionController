@@ -372,17 +372,80 @@ void ScrSettings::init()
 
     this->ui_safetymode = new Option(basic_settings_page, OptionType::ON_OFF, "Safety Mode", {.STRING = test}, safety_mode_handler);
 
-    new Option(basic_settings_page, OptionType::BUTTON, "Detect Pressure Sensors", {.STRING = test}, [](void *data)
+    // Removed 1/2/2026 because this function just keeps confusing people
+    // new Option(basic_settings_page, OptionType::BUTTON, "Detect Pressure Sensors", {.STRING = test}, [](void *data)
+    // {
+    //     currentScr->showMsgBox("Detect Pressure Sensors?",
+    //         "WARNING: YOUR CAR WILL BE AIRED OUT!!!! This routine will auto learn which pressure sensors go to which wheels.",
+    //         "Confirm", "Cancel",
+    //         []() -> void
+    //         {
+    //             DetectPressureSensorsPacket pkt;
+    //             sendRestPacket(&pkt);
+    //             log_i("Pressed detected pressure sensors");
+    //             showDialog("Doing detection routine", lv_color_hex(0xFFFF00));
+    //         },
+    //         []() -> void {}, false);
+    // });
+
+    new Option(basic_settings_page, OptionType::HEADER, "Key Fob Receiver Settings", {.STRING = test});
+    new Option(basic_settings_page, OptionType::BUTTON, "Unlearn Fob", {.STRING = test}, [](void *data)
     {
-        currentScr->showMsgBox("Detect Pressure Sensors?",
-            "WARNING: YOUR CAR WILL BE AIRED OUT!!!! This routine will auto learn which pressure sensors go to which wheels.",
+        currentScr->showMsgBox("Unlearn key fob?",
+            "WARNING: Your key fob will be unlearned. This requires you have an OASMan Key Fob Receiver installed (RX480E receiver)",
             "Confirm", "Cancel",
             []() -> void
             {
-                DetectPressureSensorsPacket pkt;
+                RfCommandPacket pkt(RfCommandNumber::RF_CMD_DELETE);
                 sendRestPacket(&pkt);
-                log_i("Pressed detected pressure sensors");
-                showDialog("Doing detection routine", lv_color_hex(0xFFFF00));
+                log_i("Pressed unlearn key fob");
+                showDialog("Unlearning key fob...", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
+
+    new Option(basic_settings_page, OptionType::BUTTON, "Learn Fob", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Learn fob?",
+            "This requires you have an OASMan Key Fob Receiver installed (RX480E receiver)",
+            "Confirm", "Cancel",
+            []() -> void
+            {
+                RfCommandPacket pkt(RfCommandNumber::RF_CMD_LEARN_MOMENTARY);
+                sendRestPacket(&pkt);
+                log_i("Pressed learn key fob");
+                showDialog("Learning key fob mode...", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
+
+    
+    new Option(basic_settings_page, OptionType::BUTTON, "(test) Learn Fob [Toggle]", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Learn fob?",
+            "This requires you have an OASMan Key Fob Receiver installed (RX480E receiver)",
+            "Confirm", "Cancel",
+            []() -> void
+            {
+                RfCommandPacket pkt(RfCommandNumber::RF_CMD_LEARN_TOGGLE);
+                sendRestPacket(&pkt);
+                log_i("Pressed learn key fob");
+                showDialog("Learning key fob mode [Toggle]...", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
+
+        new Option(basic_settings_page, OptionType::BUTTON, "(test) Learn Fob [RadioButton]", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Learn fob?",
+            "This requires you have an OASMan Key Fob Receiver installed (RX480E receiver)",
+            "Confirm", "Cancel",
+            []() -> void
+            {
+                RfCommandPacket pkt(RfCommandNumber::RF_CMD_LEARN_RADIOBUTTON);
+                sendRestPacket(&pkt);
+                log_i("Pressed learn key fob");
+                showDialog("Learning key fob mode [RadioButton]...", lv_color_hex(0xFFFF00));
             },
             []() -> void {}, false);
     });
