@@ -44,12 +44,15 @@ void RfReceiver::programLearnRadioButton() {
 
 void RfReceiver::loop()
 {
+    #ifdef RF_ENABLED_WITH_CAR_ON_DEBUG
+    // if in debug mode, don't care if vehicle is on
+    #else
     // if vehicle is off disable RfReceiver
-    // TODO: TEMPORARILY REMOVED FOR TESTING. RE-ADD FOR PRODUCTION
-    // if (!isVehicleOn())
-    // {
-    //     return;
-    // }
+    if (!isVehicleOn())
+    {
+        return;
+    }
+    #endif
 
     // do rf code
     if (ADS1115C_exists) {
