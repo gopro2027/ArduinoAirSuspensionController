@@ -419,37 +419,6 @@ void ScrSettings::init()
             []() -> void {}, false);
     });
 
-    
-    new Option(basic_settings_page, OptionType::BUTTON, "(test) Learn Fob [Toggle]", {.STRING = test}, [](void *data)
-    {
-        currentScr->showMsgBox("Learn fob?",
-            "This requires you have an OASMan Key Fob Receiver installed (RX480E receiver)",
-            "Confirm", "Cancel",
-            []() -> void
-            {
-                RfCommandPacket pkt(RfCommandNumber::RF_CMD_LEARN_TOGGLE);
-                sendRestPacket(&pkt);
-                log_i("Pressed learn key fob");
-                showDialog("Learning key fob mode [Toggle]...", lv_color_hex(0xFFFF00));
-            },
-            []() -> void {}, false);
-    });
-
-        new Option(basic_settings_page, OptionType::BUTTON, "(test) Learn Fob [RadioButton]", {.STRING = test}, [](void *data)
-    {
-        currentScr->showMsgBox("Learn fob?",
-            "This requires you have an OASMan Key Fob Receiver installed (RX480E receiver)",
-            "Confirm", "Cancel",
-            []() -> void
-            {
-                RfCommandPacket pkt(RfCommandNumber::RF_CMD_LEARN_RADIOBUTTON);
-                sendRestPacket(&pkt);
-                log_i("Pressed learn key fob");
-                showDialog("Learning key fob mode [RadioButton]...", lv_color_hex(0xFFFF00));
-            },
-            []() -> void {}, false);
-    });
-
     // --- Levelling Mode page ---
     lv_obj_t *levelling_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(levelling_page);
