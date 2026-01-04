@@ -31,6 +31,7 @@ void initializeADS();
 void setupManifold();
 bool isAnyWheelActive();
 void airUp(bool quick = false);
+void loadProfileAirUpQuick(int profileIndex);
 void airOut();
 void airUpRelativeToAverage(int value);
 void accessoryWireSetup();

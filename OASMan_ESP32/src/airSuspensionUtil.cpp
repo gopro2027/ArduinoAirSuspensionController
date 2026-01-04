@@ -212,6 +212,17 @@ void airUp(bool quick)
     getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(currentProfile[WHEEL_REAR_DRIVER], quick);
 }
 
+void loadProfileAirUpQuick(int profileIndex)
+{
+    if (profileIndex > MAX_PROFILE_COUNT)
+    {
+        return;
+    }
+    // load profile then air up
+    readProfile(profileIndex);
+    airUp(true);
+}
+
 void airOut()
 {
     getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);

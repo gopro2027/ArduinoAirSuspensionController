@@ -239,7 +239,7 @@ int SetAirheightPacket::getPressure()
 {
     return this->args32()[1].i;
 }
-ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage)
+ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD)
 {
     this->cmd = GETCONFIGVALUES;
     *this->_systemShutoffTimeM() = systemShutoffTimeM;
@@ -249,6 +249,10 @@ ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, u
     *this->_pressureSensorMax() = pressureSensorMax;
     *this->_bagVolumePercentage() = bagVolumePercentage;
     *this->_setValues() = setValues;
+    *this->_rfButtonA() = rfButtonA;
+    *this->_rfButtonB() = rfButtonB;
+    *this->_rfButtonC() = rfButtonC;
+    *this->_rfButtonD() = rfButtonD;
 }
 
 uint32_t *ConfigValuesPacket::_systemShutoffTimeM()
@@ -278,6 +282,22 @@ uint8_t *ConfigValuesPacket::_compressorOffPSI()
 bool *ConfigValuesPacket::_setValues()
 {
     return (bool *)&(this->args8()[8 + 3].i);
+}
+uint8_t *ConfigValuesPacket::_rfButtonA()
+{
+    return (uint8_t *)&(this->args8()[8 + 4].i);
+}
+uint8_t *ConfigValuesPacket::_rfButtonB()
+{
+    return (uint8_t *)&(this->args8()[8 + 5].i);
+}
+uint8_t *ConfigValuesPacket::_rfButtonC()
+{
+    return (uint8_t *)&(this->args8()[8 + 6].i);
+}
+uint8_t *ConfigValuesPacket::_rfButtonD()
+{
+    return (uint8_t *)&(this->args8()[8 + 7].i);
 }
 AuthPacket::AuthPacket(uint32_t blePasskey, AuthResult authResult)
 {
@@ -340,12 +360,29 @@ void UpdateStatusRequestPacket::setStatus(String status)
     strncpy((char *)&this->args[0], status.c_str(), len);
 }
 
-RfCommandPacket::RfCommandPacket(int commandNumber)
+RfCommandPacket::RfCommandPacket(RfCommandType commandType, int commandValueOne, int commandValueTwo)
 {
     this->cmd = RFCOMMAND;
-    this->args32()[0].i = commandNumber;
+    this->args32()[0].i = commandType;
+    this->args32()[1].i = commandValueOne;
+    this->args32()[2].i = commandValueTwo;
 }
-int RfCommandPacket::getCommandNumber()
+RfCommandType RfCommandPacket::getCommandType()
 {
-    return this->args32()[0].i;
+    return (RfCommandType)this->args32()[0].i;
+}
+RfCommandChipNumber RfCommandPacket::getChipCommandNumber()
+{
+    // only when getCommandType() == RF_COMMAND_CHIP_CMD
+    return (RfCommandChipNumber)this->args32()[1].i;
+}
+RfCommandButtonNumber RfCommandPacket::getButtonNumber()
+{
+    // only when getCommandType() == RF_COMMAND_BUTTON_ASSIGN
+    return (RfCommandButtonNumber)this->args32()[1].i;
+}
+int RfCommandPacket::getPresetNumber()
+{
+    // only when getCommandType() == RF_COMMAND_BUTTON_ASSIGN
+    return this->args32()[2].i;
 }

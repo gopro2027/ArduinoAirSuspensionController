@@ -52,6 +52,10 @@ public:
     Option *ui_mac;  // MAC address (text with value)
     Option *ui_volts;  // Battery voltage (text with value)
     Option *ui_brightnessSlider;  // Brightness (slider)
+    Option *ui_rfbuttonA;
+    Option *ui_rfbuttonB;
+    Option *ui_rfbuttonC;
+    Option *ui_rfbuttonD;
 
     void init();
     void runTouchInput(SimplePoint pos, bool down);
