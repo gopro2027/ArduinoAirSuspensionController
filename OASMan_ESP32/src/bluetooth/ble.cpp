@@ -628,11 +628,10 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
     case BTOasIdentifier::READPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
         readProfile(((ReadProfilePacket *)packet)->getProfileIndex());
         break;
-    case BTOasIdentifier::AIRUPQUICK: // add if (profileIndex > MAX_PROFILE_COUNT)
-        // load profile then air up
+    case BTOasIdentifier::AIRUPQUICK:
+        // load profile then air up. This is the main method for air up on the controller
         Serial.println("Calling air up quick!");
-        readProfile(((AirupQuickPacket *)packet)->getProfileIndex());
-        airUp(false); // typically this was true but im changing it to not be because now this is the main air up method on the controller :)
+        loadProfileAirUpQuick(((AirupQuickPacket *)packet)->getProfileIndex());
         break;
     case BTOasIdentifier::BASEPROFILE:
         setbaseProfile(((BaseProfilePacket *)packet)->getProfileIndex());

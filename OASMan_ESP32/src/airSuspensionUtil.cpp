@@ -220,7 +220,7 @@ void loadProfileAirUpQuick(int profileIndex)
     }
     // load profile then air up
     readProfile(profileIndex);
-    airUp(true);
+    airUp(false);
 }
 
 void airOut()
