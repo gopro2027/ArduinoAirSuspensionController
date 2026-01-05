@@ -89,10 +89,10 @@
 #define ebrakeInput new InputType(34, INPUT)
 
 /* RF Communication */
-#define rfInputA new InputType(0, &ADS1115C) // ADSC/0
-#define rfInputB new InputType(1, &ADS1115C) // ADSC/1
-#define rfInputC new InputType(2, &ADS1115C) // ADSC/2
-#define rfInputD new InputType(3, &ADS1115C) // ADSC/3
+#define rfInputA new InputType(3, &ADS1115C) // ADSC/0
+#define rfInputB new InputType(2, &ADS1115C) // ADSC/1
+#define rfInputC new InputType(1, &ADS1115C) // ADSC/2
+#define rfInputD new InputType(0, &ADS1115C) // ADSC/3
 #define rfProgramPin new InputType(15, OUTPUT) // ADSC/4
 
 
