@@ -77,6 +77,7 @@ void setup()
     wheel[WHEEL_REAR_DRIVER] = new Wheel(manifold->get(REAR_DRIVER_IN), manifold->get(REAR_DRIVER_OUT), pressureInputs[getpressureInputRearDriver()], levelInputRearDriver, WHEEL_REAR_DRIVER);
 
     compressor = new Compressor(compressorRelayPin, pressureInputs[getpressureInputTank()]);
+    rfReceiver = new RfReceiver();
 
     if (getlearnPressureSensors())
     {
@@ -89,7 +90,7 @@ void setup()
 
     // TODO: make base profile work (look in other spots in app for this)
     // readProfile(getbaseProfile());// TODO: add functionality for this in the controller
-    readProfile(2);
+    readProfile(RIDE_HEIGHT_PRESET_NUMBER);
 
     setup_tasks();
 

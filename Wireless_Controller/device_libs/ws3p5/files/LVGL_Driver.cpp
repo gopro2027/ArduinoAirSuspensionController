@@ -1,17 +1,18 @@
 // LVGL_Driver.cpp - Cleaned for ST7796 + FT6336
 #include <Arduino.h>
 #include <Wire.h>
-
+#include <esp32-hal-ledc.h>
 #include "device_lib_exports.h"
 #include "lvgl.h"
 #include "esp_lcd_touch_ft6336.h"
 #include "PMU_AXP2101.h"
 
+
 #ifndef GPIO_BCKL
   #define GPIO_BCKL 6
 #endif
 
-extern void set_brightness(float level);
+// extern void set_brightness(float level);
 
 // indev is DEFINED elsewhere (board_driver_util.cpp in your project)
 extern "C" lv_indev_t *indev;
@@ -21,17 +22,21 @@ extern "C" lv_display_t *lvgl_lcd_init_perf(void);
 
 void Backlight_Init()
 {
-    // no-op
+    // Nothing special to do here (matches your other board)
 }
 
 void Set_Backlight(uint8_t Light)
 {
     if (Light > 100) Light = 100;
 
-    pinMode(GPIO_BCKL, OUTPUT);
-    digitalWrite(GPIO_BCKL, (Light > 0) ? HIGH : LOW);
+    // Same approach as your other board: analogWrite drives PWM
+    uint32_t duty = (255u * Light) / 100u;
 
-    Serial.printf("[BACKLIGHT] GPIO Set to %u%%\n", (unsigned)Light);
+    pinMode(GPIO_BCKL, OUTPUT);
+    analogWrite(GPIO_BCKL, duty);
+
+    // (Optional) log
+    // Serial.printf("[BACKLIGHT] %u%% (duty=%lu)\n", (unsigned)Light, (unsigned long)duty);
 }
 
 void I2C_Init(void)

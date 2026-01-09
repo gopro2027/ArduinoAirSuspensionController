@@ -10,4 +10,6 @@
 
 void setup_tasks();
 
+extern RfReceiver *getRfReceiver(); // defined in airSuspensionUtil.h
+
 #endif

@@ -7,19 +7,18 @@
 #include "components/wheel.h"
 #include "manifoldSaveData.h"
 #include "sampleReading.tcc"
+#include "components/rf_receiver.h"
 
 extern InputType *pressureInputs[5];
 extern Manifold *manifold;
 extern Compressor *compressor;
 extern Wheel *wheel[4];
+extern RfReceiver *rfReceiver;
 extern bool forceShutoff;
 
-#if USE_ADS == true
 extern Adafruit_ADS1115 ADS1115A;
-#if USE_2_ADS == true
 extern Adafruit_ADS1115 ADS1115B;
-#endif
-#endif
+extern Adafruit_ADS1115 ADS1115C;
 
 Manifold *getManifold();
 Compressor *getCompressor();
@@ -32,6 +31,7 @@ void initializeADS();
 void setupManifold();
 bool isAnyWheelActive();
 void airUp(bool quick = false);
+void loadProfileAirUpQuick(int profileIndex);
 void airOut();
 void airUpRelativeToAverage(int value);
 void accessoryWireSetup();

@@ -145,6 +145,11 @@ void beginSaveData()
     _SaveData.blePasskey.load("blePasskey", BLE_PASSKEY);
     _SaveData.bleName.loadString("bleName", BT_NAME);
 
+    _SaveData.rfButtonAPreset.load("rfButtonAPreset", RIDE_HEIGHT_PRESET_NUMBER);
+    _SaveData.rfButtonBPreset.load("rfButtonBPreset", RIDE_HEIGHT_PRESET_NUMBER);
+    _SaveData.rfButtonCPreset.load("rfButtonCPreset", RIDE_HEIGHT_PRESET_NUMBER);
+    _SaveData.rfButtonDPreset.load("rfButtonDPreset", RIDE_HEIGHT_PRESET_NUMBER);
+
     _SaveData.systemShutoffTimeM.load("systemShutoffTimeM", SYSTEM_SHUTOFF_TIME_M);
     _SaveData.compressorOnPSI.load("compressorOnPSI", COMPRESSOR_ON_BELOW_PSI);
     _SaveData.compressorOffPSI.load("compressorOffPSI", COMPRESSOR_MAX_PSI);
@@ -374,6 +379,11 @@ createSaveFuncInt(compressorOnPSI, uint8_t);
 createSaveFuncInt(compressorOffPSI, uint8_t);
 createSaveFuncInt(pressureSensorMax, uint16_t);
 createSaveFuncInt(bagVolumePercentage, uint16_t);
+
+createSaveFuncInt(rfButtonAPreset, uint8_t);
+createSaveFuncInt(rfButtonBPreset, uint8_t);
+createSaveFuncInt(rfButtonCPreset, uint8_t);
+createSaveFuncInt(rfButtonDPreset, uint8_t);
 
 float getHeightSensorMax()
 {

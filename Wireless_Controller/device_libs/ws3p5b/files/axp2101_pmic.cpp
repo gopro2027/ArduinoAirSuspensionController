@@ -247,7 +247,7 @@ void poll()
   // Throttle IRQ polling to avoid saturating the I2C bus.
   static uint32_t last_ms = 0;
   uint32_t now = millis();
-  if (last_ms != 0 && (now - last_ms) < 50) {
+  if (last_ms != 0 && (now - last_ms) < 200) {
     return;   // ~20 Hz polling
   }
   last_ms = now;
