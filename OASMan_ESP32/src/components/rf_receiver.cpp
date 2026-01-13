@@ -41,6 +41,7 @@ void RfReceiver::programLearnRadioButton() {
 }
 
 #define RF_SIGNAL_DETECTION_THRESHOLD 3000
+#define RF_DEBOUNCE_COUNT 5
 
 void RfReceiver::loop()
 {
@@ -54,11 +55,6 @@ void RfReceiver::loop()
     }
     #endif
 
-    static bool state_a = false;
-    static bool state_b = false;
-    static bool state_c = false;
-    static bool state_d = false;
-
     // do rf code
     if (ADS1115C_exists) {
         int a = rf_inputA->analogRead();
@@ -66,42 +62,74 @@ void RfReceiver::loop()
         int c = rf_inputC->analogRead();
         int d = rf_inputD->analogRead();
 
-        bool new_state_a = a > RF_SIGNAL_DETECTION_THRESHOLD;
-        bool new_state_b = b > RF_SIGNAL_DETECTION_THRESHOLD;
-        bool new_state_c = c > RF_SIGNAL_DETECTION_THRESHOLD;
-        bool new_state_d = d > RF_SIGNAL_DETECTION_THRESHOLD;
+        bool raw_state_a = a > RF_SIGNAL_DETECTION_THRESHOLD;
+        bool raw_state_b = b > RF_SIGNAL_DETECTION_THRESHOLD;
+        bool raw_state_c = c > RF_SIGNAL_DETECTION_THRESHOLD;
+        bool raw_state_d = d > RF_SIGNAL_DETECTION_THRESHOLD;
 
-        if (new_state_a && !state_a)
-        {
-            // button A pressed
-            Serial.println("Button A pressed");
-            loadProfileAirUpQuick(getrfButtonAPreset());
-        }
-        if (new_state_b && !state_b)
-        {
-            // button B pressed
-            Serial.println("Button B pressed");
-            loadProfileAirUpQuick(getrfButtonBPreset());
-        }
-        if (new_state_c && !state_c)
-        {
-            // button C pressed
-            Serial.println("Button C pressed");
-            loadProfileAirUpQuick(getrfButtonCPreset());
-        }
-        if (new_state_d && !state_d)
-        {
-            // button D pressed
-            Serial.println("Button D pressed");
-            loadProfileAirUpQuick(getrfButtonDPreset());
+        // Counters for consecutive true readings
+        static int counter_a = 0;
+        static int counter_b = 0;
+        static int counter_c = 0;
+        static int counter_d = 0;
+
+        // This code is a bit verbose because I just had AI write it because I'm being lazy. If we intent to improve upon it in the future we should move out the code per each a-d into a function, or maybe make it so we can loop through. For now though not a huge issue to leave as is. I also verified the logic the ai wrote by just reading through it, appears correct ~ Tyler
+
+        // Handle channel A
+        if (raw_state_a) {
+            if (counter_a < RF_DEBOUNCE_COUNT) {
+                counter_a++;
+                if (counter_a == RF_DEBOUNCE_COUNT) {
+                    // button A pressed
+                    Serial.println("Button A pressed");
+                    loadProfileAirUpQuick(getrfButtonAPreset());
+                }
+            }
+        } else {
+            counter_a = 0;
         }
 
-        state_a = new_state_a;
-        state_b = new_state_b;
-        state_c = new_state_c;
-        state_d = new_state_d;
+        // Handle channel B
+        if (raw_state_b) {
+            if (counter_b < RF_DEBOUNCE_COUNT) {
+                counter_b++;
+                if (counter_b == RF_DEBOUNCE_COUNT) {
+                    // button B pressed
+                    Serial.println("Button B pressed");
+                    loadProfileAirUpQuick(getrfButtonBPreset());
+                }
+            }
+        } else {
+            counter_b = 0;
+        }
 
-        // TODO: Implement preset calling using the saved data for which preset goes to which button
+        // Handle channel C
+        if (raw_state_c) {
+            if (counter_c < RF_DEBOUNCE_COUNT) {
+                counter_c++;
+                if (counter_c == RF_DEBOUNCE_COUNT) {
+                    // button C pressed
+                    Serial.println("Button C pressed");
+                    loadProfileAirUpQuick(getrfButtonCPreset());
+                }
+            }
+        } else {
+            counter_c = 0;
+        }
+
+        // Handle channel D
+        if (raw_state_d) {
+            if (counter_d < RF_DEBOUNCE_COUNT) {
+                counter_d++;
+                if (counter_d == RF_DEBOUNCE_COUNT) {
+                    // button D pressed
+                    Serial.println("Button D pressed");
+                    loadProfileAirUpQuick(getrfButtonDPreset());
+                }
+            }
+        } else {
+            counter_d = 0;
+        }
     }
 }
 
