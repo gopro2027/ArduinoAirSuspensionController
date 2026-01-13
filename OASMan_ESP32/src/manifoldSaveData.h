@@ -77,6 +77,12 @@ public:
     Preferencable compressorOffPSI;
     Preferencable pressureSensorMax;
     Preferencable bagVolumePercentage;
+
+    Preferencable rfButtonAPreset;
+    Preferencable rfButtonBPreset;
+    Preferencable rfButtonCPreset;
+    Preferencable rfButtonDPreset;
+
     Profile profile[MAX_PROFILE_COUNT];
     AIModelPreference aiModels[4];
 };
@@ -151,6 +157,11 @@ headerDefineSaveFunc(compressorOnPSI, uint8_t);
 headerDefineSaveFunc(compressorOffPSI, uint8_t);
 headerDefineSaveFunc(pressureSensorMax, uint16_t);
 headerDefineSaveFunc(bagVolumePercentage, uint16_t);
+
+headerDefineSaveFunc(rfButtonAPreset, uint8_t);
+headerDefineSaveFunc(rfButtonBPreset, uint8_t);
+headerDefineSaveFunc(rfButtonCPreset, uint8_t);
+headerDefineSaveFunc(rfButtonDPreset, uint8_t);
 
 float getHeightSensorMax();
 

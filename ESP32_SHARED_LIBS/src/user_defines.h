@@ -11,6 +11,9 @@
 // Will always be set to false in any official oasman release. Use at your own risk. OASMan is not responsible for damage caused by using this feature
 #define ENABLE_AIR_OUT_ON_SHUTOFF false
 
+// This is a feature that will run a routine to mo0ve your car around. It mostly confuses people but we want to be able to enable it in here in case somebody wants to use it in the future.
+#define ENABLE_DETECT_PRESSURE_SENSORS_BUTTON false
+
 // Addon to ENABLE_AIR_OUT_ON_SHUTOFF. Will change it so you have to trigger the neg input 2 times for about 300ms each within AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE_TIME
 #define AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE false
 #define AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE_TIME 3 * 1000
@@ -88,6 +91,14 @@
 /* E Brake Wire */
 #define ebrakeInput new InputType(34, INPUT)
 
+/* RF Communication */
+#define rfInputA new InputType(3, &ADS1115C) // ADSC/0
+#define rfInputB new InputType(2, &ADS1115C) // ADSC/1
+#define rfInputC new InputType(1, &ADS1115C) // ADSC/2
+#define rfInputD new InputType(0, &ADS1115C) // ADSC/3
+#define rfProgramPin new InputType(15, OUTPUT) // ADSC/4
+
+
 // These will not be exact depending on how accurate your pressure sensors are.
 // For example: Mine will read 220psi when the actual pressure is 180psi
 #define COMPRESSOR_ON_BELOW_PSI 140
@@ -99,12 +110,10 @@
 #define levelInputFrontDriver new InputType(2, &ADS1115B)    // ADSB/2
 #define levelInputRearDriver new InputType(1, &ADS1115B)     // ADSB/1
 
-/* Set to true if in any of the InputType's above you use ADS (Adafruit_ADS1115) */
-#define USE_ADS true
-/* Set to true if you use 2 ads board (low and high) */
-#define USE_2_ADS true
+/* ADS1115 I2C Addresses */
 #define ADS_A_ADDRESS 0x48 // 0x48 is address pin to low
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
+#define ADS_C_ADDRESS 0x4A // 0x4A is address pin to SDA
 
 /* Disable the hang if ads fails to load */
 #define ADS_MOCK_BYPASS true
@@ -142,6 +151,8 @@
 #define WHEEL_FRONT_DRIVER 2
 #define WHEEL_REAR_DRIVER 3
 #define _TANK_INDEX 4
+
+#define RIDE_HEIGHT_PRESET_NUMBER 2
 
 enum SOLENOID_INDEX
 {

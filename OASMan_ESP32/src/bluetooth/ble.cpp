@@ -628,11 +628,10 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
     case BTOasIdentifier::READPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
         readProfile(((ReadProfilePacket *)packet)->getProfileIndex());
         break;
-    case BTOasIdentifier::AIRUPQUICK: // add if (profileIndex > MAX_PROFILE_COUNT)
-        // load profile then air up
+    case BTOasIdentifier::AIRUPQUICK:
+        // load profile then air up. This is the main method for air up on the controller
         Serial.println("Calling air up quick!");
-        readProfile(((AirupQuickPacket *)packet)->getProfileIndex());
-        airUp(false); // typically this was true but im changing it to not be because now this is the main air up method on the controller :)
+        loadProfileAirUpQuick(((AirupQuickPacket *)packet)->getProfileIndex());
         break;
     case BTOasIdentifier::BASEPROFILE:
         setbaseProfile(((BaseProfilePacket *)packet)->getProfileIndex());
@@ -732,7 +731,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             setpressureSensorMax(*recpkt->_pressureSensorMax());
             setbagVolumePercentage(*recpkt->_bagVolumePercentage());
         }
-        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage());
+        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset());
         packetMover::sendRestPacket(&pkt, con_handle);
         //  memcpy(rest_characteristic_data, pkt.tx(), BTOAS_PACKET_SIZE);
         //  att_server_notify_SAFE(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
@@ -804,6 +803,61 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
 
         packetMover::sendRestPacket(&pkt, con_handle);
     }
+    break;
+    case BTOasIdentifier::RFCOMMAND:
+    {
+        RfCommandPacket *rfpkt = (RfCommandPacket *)packet;
+        switch (rfpkt->getCommandType())
+        {
+            case RfCommandType::RF_COMMAND_CHIP_CMD:
+            switch (rfpkt->getChipCommandNumber())
+            {
+            case RfCommandChipNumber::RF_CMD_DELETE:
+                Serial.println("Starting RF Delete");
+                getRfReceiver()->programDelete();
+                break;
+            case RfCommandChipNumber::RF_CMD_LEARN_MOMENTARY:
+                Serial.println("Starting RF Learn Momentary Mode");
+                getRfReceiver()->programLearnMomentary();
+                break;
+            case RfCommandChipNumber::RF_CMD_LEARN_TOGGLE:
+                Serial.println("Starting RF Learn Toggle Mode");
+                getRfReceiver()->programLearnToggle();
+                break;
+            case RfCommandChipNumber::RF_CMD_LEARN_RADIOBUTTON:
+                Serial.println("Starting RF Learn RadioButton Mode");
+                getRfReceiver()->programLearnRadioButton();
+                break;
+            }
+            break;
+            case RfCommandType::RF_COMMAND_BUTTON_ASSIGN:
+            {
+                RfCommandButtonNumber buttonNumber = rfpkt->getButtonNumber();
+                int presetNumber = rfpkt->getPresetNumber();
+                Serial.print("Assigning RF Button ");
+                Serial.print(buttonNumber);
+                Serial.print(" to preset ");
+                Serial.println(presetNumber);
+                switch (buttonNumber) {
+                    case RfCommandButtonNumber::RF_BUTTON_A:
+                        setrfButtonAPreset(presetNumber);
+                        break;
+                    case RfCommandButtonNumber::RF_BUTTON_B:
+                        setrfButtonBPreset(presetNumber);
+                        break;
+                    case RfCommandButtonNumber::RF_BUTTON_C:
+                        setrfButtonCPreset(presetNumber);
+                        break;
+                    case RfCommandButtonNumber::RF_BUTTON_D:
+                        setrfButtonDPreset(presetNumber);
+                        break;
+                }
+            }
+            break;
+        }
+        
+    }
+    break;
     }
 }
 

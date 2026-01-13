@@ -571,16 +571,6 @@ void joystickLoop(ControllerPtr ctl)
 #pragma endregion
 
 #pragma region konami
-void loadProfileAirUpQuick(int profileIndex)
-{
-    if (profileIndex > MAX_PROFILE_COUNT)
-    {
-        return;
-    }
-    // load profile then air up
-    readProfile(profileIndex);
-    airUp(true);
-}
 
 uint8_t konamiIndex = 0;
 uint8_t konamiCompletions = 0;
@@ -647,7 +637,7 @@ void doDance()
     Serial.println("Loading profile 2");
     // TODO: make base profile work (look in other spots in app for this)
     // go to the 2nd profile since that is default right now for ride height.
-    loadProfileAirUpQuick(2);
+    loadProfileAirUpQuick(RIDE_HEIGHT_PRESET_NUMBER);
 }
 
 void updateKonami(ControllerPtr ctl)

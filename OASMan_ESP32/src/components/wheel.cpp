@@ -150,6 +150,9 @@ bool Wheel::isActive()
 
 void Wheel::initPressureGoal(int newPressure, bool quick)
 {
+    // 1/4/2026 override to false, we no longer want to use quick mode ever
+    quick = false;
+
     if (newPressure > (getheightSensorMode() ? getHeightSensorMax() * 1.03f : getbagMaxPressure()))
     {
         // hardcode not to go above set psi

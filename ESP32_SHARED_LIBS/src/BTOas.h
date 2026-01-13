@@ -44,6 +44,7 @@ enum BTOasIdentifier
     BP32PKT = 30,
     BROADCASTNAME = 35,
     UPDATESTATUSREQUEST = 36,
+    RFCOMMAND = 37
 };
 
 enum StatusPacketBittset
@@ -91,6 +92,29 @@ struct AuxillaryOutputModePayload
     AuxillaryOutputModeTimeUnit timeUnit;
     uint32_t time;
 };
+
+enum RfCommandType
+{
+    RF_COMMAND_CHIP_CMD = 1,
+    RF_COMMAND_BUTTON_ASSIGN = 2
+};
+
+enum RfCommandChipNumber
+{
+    RF_CMD_DELETE = 1,
+    RF_CMD_LEARN_MOMENTARY = 2,
+    RF_CMD_LEARN_TOGGLE = 3,
+    RF_CMD_LEARN_RADIOBUTTON = 4
+};
+
+enum RfCommandButtonNumber
+{
+    RF_BUTTON_A = 1,
+    RF_BUTTON_B = 2,
+    RF_BUTTON_C = 3,
+    RF_BUTTON_D = 4
+};
+
 
 enum BP32CMD
 {
@@ -271,7 +295,7 @@ struct StartwebPacket : BTOasPacket
 };
 struct ConfigValuesPacket : BTOasPacket
 {
-    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage);
+    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD);
     bool *_setValues();
     uint8_t *_bagMaxPressure();
     uint32_t *_systemShutoffTimeM();
@@ -279,6 +303,10 @@ struct ConfigValuesPacket : BTOasPacket
     uint8_t *_compressorOffPSI();
     uint16_t *_pressureSensorMax();
     uint16_t *_bagVolumePercentage();
+    uint8_t *_rfButtonA(); // these rf buttons are special because we only send them with this packet (send from manifold to controller), we do not save them upon receiving them. We use RfCommandPacket to set them. It made more sense to me to just have them here instead of creating another packet for sending them from the manifold to the controller on connect. And I decided to not move the other values here because they are commands not necessarily config data being set. So essentially the other function is how we send/set the commands, and this function is how we grab the values
+    uint8_t *_rfButtonB();
+    uint8_t *_rfButtonC();
+    uint8_t *_rfButtonD();
 };
 
 struct AuthPacket : BTOasPacket
@@ -312,6 +340,15 @@ struct AuxillaryOutputModePacket : BTOasPacket
 {
     AuxillaryOutputModePacket();
     AuxillaryOutputModePacket(AuxillaryOutputModePayload payload) ;
+};
+
+struct RfCommandPacket : BTOasPacket
+{
+    RfCommandPacket(RfCommandType commandType, int commandValueOne, int commandValueTwo);
+    RfCommandType getCommandType();
+    RfCommandChipNumber getChipCommandNumber();
+    RfCommandButtonNumber getButtonNumber();
+    int getPresetNumber();
 };
 
 #endif

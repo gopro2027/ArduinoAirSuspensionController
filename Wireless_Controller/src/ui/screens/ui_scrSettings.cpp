@@ -372,6 +372,7 @@ void ScrSettings::init()
 
     this->ui_safetymode = new Option(basic_settings_page, OptionType::ON_OFF, "Safety Mode", {.STRING = test}, safety_mode_handler);
 
+#if ENABLE_DETECT_PRESSURE_SENSORS_BUTTON
     new Option(basic_settings_page, OptionType::BUTTON, "Detect Pressure Sensors", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Detect Pressure Sensors?",
@@ -386,6 +387,63 @@ void ScrSettings::init()
             },
             []() -> void {}, false);
     });
+#endif
+
+    new Option(basic_settings_page, OptionType::HEADER, "Key Fob Settings", {.STRING = test});
+    new Option(basic_settings_page, OptionType::BUTTON, "Unlearn Fob", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Unlearn key fob?",
+            "WARNING: Your key fob will be unlearned. This requires you have an OASMan Key Fob Receiver installed (RX480E receiver)",
+            "Confirm", "Cancel",
+            []() -> void
+            {
+                RfCommandPacket pkt(RfCommandType::RF_COMMAND_CHIP_CMD, RfCommandChipNumber::RF_CMD_DELETE, 0);
+                sendRestPacket(&pkt);
+                log_i("Pressed unlearn key fob");
+                showDialog("Unlearning key fob...", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
+
+    new Option(basic_settings_page, OptionType::BUTTON, "Learn Fob", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Learn fob?",
+            "This requires you have an OASMan Key Fob Receiver installed (RX480E receiver)",
+            "Confirm", "Cancel",
+            []() -> void
+            {
+                RfCommandPacket pkt(RfCommandType::RF_COMMAND_CHIP_CMD, RfCommandChipNumber::RF_CMD_LEARN_MOMENTARY, 0);
+                sendRestPacket(&pkt);
+                log_i("Pressed learn key fob");
+                showDialog("Learning key fob mode...", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
+
+    this->ui_rfbuttonA = new Option(basic_settings_page, OptionType::SLIDER, "Button A Preset Number", {.INT = 0}, [](void *data)
+    {
+        RfCommandPacket pkt(RfCommandType::RF_COMMAND_BUTTON_ASSIGN, RfCommandButtonNumber::RF_BUTTON_A, (uint32_t)data - 1);
+        sendRestPacket(&pkt);
+    });
+    ((Option *)this->ui_rfbuttonA)->setSliderParams(1, 5, true, LV_EVENT_RELEASED);
+    this->ui_rfbuttonB = new Option(basic_settings_page, OptionType::SLIDER, "Button B Preset Number", {.INT = 0}, [](void *data)
+    {
+        RfCommandPacket pkt(RfCommandType::RF_COMMAND_BUTTON_ASSIGN, RfCommandButtonNumber::RF_BUTTON_B, (uint32_t)data - 1);
+        sendRestPacket(&pkt);
+    });
+    ((Option *)this->ui_rfbuttonB)->setSliderParams(1, 5, true, LV_EVENT_RELEASED);
+    this->ui_rfbuttonC = new Option(basic_settings_page, OptionType::SLIDER, "Button C Preset Number", {.INT = 0}, [](void *data)
+    {
+        RfCommandPacket pkt(RfCommandType::RF_COMMAND_BUTTON_ASSIGN, RfCommandButtonNumber::RF_BUTTON_C, (uint32_t)data - 1);
+        sendRestPacket(&pkt);
+    });
+    ((Option *)this->ui_rfbuttonC)->setSliderParams(1, 5, true, LV_EVENT_RELEASED);
+    this->ui_rfbuttonD = new Option(basic_settings_page, OptionType::SLIDER, "Button D Preset Number", {.INT = 0}, [](void *data)
+    {
+        RfCommandPacket pkt(RfCommandType::RF_COMMAND_BUTTON_ASSIGN, RfCommandButtonNumber::RF_BUTTON_D, (uint32_t)data - 1);
+        sendRestPacket(&pkt);
+    });
+    ((Option *)this->ui_rfbuttonD)->setSliderParams(1, 5, true, LV_EVENT_RELEASED);
 
     // --- Levelling Mode page ---
     lv_obj_t *levelling_page = lv_obj_create(pages_container);
@@ -681,5 +739,10 @@ void ScrSettings::loop()
         this->ui_config4->setRightHandText(itoa(*util_configValues._compressorOffPSI(), buf, 10));
         this->ui_config5->setRightHandText(itoa(*util_configValues._pressureSensorMax(), buf, 10));
         this->ui_config6->setRightHandText(itoa(*util_configValues._bagVolumePercentage(), buf, 10));
+
+        this->ui_rfbuttonA->setRightHandText(itoa(*util_configValues._rfButtonA() + 1, buf, 10));
+        this->ui_rfbuttonB->setRightHandText(itoa(*util_configValues._rfButtonB() + 1, buf, 10));
+        this->ui_rfbuttonC->setRightHandText(itoa(*util_configValues._rfButtonC() + 1, buf, 10));
+        this->ui_rfbuttonD->setRightHandText(itoa(*util_configValues._rfButtonD() + 1, buf, 10));
     }
 }
