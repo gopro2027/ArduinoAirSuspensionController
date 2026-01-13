@@ -11,6 +11,9 @@
 // Will always be set to false in any official oasman release. Use at your own risk. OASMan is not responsible for damage caused by using this feature
 #define ENABLE_AIR_OUT_ON_SHUTOFF false
 
+// This is a feature that will run a routine to mo0ve your car around. It mostly confuses people but we want to be able to enable it in here in case somebody wants to use it in the future.
+#define ENABLE_DETECT_PRESSURE_SENSORS_BUTTON false
+
 // Addon to ENABLE_AIR_OUT_ON_SHUTOFF. Will change it so you have to trigger the neg input 2 times for about 300ms each within AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE_TIME
 #define AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE false
 #define AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE_TIME 3 * 1000

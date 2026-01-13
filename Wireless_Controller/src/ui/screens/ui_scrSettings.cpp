@@ -372,21 +372,22 @@ void ScrSettings::init()
 
     this->ui_safetymode = new Option(basic_settings_page, OptionType::ON_OFF, "Safety Mode", {.STRING = test}, safety_mode_handler);
 
-    // Removed 1/2/2026 because this function just keeps confusing people
-    // new Option(basic_settings_page, OptionType::BUTTON, "Detect Pressure Sensors", {.STRING = test}, [](void *data)
-    // {
-    //     currentScr->showMsgBox("Detect Pressure Sensors?",
-    //         "WARNING: YOUR CAR WILL BE AIRED OUT!!!! This routine will auto learn which pressure sensors go to which wheels.",
-    //         "Confirm", "Cancel",
-    //         []() -> void
-    //         {
-    //             DetectPressureSensorsPacket pkt;
-    //             sendRestPacket(&pkt);
-    //             log_i("Pressed detected pressure sensors");
-    //             showDialog("Doing detection routine", lv_color_hex(0xFFFF00));
-    //         },
-    //         []() -> void {}, false);
-    // });
+#if ENABLE_DETECT_PRESSURE_SENSORS_BUTTON
+    new Option(basic_settings_page, OptionType::BUTTON, "Detect Pressure Sensors", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Detect Pressure Sensors?",
+            "WARNING: YOUR CAR WILL BE AIRED OUT!!!! This routine will auto learn which pressure sensors go to which wheels.",
+            "Confirm", "Cancel",
+            []() -> void
+            {
+                DetectPressureSensorsPacket pkt;
+                sendRestPacket(&pkt);
+                log_i("Pressed detected pressure sensors");
+                showDialog("Doing detection routine", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
+#endif
 
     new Option(basic_settings_page, OptionType::HEADER, "Key Fob Settings", {.STRING = test});
     new Option(basic_settings_page, OptionType::BUTTON, "Unlearn Fob", {.STRING = test}, [](void *data)

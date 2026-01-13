@@ -303,7 +303,7 @@ struct ConfigValuesPacket : BTOasPacket
     uint8_t *_compressorOffPSI();
     uint16_t *_pressureSensorMax();
     uint16_t *_bagVolumePercentage();
-    uint8_t *_rfButtonA(); // these rf buttons are special because we only send them with this packet (send from manifold to controller), we do not save them upon receiving them. We use RfCommandPacket to set them. It made more sense to me to just have them here instead of creating another packet for sending them from the manifold to the controller on connect.
+    uint8_t *_rfButtonA(); // these rf buttons are special because we only send them with this packet (send from manifold to controller), we do not save them upon receiving them. We use RfCommandPacket to set them. It made more sense to me to just have them here instead of creating another packet for sending them from the manifold to the controller on connect. And I decided to not move the other values here because they are commands not necessarily config data being set. So essentially the other function is how we send/set the commands, and this function is how we grab the values
     uint8_t *_rfButtonB();
     uint8_t *_rfButtonC();
     uint8_t *_rfButtonD();
