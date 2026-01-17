@@ -46,6 +46,9 @@
 /* By default the android app is set up for 4 profiles */
 #define MAX_PROFILE_COUNT 5
 
+#define SIX_VALVE_MANIFOLD true
+#if SIX_VALVE_MANIFOLD == false
+
 /* These are the pin numbers used for our manifold solenoids */
 
 #ifdef BOARD_VERSION_ATLEAST_4
@@ -70,6 +73,17 @@
 #define solenoidFrontDriverOutPin new InputType(27, OUTPUT)
 #define solenoidRearDriverInPin new InputType(18, OUTPUT)
 #define solenoidRearDriverOutPin new InputType(17, OUTPUT)
+#endif
+
+#else
+
+/* Definitions for using a six valve manifold */
+#define m6_solenoidFrontPassengerPin new InputType(33, OUTPUT) // solenoidFrontPassengerInPin
+#define m6_solenoidRearPassengerPin new InputType(25, OUTPUT) // solenoidFrontPassengerOutPin
+#define m6_solenoidFrontDriverPin new InputType(23, OUTPUT) // solenoidRearPassengerInPin
+#define m6_solenoidRearDriverPin new InputType(19, OUTPUT) // solenoidRearPassengerOutPin
+#define m6_solenoidChamberTankPin new InputType(26, OUTPUT) // solenoidFrontDriverInPin
+#define m6_solenoidChamberExhaustPin new InputType(27, OUTPUT) // solenoidFrontDriverOutPin
 
 #endif
 

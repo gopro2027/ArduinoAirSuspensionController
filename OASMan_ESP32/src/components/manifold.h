@@ -5,12 +5,12 @@
 #include "solenoid.h"
 #include "components/wheel.h"
 #include <user_defines.h>
+#include "chamber_valve.h"
 
 class Manifold
 {
 private:
     Solenoid *solenoidList[SOLENOID_COUNT];
-    int wheelSolenoidMask = 0;
 
 public:
     Manifold();
@@ -22,6 +22,13 @@ public:
              InputType *fdo,
              InputType *rdi,
              InputType *rdo);
+    Manifold(InputType *fp,
+            InputType *rp,
+            InputType *fd,
+            InputType *rd,
+            InputType *chamberTankInput,
+            InputType *chamberExhaustInput
+        );
     Solenoid *get(int solenoid);
     Solenoid **getAll();
     void debugOut();
