@@ -23,6 +23,7 @@ public:
     void open(Solenoid *reference);
     void close(Solenoid *reference);
     bool isOpen();
+    void preMarkSolenoidAsGoingToOpen(Solenoid *reference);
 };
 
 #endif

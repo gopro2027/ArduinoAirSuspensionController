@@ -343,22 +343,34 @@ void Wheel::loop()
 
                     if (valveTime > 0)
                     {
-                        // Open valve for calculated time
-                        valve->open();
-                        delay(valveTime);
-                        valve->close();
+                        const int valveSettleTime = 250; // ms to wait after closing valve to allow pressure to stabilize a bit before reading again
+                        bool canOpen = true;
+                        #if SIX_VALVE_MANIFOLD == true
+                        if (!getManifold()->canOpenDirectionSixValveThreadSafe(valve)) {
+                            canOpen = false;
+                            iteration--;// don't count this as an iteration since we decided at last moment to skip it due to the other chamber being in use
+                            delay(valveSettleTime); // delay 250 to at least get some resemblence of matching the other valves that are opening
+                        }
+                        #endif
 
-                        // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
-                        delay(250); // Changed to 250. 150 was... confusing
+                        if (canOpen) {
+                            // Open valve for calculated time
+                            valve->open();
+                            delay(valveTime);
+                            valve->close();
 
-                        // only bother saving data for first 2 iterations AND when the valve was opened for more than 10ms AND it wasn't just set to do a special low value full smooth air out AND if the pressure change is greater than 3psi
-                        if (iteration < startIteration + 2 && valveTime > 10 && !specialSmoothAirOut)
-                        {
-                            this->readInputs();
-                            end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
-                            if (abs(start_pressure - end_pressure) > 3)
+                            // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
+                            delay(valveSettleTime); // Changed to 250. 150 was... confusing
+
+                            // only bother saving data for first 2 iterations AND when the valve was opened for more than 10ms AND it wasn't just set to do a special low value full smooth air out AND if the pressure change is greater than 3psi
+                            if (iteration < startIteration + 2 && valveTime > 10 && !specialSmoothAirOut)
                             {
-                                appendPressureDataToFile(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime);
+                                this->readInputs();
+                                end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
+                                if (abs(start_pressure - end_pressure) > 3)
+                                {
+                                    appendPressureDataToFile(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime);
+                                }
                             }
                         }
                     }

@@ -21,6 +21,7 @@ Manifold::Manifold(InputType *fpi,
     this->solenoidList[REAR_DRIVER_OUT] = new Solenoid(rdo, SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR);
 }
 
+#if SIX_VALVE_MANIFOLD == true
 Manifold::Manifold(InputType *fp,
                    InputType *rp,
                    InputType *fd,
@@ -29,8 +30,8 @@ Manifold::Manifold(InputType *fp,
                    InputType *chamberExhaustInput
                 )
 {
-    ChamberValve *chamberTank = new ChamberValve(chamberTankInput);
-    ChamberValve *chamberExhaust = new ChamberValve(chamberExhaustInput);
+    chamberTank = new ChamberValve(chamberTankInput);
+    chamberExhaust = new ChamberValve(chamberExhaustInput);
     this->solenoidList[FRONT_PASSENGER_IN] = new Solenoid(fp, chamberTank, SOLENOID_AI_INDEX::AI_MODEL_UP_FRONT);
     this->solenoidList[FRONT_PASSENGER_OUT] = new Solenoid(fp, chamberExhaust, SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT);
     this->solenoidList[REAR_PASSENGER_IN] = new Solenoid(rp, chamberTank, SOLENOID_AI_INDEX::AI_MODEL_UP_REAR);
@@ -39,7 +40,9 @@ Manifold::Manifold(InputType *fp,
     this->solenoidList[FRONT_DRIVER_OUT] = new Solenoid(fd, chamberExhaust, SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT);
     this->solenoidList[REAR_DRIVER_IN] = new Solenoid(rd, chamberTank, SOLENOID_AI_INDEX::AI_MODEL_UP_REAR);
     this->solenoidList[REAR_DRIVER_OUT] = new Solenoid(rd, chamberExhaust, SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR);
+    chamberCheckMutex = xSemaphoreCreateMutex();
 }
+#endif
 
 Solenoid *Manifold::get(int solenoid)
 {
@@ -63,3 +66,33 @@ void Manifold::debugOut()
     }
     Serial.println();
 }
+
+#if SIX_VALVE_MANIFOLD == true
+bool Manifold::canOpenDirectionSixValveThreadSafe(Solenoid *toPreMarkAsOpening) {
+    while (xSemaphoreTake(chamberCheckMutex, 1) != pdTRUE)
+    {
+        delay(1);
+    }
+    bool ret = true;
+    if (toPreMarkAsOpening->getChamberValve() == chamberTank) {
+        // we are trying to open the tank valve. Check if exhaust valve is currently open
+        if (chamberExhaust->isOpen()) {
+            ret = false;
+        } else {
+            // it's not open to pre-mark the tank chamber that it is going to be selected as the one open
+            chamberTank->preMarkSolenoidAsGoingToOpen(toPreMarkAsOpening);
+            ret = true;
+        }
+    } else {
+        // similar routine for the opposite, we are trying to open exhaust so check if tank is currently open
+        if (chamberTank->isOpen()) {
+            ret = false;
+        } else {
+            chamberExhaust->preMarkSolenoidAsGoingToOpen(toPreMarkAsOpening);
+            ret = true;
+        }
+    }
+    xSemaphoreGive(chamberCheckMutex);
+    return ret;
+}
+#endif

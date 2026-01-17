@@ -20,6 +20,10 @@ public:
     void close();
     bool isOpen();
     SOLENOID_AI_INDEX getAIIndex();
+
+    ChamberValve *getChamberValve() {
+        return this->chamber_valve;
+    }
 };
 
 #endif

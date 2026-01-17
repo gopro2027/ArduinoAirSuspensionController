@@ -27,6 +27,7 @@ bool ChamberValve::checkAndAddReference(Solenoid *reference) {
     bool found = false;
     int lowest = -1;
 
+    // first loop through all references to see if it already exists.
     for (int i = 0; i < NUM_REFERENCES; i++) {
         if (references[i] == NULL && lowest == -1) {
             lowest = i;
@@ -37,6 +38,7 @@ bool ChamberValve::checkAndAddReference(Solenoid *reference) {
         }
     }
 
+    // if not found, add it to the lowest empty slot
     bool ret = true;
     if (!found) {
         if (lowest != -1) {
@@ -95,4 +97,8 @@ void ChamberValve::close(Solenoid *reference)
 bool ChamberValve::isOpen()
 {
     return this->bopen;
+}
+
+void ChamberValve::preMarkSolenoidAsGoingToOpen(Solenoid *reference) {
+    checkAndAddReference(reference); // we don't care about the output here
 }
