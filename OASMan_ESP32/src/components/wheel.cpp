@@ -1,4 +1,5 @@
 #include "wheel.h"
+#include "manifold.h"
 
 #define NUM_WHEEL_THREADS 4
 std::atomic<bool> flagStartPressureGoalRoutine[NUM_WHEEL_THREADS];
@@ -54,7 +55,7 @@ int calculateValveOpenTimeMS(int pressureDifferenceAbsolute, bool quickMode)
 
 Wheel::Wheel() {}
 
-Wheel::Wheel(Solenoid *solenoidInPin, Solenoid *solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum)
+Wheel::Wheel(int solenoidInPin, int solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum)
 {
     this->pressurePin = pressurePin;
     this->levelSensorPin = levelSensorPin;
@@ -71,12 +72,12 @@ Wheel::Wheel(Solenoid *solenoidInPin, Solenoid *solenoidOutPin, InputType *press
 
 Solenoid *Wheel::getInSolenoid()
 {
-    return this->s_AirIn;
+    return getManifold()->get(this->s_AirIn);
 }
 
 Solenoid *Wheel::getOutSolenoid()
 {
-    return this->s_AirOut;
+    return getManifold()->get(this->s_AirOut);
 }
 
 InputType *Wheel::getPressurePin()
@@ -145,7 +146,7 @@ float Wheel::getSelectedInputValue()
 
 bool Wheel::isActive()
 {
-    return this->s_AirIn->isOpen() || this->s_AirOut->isOpen();
+    return getInSolenoid()->isOpen() || getOutSolenoid()->isOpen();
 }
 
 void Wheel::initPressureGoal(int newPressure, bool quick)
@@ -283,13 +284,13 @@ void Wheel::loop()
                 bool up = pressureDif >= 0;
                 if (up)
                 {
-                    valve = this->s_AirIn;
-                    this->s_AirOut->close();
+                    valve = getInSolenoid();
+                    getOutSolenoid()->close();
                 }
                 else
                 {
-                    valve = this->s_AirOut;
-                    this->s_AirIn->close();
+                    valve = getOutSolenoid();
+                    getInSolenoid()->close();
                 }
 
                 if (!getheightSensorMode())
@@ -387,8 +388,8 @@ void Wheel::loop()
 
         flagStartPressureGoalRoutine[thisWheelNum] = false;
         // close both after (only applies for level sensor logic)
-        this->s_AirIn->close();
-        this->s_AirOut->close();
+        getInSolenoid()->close();
+        getOutSolenoid()->close();
     }
 
     // Maintain Pressure code

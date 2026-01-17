@@ -11,6 +11,8 @@
 #include "compressor.h"
 #include "manifoldSaveData.h"
 
+class Manifold; // from manifold.h, forward reference
+
 class Wheel
 {
 private:
@@ -25,12 +27,12 @@ private:
     float pressureValue;
     float levelValue;
 
-    Solenoid *s_AirIn;
-    Solenoid *s_AirOut;
+    int s_AirIn;
+    int s_AirOut;
 
 public:
     Wheel();
-    Wheel(Solenoid *solenoidInPin, Solenoid *solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum);
+    Wheel(int solenoidInPin, int solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum);
     void initPressureGoal(int newPressure, bool quick = false);
     void loop();
     void readInputs();
@@ -47,4 +49,5 @@ void setupWheelLockSem();
 
 extern bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex);
 extern double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure);
+extern Manifold *getManifold(); // defined in airSuspensionUtil.h
 #endif
