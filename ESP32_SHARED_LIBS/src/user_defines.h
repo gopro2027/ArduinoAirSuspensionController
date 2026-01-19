@@ -48,22 +48,11 @@
 
 #define SIX_VALVE_MANIFOLD true
 
-#if SIX_VALVE_MANIFOLD == true
-
-/* Definitions for using a six valve manifold */
-#define m6_solenoidFrontPassengerPin new InputType(33, OUTPUT) // solenoidFrontPassengerInPin
-#define m6_solenoidRearPassengerPin new InputType(25, OUTPUT) // solenoidFrontPassengerOutPin
-#define m6_solenoidFrontDriverPin new InputType(23, OUTPUT) // solenoidRearPassengerInPin
-#define m6_solenoidRearDriverPin new InputType(19, OUTPUT) // solenoidRearPassengerOutPin
-#define m6_solenoidChamberTankPin new InputType(26, OUTPUT) // solenoidFrontDriverInPin
-#define m6_solenoidChamberExhaustPin new InputType(27, OUTPUT) // solenoidFrontDriverOutPin
-
-#else
-
 /* These are the pin numbers used for our manifold solenoids */
 
 #ifdef BOARD_VERSION_ATLEAST_4
 
+/* On board v4 the orientation of the connector physically is the same, but the pins they were connected too were optimized for routing */
 #define solenoidFrontPassengerInPin new InputType(18, OUTPUT)
 #define solenoidFrontPassengerOutPin new InputType(17, OUTPUT)
 #define solenoidRearPassengerInPin new InputType(19, OUTPUT)
@@ -86,7 +75,30 @@
 #define solenoidRearDriverOutPin new InputType(17, OUTPUT)
 #endif
 
-#endif
+/* Definitions for using a six valve manifold, only used when SIX_VALVE_MANIFOLD is true */
+#define m6_solenoidFrontPassengerPin solenoidRearDriverInPin
+#define m6_solenoidRearPassengerPin solenoidRearPassengerInPin
+#define m6_solenoidFrontDriverPin solenoidRearDriverOutPin
+#define m6_solenoidRearDriverPin solenoidFrontDriverInPin
+#define m6_solenoidChamberTankPin solenoidFrontPassengerInPin
+#define m6_solenoidChamberExhaustPin solenoidFrontPassengerOutPin
+// unused in 6 valve manifold is solenoidRearPassengerOutPin and solenoidFrontDriverOutPin, which are the top 2 pins (the constant pin is still used on the 3 pin connector)
+/*
+Wiring for 6 valve manifold on the boards valve connector. This will be the same physical orientation on any board, whether it has the jst or microfit connector, all the same. Remember, USA spec (left hand drive) for driver/passenger designations.
+                         ┌─────────┐
+                         │   FL    │  (Front Left/Driver - RDO label on board)
+                         ├─────────┤
+                         │   FR    │  (Front Right/Passenger - RDI label on board)
+                         ├─────────┤
+                         │   RL    │  (Rear Left/Driver - FDI label on board)
+┌─────────┐              ├─────────┤
+│   +12   │              │   RR    │  (Rear Right/Passenger - RPI label on board)
+├─────────┤              ├─────────┤
+│   N/C   │              │  TANK   │  (Tank Valve - FPI label on board)
+├─────────┤              ├─────────┤
+│   N/C   │              │ EXHAUST │  (Exhaust Valve - FPO label on board)
+└─────────┘              └─────────┘
+*/
 
 /* Pressure Sensor Inputs. Why are the ads pin nums in this specific order? Oh the world may never know */
 #define pressureSensorInput0 new InputType(0, &ADS1115A) // ADSA/0   Previous: D36/VP/A4   Default: pressureInputFrontPassenger
