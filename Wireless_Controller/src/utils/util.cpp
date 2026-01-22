@@ -1,4 +1,75 @@
 #include "util.h"
+#include "ui/theme_colors.h"
+
+// Dynamic screen dimension helpers for rotation support
+int getScreenWidth() {
+    lv_display_t *disp = lv_display_get_default();
+    if (disp) {
+        return lv_display_get_horizontal_resolution(disp);
+    }
+    return LCD_WIDTH;
+}
+
+int getScreenHeight() {
+    lv_display_t *disp = lv_display_get_default();
+    if (disp) {
+        return lv_display_get_vertical_resolution(disp);
+    }
+    return LCD_HEIGHT;
+}
+
+bool isLandscape() {
+    return getScreenWidth() > getScreenHeight();
+}
+
+// Get base resolution for scaling calculations
+// This detects the smallest dimension in portrait mode
+int getBaseWidth() {
+    int w = LCD_WIDTH;
+    int h = LCD_HEIGHT;
+    // Normalize to portrait (width < height)
+    if (w > h) {
+        int temp = w;
+        w = h;
+        h = temp;
+    }
+    return w;  // Will be 240, 320, or 480
+}
+
+int getBaseHeight() {
+    int w = LCD_WIDTH;
+    int h = LCD_HEIGHT;
+    // Normalize to portrait (width < height)
+    if (w > h) {
+        int temp = w;
+        w = h;
+        h = temp;
+    }
+    return h;  // Will be 320, 480, or 640
+}
+
+// Dynamic scaling functions (recalculate based on current screen size)
+// Scale relative to 240×320 reference design
+float getScaleX() {
+    int baseWidth = getBaseWidth();
+    int currentWidth = isLandscape() ? getScreenHeight() : getScreenWidth();
+    return currentWidth / 240.0f;
+}
+
+float getScaleY() {
+    int baseHeight = getBaseHeight();
+    int currentHeight = isLandscape() ? getScreenWidth() : getScreenHeight();
+    return currentHeight / 320.0f;
+}
+
+// Dynamic arrow button dimensions
+float getArrowButtonWidth() {
+    return 54 * getScaleX();
+}
+
+float getArrowButtonHeight() {
+    return 44 * getScaleY();
+}
 
 void scale_obj(lv_obj_t *obj, int w, int h) {
     // lv_image_set_scale_x(obj, SCALE_X * 256);
@@ -21,42 +92,222 @@ int cr_contains(CenterRect cr, SimplePoint p)
     return sr_contains(sr, p);
 }
 
-// first column (left)
-CenterRect ctr_row0col0up = {48 * SCALE_X, 89 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row0col0down = {48 * SCALE_X, 137 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+// Dynamic touch area functions (recalculate on each call for rotation support)
+// In landscape mode: horizontal pills (left=up, right=down)
+// In portrait mode: vertical pills (top=up, bottom=down)
 
-CenterRect ctr_row1col0up = {48 * SCALE_X, 193 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row1col0down = {48 * SCALE_X, 241 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+// Pill dimensions for touch areas
+// Dynamic pill dimensions that match ui_scrHome.cpp calculations
+static int getPillWidth() {
+    if (isLandscape()) {
+        return 100;  // Landscape horizontal pills
+    } else {
+        return 54;   // Portrait vertical pills
+    }
+}
 
-// second column (center)
-CenterRect ctr_row0col1up = {118 * SCALE_X, 78 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row0col1down = {118 * SCALE_X, 126 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+static int getPillHeight() {
+    const int screenHeight = getScreenHeight();
+    const int pressureAreaHeight = scaledY(55);
+    const int navbarHeight = getNavbarHeight();
+    const int contentHeight = screenHeight - pressureAreaHeight - navbarHeight;
 
-CenterRect ctr_row1col1up = {118 * SCALE_X, 204 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row1col1down = {118 * SCALE_X, 252 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+    if (isLandscape()) {
+        return (contentHeight - 24) / 2;  // Match ui_scrHome.cpp calculation
+    } else {
+        return 90;  // Portrait vertical pills
+    }
+}
 
-// third column (right)
-CenterRect ctr_row0col2up = {189 * SCALE_X, 89 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row0col2down = {189 * SCALE_X, 137 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+// Helper to get pill touch area parameters - must match ui_scrHome.cpp pill positions
+static void getPillParams(int col, int row, float &cx, float &cy, float &halfW, float &halfH) {
+    const int screenWidth = getScreenWidth();
+    const int screenHeight = getScreenHeight();
+    const int pressureAreaHeight = scaledY(55);
+    const int navbarHeight = getNavbarHeight();
+    const int contentHeight = screenHeight - pressureAreaHeight - navbarHeight;
 
-CenterRect ctr_row1col2up = {189 * SCALE_X, 193 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row1col2down = {189 * SCALE_X, 241 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
+    const int pillW = getPillWidth();
+    const int pillH = getPillHeight();
 
-// bottom nav
-SimpleRect navbarbtn_home = {0 * SCALE_X, 291 * SCALE_Y, 80 * SCALE_X, 29 * SCALE_Y};
-SimpleRect navbarbtn_presets = {80 * SCALE_X, 291 * SCALE_Y, 80 * SCALE_X, 29 * SCALE_Y};
-SimpleRect navbarbtn_settings = {160 * SCALE_X, 291 * SCALE_Y, 80 * SCALE_X, 29 * SCALE_Y};
+    if (isLandscape()) {
+        // Landscape: 3 horizontal pills per row with scaled gap between them
+        const int gap = scaledX(12);
+        const int totalPillWidth = 3 * pillW + 2 * gap;
+        const int sidePadding = (screenWidth - totalPillWidth) / 2;
 
-// presets buttons
-CenterRect ctr_preset_1 = {(48 / 2 + 48 * 0) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
-CenterRect ctr_preset_2 = {(48 / 2 + 48 * 1) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
-CenterRect ctr_preset_3 = {(48 / 2 + 48 * 2) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
-CenterRect ctr_preset_4 = {(48 / 2 + 48 * 3) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
-CenterRect ctr_preset_5 = {(48 / 2 + 48 * 4) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
+        cx = sidePadding + pillW / 2 + col * (pillW + gap);
+        cy = pressureAreaHeight + (contentHeight / 2 - pillH) / 2 + pillH / 2 + row * (pillH + scaledY(24));
+        halfW = pillW / 2.0f;
+        halfH = pillH / 2.0f;
+    } else {
+        // Portrait: 3 vertical pills per row
+        const int spacing = (screenWidth - 3 * pillW) / 4;
+        const int rowSpacing = (contentHeight - 2 * pillH) / 3;
+
+        cx = spacing + pillW / 2 + col * (pillW + spacing);
+        cy = pressureAreaHeight + rowSpacing + pillH / 2 + row * (pillH + rowSpacing);
+        halfW = pillW / 2.0f;
+        halfH = pillH / 2.0f;
+    }
+}
+
+// first column (left) - col=0
+CenterRect get_ctr_row0col0up() {
+    float cx, cy, halfW, halfH;
+    getPillParams(0, 0, cx, cy, halfW, halfH);
+    if (isLandscape()) {
+        // Left half of horizontal pill
+        return {cx - halfW / 2, cy, halfW, halfH * 2};
+    } else {
+        // Top half of vertical pill
+        return {cx, cy - halfH / 2, halfW * 2, halfH};
+    }
+}
+CenterRect get_ctr_row0col0down() {
+    float cx, cy, halfW, halfH;
+    getPillParams(0, 0, cx, cy, halfW, halfH);
+    if (isLandscape()) {
+        // Right half of horizontal pill
+        return {cx + halfW / 2, cy, halfW, halfH * 2};
+    } else {
+        // Bottom half of vertical pill
+        return {cx, cy + halfH / 2, halfW * 2, halfH};
+    }
+}
+CenterRect get_ctr_row1col0up() {
+    float cx, cy, halfW, halfH;
+    getPillParams(0, 1, cx, cy, halfW, halfH);
+    if (isLandscape()) {
+        return {cx - halfW / 2, cy, halfW, halfH * 2};
+    } else {
+        return {cx, cy - halfH / 2, halfW * 2, halfH};
+    }
+}
+CenterRect get_ctr_row1col0down() {
+    float cx, cy, halfW, halfH;
+    getPillParams(0, 1, cx, cy, halfW, halfH);
+    if (isLandscape()) {
+        return {cx + halfW / 2, cy, halfW, halfH * 2};
+    } else {
+        return {cx, cy + halfH / 2, halfW * 2, halfH};
+    }
+}
+
+// second column (center) - col=1
+CenterRect get_ctr_row0col1up() {
+    float cx, cy, halfW, halfH;
+    getPillParams(1, 0, cx, cy, halfW, halfH);
+    if (isLandscape()) {
+        return {cx - halfW / 2, cy, halfW, halfH * 2};
+    } else {
+        return {cx, cy - halfH / 2, halfW * 2, halfH};
+    }
+}
+CenterRect get_ctr_row0col1down() {
+    float cx, cy, halfW, halfH;
+    getPillParams(1, 0, cx, cy, halfW, halfH);
+    if (isLandscape()) {
+        return {cx + halfW / 2, cy, halfW, halfH * 2};
+    } else {
+        return {cx, cy + halfH / 2, halfW * 2, halfH};
+    }
+}
+CenterRect get_ctr_row1col1up() {
+    float cx, cy, halfW, halfH;
+    getPillParams(1, 1, cx, cy, halfW, halfH);
+    if (isLandscape()) {
+        return {cx - halfW / 2, cy, halfW, halfH * 2};
+    } else {
+        return {cx, cy - halfH / 2, halfW * 2, halfH};
+    }
+}
+CenterRect get_ctr_row1col1down() {
+    float cx, cy, halfW, halfH;
+    getPillParams(1, 1, cx, cy, halfW, halfH);
+    if (isLandscape()) {
+        return {cx + halfW / 2, cy, halfW, halfH * 2};
+    } else {
+        return {cx, cy + halfH / 2, halfW * 2, halfH};
+    }
+}
+
+// third column (right) - col=2
+CenterRect get_ctr_row0col2up() {
+    float cx, cy, halfW, halfH;
+    getPillParams(2, 0, cx, cy, halfW, halfH);
+    if (isLandscape()) {
+        return {cx - halfW / 2, cy, halfW, halfH * 2};
+    } else {
+        return {cx, cy - halfH / 2, halfW * 2, halfH};
+    }
+}
+CenterRect get_ctr_row0col2down() {
+    float cx, cy, halfW, halfH;
+    getPillParams(2, 0, cx, cy, halfW, halfH);
+    if (isLandscape()) {
+        return {cx + halfW / 2, cy, halfW, halfH * 2};
+    } else {
+        return {cx, cy + halfH / 2, halfW * 2, halfH};
+    }
+}
+CenterRect get_ctr_row1col2up() {
+    float cx, cy, halfW, halfH;
+    getPillParams(2, 1, cx, cy, halfW, halfH);
+    if (isLandscape()) {
+        return {cx - halfW / 2, cy, halfW, halfH * 2};
+    } else {
+        return {cx, cy - halfH / 2, halfW * 2, halfH};
+    }
+}
+CenterRect get_ctr_row1col2down() {
+    float cx, cy, halfW, halfH;
+    getPillParams(2, 1, cx, cy, halfW, halfH);
+    if (isLandscape()) {
+        return {cx + halfW / 2, cy, halfW, halfH * 2};
+    } else {
+        return {cx, cy + halfH / 2, halfW * 2, halfH};
+    }
+}
+
+// bottom nav - dynamic for all screen sizes and rotation
+SimpleRect get_navbarbtn_home() {
+    const int screenWidth = getScreenWidth();
+    const int screenHeight = getScreenHeight();
+    const int navbarHeight = getNavbarHeight();
+    const int btnWidth = screenWidth / 3;
+    const int navbarY = screenHeight - navbarHeight;
+    return {0, navbarY, btnWidth, navbarHeight};
+}
+SimpleRect get_navbarbtn_presets() {
+    const int screenWidth = getScreenWidth();
+    const int screenHeight = getScreenHeight();
+    const int navbarHeight = getNavbarHeight();
+    const int btnWidth = screenWidth / 3;
+    const int navbarY = screenHeight - navbarHeight;
+    return {btnWidth, navbarY, btnWidth, navbarHeight};
+}
+SimpleRect get_navbarbtn_settings() {
+    const int screenWidth = getScreenWidth();
+    const int screenHeight = getScreenHeight();
+    const int navbarHeight = getNavbarHeight();
+    const int btnWidth = screenWidth / 3;
+    const int navbarY = screenHeight - navbarHeight;
+    return {btnWidth * 2, navbarY, btnWidth, navbarHeight};
+}
+
+// presets buttons (dynamic based on preset number)
+CenterRect get_ctr_preset(int num) {
+    return {(48.0 / 2 + 48 * (num - 1)) * getScaleX(), 182 * getScaleY(), 48 * getScaleX(), 48 * getScaleY()};
+}
 
 // preset save and load
-SimpleRect preset_save = {18 * SCALE_X, 235 * SCALE_Y, (91 - 18) * SCALE_X, (251 - 235) * SCALE_Y};
-SimpleRect preset_load = {110 * SCALE_X, 225 * SCALE_Y, (221 - 110) * SCALE_X, (256 - 225) * SCALE_Y};
+SimpleRect get_preset_save() {
+    return {18 * getScaleX(), 235 * getScaleY(), (91 - 18) * getScaleX(), (251 - 235) * getScaleY()};
+}
+SimpleRect get_preset_load() {
+    return {110 * getScaleX(), 225 * getScaleY(), (221 - 110) * getScaleX(), (256 - 225) * getScaleY()};
+}
 
 int currentPressures[5];
 uint32_t statusBittset = 0;
@@ -193,9 +444,11 @@ void dialogLoop()
 {
     if (updateDialog)
     {
-        screens[0]->alert->show(dialogColor, dialogText, dialogEndTime);
-        screens[1]->alert->show(dialogColor, dialogText, dialogEndTime);
-        screens[2]->alert->show(dialogColor, dialogText, dialogEndTime);
+        // Only show on current screen - other screens will sync when switched to
+        if (currentScr != NULL && currentScr->alert != NULL)
+        {
+            currentScr->alert->show(dialogColor, dialogText, dialogEndTime);
+        }
         updateDialog = false;
     }
 }
@@ -219,9 +472,19 @@ void closeValves()
 void setupPressureLabel(lv_obj_t *parent, lv_obj_t **label, int x, int y, lv_align_t align, const char *defaultText)
 {
     *label = lv_label_create(parent);
+
+    // Modern styling with better font and color
     lv_obj_set_style_text_color(*label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_width(*label, LV_SIZE_CONTENT);  /// 1
-    lv_obj_set_height(*label, LV_SIZE_CONTENT); /// 1
+    lv_obj_set_style_text_font(*label, &lv_font_montserrat_14, 0);
+
+    // Add subtle text shadow for depth
+    lv_obj_set_style_text_opa(*label, LV_OPA_COVER, 0);
+    lv_obj_set_style_shadow_width(*label, 2, 0);
+    lv_obj_set_style_shadow_color(*label, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_shadow_opa(*label, LV_OPA_50, 0);
+
+    lv_obj_set_width(*label, LV_SIZE_CONTENT);
+    lv_obj_set_height(*label, LV_SIZE_CONTENT);
     lv_obj_set_x(*label, x);
     lv_obj_set_y(*label, y);
     lv_obj_set_align(*label, align);
@@ -241,6 +504,13 @@ void beginSaveData()
     _SaveData.wifiPassword.loadString("wifiPassword", "");
     _SaveData.updateResult.load("updateResult", 0);
     _SaveData.brightness.load("brightness", 80);
+    _SaveData.screenRotation.load("screenRotation", 0);
+    // Theme colors
+    _SaveData.themeColorLight.load("themeColorLight", 0x7C3AED);
+    _SaveData.themeColorDark.load("themeColorDark", 0x4C1D95);
+    _SaveData.themeColorMedium.load("themeColorMedium", 0x6D28D9);
+    _SaveData.genericGreyDark.load("genericGreyDark", 0x1F1F1F);
+    _SaveData.genericGreyVeryDark.load("genericGreyVeryDark", 0x0F0F0F);
 }
 
 createSaveFuncInt(unitsMode, int);
@@ -251,6 +521,12 @@ createSaveFuncString(wifiSSID);
 createSaveFuncString(wifiPassword);
 createSaveFuncInt(updateResult, byte);
 createSaveFuncInt(brightness, byte);
+createSaveFuncInt(screenRotation, byte);
+createSaveFuncInt(themeColorLight, uint32_t);
+createSaveFuncInt(themeColorDark, uint32_t);
+createSaveFuncInt(themeColorMedium, uint32_t);
+createSaveFuncInt(genericGreyDark, uint32_t);
+createSaveFuncInt(genericGreyVeryDark, uint32_t);
 
 float getBrightnessFloat()
 {
@@ -260,6 +536,34 @@ float getBrightnessFloat()
     if (brightnessInt > 100)
         brightnessInt = 100;
     return brightnessInt / 100.0f;
+}
+
+// Forward declaration
+void ui_reinit(void);
+
+void applyScreenRotation(byte rotation)
+{
+    lv_display_t *disp = lv_display_get_default();
+    if (!disp) return;
+
+    // Apply hardware rotation via MADCTL register
+    LCD_SetRotation(rotation);
+
+    // Use actual LCD dimensions (works for all display sizes)
+    // LCD_WIDTH and LCD_HEIGHT are defined in board JSON as compile-time constants
+    if (rotation == 1) {
+        // Landscape: swap width and height
+        lv_display_set_resolution(disp, LCD_HEIGHT, LCD_WIDTH);
+    } else {
+        // Portrait: use native dimensions
+        lv_display_set_resolution(disp, LCD_WIDTH, LCD_HEIGHT);
+    }
+    // Do NOT use lv_display_set_rotation - we're using hardware rotation
+}
+
+void reinitializeScreens()
+{
+    ui_reinit();
 }
 
 static lv_obj_t *kb = NULL;
@@ -320,7 +624,7 @@ static void kb_event_cb(lv_event_t *e)
 void initKB(Option *option)
 {
     closeKeyboard();
-    kb = lv_keyboard_create(lv_scr_act());
+    kb = lv_keyboard_create(lv_screen_active());
     // lv_obj_set_height(cont, LV_VER_RES / 2);
     if (option->type == OptionType::KEYBOARD_INPUT_NUMBER)
     {
@@ -331,10 +635,10 @@ void initKB(Option *option)
         lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_TEXT_LOWER);
     }
     lv_obj_add_event_cb(kb, kb_event_cb, LV_EVENT_ALL, option);
-    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT);    // lines in between buttons
-    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_ITEMS | LV_STATE_DEFAULT);  // buttons
-    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_ITEMS | LV_STATE_CHECKED);  // buttons (keyboard and checkmark)
-    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_ITEMS | LV_STATE_FOCUSED); // When pressing down on the buttons
+    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN);    // lines in between buttons
+    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_ITEMS);  // buttons
+    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_ITEMS | (lv_style_selector_t)LV_STATE_CHECKED);  // buttons (keyboard and checkmark)
+    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_ITEMS | (lv_style_selector_t)LV_STATE_FOCUSED); // When pressing down on the buttons
 }
 
 void ta_event_cb(lv_event_t *e)

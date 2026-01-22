@@ -5,15 +5,23 @@
 
 #include "ui.h"
 #include "utils/touch_lib.h"
+#include "components/alert.h"
+#include "theme_colors.h"
 
 SCREEN currentScreen = SCREEN_NONE;
 
 void ui_init(void)
 {
-    lv_disp_t *dispp = lv_display_get_default();
+    // Get reference to temporary screen from board_drivers_init (if any)
+    lv_obj_t *tempScr = lv_screen_active();
+
+    // Initialize theme colors from preferences
+    initThemeColors();
+
+    lv_display_t *dispp = lv_display_get_default();
     lv_theme_t *theme = lv_theme_default_init(dispp, lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_RED),
                                               false, LV_FONT_DEFAULT);
-    lv_disp_set_theme(dispp, theme);
+    lv_display_set_theme(dispp, theme);
     ui_scrMain_screen_init();
     scrHome.init();
     scrPresets.init();
@@ -21,9 +29,76 @@ void ui_init(void)
     scrMain.ui____initial_actions0 = lv_obj_create(NULL);
     changeScreen(SCREEN_HOME);
 
+    // Delete the temporary screen that was used during splash/init
+    if (tempScr != NULL && tempScr != scrHome.scr) {
+        lv_obj_del(tempScr);
+    }
+
     screens[0] = &scrHome;
     screens[1] = &scrPresets;
     screens[2] = &scrSettings;
+}
+
+void ui_reinit(void)
+{
+    // Store current screen to restore after reinit
+    SCREEN prevScreen = currentScreen;
+
+    // Create a temporary blank screen and switch to it first
+    lv_obj_t *tempScr = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(tempScr, lv_color_hex(0x000000), 0);
+    lv_screen_load(tempScr);
+
+    // Force refresh to ensure screen switch completes
+    lv_timer_handler();
+
+    // Reset state
+    currentScreen = SCREEN_NONE;
+    currentScr = NULL;
+
+    // Delete Alert objects first (C++ objects - LVGL objects are children of screen and will be deleted with it)
+    if (scrHome.alert) {
+        delete scrHome.alert;
+        scrHome.alert = NULL;
+    }
+    if (scrPresets.alert) {
+        delete scrPresets.alert;
+        scrPresets.alert = NULL;
+    }
+    if (scrSettings.alert) {
+        delete scrSettings.alert;
+        scrSettings.alert = NULL;
+    }
+
+    // Delete old screens safely
+    if (scrHome.scr) {
+        lv_obj_del(scrHome.scr);
+        scrHome.scr = NULL;
+    }
+    if (scrPresets.scr) {
+        lv_obj_del(scrPresets.scr);
+        scrPresets.scr = NULL;
+    }
+    if (scrSettings.scr) {
+        lv_obj_del(scrSettings.scr);
+        scrSettings.scr = NULL;
+    }
+
+    // Reinitialize screens
+    scrHome.init();
+    scrPresets.init();
+    scrSettings.init();
+
+    // Update screens array
+    screens[0] = &scrHome;
+    screens[1] = &scrPresets;
+    screens[2] = &scrSettings;
+
+    // Restore to previous screen
+    changeScreen(prevScreen);
+
+    // Delete temporary screen
+    lv_obj_del(tempScr);
 }
 
 void changeScreen(SCREEN screen)
@@ -39,20 +114,26 @@ void changeScreen(SCREEN screen)
     switch (screen)
     {
     case SCREEN_MAIN:
-        lv_disp_load_scr(scrMain.ui_scrMain);
+        lv_screen_load(scrMain.ui_scrMain);
         break;
     case SCREEN_HOME:
-        lv_disp_load_scr(scrHome.scr);
+        lv_screen_load(scrHome.scr);
         currentScr = &scrHome;
         break;
     case SCREEN_PRESETS:
-        lv_disp_load_scr(scrPresets.scr);
+        lv_screen_load(scrPresets.scr);
         currentScr = &scrPresets;
         break;
     case SCREEN_SETTINGS:
-        lv_disp_load_scr(scrSettings.scr);
+        lv_screen_load(scrSettings.scr);
         currentScr = &scrSettings;
         break;
+    }
+
+    // Sync alert icon state from global dismissed state when changing screens
+    if (currentScr != NULL && currentScr->alert != NULL)
+    {
+        currentScr->alert->syncFromGlobal();
     }
 
     screenLoop(); // run one screen loop of the new screen to update things like the alert before it gets shown on screen

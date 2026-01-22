@@ -9,8 +9,42 @@
 
 #include "device_lib_exports.h"
 
-#define SCALE_X (LCD_WIDTH / 240.0f)
-#define SCALE_Y (LCD_HEIGHT/ 320.0f)
+// Dynamic scaling based on current screen dimensions (supports rotation)
+float getScaleX();
+float getScaleY();
+int getBaseWidth();
+int getBaseHeight();
+
+// Dynamic screen dimension helpers for rotation support
+int getScreenWidth();
+int getScreenHeight();
+bool isLandscape();
+
+// Scaled dimension helpers - scales from 240×320 reference
+inline int scaled(int referenceValue) {
+    return (int)(referenceValue * getScaleX());
+}
+inline int scaledX(int referenceValue) {
+    return (int)(referenceValue * getScaleX());
+}
+inline int scaledY(int referenceValue) {
+    return (int)(referenceValue * getScaleY());
+}
+
+// Dynamic UI constants that scale with display size
+inline int getNavbarHeight() {
+    return scaledY(56);
+}
+
+// Override compile-time constant with dynamic value
+#ifdef NAVBAR_HEIGHT
+#undef NAVBAR_HEIGHT
+#endif
+#define NAVBAR_HEIGHT getNavbarHeight()
+
+// Legacy compile-time macros (use dynamic functions for rotation support)
+#define SCALE_X getScaleX()
+#define SCALE_Y getScaleY()
 
 void scale_obj(lv_obj_t *obj, int w, int h);
 void scale_img(lv_obj_t *obj, lv_image_dsc_t img);
@@ -37,45 +71,40 @@ int sr_contains(SimpleRect r, SimplePoint p);
 
 int cr_contains(CenterRect cr, SimplePoint p);
 
-#define ARROW_BUTTON_WIDTH 54 * SCALE_X
-#define ARROW_BUTTON_HEIGHT 44 * SCALE_Y
+// Dynamic arrow button dimensions
+float getArrowButtonWidth();
+float getArrowButtonHeight();
 
+// Dynamic touch area functions (recalculate on each call for rotation support)
 // first column (left)
-extern CenterRect ctr_row0col0up;
-extern CenterRect ctr_row0col0down;
-
-extern CenterRect ctr_row1col0up;
-extern CenterRect ctr_row1col0down;
+CenterRect get_ctr_row0col0up();
+CenterRect get_ctr_row0col0down();
+CenterRect get_ctr_row1col0up();
+CenterRect get_ctr_row1col0down();
 
 // second column (center)
-extern CenterRect ctr_row0col1up;
-extern CenterRect ctr_row0col1down;
-
-extern CenterRect ctr_row1col1up;
-extern CenterRect ctr_row1col1down;
+CenterRect get_ctr_row0col1up();
+CenterRect get_ctr_row0col1down();
+CenterRect get_ctr_row1col1up();
+CenterRect get_ctr_row1col1down();
 
 // third column (right)
-extern CenterRect ctr_row0col2up;
-extern CenterRect ctr_row0col2down;
-
-extern CenterRect ctr_row1col2up;
-extern CenterRect ctr_row1col2down;
+CenterRect get_ctr_row0col2up();
+CenterRect get_ctr_row0col2down();
+CenterRect get_ctr_row1col2up();
+CenterRect get_ctr_row1col2down();
 
 // bottom nav
-extern SimpleRect navbarbtn_home;
-extern SimpleRect navbarbtn_presets;
-extern SimpleRect navbarbtn_settings;
+SimpleRect get_navbarbtn_home();
+SimpleRect get_navbarbtn_presets();
+SimpleRect get_navbarbtn_settings();
 
 // presets buttons
-extern CenterRect ctr_preset_1;
-extern CenterRect ctr_preset_2;
-extern CenterRect ctr_preset_3;
-extern CenterRect ctr_preset_4;
-extern CenterRect ctr_preset_5;
+CenterRect get_ctr_preset(int num);
 
 // preset save and load
-extern SimpleRect preset_save;
-extern SimpleRect preset_load;
+SimpleRect get_preset_save();
+SimpleRect get_preset_load();
 
 void runNextFrame(std::function<void()> function);
 void handleFunctionRunOnNextFrame();
@@ -128,6 +157,13 @@ public:
     Preferencable wifiPassword;
     Preferencable updateResult;
     Preferencable brightness;
+    Preferencable screenRotation;
+    // Theme colors
+    Preferencable themeColorLight;
+    Preferencable themeColorDark;
+    Preferencable themeColorMedium;
+    Preferencable genericGreyDark;
+    Preferencable genericGreyVeryDark;
 };
 
 extern SaveData _SaveData;
@@ -140,9 +176,19 @@ headerDefineSaveFunc(wifiSSID, String);
 headerDefineSaveFunc(wifiPassword, String);
 headerDefineSaveFunc(updateResult, byte);
 headerDefineSaveFunc(brightness, byte);
+headerDefineSaveFunc(screenRotation, byte);
+headerDefineSaveFunc(themeColorLight, uint32_t);
+headerDefineSaveFunc(themeColorDark, uint32_t);
+headerDefineSaveFunc(themeColorMedium, uint32_t);
+headerDefineSaveFunc(genericGreyDark, uint32_t);
+headerDefineSaveFunc(genericGreyVeryDark, uint32_t);
 
 void ta_event_cb(lv_event_t *e);
 void slider_event_cb(lv_event_t *e);
 bool isKeyboardHidden();
 float getBrightnessFloat();
+
+// Screen rotation helpers
+void applyScreenRotation(byte rotation);
+void reinitializeScreens();
 #endif

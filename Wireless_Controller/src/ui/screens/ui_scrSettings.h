@@ -52,6 +52,8 @@ public:
     Option *ui_mac;  // MAC address (text with value)
     Option *ui_volts;  // Battery voltage (text with value)
     Option *ui_brightnessSlider;  // Brightness (slider)
+    Option *ui_screenRotation;  // Screen rotation toggle button
+    RadioOption *ui_themePreset;  // Theme preset selection (radio)
     Option *ui_rfbuttonA;
     Option *ui_rfbuttonB;
     Option *ui_rfbuttonC;
@@ -60,6 +62,7 @@ public:
     void init();
     void runTouchInput(SimplePoint pos, bool down);
     void loop();
+    void showColorPickerModal();
 };
 
 extern ScrSettings scrSettings;

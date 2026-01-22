@@ -39,3 +39,4 @@ void LCD_addWindow(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yen
 
 void Backlight_Init(void);
 void Set_Backlight(uint8_t Light);
+void LCD_SetRotation(uint8_t rotation);

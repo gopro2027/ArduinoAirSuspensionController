@@ -66,6 +66,7 @@ public:
     void setSliderParams(int min, int max, bool display_above_value, lv_event_code_t trigger_event = LV_EVENT_VALUE_CHANGED);
     void setBooleanValue(bool value, bool netSend = false);
     void indentText(int extraX = 0);
+    static void resetHeaderStyle();
 };
 
 #endif

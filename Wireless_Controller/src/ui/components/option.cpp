@@ -1,10 +1,22 @@
 #include "option.h"
+#include "../theme_colors.h"
 lv_style_t headerStyle;
 static bool styleCreated = false;
 LV_IMG_DECLARE(imgOn);
 LV_IMG_DECLARE(imgOff);
-#define OPTION_ROW_HEIGHT (36 * SCALE_Y)
-#define MARGIN (10 * SCALE_X) // originally 16
+
+
+// Use a minimum height to ensure usability
+static int getOptionRowHeight() {
+    int scaled = (int)(36 * getScaleY());
+    return (scaled < 36) ? 36 : scaled;  // Minimum 36px height
+}
+#define OPTION_ROW_HEIGHT getOptionRowHeight()
+// Dynamic margin that scales with display
+static int getMargin() {
+    return scaledX(10);
+}
+#define MARGIN getMargin()
 static char strbuf[20];
 
 void createStyle()
@@ -13,18 +25,16 @@ void createStyle()
     {
         // create style
         lv_style_init(&headerStyle);
-        // lv_style_set_bg_color(&headerStyle, lv_color_grey());
-        // lv_style_set_bg_opa(&headerStyle, LV_OPA_50);
-        // lv_style_set_border_width(&headerStyle, 2);
-        // lv_style_set_border_color(&headerStyle, lv_color_black());
         lv_style_set_text_font(&headerStyle, &lv_font_montserrat_20);
-
-        // scale per devices
-        lv_style_set_transform_scale_x(&headerStyle, SCALE_X * 256);
-        lv_style_set_transform_scale_y(&headerStyle, SCALE_Y * 256);
-
+        // Don't use transform scaling - it causes issues with rotation changes
         styleCreated = true;
     }
+}
+
+void Option::resetHeaderStyle()
+{
+    // Force style to be recreated on next Option creation
+    styleCreated = false;
 }
 void ui_clicked_imgOff(lv_event_t *e)
 {
@@ -84,7 +94,7 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     createStyle();
     this->root = lv_obj_create(parent);
     lv_obj_remove_style_all(this->root);
-    lv_obj_set_size(this->root, LCD_WIDTH, this->optionRowHeight);
+    lv_obj_set_size(this->root, getScreenWidth(), this->optionRowHeight);
 
     if (type != OptionType::SPACE && type != OptionType::BUTTON)
     {
@@ -132,12 +142,12 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_obj_t *btntext = lv_label_create(this->text);
         lv_label_set_text(btntext, text);
 
-        lv_obj_set_style_bg_color(this->text, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);    // bg
-        lv_obj_set_style_border_color(this->text, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT); // border
+        lv_obj_set_style_bg_color(this->text, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);    // bg
+        lv_obj_set_style_border_color(this->text, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN); // border
 
         // disabled colors
-        lv_obj_set_style_bg_color(this->text, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DISABLED);     // bg
-        lv_obj_set_style_border_color(this->text, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DISABLED); // border
+        lv_obj_set_style_bg_color(this->text, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | (lv_style_selector_t)LV_STATE_DISABLED);     // bg
+        lv_obj_set_style_border_color(this->text, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | (lv_style_selector_t)LV_STATE_DISABLED); // border
 
         lv_obj_add_flag(this->text, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
         lv_obj_add_event_cb(this->text, ui_clicked_button, LV_EVENT_ALL, this);
@@ -153,9 +163,9 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_obj_set_align(this->ui_imgOn, LV_ALIGN_LEFT_MID);
         lv_obj_set_x(this->ui_imgOn, MARGIN);
 
-        lv_obj_set_style_bg_color(this->ui_imgOn, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR | LV_STATE_CHECKED);
-        lv_obj_set_style_border_color(this->ui_imgOn, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR | LV_STATE_DEFAULT);
-        lv_obj_set_style_bg_color(this->ui_imgOn, lv_color_hex(THEME_COLOR_DARK), LV_PART_INDICATOR | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(this->ui_imgOn, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR | (lv_style_selector_t)LV_STATE_CHECKED);
+        lv_obj_set_style_border_color(this->ui_imgOn, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR);
+        lv_obj_set_style_bg_color(this->ui_imgOn, lv_color_hex(THEME_COLOR_DARK), LV_PART_INDICATOR);
 
         // only want the off image to be clickable
         lv_obj_add_flag(this->ui_imgOn, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
@@ -164,8 +174,8 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     else if (type == OptionType::KEYBOARD_INPUT_NUMBER || type == OptionType::KEYBOARD_INPUT_TEXT)
     {
         this->indentText(1);
-        const int textAreaWidth = (type == OptionType::KEYBOARD_INPUT_TEXT) ? 150 : 70;
-        const int textMaxWidth = LCD_WIDTH - (MARGIN * 2 + MARGIN + textAreaWidth) - 6;
+        const int textAreaWidth = (type == OptionType::KEYBOARD_INPUT_TEXT) ? scaledX(150) : scaledX(70);
+        const int textMaxWidth = getScreenWidth() - (MARGIN * 2 + MARGIN + textAreaWidth) - scaledX(6);
         lv_obj_set_width(this->text, textMaxWidth); // space between the start position and the text input
 
         this->rightHandObj = lv_textarea_create(this->root);
@@ -178,10 +188,10 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         // lv_textarea_set_cursor_hidden(ta, true);
         // lv_obj_set_event_cb(this->rightHandObj, ta_event_handler);
 
-        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);    // bg
-        lv_obj_set_style_border_color(this->rightHandObj, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT); // border
+        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);    // bg
+        lv_obj_set_style_border_color(this->rightHandObj, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN); // border
 
-        lv_obj_set_style_radius(this->rightHandObj, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_radius(this->rightHandObj, 5, LV_PART_MAIN);
         // lv_obj_set_style_border_width(this->rightHandObj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
         lv_obj_set_width(this->rightHandObj, textAreaWidth);
@@ -205,16 +215,16 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_slider_set_range(this->rightHandObj, 0, 9999999); // will be updated later
         lv_slider_set_value(this->rightHandObj, value.INT, LV_ANIM_OFF);
 
-        lv_obj_set_width(this->rightHandObj, LCD_WIDTH - (MARGIN * 4));
+        lv_obj_set_width(this->rightHandObj, getScreenWidth() - (MARGIN * 4));
         lv_obj_set_x(this->rightHandObj, 0);
         lv_obj_set_y(this->rightHandObj, -OPTION_ROW_HEIGHT / 4);
         lv_obj_set_align(this->rightHandObj, LV_ALIGN_BOTTOM_MID);
 
         // lv_obj_set_style_line_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR | LV_STATE_DEFAULT); // border
 
-        // lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);      // bg
-        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR | LV_STATE_DEFAULT); // border
-        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_DARK), LV_PART_KNOB | LV_STATE_DEFAULT);       // border
+        // lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);      // bg
+        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR); // border
+        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_DARK), LV_PART_KNOB);       // border
 
         lv_obj_add_flag(this->rightHandObj, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
         lv_obj_add_event_cb(this->rightHandObj, slider_event_cb, LV_EVENT_ALL, this);
