@@ -116,3 +116,15 @@ float BAT_Get_Volts(void)
     uint16_t mv = PMU_getBatteryVoltage_mV();
     return mv / 1000.0f;
 }
+
+/******************************************************************************
+function: Set LCD rotation using MADCTL register (0x36)
+parameter:
+    rotation: 0 = Portrait, 1 = Landscape (90°)
+******************************************************************************/
+extern "C" void lvgl_set_rotation(uint8_t rotation);
+
+void LCD_SetRotation(uint8_t rotation)
+{
+    lvgl_set_rotation(rotation);
+}

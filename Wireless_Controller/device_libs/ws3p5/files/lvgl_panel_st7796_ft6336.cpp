@@ -374,3 +374,20 @@ extern "C" void lvgl_loop(void)
   lv_timer_handler();
   // vTaskDelay(pdMS_TO_TICKS(0));
 }
+
+/******************************************************************************
+function: Set LCD rotation using Arduino_GFX setRotation
+parameter:
+    rotation: 0 = Portrait, 1 = Landscape (90°)
+******************************************************************************/
+extern "C" void lvgl_set_rotation(uint8_t rotation)
+{
+  if (gfx == nullptr) {
+    return; // Display not initialized yet
+  }
+
+  // Arduino_GFX uses rotation values: 0=0°, 1=90°, 2=180°, 3=270°
+  // Map our rotation (0=Portrait, 1=Landscape) to Arduino_GFX rotation
+  uint8_t gfx_rotation = (rotation == 1) ? 1 : 0; // 0=Portrait, 1=Landscape (90°)
+  gfx->setRotation(gfx_rotation);
+}

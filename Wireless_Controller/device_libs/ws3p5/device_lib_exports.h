@@ -58,6 +58,7 @@ void Backlight_Init();
 void Set_Backlight(uint8_t Light);
 void I2C_Init(void);
 void LCD_Init();
+void LCD_SetRotation(uint8_t rotation);
 touch_and_screen Lvgl_Init(void);
 
 void BAT_Init(void);
