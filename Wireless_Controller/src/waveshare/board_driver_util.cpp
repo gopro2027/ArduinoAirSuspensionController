@@ -117,13 +117,14 @@ void board_drivers_init()
     LCD_SetRotation(rotation);
 
     // Update LVGL resolution to match rotated display
-    // Portrait: 240x320, Landscape: 320x240
+    // Use actual LCD dimensions (works for all display sizes)
+    // LCD_WIDTH and LCD_HEIGHT are defined in board JSON as compile-time constants
     if (rotation == 1) {
         // Landscape mode - swap width/height
-        lv_display_set_resolution(display, 320, 240);
+        lv_display_set_resolution(display, LCD_HEIGHT, LCD_WIDTH);
     } else {
         // Portrait mode - native resolution
-        lv_display_set_resolution(display, 240, 320);
+        lv_display_set_resolution(display, LCD_WIDTH, LCD_HEIGHT);
     }
 
     // Create a fresh screen with correct rotated dimensions
