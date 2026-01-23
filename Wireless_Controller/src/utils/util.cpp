@@ -1,5 +1,4 @@
 #include "util.h"
-#include "ui/theme_colors.h"
 
 // Dynamic screen dimension helpers for rotation support
 int getScreenWidth() {
@@ -501,12 +500,10 @@ void beginSaveData()
     _SaveData.updateResult.load("updateResult", 0);
     _SaveData.brightness.load("brightness", 80);
     _SaveData.screenRotation.load("screenRotation", 0);
-    // Theme colors
-    _SaveData.themeColorLight.load("themeColorLight", 0x7C3AED);
-    _SaveData.themeColorDark.load("themeColorDark", 0x4C1D95);
-    _SaveData.themeColorMedium.load("themeColorMedium", 0x6D28D9);
-    _SaveData.genericGreyDark.load("genericGreyDark", 0x1F1F1F);
-    _SaveData.genericGreyVeryDark.load("genericGreyVeryDark", 0x0F0F0F);
+    // Theme colors - using default purple/lavender theme values
+    _SaveData.themeColorLight.load("themeColorLight", DEFAULT_THEME_COLOR_LIGHT);
+    _SaveData.themeColorDark.load("themeColorDark", DEFAULT_THEME_COLOR_DARK);
+    _SaveData.themeColorMedium.load("themeColorMedium", DEFAULT_THEME_COLOR_MEDIUM);
 }
 
 createSaveFuncInt(unitsMode, int);
@@ -521,8 +518,6 @@ createSaveFuncInt(screenRotation, byte);
 createSaveFuncInt(themeColorLight, uint32_t);
 createSaveFuncInt(themeColorDark, uint32_t);
 createSaveFuncInt(themeColorMedium, uint32_t);
-createSaveFuncInt(genericGreyDark, uint32_t);
-createSaveFuncInt(genericGreyVeryDark, uint32_t);
 
 float getBrightnessFloat()
 {
@@ -729,4 +724,48 @@ void onBLEConnectionCompleted()
     sendConfigValuesPacket(false);   // sends a request of the manifold to send out the manifolds save data
     requestPreset();                 // sends a request of the manifold to send out the current presets values
     sendUpdateStatusRequestPacket(); // sends a request of the manifold to send out the current update status
+}
+
+// Apply a theme preset
+void applyThemePreset(ThemePreset preset) {
+    switch (preset) {
+        case PRESET_PURPLE:
+            setthemeColorLight(DEFAULT_THEME_COLOR_LIGHT);   // Light purple
+            setthemeColorMedium(DEFAULT_THEME_COLOR_MEDIUM);  // Medium purple
+            setthemeColorDark(DEFAULT_THEME_COLOR_DARK);    // Dark purple
+            break;
+        case PRESET_BLUE:
+            setthemeColorLight(THEME_COLOR_OCEAN_BLUE_LIGHT);   // Light blue
+            setthemeColorMedium(THEME_COLOR_OCEAN_BLUE_MEDIUM);  // Medium blue
+            setthemeColorDark(THEME_COLOR_OCEAN_BLUE_DARK);    // Dark blue
+            break;
+        case PRESET_GREEN:
+            setthemeColorLight(THEME_COLOR_FOREST_GREEN_LIGHT);   // Light green
+            setthemeColorMedium(THEME_COLOR_FOREST_GREEN_MEDIUM);  // Medium green
+            setthemeColorDark(THEME_COLOR_FOREST_GREEN_DARK);    // Dark green
+            break;
+        case PRESET_CUSTOM:
+        default:
+            // Do nothing for custom
+            break;
+    }
+}
+
+// Get current theme preset (-1 if custom)
+int getCurrentThemePreset() {
+    uint32_t light = getthemeColorLight();
+    uint32_t medium = getthemeColorMedium();
+    uint32_t dark = getthemeColorDark();
+    
+    // Check if current colors match any preset
+    if (light == DEFAULT_THEME_COLOR_LIGHT && medium == DEFAULT_THEME_COLOR_MEDIUM && dark == DEFAULT_THEME_COLOR_DARK) {
+        return PRESET_PURPLE;
+    }
+    if (light == THEME_COLOR_OCEAN_BLUE_LIGHT && medium == THEME_COLOR_OCEAN_BLUE_MEDIUM && dark == THEME_COLOR_OCEAN_BLUE_DARK) {
+        return PRESET_BLUE;
+    }
+    if (light == THEME_COLOR_FOREST_GREEN_LIGHT && medium == THEME_COLOR_FOREST_GREEN_MEDIUM && dark == THEME_COLOR_FOREST_GREEN_DARK) {
+        return PRESET_GREEN;
+    }
+    return PRESET_CUSTOM;
 }

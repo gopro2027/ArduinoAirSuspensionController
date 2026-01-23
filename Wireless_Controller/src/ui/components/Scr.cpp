@@ -5,7 +5,6 @@
 
 #include "Scr.h"
 #include "ui/ui.h" // sketchy backwards import may break in the future
-#include "../theme_colors.h"
 
 // Structure for navbar callback data
 struct NavbarCallbackData {

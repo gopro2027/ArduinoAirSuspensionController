@@ -1,5 +1,4 @@
 #include "ui_scrSettings.h"
-#include "../theme_colors.h"
 #include "../../utils/util.h"
 
 // Forward declaration
@@ -48,7 +47,7 @@ void ScrSettings::showColorPickerModal() {
     const int screenHeight = getScreenHeight();
 
     // Get current theme color
-    uint32_t currentColor = getThemeColorLight();
+    uint32_t currentColor = THEME_COLOR_LIGHT;
     uint8_t currentR = (currentColor >> 16) & 0xFF;
     uint8_t currentG = (currentColor >> 8) & 0xFF;
     uint8_t currentB = currentColor & 0xFF;
@@ -228,10 +227,10 @@ void ScrSettings::showColorPickerModal() {
     // Apply button
     lv_obj_t *applyBtn = lv_btn_create(btnContainer);
     lv_obj_set_size(applyBtn, btnWidth, btnHeight);
-    lv_obj_set_style_bg_color(applyBtn, lv_color_hex(getThemeColorLight()), 0);
+    lv_obj_set_style_bg_color(applyBtn, lv_color_hex(THEME_COLOR_LIGHT), 0);
     lv_obj_set_style_radius(applyBtn, scaledX(18), 0);
     lv_obj_set_style_border_width(applyBtn, 0, 0);
-    lv_obj_set_style_shadow_color(applyBtn, lv_color_hex(getThemeColorLight()), 0);
+    lv_obj_set_style_shadow_color(applyBtn, lv_color_hex(THEME_COLOR_LIGHT), 0);
     lv_obj_set_style_shadow_width(applyBtn, scaledX(12), 0);
     lv_obj_set_style_shadow_opa(applyBtn, LV_OPA_40, 0);
 
@@ -250,10 +249,11 @@ void ScrSettings::showColorPickerModal() {
             uint8_t g = lv_slider_get_value(data->greenSlider);
             uint8_t b = lv_slider_get_value(data->blueSlider);
 
+            // Using the base color, we must auto generate the dark and medium colors when we have a user select the custom color.
             uint32_t hex = (r << 16) | (g << 8) | b;
-            setThemeColorLight(hex);
-            setThemeColorDark(((r / 2) << 16) | ((g / 2) << 8) | (b / 2));
-            setThemeColorMedium(((r * 3 / 4) << 16) | ((g * 3 / 4) << 8) | (b * 3 / 4));
+            setthemeColorLight(hex);
+            setthemeColorDark(((r / 2) << 16) | ((g / 2) << 8) | (b / 2));
+            setthemeColorMedium(((r * 3 / 4) << 16) | ((g * 3 / 4) << 8) | (b * 3 / 4));
 
             if (scrSettings.ui_themePreset) {
                 scrSettings.ui_themePreset->setSelectedOption(-1, false);

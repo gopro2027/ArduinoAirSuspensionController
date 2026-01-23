@@ -1,5 +1,4 @@
 #include "ui_scrSettings.h"
-#include "../theme_colors.h"
 
 ScrSettings scrSettings(false, false, NAV_SETTINGS);  // No pressures, no alert icon
 

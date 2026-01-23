@@ -1,5 +1,4 @@
 #include "option.h"
-#include "../theme_colors.h"
 lv_style_t headerStyle;
 static bool styleCreated = false;
 LV_IMG_DECLARE(imgOn);

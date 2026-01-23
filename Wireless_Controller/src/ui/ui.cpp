@@ -6,7 +6,6 @@
 #include "ui.h"
 #include "utils/touch_lib.h"
 #include "components/alert.h"
-#include "theme_colors.h"
 
 SCREEN currentScreen = SCREEN_NONE;
 
@@ -14,9 +13,6 @@ void ui_init(void)
 {
     // Get reference to temporary screen from board_drivers_init (if any)
     lv_obj_t *tempScr = lv_screen_active();
-
-    // Initialize theme colors from preferences
-    initThemeColors();
 
     lv_display_t *dispp = lv_display_get_default();
     lv_theme_t *theme = lv_theme_default_init(dispp, lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_RED),

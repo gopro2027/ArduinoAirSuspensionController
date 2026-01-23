@@ -1,6 +1,5 @@
 #include "ui_scrHome.h"
 #include "ui/ui.h" // sketchy backwards import may break in the future
-#include "../theme_colors.h"
 
 ScrHome scrHome(true, true, NAV_HOME);
 

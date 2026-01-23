@@ -162,8 +162,6 @@ public:
     Preferencable themeColorLight;
     Preferencable themeColorDark;
     Preferencable themeColorMedium;
-    Preferencable genericGreyDark;
-    Preferencable genericGreyVeryDark;
 };
 
 extern SaveData _SaveData;
@@ -180,8 +178,40 @@ headerDefineSaveFunc(screenRotation, byte);
 headerDefineSaveFunc(themeColorLight, uint32_t);
 headerDefineSaveFunc(themeColorDark, uint32_t);
 headerDefineSaveFunc(themeColorMedium, uint32_t);
-headerDefineSaveFunc(genericGreyDark, uint32_t);
-headerDefineSaveFunc(genericGreyVeryDark, uint32_t);
+
+// Theme presets enum
+enum ThemePreset {
+    PRESET_CUSTOM = -1,
+    PRESET_PURPLE = 0,
+    PRESET_BLUE = 1,
+    PRESET_GREEN = 2
+};
+
+#define GENERIC_GREY_VERY_DARK 0x121212
+#define GENERIC_GREY_DARK 0x1F1F1F
+#define GENERIC_GREY 0x4e4954
+#define GENERIC_GREY_LIGHT 0x6a6571
+
+// Default theme colors (purple/lavender theme)
+#define DEFAULT_THEME_COLOR_LIGHT  0xA78BFA  // Light purple
+#define DEFAULT_THEME_COLOR_MEDIUM 0x8B5CF6  // Medium purple
+#define DEFAULT_THEME_COLOR_DARK   0x6D28D9  // Dark purple
+
+#define THEME_COLOR_OCEAN_BLUE_LIGHT 0x60A5FA
+#define THEME_COLOR_OCEAN_BLUE_MEDIUM 0x3B82F6
+#define THEME_COLOR_OCEAN_BLUE_DARK 0x2563EB
+
+#define THEME_COLOR_FOREST_GREEN_LIGHT 0x34D399
+#define THEME_COLOR_FOREST_GREEN_MEDIUM 0x10B981
+#define THEME_COLOR_FOREST_GREEN_DARK 0x059669
+
+// Theme color accessors (use getters to get dynamic values)
+#define THEME_COLOR_LIGHT  getthemeColorLight()
+#define THEME_COLOR_MEDIUM getthemeColorMedium()
+#define THEME_COLOR_DARK   getthemeColorDark()
+
+void applyThemePreset(ThemePreset preset);
+int getCurrentThemePreset();
 
 void ta_event_cb(lv_event_t *e);
 void slider_event_cb(lv_event_t *e);
