@@ -46,6 +46,8 @@
   #define PWR_KEY_ACTIVE_LOW 1
 #endif
 
+#define SUPPORTS_ROTATION 1
+
 // Struct for LVGL initialization
 struct touch_and_screen
 {

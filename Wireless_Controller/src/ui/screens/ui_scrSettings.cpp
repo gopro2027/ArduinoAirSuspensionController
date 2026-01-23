@@ -512,6 +512,7 @@ void ScrSettings::init()
     // Screen rotation setting - single button that toggles between Portrait/Landscape
     new Option(controller_settings_page, OptionType::HEADER, "Screen Orientation", {.STRING = ""});
 
+    #if SUPPORTS_ROTATION == 1
     this->ui_screenRotation = new Option(controller_settings_page, OptionType::BUTTON,
         getscreenRotation() == 0 ? "Switch to Landscape" : "Switch to Portrait",
         {.STRING = ""}, [](void *data)
@@ -527,6 +528,7 @@ void ScrSettings::init()
             reinitializeScreens();
         });
     });
+    #endif
 
     // Theme colors setting
     new Option(controller_settings_page, OptionType::HEADER, "Theme Colors", {.STRING = ""});

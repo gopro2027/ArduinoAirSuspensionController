@@ -244,42 +244,4 @@ void Set_Backlight(uint8_t Light)
   }
 }
 
-// Current rotation state for LCD operations
-static uint8_t lcd_rotation = 0;
-
-/******************************************************************************
-function: Set LCD rotation using ESP LCD panel API
-parameter:
-    rotation: 0 = Portrait, 1 = Landscape (90°)
-******************************************************************************/
-void LCD_SetRotation(uint8_t rotation)
-{
-  lcd_rotation = rotation;
-
-  if (panel_handle == NULL) {
-    return; // Panel not initialized yet
-  }
-
-  // For RGB panels, use esp_lcd_panel_swap_xy and esp_lcd_panel_mirror
-  // to achieve rotation effects
-  switch (rotation)
-  {
-  case 0: // Portrait (480x640)
-    esp_lcd_panel_swap_xy(panel_handle, false);
-    esp_lcd_panel_mirror(panel_handle, false, false);
-    break;
-  case 1: // Landscape (640x480) - 90 degrees
-    esp_lcd_panel_swap_xy(panel_handle, true);
-    esp_lcd_panel_mirror(panel_handle, false, false);
-    break;
-  default:
-    esp_lcd_panel_swap_xy(panel_handle, false);
-    esp_lcd_panel_mirror(panel_handle, false, false);
-    break;
-  }
-}
-
-
-
-
 

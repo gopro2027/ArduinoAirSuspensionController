@@ -113,19 +113,9 @@ void board_drivers_init()
     extern byte getscreenRotation();
     byte rotation = getscreenRotation();
 
-    // Set hardware rotation via MADCTL register
-    LCD_SetRotation(rotation);
-
-    // Update LVGL resolution to match rotated display
-    // Use actual LCD dimensions (works for all display sizes)
-    // LCD_WIDTH and LCD_HEIGHT are defined in board JSON as compile-time constants
-    if (rotation == 1) {
-        // Landscape mode - swap width/height
-        lv_display_set_resolution(display, LCD_HEIGHT, LCD_WIDTH);
-    } else {
-        // Portrait mode - native resolution
-        lv_display_set_resolution(display, LCD_WIDTH, LCD_HEIGHT);
-    }
+    #if SUPPORTS_ROTATION == 1
+    applyScreenRotation(rotation);
+    #endif
 
     // Create a fresh screen with correct rotated dimensions
     lv_obj_t *tempScr = lv_obj_create(NULL);

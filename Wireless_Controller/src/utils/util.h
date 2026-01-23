@@ -189,6 +189,10 @@ bool isKeyboardHidden();
 float getBrightnessFloat();
 
 // Screen rotation helpers
+#if SUPPORTS_ROTATION == 1
 void applyScreenRotation(byte rotation);
+#endif
 void reinitializeScreens();
+
+
 #endif

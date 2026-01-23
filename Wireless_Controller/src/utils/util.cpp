@@ -537,6 +537,7 @@ float getBrightnessFloat()
 // Forward declaration
 void ui_reinit(void);
 
+#if SUPPORTS_ROTATION == 1
 void applyScreenRotation(byte rotation)
 {
     lv_display_t *disp = lv_display_get_default();
@@ -556,6 +557,7 @@ void applyScreenRotation(byte rotation)
     }
     // Do NOT use lv_display_set_rotation - we're using hardware rotation
 }
+#endif
 
 void reinitializeScreens()
 {

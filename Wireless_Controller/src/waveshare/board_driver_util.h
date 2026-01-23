@@ -25,7 +25,4 @@ touch_calibration_data_t smartdisplay_compute_touch_calibration(const lv_point_t
 void set_brightness(float level);
 void board_drivers_init();
 
-// Hardware LCD rotation - declared here to ensure availability
-void LCD_SetRotation(uint8_t rotation);
-
 #endif
