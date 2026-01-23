@@ -13,9 +13,8 @@ struct NavbarCallbackData {
     Scr *scr;
 };
 
-Scr::Scr(lv_image_dsc_t navbarImage, bool showPressures, bool showAlertIcon, NavbarItem activeNav)
+Scr::Scr(bool showPressures, bool showAlertIcon, NavbarItem activeNav)
 {
-    this->navbarImage = navbarImage;
     this->showPressures = showPressures;
     this->showAlertIcon = showAlertIcon;
     this->activeNavItem = activeNav;
@@ -46,8 +45,7 @@ void Scr::init()
     lv_obj_remove_flag(this->rect_bg, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE)); /// Flags
     lv_obj_set_style_bg_opa(this->rect_bg, 255, LV_PART_MAIN);
 
-    // Modern navbar (replaces static image)
-    this->icon_navbar = NULL;  // Not used anymore
+    // Modern navbar
     createModernNavbar();
 
     this->alert = new Alert(this, this->showAlertIcon);

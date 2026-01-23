@@ -1,8 +1,7 @@
 #include "ui_scrSettings.h"
 #include "../theme_colors.h"
 
-LV_IMG_DECLARE(navbar_settings);
-ScrSettings scrSettings(navbar_settings, false, false, NAV_SETTINGS);  // No pressures, no alert icon
+ScrSettings scrSettings(false, false, NAV_SETTINGS);  // No pressures, no alert icon
 
 void alertValueUpdated()
 {

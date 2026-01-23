@@ -1,17 +1,10 @@
 #include "ui_scrPresets.h"
 #include "../theme_colors.h"
 
-LV_IMG_DECLARE(navbar_presets);
-ScrPresets scrPresets(navbar_presets, true, true, NAV_PRESETS);
+ScrPresets scrPresets(true, true, NAV_PRESETS);
 
-LV_IMG_DECLARE(presets_bg);
 LV_IMG_DECLARE(img_car);
 LV_IMG_DECLARE(img_wheels);
-LV_IMG_DECLARE(selected_1);
-LV_IMG_DECLARE(selected_2);
-LV_IMG_DECLARE(selected_3);
-LV_IMG_DECLARE(selected_4);
-LV_IMG_DECLARE(selected_5);
 
 // Dynamic car positioning based on screen size
 static int getCarX() { return getScreenWidth() / 2 - img_car.header.w / 2; }
@@ -170,16 +163,17 @@ void ScrPresets::init()
     lv_obj_add_flag(this->rect_bg, LV_OBJ_FLAG_HIDDEN); // hide grey background, we have a different one on this page
     lv_obj_delete(this->rect_bg);
 
-    // background - solid dark gradient color (no image to avoid duplicate buttons)
-    // The presets_bg image contains preset buttons which conflict with our LVGL buttons
+    // Subtle theme-tinted gradient background
     this->rect_bg = lv_obj_create(this->scr);
     lv_obj_remove_style_all(this->rect_bg);
     lv_obj_set_size(this->rect_bg, screenWidth, screenHeight);
-    lv_obj_set_style_bg_color(this->rect_bg, lv_color_hex(GENERIC_GREY_VERY_DARK), LV_PART_MAIN);
+    // Mix theme color with dark grey for a very subtle tint
+    lv_obj_set_style_bg_color(this->rect_bg, lv_color_mix(lv_color_hex(THEME_COLOR_DARK), lv_color_hex(GENERIC_GREY_DARK), 25), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(this->rect_bg, LV_OPA_COVER, LV_PART_MAIN);
-    // Add subtle gradient
-    lv_obj_set_style_bg_grad_color(this->rect_bg, lv_color_hex(GENERIC_GREY_DARK), LV_PART_MAIN);
+    lv_obj_set_style_bg_grad_color(this->rect_bg, lv_color_hex(GENERIC_GREY_VERY_DARK), LV_PART_MAIN);
     lv_obj_set_style_bg_grad_dir(this->rect_bg, LV_GRAD_DIR_VER, LV_PART_MAIN);
+    lv_obj_set_style_bg_main_stop(this->rect_bg, 60, LV_PART_MAIN);
+    lv_obj_set_style_bg_grad_stop(this->rect_bg, 180, LV_PART_MAIN);
     lv_obj_remove_flag(this->rect_bg, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE));
 
     // wheel well 1

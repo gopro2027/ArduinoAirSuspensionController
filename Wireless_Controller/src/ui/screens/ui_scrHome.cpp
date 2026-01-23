@@ -2,9 +2,7 @@
 #include "ui/ui.h" // sketchy backwards import may break in the future
 #include "../theme_colors.h"
 
-LV_IMG_DECLARE(navbar_home);
-
-ScrHome scrHome(navbar_home, true, true, NAV_HOME);
+ScrHome scrHome(true, true, NAV_HOME);
 
 // Unified pill button dimensions - calculated dynamically for rotation support
 static int PILL_WIDTH = 60;

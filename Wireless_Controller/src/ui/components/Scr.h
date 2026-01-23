@@ -30,13 +30,11 @@ enum NavbarItem {
 class Scr
 {
 public:
-    lv_image_dsc_t navbarImage;
     bool showPressures;
     bool showAlertIcon;  // Whether to show alert icon on this screen
     NavbarItem activeNavItem;  // Which navbar item is active for this screen
     lv_obj_t *scr;
     lv_obj_t *rect_bg;
-    lv_obj_t *icon_navbar;  // Legacy - kept for compatibility
     lv_obj_t *navbar_container;
     lv_obj_t *navbar_btns[3];
     lv_obj_t *navbar_icons[3];
@@ -55,7 +53,7 @@ public:
     bool deleteMessageBoxNextFrame; // want to make sure message box is still shown for the full duration of the current frame that it is deleted on, else the clicks on the dialog closing it will also register on the screen possibly triggering other buttons. Will delete it immediately at beginning of next frame
     bool mb_force_button_press;
 
-    Scr(lv_image_dsc_t navbarImage, bool showPressures, bool showAlertIcon = true, NavbarItem activeNav = NAV_HOME);
+    Scr(bool showPressures, bool showAlertIcon = true, NavbarItem activeNav = NAV_HOME);
     virtual void init();
     virtual void loop();
     void updatePressureValues();
