@@ -166,9 +166,17 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_obj_set_style_border_color(this->ui_imgOn, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR);
         lv_obj_set_style_bg_color(this->ui_imgOn, lv_color_hex(THEME_COLOR_DARK), LV_PART_INDICATOR);
 
-        // only want the off image to be clickable
-        lv_obj_add_flag(this->ui_imgOn, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
-        lv_obj_add_event_cb(this->ui_imgOn, ui_clicked_button, LV_EVENT_ALL, this);
+        // Make checkbox non-clickable so touches pass through to root
+        lv_obj_remove_flag(this->ui_imgOn, LV_OBJ_FLAG_CLICKABLE);
+        
+        // Make text label non-clickable so touches pass through to root
+        if (this->text != NULL) {
+            lv_obj_remove_flag(this->text, LV_OBJ_FLAG_CLICKABLE);
+        }
+        
+        // Make the entire root container clickable for larger touch area
+        lv_obj_add_flag(this->root, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(this->root, ui_clicked_button, LV_EVENT_CLICKED, this);
     }
     else if (type == OptionType::KEYBOARD_INPUT_NUMBER || type == OptionType::KEYBOARD_INPUT_TEXT)
     {
