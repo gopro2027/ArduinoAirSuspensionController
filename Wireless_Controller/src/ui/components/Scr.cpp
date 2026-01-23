@@ -316,10 +316,13 @@ void Scr::createModernNavbar()
     for (int i = 0; i < 3; i++) {
         this->navbar_btns[i] = lv_obj_create(this->navbar_container);
         lv_obj_remove_style_all(this->navbar_btns[i]);
-        lv_obj_set_size(this->navbar_btns[i], btnWidth, navbarHeight - 8);
-        lv_obj_set_pos(this->navbar_btns[i], i * btnWidth, 4);
+        // Make buttons cover full navbar height for larger touch area
+        lv_obj_set_size(this->navbar_btns[i], btnWidth, navbarHeight);
+        lv_obj_set_pos(this->navbar_btns[i], i * btnWidth, 0);
         lv_obj_set_style_bg_opa(this->navbar_btns[i], LV_OPA_TRANSP, 0);
         lv_obj_remove_flag(this->navbar_btns[i], LV_OBJ_FLAG_SCROLLABLE);
+        // Ensure button is clickable
+        lv_obj_add_flag(this->navbar_btns[i], LV_OBJ_FLAG_CLICKABLE);
         lv_obj_set_flex_flow(this->navbar_btns[i], LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(this->navbar_btns[i], LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
         lv_obj_set_style_pad_row(this->navbar_btns[i], 4, 0);
@@ -330,15 +333,17 @@ void Scr::createModernNavbar()
         cbData[i].scr = this;
         lv_obj_add_event_cb(this->navbar_btns[i], navbar_click_cb, LV_EVENT_CLICKED, &cbData[i]);
 
-        // Icon
+        // Icon - make non-clickable so touches pass through to parent button
         this->navbar_icons[i] = lv_label_create(this->navbar_btns[i]);
         lv_label_set_text(this->navbar_icons[i], icons[i]);
         lv_obj_set_style_text_font(this->navbar_icons[i], &lv_font_montserrat_16, 0);
+        lv_obj_remove_flag(this->navbar_icons[i], LV_OBJ_FLAG_CLICKABLE);
 
-        // Label
+        // Label - make non-clickable so touches pass through to parent button
         this->navbar_labels[i] = lv_label_create(this->navbar_btns[i]);
         lv_label_set_text(this->navbar_labels[i], labels[i]);
         lv_obj_set_style_text_font(this->navbar_labels[i], &lv_font_montserrat_10, 0);
+        lv_obj_remove_flag(this->navbar_labels[i], LV_OBJ_FLAG_CLICKABLE);
 
         // Colors based on active state
         bool isActive = (i == this->activeNavItem);
