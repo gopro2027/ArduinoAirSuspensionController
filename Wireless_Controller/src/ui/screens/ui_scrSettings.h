@@ -60,7 +60,6 @@ public:
     Option *ui_rfbuttonD;
 
     void init();
-    void runTouchInput(SimplePoint pos, bool down);
     void loop();
     void showColorPickerModal();
 };

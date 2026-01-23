@@ -30,7 +30,6 @@ public:
     lv_obj_t *btnLoad;
 
     void init();
-    void runTouchInput(SimplePoint pos, bool down);
     void showPresetDialog();
     void loop();
     void setPreset(int num);

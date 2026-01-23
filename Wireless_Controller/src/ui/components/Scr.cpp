@@ -7,6 +7,12 @@
 #include "ui/ui.h" // sketchy backwards import may break in the future
 #include "../theme_colors.h"
 
+// Structure for navbar callback data
+struct NavbarCallbackData {
+    NavbarItem item;
+    Scr *scr;
+};
+
 Scr::Scr(lv_image_dsc_t navbarImage, bool showPressures, bool showAlertIcon, NavbarItem activeNav)
 {
     this->navbarImage = navbarImage;
@@ -60,46 +66,10 @@ void Scr::init()
     }
 }
 
-// down = true when just pressed, false when just released
-void Scr::runTouchInput(SimplePoint pos, bool down)
-{
-    if (down)
-    {
-        if (isKeyboardHidden())
-        {
-            if (!isMsgBoxDisplayed())
-            {
-                if (sr_contains(get_navbarbtn_home(), pos))
-                {
-                    changeScreen(SCREEN_HOME);
-                }
-                if (sr_contains(get_navbarbtn_presets(), pos))
-                {
-                    changeScreen(SCREEN_PRESETS);
-                }
-                if (sr_contains(get_navbarbtn_settings(), pos))
-                {
-                    changeScreen(SCREEN_SETTINGS);
-                }
-            }
-        }
-    }
-    else
-    {
-        if (this->mb_dialog != NULL)
-        {
-            if (this->mb_force_button_press == false)
-            {
-                this->deleteMessageBoxNextFrame = true;
-            }
-        }
-    }
-}
 
 void dialog_clicked_function(lv_event_t *e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
-    lv_obj_t *target = (lv_obj_t *)lv_event_get_target(e);
     DialogData *dialogData = (DialogData *)lv_event_get_user_data(e);
     if (event_code == LV_EVENT_CLICKED)
     {
@@ -109,6 +79,36 @@ void dialog_clicked_function(lv_event_t *e)
         {
             dialogData->callback();
         }
+    }
+}
+
+// Navbar button click callback - static function to work with LVGL event system
+static void navbar_click_cb(lv_event_t *e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if (event_code == LV_EVENT_CLICKED) {
+        NavbarCallbackData *cbData = (NavbarCallbackData *)lv_event_get_user_data(e);
+        
+        if (!cbData || !cbData->scr) return;
+        
+        SCREEN targetScreen;
+        switch (cbData->item) {
+            case NAV_HOME:
+                targetScreen = SCREEN_HOME;
+                break;
+            case NAV_PRESETS:
+                targetScreen = SCREEN_PRESETS;
+                break;
+            case NAV_SETTINGS:
+                targetScreen = SCREEN_SETTINGS;
+                break;
+            default:
+                return;
+        }
+        if (!isKeyboardHidden() || cbData->scr->isMsgBoxDisplayed()) {
+            return;  // Don't change screen if keyboard is visible or message box is displayed
+        }
+        changeScreen(targetScreen);
     }
 }
 
@@ -176,14 +176,15 @@ void Scr::loop()
         this->deleteMessageBoxNextFrame = false;
     }
     handleFunctionRunOnNextFrame();
-    SimplePoint tp = {(double)touchX(), (double)touchY()};
-    if (isJustPressed())
-    {
-        this->runTouchInput(tp, true);
-    }
     if (isJustReleased())
     {
-        this->runTouchInput(tp, false);
+        if (this->mb_dialog != NULL)
+        {
+            if (this->mb_force_button_press == false)
+            {
+                this->deleteMessageBoxNextFrame = true;
+            }
+        }
     }
     this->updatePressureValues();
     this->alert->loop();
@@ -325,6 +326,12 @@ void Scr::createModernNavbar()
         lv_obj_set_flex_flow(this->navbar_btns[i], LV_FLEX_FLOW_COLUMN);
         lv_obj_set_flex_align(this->navbar_btns[i], LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
         lv_obj_set_style_pad_row(this->navbar_btns[i], 4, 0);
+        
+        // Add click event callback - pass both item and screen pointer
+        static NavbarCallbackData cbData[3];  // Static to persist
+        cbData[i].item = (NavbarItem)i;
+        cbData[i].scr = this;
+        lv_obj_add_event_cb(this->navbar_btns[i], navbar_click_cb, LV_EVENT_CLICKED, &cbData[i]);
 
         // Icon
         this->navbar_icons[i] = lv_label_create(this->navbar_btns[i]);

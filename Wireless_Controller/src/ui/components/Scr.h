@@ -56,7 +56,6 @@ public:
     bool mb_force_button_press;
 
     Scr(lv_image_dsc_t navbarImage, bool showPressures, bool showAlertIcon = true, NavbarItem activeNav = NAV_HOME);
-    virtual void runTouchInput(SimplePoint pos, bool down);
     virtual void init();
     virtual void loop();
     void updatePressureValues();

@@ -475,11 +475,6 @@ void loadSelectedPreset()
     showDialog("Loaded Preset!", lv_color_hex(0x22bb33));
 }
 
-void ScrPresets::runTouchInput(SimplePoint pos, bool down)
-{
-    // Save/Load are now LVGL buttons, so only call base class for navbar handling
-    Scr::runTouchInput(pos, down);
-}
 
 void ScrPresets::loop()
 {

@@ -736,10 +736,6 @@ void ScrSettings::init()
     sendConfigValuesPacket(false);
 }
 
-void ScrSettings::runTouchInput(SimplePoint pos, bool down)
-{
-    Scr::runTouchInput(pos, down);
-}
 
 void ScrSettings::loop()
 {
