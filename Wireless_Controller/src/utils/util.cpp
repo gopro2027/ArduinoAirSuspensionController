@@ -477,11 +477,7 @@ void setupPressureLabel(lv_obj_t *parent, lv_obj_t **label, int x, int y, lv_ali
     lv_obj_set_style_text_color(*label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_text_font(*label, &lv_font_montserrat_14, 0);
 
-    // Add subtle text shadow for depth
     lv_obj_set_style_text_opa(*label, LV_OPA_COVER, 0);
-    lv_obj_set_style_shadow_width(*label, 2, 0);
-    lv_obj_set_style_shadow_color(*label, lv_color_hex(0x000000), 0);
-    lv_obj_set_style_shadow_opa(*label, LV_OPA_50, 0);
 
     lv_obj_set_width(*label, LV_SIZE_CONTENT);
     lv_obj_set_height(*label, LV_SIZE_CONTENT);
