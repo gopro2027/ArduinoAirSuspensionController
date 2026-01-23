@@ -16,7 +16,13 @@ LV_IMG_DECLARE(selected_5);
 // Dynamic car positioning based on screen size
 static int getCarX() { return getScreenWidth() / 2 - img_car.header.w / 2; }
 static int getWheelsX() { return getScreenWidth() / 2 - img_wheels.header.w / 2; }
-static int getWheelsY() { return 88 * SCALE_Y; }
+static int getWheelsY() {
+    // Position wheels in available space between pressure labels and bottom buttons
+    // On larger displays, use a smaller multiplier to avoid overlap with buttons
+    int baseY = 88 * SCALE_Y;
+    int maxY = getScreenHeight() - getNavbarHeight() - scaledY(100); // Leave room for buttons
+    return (baseY < maxY) ? baseY : maxY;
+}
 static int getCarY1() { return getWheelsY() - 21 * SCALE_Y; }
 static int getCarY2() { return getCarY1() - 4 * SCALE_Y; }
 static int getCarY3() { return getCarY2() - 4 * SCALE_Y; }
@@ -43,7 +49,7 @@ static int getPresetBtnSize() {
 }
 #define PRESET_BTN_WIDTH getPresetBtnSize()
 #define PRESET_BTN_HEIGHT getPresetBtnSize()
-static const int PRESET_BTN_RADIUS = 19;  // Circular buttons
+#define PRESET_BTN_RADIUS LV_RADIUS_CIRCLE  // Perfect circle regardless of size
 #define PRESET_BTN_COLOR GENERIC_GREY_DARK
 #define PRESET_BTN_ACTIVE_COLOR THEME_COLOR_LIGHT
 #define PRESET_BTN_GLOW_COLOR THEME_COLOR_MEDIUM
