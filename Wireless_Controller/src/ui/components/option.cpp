@@ -190,6 +190,8 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
 
         lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);    // bg
         lv_obj_set_style_border_color(this->rightHandObj, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN); // border
+        lv_obj_set_style_text_color(this->rightHandObj, lv_color_hex(0xFFFFFF), LV_PART_MAIN);           // text
+        lv_obj_set_style_text_color(this->rightHandObj, lv_color_hex(0xE0E0E0), LV_PART_TEXTAREA_PLACEHOLDER); // placeholder
 
         lv_obj_set_style_radius(this->rightHandObj, 5, LV_PART_MAIN);
         // lv_obj_set_style_border_width(this->rightHandObj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
