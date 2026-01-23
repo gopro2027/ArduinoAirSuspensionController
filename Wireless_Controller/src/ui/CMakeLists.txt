@@ -1,5 +1,4 @@
-SET(SOURCES screens/ui_scrMain.cpp
-    ui.cpp
+SET(SOURCES ui.cpp
     components/ui_comp_hook.cpp
     ui_helpers.cpp)
 

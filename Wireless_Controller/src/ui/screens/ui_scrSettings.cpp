@@ -509,10 +509,12 @@ void ScrSettings::init()
     });
     ((Option *)this->ui_brightnessSlider)->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
 
+    #if SUPPORTS_ROTATION == 1
+    
     // Screen rotation setting - single button that toggles between Portrait/Landscape
     new Option(controller_settings_page, OptionType::HEADER, "Screen Orientation", {.STRING = ""});
 
-    #if SUPPORTS_ROTATION == 1
+    
     this->ui_screenRotation = new Option(controller_settings_page, OptionType::BUTTON,
         getscreenRotation() == 0 ? "Switch to Landscape" : "Switch to Portrait",
         {.STRING = ""}, [](void *data)

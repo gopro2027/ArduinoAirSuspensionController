@@ -8,20 +8,6 @@
 
 #include "utils/util.h"
 
-void OnAddOneClicked(lv_event_t *e)
-{
-    static uint32_t cnt = 0;
-    cnt++;
-    lv_label_set_text_fmt(scrMain.ui_lblCountValue, "%u", cnt);
-}
-
-void OnRotateClicked(lv_event_t *e)
-{
-    auto disp = lv_display_get_default();
-    auto rotation = (lv_display_rotation_t)((lv_display_get_rotation(disp) + 1) % (LV_DISPLAY_ROTATION_270 + 1));
-    lv_display_set_rotation(disp, rotation);
-}
-
 #define DIM_SCREEN_TIME 60 * 1000 * getscreenDimTimeM()
 unsigned long dimScreenTime = 0;
 bool dimmed = false;

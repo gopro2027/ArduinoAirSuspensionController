@@ -22,11 +22,9 @@ void ui_init(void)
     lv_theme_t *theme = lv_theme_default_init(dispp, lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_RED),
                                               false, LV_FONT_DEFAULT);
     lv_display_set_theme(dispp, theme);
-    ui_scrMain_screen_init();
     scrHome.init();
     scrPresets.init();
     scrSettings.init();
-    scrMain.ui____initial_actions0 = lv_obj_create(NULL);
     changeScreen(SCREEN_HOME);
 
     // Delete the temporary screen that was used during splash/init
@@ -113,9 +111,6 @@ void changeScreen(SCREEN screen)
     currentScreen = screen;
     switch (screen)
     {
-    case SCREEN_MAIN:
-        lv_screen_load(scrMain.ui_scrMain);
-        break;
     case SCREEN_HOME:
         lv_screen_load(scrHome.scr);
         currentScr = &scrHome;
@@ -165,9 +160,6 @@ void screenLoop()
 {
     switch (currentScreen)
     {
-    case SCREEN_MAIN:
-        ui_scrMain_loop();
-        break;
     case SCREEN_HOME:
         scrHome.loop();
         break;

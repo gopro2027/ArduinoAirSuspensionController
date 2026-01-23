@@ -108,12 +108,11 @@ void board_drivers_init()
     // Now delete the old splash screen
     lv_obj_del(splashScr);
 
+    #if SUPPORTS_ROTATION == 1
     // Apply saved screen rotation using hardware MADCTL rotation
     // Hardware rotation is more efficient - LCD controller rotates pixels directly
     extern byte getscreenRotation();
     byte rotation = getscreenRotation();
-
-    #if SUPPORTS_ROTATION == 1
     applyScreenRotation(rotation);
     #endif
 
