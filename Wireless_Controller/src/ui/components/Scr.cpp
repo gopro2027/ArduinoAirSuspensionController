@@ -258,7 +258,7 @@ void Scr::updatePressureValues()
 // navbar with sleek underline indicator
 void Scr::createModernNavbar()
 {
-    const int navbarHeight = scaledY(56);
+    const int navbarHeight = getNavbarHeight();
     const int screenWidth = getScreenWidth();
     const int btnWidth = screenWidth / 3;
 

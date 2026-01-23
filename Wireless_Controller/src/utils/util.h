@@ -33,7 +33,7 @@ inline int scaledY(int referenceValue) {
 
 // Dynamic UI constants that scale with display size
 inline int getNavbarHeight() {
-    return scaledY(56);
+    return scaledY(50);
 }
 
 // Override compile-time constant with dynamic value
