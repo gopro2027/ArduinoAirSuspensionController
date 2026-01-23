@@ -6,7 +6,8 @@ void RadioOption::setSelectedOption(int _selected, bool callOnSelect)
     {
         return;
     }
-    if (_selected < 0)
+    // Allow -1 to deselect all (for custom colors)
+    if (_selected < -1)
     {
         log_i("ERROR OPTION INDEX NOT FOUND");
         return;
@@ -16,7 +17,7 @@ void RadioOption::setSelectedOption(int _selected, bool callOnSelect)
     {
         this->options[i]->setBooleanValue(i == this->selected);
     }
-    if (callOnSelect)
+    if (callOnSelect && _selected >= 0)
     {
         this->onSelect((void *)selected);
     }

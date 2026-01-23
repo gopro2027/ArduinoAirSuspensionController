@@ -1,7 +1,8 @@
 #include "ui_scrSettings.h"
+#include "../theme_colors.h"
 
 LV_IMG_DECLARE(navbar_settings);
-ScrSettings scrSettings(navbar_settings, false);
+ScrSettings scrSettings(navbar_settings, false, false, NAV_SETTINGS);  // No pressures, no alert icon
 
 void alertValueUpdated()
 {
@@ -13,6 +14,7 @@ extern bool isConnectedToManifold();
 
 // Current page tracking
 static lv_obj_t *current_page = NULL;
+static int saved_page_index = 0;  // Remember page selection across reinits
 static lv_obj_t *menu_container = NULL;
 static const char *section_names[] = {
     "Status", "Game Controller", "ML/AI", "Basic settings",
@@ -60,13 +62,13 @@ static void style_dropdown_list(lv_obj_t *dd)
     lv_obj_set_style_radius(list, 14, LV_PART_MAIN);
 
     // Keep it from covering your whole UI
-    lv_obj_set_style_max_height(list, (int)(LCD_HEIGHT * 0.65f), LV_PART_MAIN);
+    lv_obj_set_style_max_height(list, (int)(getScreenHeight() * 0.65f), LV_PART_MAIN);
 
     // Items (normal)
     lv_obj_set_style_text_color(list, lv_color_white(),
-                                LV_PART_MAIN | LV_STATE_DEFAULT);
+                                LV_PART_MAIN);
     lv_obj_set_style_text_color(list, lv_color_white(),
-                                LV_PART_SELECTED | LV_STATE_DEFAULT);
+                                LV_PART_SELECTED);
 
     lv_obj_set_style_pad_left(list, 16, LV_PART_SELECTED);
     lv_obj_set_style_pad_right(list, 16, LV_PART_SELECTED);
@@ -77,22 +79,22 @@ static void style_dropdown_list(lv_obj_t *dd)
     lv_obj_set_style_border_width(list, 0, LV_PART_SELECTED);
 
     // Selected item (checked) = subtle pill
-    lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_LIGHT), 
-                              LV_PART_SELECTED | LV_STATE_CHECKED);
-    lv_obj_set_style_bg_opa(list, LV_OPA_COVER, 
-                            LV_PART_SELECTED | LV_STATE_CHECKED);
-    lv_obj_set_style_radius(list, 12, LV_PART_SELECTED | LV_STATE_CHECKED);
-    lv_obj_set_style_text_color(list, lv_color_white(), 
-                                LV_PART_SELECTED | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_LIGHT),
+                              LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
+    lv_obj_set_style_bg_opa(list, LV_OPA_COVER,
+                            LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
+    lv_obj_set_style_radius(list, 12, LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
+    lv_obj_set_style_text_color(list, lv_color_white(),
+                                LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
 
     // Pressed item = same as selected (maintains color when pressing)
-    lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_LIGHT), 
-                              LV_PART_SELECTED | LV_STATE_PRESSED);
-    lv_obj_set_style_bg_opa(list, LV_OPA_COVER, 
-                            LV_PART_SELECTED | LV_STATE_PRESSED);
-    lv_obj_set_style_radius(list, 12, LV_PART_SELECTED | LV_STATE_PRESSED);
-    lv_obj_set_style_text_color(list, lv_color_white(), 
-                                LV_PART_SELECTED | LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_LIGHT),
+                              LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(list, LV_OPA_COVER,
+                            LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
+    lv_obj_set_style_radius(list, 12, LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
+    lv_obj_set_style_text_color(list, lv_color_white(),
+                                LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
 
     // Scrollbar subtle
     lv_obj_set_style_bg_opa(list, LV_OPA_20, LV_PART_SCROLLBAR);
@@ -108,6 +110,9 @@ static void section_dropdown_event_cb(lv_event_t *e)
     if (code == LV_EVENT_VALUE_CHANGED) {
         uint32_t id = lv_dropdown_get_selected(dropdown);
         ScrSettings *settings = (ScrSettings *)lv_event_get_user_data(e);
+
+        // Save page selection for reinit
+        saved_page_index = id;
 
         // Hide current page
         if (current_page) {
@@ -192,10 +197,16 @@ void ScrSettings::init()
 {
     Scr::init();
 
+    // Reset header style to pick up new scale values after rotation
+    Option::resetHeaderStyle();
+
+    int scrW = getScreenWidth();
+    int scrH = getScreenHeight();
+
     // Create main container for settings (not scrollable)
     menu_container = lv_obj_create(this->scr);
     lv_obj_remove_style_all(menu_container);
-    lv_obj_set_size(menu_container, LCD_WIDTH, LCD_HEIGHT - NAVBAR_HEIGHT);
+    lv_obj_set_size(menu_container, scrW, scrH - NAVBAR_HEIGHT);
     lv_obj_align(menu_container, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_set_style_bg_opa(menu_container, LV_OPA_TRANSP, 0);
     lv_obj_set_layout(menu_container, LV_LAYOUT_FLEX);
@@ -203,9 +214,10 @@ void ScrSettings::init()
     lv_obj_clear_flag(menu_container, LV_OBJ_FLAG_SCROLLABLE);
 
     // Create top menu bar with dropdown (fixed, not scrollable)
+    const int menuBarHeight = scaledY(54);
     lv_obj_t *menu_bar = lv_obj_create(menu_container);
     lv_obj_remove_style_all(menu_bar);
-    lv_obj_set_size(menu_bar, LCD_WIDTH, 54 * SCALE_Y);
+    lv_obj_set_size(menu_bar, scrW, menuBarHeight);
     // lv_obj_set_style_bg_color(menu_bar, lv_color_hex(0x0B0E12), 0);
     lv_obj_set_style_bg_opa(menu_bar, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_layout(menu_bar, LV_LAYOUT_FLEX);
@@ -218,8 +230,8 @@ void ScrSettings::init()
     lv_obj_t *dropdown = lv_dropdown_create(menu_bar);
     lv_dropdown_set_options(dropdown,
         "Status\nGame Controller\nML/AI\nBasic settings\nLevelling Mode\nUnits\nController Settings\nConfig\nWifi / Update");
-    lv_obj_set_width(dropdown, LCD_WIDTH - 12);
-    lv_obj_set_height(dropdown, 44 * SCALE_Y);
+    lv_obj_set_width(dropdown, scrW - scaledX(12));
+    lv_obj_set_height(dropdown, scaledY(44));
     style_dropdown_closed(dropdown);
 
     lv_obj_add_event_cb(dropdown, section_dropdown_event_cb, LV_EVENT_VALUE_CHANGED, this);
@@ -228,7 +240,7 @@ void ScrSettings::init()
     // Create pages container (scrollable area for content only)
     lv_obj_t *pages_container = lv_obj_create(menu_container);
     lv_obj_remove_style_all(pages_container);
-    lv_obj_set_size(pages_container, LCD_WIDTH, LCD_HEIGHT - NAVBAR_HEIGHT - 54 * SCALE_Y);
+    lv_obj_set_size(pages_container, scrW, scrH - NAVBAR_HEIGHT - menuBarHeight);
     lv_obj_set_style_bg_opa(pages_container, LV_OPA_TRANSP, 0);
     lv_obj_set_layout(pages_container, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(pages_container, LV_FLEX_FLOW_COLUMN);
@@ -243,7 +255,7 @@ void ScrSettings::init()
     // --- Status page ---
     lv_obj_t *status_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(status_page);
-    lv_obj_set_size(status_page, LCD_WIDTH, LV_SIZE_CONTENT);
+    lv_obj_set_size(status_page, scrW, LV_SIZE_CONTENT);
     lv_obj_set_layout(status_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(status_page, LV_FLEX_FLOW_COLUMN);
     this->pages[0] = status_page;
@@ -280,7 +292,7 @@ void ScrSettings::init()
     // --- Game Controller page ---
     lv_obj_t *game_controller_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(game_controller_page);
-    lv_obj_set_size(game_controller_page, LCD_WIDTH, LV_SIZE_CONTENT);
+    lv_obj_set_size(game_controller_page, scrW, LV_SIZE_CONTENT);
     lv_obj_set_layout(game_controller_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(game_controller_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(game_controller_page, LV_OBJ_FLAG_HIDDEN);
@@ -331,7 +343,7 @@ void ScrSettings::init()
     // --- ML/AI page ---
     lv_obj_t *ml_ai_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(ml_ai_page);
-    lv_obj_set_size(ml_ai_page, LCD_WIDTH, LV_SIZE_CONTENT);
+    lv_obj_set_size(ml_ai_page, scrW, LV_SIZE_CONTENT);
     lv_obj_set_layout(ml_ai_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(ml_ai_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(ml_ai_page, LV_OBJ_FLAG_HIDDEN);
@@ -357,7 +369,7 @@ void ScrSettings::init()
     // --- Basic settings page ---
     lv_obj_t *basic_settings_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(basic_settings_page);
-    lv_obj_set_size(basic_settings_page, LCD_WIDTH, LV_SIZE_CONTENT);
+    lv_obj_set_size(basic_settings_page, scrW, LV_SIZE_CONTENT);
     lv_obj_set_layout(basic_settings_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(basic_settings_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(basic_settings_page, LV_OBJ_FLAG_HIDDEN);
@@ -448,7 +460,7 @@ void ScrSettings::init()
     // --- Levelling Mode page ---
     lv_obj_t *levelling_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(levelling_page);
-    lv_obj_set_size(levelling_page, LCD_WIDTH, LV_SIZE_CONTENT);
+    lv_obj_set_size(levelling_page, scrW, LV_SIZE_CONTENT);
     lv_obj_set_layout(levelling_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(levelling_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(levelling_page, LV_OBJ_FLAG_HIDDEN);
@@ -465,7 +477,7 @@ void ScrSettings::init()
     // --- Units page ---
     lv_obj_t *units_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(units_page);
-    lv_obj_set_size(units_page, LCD_WIDTH, LV_SIZE_CONTENT);
+    lv_obj_set_size(units_page, scrW, LV_SIZE_CONTENT);
     lv_obj_set_layout(units_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(units_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(units_page, LV_OBJ_FLAG_HIDDEN);
@@ -478,13 +490,13 @@ void ScrSettings::init()
     // --- Controller Settings page ---
     lv_obj_t *controller_settings_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(controller_settings_page);
-    lv_obj_set_size(controller_settings_page, LCD_WIDTH, LV_SIZE_CONTENT);
+    lv_obj_set_size(controller_settings_page, scrW, LV_SIZE_CONTENT);
     lv_obj_set_layout(controller_settings_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(controller_settings_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(controller_settings_page, LV_OBJ_FLAG_HIDDEN);
     this->pages[6] = controller_settings_page;
 
-    new Option(controller_settings_page, OptionType::KEYBOARD_INPUT_NUMBER, "Dim Screen (Minutes)", {.INT = getscreenDimTimeM()}, [](void *data)
+    new Option(controller_settings_page, OptionType::KEYBOARD_INPUT_NUMBER, "Dim Screen (Minutes)", {.INT = (int)getscreenDimTimeM()}, [](void *data)
     {
         log_i("Pressed %i", ((uint32_t)data));
         setscreenDimTimeM((uint32_t)data);
@@ -498,10 +510,46 @@ void ScrSettings::init()
     });
     ((Option *)this->ui_brightnessSlider)->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
 
+    // Screen rotation setting - single button that toggles between Portrait/Landscape
+    new Option(controller_settings_page, OptionType::HEADER, "Screen Orientation", {.STRING = ""});
+
+    this->ui_screenRotation = new Option(controller_settings_page, OptionType::BUTTON,
+        getscreenRotation() == 0 ? "Switch to Landscape" : "Switch to Portrait",
+        {.STRING = ""}, [](void *data)
+    {
+        byte currentRotation = getscreenRotation();
+        byte newRotation = (currentRotation == 0) ? 1 : 0;
+        setscreenRotation(newRotation);
+        applyScreenRotation(newRotation);
+        ScrSettings *settings = (ScrSettings *)currentScr;
+        settings->ui_screenRotation->setRightHandText(newRotation == 0 ? "Switch to Landscape" : "Switch to Portrait");
+        // Schedule screen reinit for next frame to allow rotation to complete
+        runNextFrame([]() -> void {
+            reinitializeScreens();
+        });
+    });
+
+    // Theme colors setting
+    new Option(controller_settings_page, OptionType::HEADER, "Theme Colors", {.STRING = ""});
+
+    const char *themePresetText[3] = {"Default Purple", "Ocean Blue", "Forest Green"};
+    option_event_cb_t themePresetCB = [](void *data)
+    {
+        int presetId = (int)(intptr_t)data;
+        applyThemePreset((ThemePreset)presetId);
+        runNextFrame([]() { reinitializeScreens(); });
+    };
+    this->ui_themePreset = new RadioOption(controller_settings_page, themePresetText, 3, themePresetCB, getCurrentThemePreset() >= 0 ? getCurrentThemePreset() : 0);
+
+    // Custom color picker button
+    new Option(controller_settings_page, OptionType::BUTTON, "Custom Color Picker", {.STRING = ""}, [](void *data) {
+        scrSettings.showColorPickerModal();
+    });
+
     // --- Config page ---
     lv_obj_t *config_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(config_page);
-    lv_obj_set_size(config_page, LCD_WIDTH, LV_SIZE_CONTENT);
+    lv_obj_set_size(config_page, scrW, LV_SIZE_CONTENT);
     lv_obj_set_layout(config_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(config_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(config_page, LV_OBJ_FLAG_HIDDEN);
@@ -516,7 +564,7 @@ void ScrSettings::init()
     });
     ((Option *)this->ui_config1)->setSliderParams(1, 256, true, LV_EVENT_RELEASED);
 
-    new Option(config_page, OptionType::KEYBOARD_INPUT_NUMBER, "Bluetooth Passkey (6 digits)", {.INT = getblePasskey()}, [](void *data)
+    new Option(config_page, OptionType::KEYBOARD_INPUT_NUMBER, "Bluetooth Passkey (6 digits)", {.INT = (int)getblePasskey()}, [](void *data)
     {
         log_i("Pressed %i", (data));
         setblePasskey((uint32_t)data);
@@ -573,7 +621,7 @@ void ScrSettings::init()
     // --- Wifi / Update page ---
     lv_obj_t *wifi_update_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(wifi_update_page);
-    lv_obj_set_size(wifi_update_page, LCD_WIDTH, LV_SIZE_CONTENT);
+    lv_obj_set_size(wifi_update_page, scrW, LV_SIZE_CONTENT);
     lv_obj_set_layout(wifi_update_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(wifi_update_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(wifi_update_page, LV_OBJ_FLAG_HIDDEN);
@@ -644,19 +692,20 @@ void ScrSettings::init()
     updateUpdateButtonVisbility();
     this->ui_manifoldUpdateStatus = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Manifold:", {.STRING = test});
 
-    // QR Code
+    // QR Code - scaled for display size
+    const int qrSize = scaledX(100);
     lv_obj_t *qrCodeParent = lv_obj_create(wifi_update_page);
     lv_obj_remove_style_all(qrCodeParent);
-    lv_obj_set_size(qrCodeParent, LCD_WIDTH, 100);
+    lv_obj_set_size(qrCodeParent, scrW, qrSize);
 
     this->ui_qrcode = lv_qrcode_create(qrCodeParent);
-    lv_qrcode_set_size(this->ui_qrcode, 100);
+    lv_qrcode_set_size(this->ui_qrcode, qrSize);
     lv_qrcode_set_dark_color(this->ui_qrcode, lv_color_black());
     lv_qrcode_set_light_color(this->ui_qrcode, lv_color_white());
 
     const char *qr_data = "https://oasman.dev";
     lv_qrcode_update(this->ui_qrcode, qr_data, strlen(qr_data));
-    lv_obj_set_x(this->ui_qrcode, LCD_WIDTH / 2 - 50);
+    lv_obj_set_x(this->ui_qrcode, scrW / 2 - qrSize / 2);
 
     // Version and info
     OptionValue versionValue;
@@ -669,17 +718,24 @@ void ScrSettings::init()
     this->ui_mac = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Manifold:", {.STRING = ble_getMAC()});
     this->ui_volts = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Battery:", {.STRING = getBatteryVoltageString()});
 
-    // Set initial page
-    current_page = status_page;
-    lv_dropdown_set_selected(dropdown, 0);
+    // Restore previously selected page (or default to Status)
+    lv_dropdown_set_selected(dropdown, saved_page_index);
+    current_page = this->pages[saved_page_index];
+
+    // Hide all pages except the selected one
+    for (int i = 0; i < NUM_SECTIONS; i++) {
+        if (this->pages[i] != NULL) {
+            if (i == saved_page_index) {
+                lv_obj_remove_flag(this->pages[i], LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_add_flag(this->pages[i], LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+    }
 
     sendConfigValuesPacket(false);
 }
 
-void ScrSettings::runTouchInput(SimplePoint pos, bool down)
-{
-    Scr::runTouchInput(pos, down);
-}
 
 void ScrSettings::loop()
 {

@@ -17,8 +17,8 @@ void OnAddOneClicked(lv_event_t *e)
 
 void OnRotateClicked(lv_event_t *e)
 {
-    auto disp = lv_disp_get_default();
-    auto rotation = (lv_display_rotation_t)((lv_disp_get_rotation(disp) + 1) % (LV_DISPLAY_ROTATION_270 + 1));
+    auto disp = lv_display_get_default();
+    auto rotation = (lv_display_rotation_t)((lv_display_get_rotation(disp) + 1) % (LV_DISPLAY_ROTATION_270 + 1));
     lv_display_set_rotation(disp, rotation);
 }
 
@@ -57,10 +57,6 @@ void setup()
 
     board_drivers_init();
 
-    __attribute__((unused)) auto disp = lv_disp_get_default();
-    // lv_disp_set_rotation(disp, LV_DISP_ROT_90);
-    // lv_disp_set_rotation(disp, LV_DISP_ROT_180);
-    // lv_disp_set_rotation(disp, LV_DISP_ROT_270);
 
     ui_init();
 
@@ -125,16 +121,6 @@ void loop()
         set_brightness(0.01f);
         dimmed = true;
     }
-
-    // if (isJustPressed())
-    // {
-    //     log_i("Just Pressed %d %d ", touchX(), touchY());
-    // }
-    // if (isJustReleased())
-    // {
-    //     log_i("Just Released %d %d ", touchX(), touchY());
-    // }
-
 
     // screen code
     screenLoop();

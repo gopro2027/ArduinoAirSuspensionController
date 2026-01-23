@@ -19,6 +19,6 @@
   "platforms": "espressif32",
   "dependencies": {
     "Wire":"",
-    "lvgl/lvgl":"9.2.2"
+    "lvgl/lvgl":"^9.4.0"
   }
 }
