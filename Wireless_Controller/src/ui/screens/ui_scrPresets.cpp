@@ -6,8 +6,15 @@ LV_IMG_DECLARE(img_car);
 LV_IMG_DECLARE(img_wheels);
 
 // Dynamic car positioning based on screen size
-static int getCarX() { return getScreenWidth() / 2 - img_car.header.w / 2; }
-static int getWheelsX() { return getScreenWidth() / 2 - img_wheels.header.w / 2; }
+// In landscape mode, offset car to the right to account for Save/Load buttons on left
+static int getCarX() {
+    int offset = isLandscape() ? scaledX(50) : 0;
+    return getScreenWidth() / 2 - img_car.header.w / 2 + offset;
+}
+static int getWheelsX() {
+    int offset = isLandscape() ? scaledX(50) : 0;
+    return getScreenWidth() / 2 - img_wheels.header.w / 2 + offset;
+}
 static int getWheelsY() {
     // Position wheels in available space between pressure labels and bottom buttons
     // On larger displays, use a smaller multiplier to avoid overlap with buttons

@@ -45,11 +45,9 @@ class Option
 {
 public:
     lv_obj_t *root;
-    lv_obj_t *bar;
     lv_obj_t *text;
     lv_obj_t *rightHandObj;
-    lv_obj_t *ui_imgOn;
-    lv_obj_t *ui_imgOff;
+    lv_obj_t *ui_switch;
     void *extraEventClickData;
     option_event_cb_t event_cb;
     OptionType type;
