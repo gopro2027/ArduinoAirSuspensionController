@@ -534,7 +534,7 @@ void ScrSettings::init()
     // Theme colors setting
     new Option(controller_settings_page, OptionType::HEADER, "Theme Colors", {.STRING = ""});
 
-    const char *themePresetText[3] = {"Default Purple", "Ocean Blue", "Forest Green"};
+    const char *themePresetText[3] = {"Ocean Blue", "Plump Purple", "Forest Green"};
     option_event_cb_t themePresetCB = [](void *data)
     {
         int presetId = (int)(intptr_t)data;

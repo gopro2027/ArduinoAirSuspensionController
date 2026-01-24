@@ -182,8 +182,8 @@ headerDefineSaveFunc(themeColorMedium, uint32_t);
 // Theme presets enum
 enum ThemePreset {
     PRESET_CUSTOM = -1,
-    PRESET_PURPLE = 0,
-    PRESET_BLUE = 1,
+    PRESET_BLUE = 0,
+    PRESET_PURPLE = 1,
     PRESET_GREEN = 2
 };
 
@@ -193,9 +193,9 @@ enum ThemePreset {
 #define GENERIC_GREY_LIGHT 0x6a6571
 
 // Default theme colors (purple/lavender theme)
-#define DEFAULT_THEME_COLOR_LIGHT  0xA78BFA  // Light purple
-#define DEFAULT_THEME_COLOR_MEDIUM 0x8B5CF6  // Medium purple
-#define DEFAULT_THEME_COLOR_DARK   0x6D28D9  // Dark purple
+#define THEME_COLOR_PLUMP_PURPLE_LIGHT  0xA78BFA  // Light purple
+#define THEME_COLOR_PLUMP_PURPLE_MEDIUM 0x8B5CF6  // Medium purple
+#define THEME_COLOR_PLUMP_PURPLE_DARK   0x6D28D9  // Dark purple
 
 #define THEME_COLOR_OCEAN_BLUE_LIGHT 0x60A5FA
 #define THEME_COLOR_OCEAN_BLUE_MEDIUM 0x3B82F6

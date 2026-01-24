@@ -501,9 +501,9 @@ void beginSaveData()
     _SaveData.brightness.load("brightness", 80);
     _SaveData.screenRotation.load("screenRotation", 0);
     // Theme colors - using default purple/lavender theme values
-    _SaveData.themeColorLight.load("themeColorLight", DEFAULT_THEME_COLOR_LIGHT);
-    _SaveData.themeColorDark.load("themeColorDark", DEFAULT_THEME_COLOR_DARK);
-    _SaveData.themeColorMedium.load("themeColorMedium", DEFAULT_THEME_COLOR_MEDIUM);
+    _SaveData.themeColorLight.load("themeColorLight", THEME_COLOR_OCEAN_BLUE_LIGHT);
+    _SaveData.themeColorDark.load("themeColorDark", THEME_COLOR_OCEAN_BLUE_DARK);
+    _SaveData.themeColorMedium.load("themeColorMedium", THEME_COLOR_OCEAN_BLUE_MEDIUM);
 }
 
 createSaveFuncInt(unitsMode, int);
@@ -730,9 +730,9 @@ void onBLEConnectionCompleted()
 void applyThemePreset(ThemePreset preset) {
     switch (preset) {
         case PRESET_PURPLE:
-            setthemeColorLight(DEFAULT_THEME_COLOR_LIGHT);   // Light purple
-            setthemeColorMedium(DEFAULT_THEME_COLOR_MEDIUM);  // Medium purple
-            setthemeColorDark(DEFAULT_THEME_COLOR_DARK);    // Dark purple
+            setthemeColorLight(THEME_COLOR_PLUMP_PURPLE_LIGHT);   // Light purple
+            setthemeColorMedium(THEME_COLOR_PLUMP_PURPLE_MEDIUM);  // Medium purple
+            setthemeColorDark(THEME_COLOR_PLUMP_PURPLE_DARK);    // Dark purple
             break;
         case PRESET_BLUE:
             setthemeColorLight(THEME_COLOR_OCEAN_BLUE_LIGHT);   // Light blue
@@ -758,7 +758,7 @@ int getCurrentThemePreset() {
     uint32_t dark = getthemeColorDark();
     
     // Check if current colors match any preset
-    if (light == DEFAULT_THEME_COLOR_LIGHT && medium == DEFAULT_THEME_COLOR_MEDIUM && dark == DEFAULT_THEME_COLOR_DARK) {
+    if (light == THEME_COLOR_PLUMP_PURPLE_LIGHT && medium == THEME_COLOR_PLUMP_PURPLE_MEDIUM && dark == THEME_COLOR_PLUMP_PURPLE_DARK) {
         return PRESET_PURPLE;
     }
     if (light == THEME_COLOR_OCEAN_BLUE_LIGHT && medium == THEME_COLOR_OCEAN_BLUE_MEDIUM && dark == THEME_COLOR_OCEAN_BLUE_DARK) {
