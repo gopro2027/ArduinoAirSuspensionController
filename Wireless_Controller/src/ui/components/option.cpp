@@ -171,11 +171,16 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_textarea_set_placeholder_text(this->rightHandObj, "Input");
         lv_textarea_set_one_line(this->rightHandObj, true);
 
-        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);
-        lv_obj_set_style_border_color(this->rightHandObj, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN);
-        lv_obj_set_style_text_color(this->rightHandObj, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-        lv_obj_set_style_text_color(this->rightHandObj, lv_color_hex(0xE0E0E0), LV_PART_TEXTAREA_PLACEHOLDER);
+        // lv_textarea_set_cursor_hidden(ta, true);
+        // lv_obj_set_event_cb(this->rightHandObj, ta_event_handler);
+
+        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);    // bg
+        lv_obj_set_style_border_color(this->rightHandObj, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN); // border
+        lv_obj_set_style_text_color(this->rightHandObj, lv_color_hex(0xFFFFFF), LV_PART_MAIN);           // text
+        lv_obj_set_style_text_color(this->rightHandObj, lv_color_hex(0xE0E0E0), LV_PART_TEXTAREA_PLACEHOLDER); // placeholder
+
         lv_obj_set_style_radius(this->rightHandObj, 5, LV_PART_MAIN);
+        // lv_obj_set_style_border_width(this->rightHandObj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
         lv_obj_set_width(this->rightHandObj, textAreaWidth);
         lv_obj_set_x(this->rightHandObj, -MARGIN);
@@ -200,8 +205,11 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_obj_set_y(this->rightHandObj, -OPTION_ROW_HEIGHT / 4);
         lv_obj_set_align(this->rightHandObj, LV_ALIGN_BOTTOM_MID);
 
-        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR);
-        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_DARK), LV_PART_KNOB);
+        // lv_obj_set_style_line_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR | LV_STATE_DEFAULT); // border
+
+        // lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);      // bg
+        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR); // border
+        lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_DARK), LV_PART_KNOB);       // border
 
         lv_obj_add_flag(this->rightHandObj, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
         lv_obj_add_event_cb(this->rightHandObj, slider_event_cb, LV_EVENT_ALL, this);
@@ -249,7 +257,7 @@ void Option::setRightHandText(const char *text)
     {
         if (strcmp(lv_textarea_get_text(this->rightHandObj), text) != 0)
         {
-            lv_textarea_set_text(this->rightHandObj, text);
+            lv_textarea_set_text(this->rightHandObj, text); // itoa(value.INT, strbuf, 10)
         }
     }
     else if (type == OptionType::BUTTON)
