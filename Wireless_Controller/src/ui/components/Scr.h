@@ -29,6 +29,8 @@ enum NavbarItem {
 
 class Scr
 {
+private:
+    void createModernNavbar();
 public:
     bool showPressures;
     bool showAlertIcon;  // Whether to show alert icon on this screen
@@ -59,7 +61,6 @@ public:
     void updatePressureValues();
     void showMsgBox(const char *title, const char *text, const char *yesText, const char *noText, std::function<void()> onYes, std::function<void()> onNo, bool forceButtonPress);
     bool isMsgBoxDisplayed();
-    void createModernNavbar();
     void updateNavbarSelection(NavbarItem item);
 };
 
