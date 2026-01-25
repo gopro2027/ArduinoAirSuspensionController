@@ -42,6 +42,15 @@ struct PillButtonData {
     int valveBitsCount;
 };
 
+// File-scope callback data arrays (must persist and be resettable on reinit)
+static PillButtonData pillDataUp[6];
+static PillButtonData pillDataDown[6];
+static int pillDataIndex = 0;
+
+static void resetPillButtonCallbackState() {
+    pillDataIndex = 0;
+}
+
 // Animation callback to set transform scale
 static void anim_scale_cb(void *var, int32_t value) {
     lv_obj_t *obj = (lv_obj_t *)var;
@@ -54,7 +63,7 @@ static void pill_button_pressed_cb(lv_event_t *e) {
     if (event_code == LV_EVENT_PRESSED) {
         PillButtonData *data = (PillButtonData *)lv_event_get_user_data(e);
         lv_obj_t *btn = lv_event_get_target_obj(e);
-        
+
         // Set valve bits
         for (int i = 0; i < data->valveBitsCount; i++) {
             setValveBit(data->valveBits[i]);
@@ -80,7 +89,7 @@ static void pill_button_released_cb(lv_event_t *e) {
     lv_event_code_t event_code = lv_event_get_code(e);
     if (event_code == LV_EVENT_RELEASED) {
         lv_obj_t *btn = lv_event_get_target_obj(e);
-        
+
         closeValves();
         
         // Get the pill container (parent of the button) to animate the whole pill
@@ -231,40 +240,39 @@ static PillButtons createUnifiedPill(lv_obj_t *parent)
 }
 
 // Setup pill button callbacks with valve bit data
-static void setupPillButtonCallbacks(PillButtons &pill, 
+static void setupPillButtonCallbacks(PillButtons &pill,
                                      int valveBitsUp[], int valveBitsUpCount,
                                      int valveBitsDown[], int valveBitsDownCount) {
-    // Create callback data for up and down buttons
-    static PillButtonData dataUp[6];  // Static to persist
-    static PillButtonData dataDown[6];
-    static int dataIndex = 0;
-    
-    if (dataIndex < 6) {
+    // Uses file-scope pillDataUp/pillDataDown/pillDataIndex (reset via resetPillButtonCallbackState)
+    if (pillDataIndex < 6) {
         // Setup up half data
-        dataUp[dataIndex].valveBitsCount = valveBitsUpCount;
+        pillDataUp[pillDataIndex].valveBitsCount = valveBitsUpCount;
         for (int i = 0; i < valveBitsUpCount && i < 4; i++) {
-            dataUp[dataIndex].valveBits[i] = valveBitsUp[i];
+            pillDataUp[pillDataIndex].valveBits[i] = valveBitsUp[i];
         }
-        
+
         // Setup down half data
-        dataDown[dataIndex].valveBitsCount = valveBitsDownCount;
+        pillDataDown[pillDataIndex].valveBitsCount = valveBitsDownCount;
         for (int i = 0; i < valveBitsDownCount && i < 4; i++) {
-            dataDown[dataIndex].valveBits[i] = valveBitsDown[i];
+            pillDataDown[pillDataIndex].valveBits[i] = valveBitsDown[i];
         }
-        
+
         // Add event callbacks - LVGL handles animations automatically
-        lv_obj_add_event_cb(pill.btnUp, pill_button_pressed_cb, LV_EVENT_PRESSED, &dataUp[dataIndex]);
-        lv_obj_add_event_cb(pill.btnUp, pill_button_released_cb, LV_EVENT_RELEASED, &dataUp[dataIndex]);
-        lv_obj_add_event_cb(pill.btnDown, pill_button_pressed_cb, LV_EVENT_PRESSED, &dataDown[dataIndex]);
-        lv_obj_add_event_cb(pill.btnDown, pill_button_released_cb, LV_EVENT_RELEASED, &dataDown[dataIndex]);
-        
-        dataIndex++;
+        lv_obj_add_event_cb(pill.btnUp, pill_button_pressed_cb, LV_EVENT_PRESSED, &pillDataUp[pillDataIndex]);
+        lv_obj_add_event_cb(pill.btnUp, pill_button_released_cb, LV_EVENT_RELEASED, &pillDataUp[pillDataIndex]);
+        lv_obj_add_event_cb(pill.btnDown, pill_button_pressed_cb, LV_EVENT_PRESSED, &pillDataDown[pillDataIndex]);
+        lv_obj_add_event_cb(pill.btnDown, pill_button_released_cb, LV_EVENT_RELEASED, &pillDataDown[pillDataIndex]);
+
+        pillDataIndex++;
     }
 }
 
 void ScrHome::init(void)
 {
     Scr::init();
+
+    // Reset pill button callback state for screen reinit (orientation changes)
+    resetPillButtonCallbackState();
 
     // Calculate pill dimensions based on current screen orientation
     calculatePillDimensions();

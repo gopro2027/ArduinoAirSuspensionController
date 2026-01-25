@@ -34,6 +34,11 @@ void Scr::init()
     this->mb_dialog = NULL;
     this->deleteMessageBoxNextFrame = false;
 
+    // Initialize prevPressures to force update on first loop after reinit
+    for (int i = 0; i < 5; i++) {
+        this->prevPressures[i] = -1;
+    }
+
     // Subtle theme-tinted gradient background
     const int screenWidth = getScreenWidth();
     const int screenHeight = getScreenHeight();
