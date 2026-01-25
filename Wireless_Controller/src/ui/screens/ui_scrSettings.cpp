@@ -538,14 +538,14 @@ void ScrSettings::init()
     // Theme colors setting
     allOptions.push_back(new Option(controller_settings_page, OptionType::HEADER, "Theme Colors", {.STRING = ""}));
 
-    const char *themePresetText[3] = {"Ocean Blue", "Plump Purple", "Forest Green"};
+    const char *themePresetText[4] = {"Ocean Blue", "Plump Purple", "Forest Green", "Desert Sand"};
     option_event_cb_t themePresetCB = [](void *data)
     {
         int presetId = (int)(intptr_t)data;
         applyThemePreset((ThemePreset)presetId);
         runNextFrame([]() { reinitializeScreens(); });
     };
-    this->ui_themePreset = new RadioOption(controller_settings_page, themePresetText, 3, themePresetCB, getCurrentThemePreset() >= 0 ? getCurrentThemePreset() : 0);
+    this->ui_themePreset = new RadioOption(controller_settings_page, themePresetText, 4, themePresetCB, getCurrentThemePreset() >= 0 ? getCurrentThemePreset() : 0);
 
     // Custom color picker button
     allOptions.push_back(new Option(controller_settings_page, OptionType::BUTTON, "Custom Color Picker", {.STRING = ""}, [](void *data) {

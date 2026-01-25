@@ -748,6 +748,11 @@ void applyThemePreset(ThemePreset preset) {
             setthemeColorMedium(THEME_COLOR_FOREST_GREEN_MEDIUM);  // Medium green
             setthemeColorDark(THEME_COLOR_FOREST_GREEN_DARK);    // Dark green
             break;
+        case PRESET_DESERT_SAND:
+            setthemeColorLight(THEME_COLOR_DESERT_SAND_LIGHT);    // Desert Sand (light)
+            setthemeColorMedium(THEME_COLOR_DESERT_SAND_MEDIUM);  // Desert Sand (medium)
+            setthemeColorDark(THEME_COLOR_DESERT_SAND_DARK);      // Desert Sand (dark)
+            break;
         case PRESET_CUSTOM:
         default:
             // Do nothing for custom
@@ -770,6 +775,9 @@ int getCurrentThemePreset() {
     }
     if (light == THEME_COLOR_FOREST_GREEN_LIGHT && medium == THEME_COLOR_FOREST_GREEN_MEDIUM && dark == THEME_COLOR_FOREST_GREEN_DARK) {
         return PRESET_GREEN;
+    }
+    if (light == THEME_COLOR_DESERT_SAND_LIGHT && medium == THEME_COLOR_DESERT_SAND_MEDIUM && dark == THEME_COLOR_DESERT_SAND_DARK) {
+        return PRESET_DESERT_SAND;
     }
     return PRESET_CUSTOM;
 }

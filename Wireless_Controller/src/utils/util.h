@@ -185,7 +185,8 @@ enum ThemePreset {
     PRESET_CUSTOM = -1,
     PRESET_BLUE = 0,
     PRESET_PURPLE = 1,
-    PRESET_GREEN = 2
+    PRESET_GREEN = 2,
+    PRESET_DESERT_SAND = 3
 };
 
 #define GENERIC_GREY_VERY_DARK 0x121212
@@ -205,6 +206,11 @@ enum ThemePreset {
 #define THEME_COLOR_FOREST_GREEN_LIGHT 0x34D399
 #define THEME_COLOR_FOREST_GREEN_MEDIUM 0x10B981
 #define THEME_COLOR_FOREST_GREEN_DARK 0x059669
+
+// Desert Sand (#E7D399) theme (light/medium/dark shades)
+#define THEME_COLOR_DESERT_SAND_LIGHT  0xE7D399
+#define THEME_COLOR_DESERT_SAND_MEDIUM 0xC4B382
+#define THEME_COLOR_DESERT_SAND_DARK   0xA2946B
 
 // Theme color accessors (use getters to get dynamic values)
 #define THEME_COLOR_LIGHT  getthemeColorLight()
