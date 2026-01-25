@@ -34,10 +34,11 @@ void Scr::init()
     this->mb_dialog = NULL;
     this->deleteMessageBoxNextFrame = false;
 
-    // Initialize prevPressures to force update on first loop after reinit
+    // Initialize prevPressures and prevUnitsMode to force update on first loop after reinit
     for (int i = 0; i < 5; i++) {
         this->prevPressures[i] = -1;
     }
+    this->prevUnitsMode = -1;
 
     // Subtle theme-tinted gradient background
     const int screenWidth = getScreenWidth();
@@ -197,9 +198,9 @@ void Scr::loop()
     this->alert->loop();
 }
 
-void updatePressure(Scr *scr, lv_obj_t *obj, int index, bool isHeightSensorPercentage)
+void updatePressure(Scr *scr, lv_obj_t *obj, int index, bool isHeightSensorPercentage, bool unitsChanged)
 {
-    if (scr->prevPressures[index] != currentPressures[index])
+    if (scr->prevPressures[index] != currentPressures[index] || unitsChanged)
     {
         int oldPressure = scr->prevPressures[index];
         int newPressure = currentPressures[index];
@@ -253,12 +254,17 @@ void Scr::updatePressureValues()
 {
     if (this->showPressures)
     {
+        int currentUnitsMode = getunitsMode();
+        bool unitsChanged = (this->prevUnitsMode != currentUnitsMode);
+
         bool hs = statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE);
-        updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER, hs);
-        updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER, hs);
-        updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER, hs);
-        updatePressure(this, this->ui_lblPressureRearDriver, WHEEL_REAR_DRIVER, hs);
-        updatePressure(this, this->ui_lblPressureTank, _TANK_INDEX, false);
+        updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER, hs, unitsChanged);
+        updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER, hs, unitsChanged);
+        updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER, hs, unitsChanged);
+        updatePressure(this, this->ui_lblPressureRearDriver, WHEEL_REAR_DRIVER, hs, unitsChanged);
+        updatePressure(this, this->ui_lblPressureTank, _TANK_INDEX, false, unitsChanged);
+
+        this->prevUnitsMode = currentUnitsMode;
     }
 }
 

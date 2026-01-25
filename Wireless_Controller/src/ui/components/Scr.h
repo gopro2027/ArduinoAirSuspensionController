@@ -49,6 +49,7 @@ public:
     lv_obj_t *ui_lblPressureRearPassenger;
     lv_obj_t *ui_lblPressureTank;
     int prevPressures[5];
+    int prevUnitsMode;
     lv_obj_t *mb_dialog;
     DialogData dialogDataYes;
     DialogData dialogDataNo;
