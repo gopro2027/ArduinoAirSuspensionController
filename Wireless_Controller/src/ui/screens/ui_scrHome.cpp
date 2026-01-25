@@ -14,6 +14,9 @@ static bool LANDSCAPE_MODE = false;  // Track if we're using horizontal layout
 static lv_point_precise_t ARROW_POINTS_UP[3];
 static lv_point_precise_t ARROW_POINTS_DOWN[3];
 
+// Precomputed divider points (relative to pill container origin)
+static lv_point_precise_t DIVIDER_POINTS[2];
+
 // Calculate pill dimensions based on available space
 static void calculatePillDimensions() {
     const int screenHeight = getScreenHeight();
@@ -57,6 +60,23 @@ static void calculatePillDimensions() {
         // Portrait: top=UP, bottom=DOWN
         fill_arrow_points(ARROW_POINTS_UP,   PILL_WIDTH / 2,       PILL_HEIGHT / 4,      -1);
         fill_arrow_points(ARROW_POINTS_DOWN, PILL_WIDTH / 2,       PILL_HEIGHT * 3 / 4,   1);
+    }
+
+    // Precompute center divider line points now that pill dimensions are known.
+    const int dividerMargin = scaledX(8);  // Scale the margin
+    if (LANDSCAPE_MODE) {
+        // Vertical divider in center
+        DIVIDER_POINTS[0].x = PILL_WIDTH / 2;
+        DIVIDER_POINTS[0].y = dividerMargin;
+        DIVIDER_POINTS[1].x = PILL_WIDTH / 2;
+        DIVIDER_POINTS[1].y = PILL_HEIGHT - dividerMargin;
+    } else {
+        // Horizontal divider in center
+        const int horizontalMargin = scaledX(10);
+        DIVIDER_POINTS[0].x = horizontalMargin;
+        DIVIDER_POINTS[0].y = PILL_HEIGHT / 2;
+        DIVIDER_POINTS[1].x = PILL_WIDTH - horizontalMargin;
+        DIVIDER_POINTS[1].y = PILL_HEIGHT / 2;
     }
 }
 
@@ -200,27 +220,9 @@ static PillButtons createUnifiedPill(lv_obj_t *parent)
         lv_obj_remove_flag(pill.btnDown, LV_OBJ_FLAG_SCROLLABLE);
     }
 
-    // Draw center divider line
-    lv_point_precise_t *divider_points = new lv_point_precise_t[2];  // Stack allocated - LVGL copies the data
-    const int dividerMargin = scaledX(8);  // Scale the margin
-    if (LANDSCAPE_MODE) {
-        // Vertical divider in center
-        divider_points[0].x = PILL_WIDTH / 2;
-        divider_points[0].y = dividerMargin;
-        divider_points[1].x = PILL_WIDTH / 2;
-        divider_points[1].y = PILL_HEIGHT - dividerMargin;
-    } else {
-        // Horizontal divider in center
-        const int horizontalMargin = scaledX(10);
-        divider_points[0].x = horizontalMargin;
-        divider_points[0].y = PILL_HEIGHT / 2;
-        divider_points[1].x = PILL_WIDTH - horizontalMargin;
-        divider_points[1].y = PILL_HEIGHT / 2;
-    }
-
     // Create divider line with current theme color
     lv_obj_t *divider = lv_line_create(pill.container);
-    lv_line_set_points(divider, divider_points, 2);
+    lv_line_set_points(divider, DIVIDER_POINTS, 2);
     lv_obj_set_style_line_width(divider, 1, 0);
     lv_obj_set_style_line_color(divider, lv_color_hex(THEME_COLOR_DARK), 0);
 
