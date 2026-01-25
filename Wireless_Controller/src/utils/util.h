@@ -133,6 +133,7 @@ void dialogLoop();
 
 unsigned int getValveControlValue();
 void setValveBit(int bit);
+void unsetValveBit(int bit);
 void closeValves();
 
 void setupPressureLabel(lv_obj_t *parent, lv_obj_t **label, int x, int y, lv_align_t align, const char *defaultText);

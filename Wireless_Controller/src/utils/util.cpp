@@ -462,6 +462,10 @@ void setValveBit(int bit)
 {
     valveControlValue = valveControlValue | (1 << bit);
 }
+void unsetValveBit(int bit)
+{
+    valveControlValue = valveControlValue & ~(1 << bit);
+}
 void closeValves()
 {
     valveControlValue = 0;
