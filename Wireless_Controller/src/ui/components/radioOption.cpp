@@ -51,3 +51,14 @@ RadioOption::RadioOption(lv_obj_t *parent, const char **text, int _size, option_
     // call last
     this->setSelectedOption(_selected);
 }
+
+RadioOption::~RadioOption()
+{
+    if (this->options) {
+        for (int i = 0; i < this->size; i++) {
+            delete this->options[i];
+        }
+        free(this->options);
+        this->options = nullptr;
+    }
+}

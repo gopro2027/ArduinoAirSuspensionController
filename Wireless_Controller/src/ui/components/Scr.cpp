@@ -405,3 +405,12 @@ void Scr::updateNavbarSelection(NavbarItem item)
         lv_obj_set_style_text_color(this->navbar_labels[i], lv_color_hex(labelColor), 0);
     }
 }
+
+void Scr::cleanup()
+{
+    // Base cleanup - delete Alert (common to all screens)
+    if (this->alert) {
+        delete this->alert;
+        this->alert = nullptr;
+    }
+}

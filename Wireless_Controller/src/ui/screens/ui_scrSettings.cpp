@@ -195,6 +195,10 @@ void ScrSettings::init()
 {
     Scr::init();
 
+    // Clear tracking vectors for fresh init
+    allOptions.clear();
+    allRadioOptions.clear();
+
     // Reset header style to pick up new scale values after rotation
     Option::resetHeaderStyle();
 
@@ -296,7 +300,7 @@ void ScrSettings::init()
     lv_obj_add_flag(game_controller_page, LV_OBJ_FLAG_HIDDEN);
     this->pages[1] = game_controller_page;
 
-    new Option(game_controller_page, OptionType::BUTTON, "Allow New Controller", {.STRING = test}, [](void *data)
+    allOptions.push_back(new Option(game_controller_page, OptionType::BUTTON, "Allow New Controller", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Confirm?",
             "After clicking this, OASMan will become pairable and the next controller to try to pair with OASMan will be allowed to pair and remembered by OASMan.\nMax saved devices is 20",
@@ -308,9 +312,9 @@ void ScrSettings::init()
                 showDialog("Connect your controller!", lv_color_hex(0xFFFF00));
             },
             []() -> void {}, false);
-    });
+    }));
 
-    new Option(game_controller_page, OptionType::BUTTON, "Un-pair All Controllers", {.STRING = test}, [](void *data)
+    allOptions.push_back(new Option(game_controller_page, OptionType::BUTTON, "Un-pair All Controllers", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Confirm?",
             "After clicking this, all paired game controllers will be removed from memory, and actively connected ones will be disconnected. This also resets your saved devices back to 0.",
@@ -322,9 +326,9 @@ void ScrSettings::init()
                 showDialog("Controllers forgotten!", lv_color_hex(0xFFFF00));
             },
             []() -> void {}, false);
-    });
+    }));
 
-    new Option(game_controller_page, OptionType::BUTTON, "Disconnect Controllers", {.STRING = test}, [](void *data)
+    allOptions.push_back(new Option(game_controller_page, OptionType::BUTTON, "Disconnect Controllers", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Confirm?",
             "Some devices may be difficult to disconnect on their own, this will disconnect them for you. Hint: Pressing the 'system' button on supporting controllers will disconnect them.",
@@ -336,7 +340,7 @@ void ScrSettings::init()
                 showDialog("Controllers disconnected!", lv_color_hex(0xFFFF00));
             },
             []() -> void {}, false);
-    });
+    }));
 
     // --- ML/AI page ---
     lv_obj_t *ml_ai_page = lv_obj_create(pages_container);
@@ -351,7 +355,7 @@ void ScrSettings::init()
     this->ui_aiReady = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Trained:", {.STRING = test});
     this->ui_aiEnabled = new Option(ml_ai_page, OptionType::ON_OFF, "Enabled:", {.STRING = test}, ai_status_handler);
 
-    new Option(ml_ai_page, OptionType::BUTTON, "Reset Learned Data", {.STRING = test}, [](void *data)
+    allOptions.push_back(new Option(ml_ai_page, OptionType::BUTTON, "Reset Learned Data", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Reset Learned AI data?", "Run this if ai has completed training and you are getting innacurate presets.",
             "Confirm", "Cancel",
@@ -362,7 +366,7 @@ void ScrSettings::init()
                 log_i("Pressed reset ai");
             },
             []() -> void {}, false);
-    });
+    }));
 
     // --- Basic settings page ---
     lv_obj_t *basic_settings_page = lv_obj_create(pages_container);
@@ -383,7 +387,7 @@ void ScrSettings::init()
     this->ui_safetymode = new Option(basic_settings_page, OptionType::ON_OFF, "Safety Mode", {.STRING = test}, safety_mode_handler);
 
 #if ENABLE_DETECT_PRESSURE_SENSORS_BUTTON
-    new Option(basic_settings_page, OptionType::BUTTON, "Detect Pressure Sensors", {.STRING = test}, [](void *data)
+    allOptions.push_back(new Option(basic_settings_page, OptionType::BUTTON, "Detect Pressure Sensors", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Detect Pressure Sensors?",
             "WARNING: YOUR CAR WILL BE AIRED OUT!!!! This routine will auto learn which pressure sensors go to which wheels.",
@@ -396,11 +400,11 @@ void ScrSettings::init()
                 showDialog("Doing detection routine", lv_color_hex(0xFFFF00));
             },
             []() -> void {}, false);
-    });
+    }));
 #endif
 
-    new Option(basic_settings_page, OptionType::HEADER, "Key Fob Settings", {.STRING = test});
-    new Option(basic_settings_page, OptionType::BUTTON, "Unlearn Fob", {.STRING = test}, [](void *data)
+    allOptions.push_back(new Option(basic_settings_page, OptionType::HEADER, "Key Fob Settings", {.STRING = test}));
+    allOptions.push_back(new Option(basic_settings_page, OptionType::BUTTON, "Unlearn Fob", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Unlearn key fob?",
             "WARNING: Your key fob will be unlearned. This requires you have an OASMan Key Fob Receiver installed (RX480E receiver)",
@@ -413,9 +417,9 @@ void ScrSettings::init()
                 showDialog("Unlearning key fob...", lv_color_hex(0xFFFF00));
             },
             []() -> void {}, false);
-    });
+    }));
 
-    new Option(basic_settings_page, OptionType::BUTTON, "Learn Fob", {.STRING = test}, [](void *data)
+    allOptions.push_back(new Option(basic_settings_page, OptionType::BUTTON, "Learn Fob", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Learn fob?",
             "This requires you have an OASMan Key Fob Receiver installed (RX480E receiver)",
@@ -428,7 +432,7 @@ void ScrSettings::init()
                 showDialog("Learning key fob mode...", lv_color_hex(0xFFFF00));
             },
             []() -> void {}, false);
-    });
+    }));
 
     this->ui_rfbuttonA = new Option(basic_settings_page, OptionType::SLIDER, "Button A Preset Number", {.INT = 0}, [](void *data)
     {
@@ -483,7 +487,7 @@ void ScrSettings::init()
 
     const char *unitsRadioText[2] = {"PSI", "Bar"};
     option_event_cb_t unitsRadioCB = [](void *data) { setunitsMode((int)data); };
-    new RadioOption(units_page, unitsRadioText, 2, unitsRadioCB, getunitsMode());
+    allRadioOptions.push_back(new RadioOption(units_page, unitsRadioText, 2, unitsRadioCB, getunitsMode()));
 
     // --- Controller Settings page ---
     lv_obj_t *controller_settings_page = lv_obj_create(pages_container);
@@ -494,11 +498,11 @@ void ScrSettings::init()
     lv_obj_add_flag(controller_settings_page, LV_OBJ_FLAG_HIDDEN);
     this->pages[6] = controller_settings_page;
 
-    new Option(controller_settings_page, OptionType::KEYBOARD_INPUT_NUMBER, "Dim Screen (Minutes)", {.INT = (int)getscreenDimTimeM()}, [](void *data)
+    allOptions.push_back(new Option(controller_settings_page, OptionType::KEYBOARD_INPUT_NUMBER, "Dim Screen (Minutes)", {.INT = (int)getscreenDimTimeM()}, [](void *data)
     {
         log_i("Pressed %i", ((uint32_t)data));
         setscreenDimTimeM((uint32_t)data);
-    });
+    }));
 
     this->ui_brightnessSlider = new Option(controller_settings_page, OptionType::SLIDER, "Brightness", {.INT = getbrightness()}, [](void *data)
     {
@@ -511,7 +515,7 @@ void ScrSettings::init()
     #if SUPPORTS_ROTATION == 1
     
     // Screen rotation setting - single button that toggles between Portrait/Landscape
-    new Option(controller_settings_page, OptionType::HEADER, "Screen Orientation", {.STRING = ""});
+    allOptions.push_back(new Option(controller_settings_page, OptionType::HEADER, "Screen Orientation", {.STRING = ""}));
 
     
     this->ui_screenRotation = new Option(controller_settings_page, OptionType::BUTTON,
@@ -532,7 +536,7 @@ void ScrSettings::init()
     #endif
 
     // Theme colors setting
-    new Option(controller_settings_page, OptionType::HEADER, "Theme Colors", {.STRING = ""});
+    allOptions.push_back(new Option(controller_settings_page, OptionType::HEADER, "Theme Colors", {.STRING = ""}));
 
     const char *themePresetText[3] = {"Ocean Blue", "Plump Purple", "Forest Green"};
     option_event_cb_t themePresetCB = [](void *data)
@@ -544,9 +548,9 @@ void ScrSettings::init()
     this->ui_themePreset = new RadioOption(controller_settings_page, themePresetText, 3, themePresetCB, getCurrentThemePreset() >= 0 ? getCurrentThemePreset() : 0);
 
     // Custom color picker button
-    new Option(controller_settings_page, OptionType::BUTTON, "Custom Color Picker", {.STRING = ""}, [](void *data) {
+    allOptions.push_back(new Option(controller_settings_page, OptionType::BUTTON, "Custom Color Picker", {.STRING = ""}, [](void *data) {
         scrSettings.showColorPickerModal();
-    });
+    }));
 
     // --- Config page ---
     lv_obj_t *config_page = lv_obj_create(pages_container);
@@ -566,7 +570,7 @@ void ScrSettings::init()
     });
     ((Option *)this->ui_config1)->setSliderParams(1, 256, true, LV_EVENT_RELEASED);
 
-    new Option(config_page, OptionType::KEYBOARD_INPUT_NUMBER, "Bluetooth Passkey (6 digits)", {.INT = (int)getblePasskey()}, [](void *data)
+    allOptions.push_back(new Option(config_page, OptionType::KEYBOARD_INPUT_NUMBER, "Bluetooth Passkey (6 digits)", {.INT = (int)getblePasskey()}, [](void *data)
     {
         log_i("Pressed %i", (data));
         setblePasskey((uint32_t)data);
@@ -577,7 +581,7 @@ void ScrSettings::init()
             authblacklist.clear();
         }
         alertValueUpdated();
-    });
+    }));
 
     this->ui_config2 = new Option(config_page, OptionType::KEYBOARD_INPUT_NUMBER, "Shutoff Time (Minutes)", {.INT = 0}, [](void *data)
     {
@@ -634,13 +638,13 @@ void ScrSettings::init()
     OptionValue wifiOptionValue;
     wifiOptionValue.STRING = buf;
 
-    new Option(wifi_update_page, OptionType::KEYBOARD_INPUT_TEXT, "SSID", wifiOptionValue, [](void *data)
+    allOptions.push_back(new Option(wifi_update_page, OptionType::KEYBOARD_INPUT_TEXT, "SSID", wifiOptionValue, [](void *data)
     {
         log_i("Typed %s", ((char *)data));
         setwifiSSID(((char *)data));
         alertValueUpdated();
         ((ScrSettings *)currentScr)->updateUpdateButtonVisbility();
-    });
+    }));
 
     strncpy(buf, getwifiPassword().c_str(), sizeof(buf));
     wifiOptionValue.STRING = buf;
@@ -652,6 +656,7 @@ void ScrSettings::init()
         alertValueUpdated();
         ((ScrSettings *)currentScr)->updateUpdateButtonVisbility();
     });
+    allOptions.push_back(pass);
 
     lv_textarea_set_password_mode(pass->rightHandObj, true);
     lv_textarea_set_password_show_time(pass->rightHandObj, 10000);
@@ -716,7 +721,7 @@ void ScrSettings::init()
 #else
     versionValue.STRING = "DEVELOPMENT";
 #endif
-    new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Version:", versionValue);
+    allOptions.push_back(new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Version:", versionValue));
     this->ui_mac = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Manifold:", {.STRING = ble_getMAC()});
     this->ui_volts = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Battery:", {.STRING = getBatteryVoltageString()});
 
@@ -803,4 +808,54 @@ void ScrSettings::loop()
         this->ui_rfbuttonC->setRightHandText(itoa(*util_configValues._rfButtonC() + 1, buf, 10));
         this->ui_rfbuttonD->setRightHandText(itoa(*util_configValues._rfButtonD() + 1, buf, 10));
     }
+}
+
+void ScrSettings::cleanup()
+{
+    // Call base class cleanup first (deletes Alert)
+    Scr::cleanup();
+
+    // Delete stored Option/RadioOption members
+    delete ui_s1;
+    delete ui_s2;
+    delete ui_s3;
+    delete ui_ebrakeStatus;
+    delete ui_rebootbutton;
+    delete ui_aiReady;
+    delete ui_aiPercentage;
+    delete ui_aiEnabled;
+    delete ui_maintainprssure;
+    delete ui_riseonstart;
+#if ENABLE_AIR_OUT_ON_SHUTOFF
+    delete ui_airoutonshutoff;
+#endif
+    delete ui_safetymode;
+    delete ui_heightsensormode;
+    delete ui_config1;
+    delete ui_config2;
+    delete ui_config3;
+    delete ui_config4;
+    delete ui_config5;
+    delete ui_config6;
+    delete (Option*)ui_updateBtn;
+    delete ui_manifoldUpdateStatus;
+    delete ui_mac;
+    delete ui_volts;
+    delete ui_brightnessSlider;
+    delete ui_screenRotation;
+    delete ui_themePreset;
+    delete ui_rfbuttonA;
+    delete ui_rfbuttonB;
+    delete ui_rfbuttonC;
+    delete ui_rfbuttonD;
+
+    // Delete vector-tracked objects (non-stored Options/RadioOptions)
+    for (Option* opt : allOptions) {
+        delete opt;
+    }
+    for (RadioOption* opt : allRadioOptions) {
+        delete opt;
+    }
+    allOptions.clear();
+    allRadioOptions.clear();
 }

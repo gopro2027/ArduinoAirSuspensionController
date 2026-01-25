@@ -27,7 +27,7 @@ typedef enum
 } SCREEN;
 
 void ui_init(void);
-void ui_reinit(void);  // Reinitialize all screens (for rotation changes)
+void ui_reinit(void);
 void changeScreen(SCREEN screen);
 void screenLoop();
 void safetyModeMsgBoxCheck();

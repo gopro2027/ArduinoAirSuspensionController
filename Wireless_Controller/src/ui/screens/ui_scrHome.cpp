@@ -110,7 +110,7 @@ static void pill_button_released_cb(lv_event_t *e) {
 // Draw arrow at specific position in pill
 static void draw_arrow_at(lv_obj_t *parent, int cx, int cy, int direction)
 {
-    lv_point_precise_t *line_points = new lv_point_precise_t[3];
+    lv_point_precise_t line_points[3];  // Stack allocated - LVGL copies the data
     line_points[0].x = -ARROW_SIZE + cx;
     line_points[0].y = -4 * direction + cy;
     line_points[1].x = cx;
@@ -202,7 +202,7 @@ static PillButtons createUnifiedPill(lv_obj_t *parent)
     }
 
     // Draw center divider line
-    lv_point_precise_t *divider_points = new lv_point_precise_t[2];
+    lv_point_precise_t divider_points[2];  // Stack allocated - LVGL copies the data
     const int dividerMargin = scaledX(8);  // Scale the margin
     if (LANDSCAPE_MODE) {
         // Vertical divider in center
@@ -359,4 +359,10 @@ void ScrHome::init(void)
 void ScrHome::loop()
 {
     Scr::loop();
+}
+
+void ScrHome::cleanup()
+{
+    Scr::cleanup();  // Base cleanup (Alert)
+    resetPillButtonCallbackState();  // Reset static counter for next init
 }

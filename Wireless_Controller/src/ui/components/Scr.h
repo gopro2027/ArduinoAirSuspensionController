@@ -59,6 +59,7 @@ public:
     Scr(bool showPressures, bool showAlertIcon = true, NavbarItem activeNav = NAV_HOME);
     virtual void init();
     virtual void loop();
+    virtual void cleanup();
     void updatePressureValues();
     void showMsgBox(const char *title, const char *text, const char *yesText, const char *noText, std::function<void()> onYes, std::function<void()> onNo, bool forceButtonPress);
     bool isMsgBoxDisplayed();

@@ -12,6 +12,7 @@ class ScrHome : public Scr
 public:
     void init();
     void loop();
+    void cleanup() override;
     lv_obj_t *icon_home_bg;
 
     // Pill container references (containers hold up/down buttons)

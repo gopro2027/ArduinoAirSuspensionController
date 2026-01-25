@@ -59,8 +59,13 @@ public:
     Option *ui_rfbuttonC;
     Option *ui_rfbuttonD;
 
+    // Track all Options/RadioOptions for cleanup
+    std::vector<Option*> allOptions;
+    std::vector<RadioOption*> allRadioOptions;
+
     void init();
     void loop();
+    void cleanup() override;
     void showColorPickerModal();
 };
 

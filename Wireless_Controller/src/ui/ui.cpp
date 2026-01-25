@@ -7,6 +7,8 @@
 #include "utils/touch_lib.h"
 #include "components/alert.h"
 
+LV_IMG_DECLARE(oasman_splash);
+
 SCREEN currentScreen = SCREEN_NONE;
 
 void ui_init(void)
@@ -38,45 +40,28 @@ void ui_reinit(void)
     // Store current screen to restore after reinit
     SCREEN prevScreen = currentScreen;
 
-    // Create a temporary blank screen and switch to it first
+    // Create OASMan splash screen
     lv_obj_t *tempScr = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(tempScr, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_color(tempScr, lv_color_black(), LV_PART_MAIN);
+    lv_obj_t *splashImg = lv_image_create(tempScr);
+    lv_image_set_src(splashImg, &oasman_splash);
+    lv_obj_set_align(splashImg, LV_ALIGN_CENTER);
     lv_screen_load(tempScr);
-
-    // Force refresh to ensure screen switch completes
     lv_timer_handler();
 
     // Reset state
     currentScreen = SCREEN_NONE;
-    currentScr = NULL;
+    currentScr = nullptr;
 
-    // Delete Alert objects first (C++ objects - LVGL objects are children of screen and will be deleted with it)
-    if (scrHome.alert) {
-        delete scrHome.alert;
-        scrHome.alert = NULL;
-    }
-    if (scrPresets.alert) {
-        delete scrPresets.alert;
-        scrPresets.alert = NULL;
-    }
-    if (scrSettings.alert) {
-        delete scrSettings.alert;
-        scrSettings.alert = NULL;
-    }
+    // Clean up each screen (virtual cleanup handles screen-specific objects)
+    scrHome.cleanup();
+    scrPresets.cleanup();
+    scrSettings.cleanup();
 
-    // Delete old screens safely
-    if (scrHome.scr) {
-        lv_obj_del(scrHome.scr);
-        scrHome.scr = NULL;
-    }
-    if (scrPresets.scr) {
-        lv_obj_del(scrPresets.scr);
-        scrPresets.scr = NULL;
-    }
-    if (scrSettings.scr) {
-        lv_obj_del(scrSettings.scr);
-        scrSettings.scr = NULL;
-    }
+    // Delete LVGL screen objects
+    if (scrHome.scr) { lv_obj_del(scrHome.scr); scrHome.scr = nullptr; }
+    if (scrPresets.scr) { lv_obj_del(scrPresets.scr); scrPresets.scr = nullptr; }
+    if (scrSettings.scr) { lv_obj_del(scrSettings.scr); scrSettings.scr = nullptr; }
 
     // Reinitialize screens
     scrHome.init();
@@ -91,7 +76,7 @@ void ui_reinit(void)
     // Restore to previous screen
     changeScreen(prevScreen);
 
-    // Delete temporary screen
+    // Delete temporary splash screen
     lv_obj_del(tempScr);
 }
 
