@@ -10,6 +10,10 @@ static int PILL_RADIUS = 30;   // Rounded ends
 static int ARROW_SIZE = 10;    // Arrow size
 static bool LANDSCAPE_MODE = false;  // Track if we're using horizontal layout
 
+// Precomputed arrow points (relative to pill container origin)
+static lv_point_precise_t ARROW_POINTS_UP[3];
+static lv_point_precise_t ARROW_POINTS_DOWN[3];
+
 // Calculate pill dimensions based on available space
 static void calculatePillDimensions() {
     const int screenHeight = getScreenHeight();
@@ -33,6 +37,26 @@ static void calculatePillDimensions() {
         PILL_WIDTH = scaledX(54);
         PILL_RADIUS = PILL_WIDTH / 2;
         ARROW_SIZE = scaledX(10);
+    }
+
+    // Precompute arrow point coordinates now that pill dimensions are known.
+    auto fill_arrow_points = [](lv_point_precise_t (&pts)[3], int cx, int cy, int direction) {
+        pts[0].x = -ARROW_SIZE + cx;
+        pts[0].y = -4 * direction + cy;
+        pts[1].x = cx;
+        pts[1].y = 5 * direction + cy;
+        pts[2].x = ARROW_SIZE + cx;
+        pts[2].y = -4 * direction + cy;
+    };
+
+    if (LANDSCAPE_MODE) {
+        // Landscape: left=UP, right=DOWN
+        fill_arrow_points(ARROW_POINTS_UP,   PILL_WIDTH / 4,       PILL_HEIGHT / 2, -1);
+        fill_arrow_points(ARROW_POINTS_DOWN, PILL_WIDTH * 3 / 4,   PILL_HEIGHT / 2,  1);
+    } else {
+        // Portrait: top=UP, bottom=DOWN
+        fill_arrow_points(ARROW_POINTS_UP,   PILL_WIDTH / 2,       PILL_HEIGHT / 4,      -1);
+        fill_arrow_points(ARROW_POINTS_DOWN, PILL_WIDTH / 2,       PILL_HEIGHT * 3 / 4,   1);
     }
 }
 
@@ -90,17 +114,9 @@ static void pill_button_released_cb(lv_event_t *e) {
     }
 }
 
-// Draw arrow at specific position in pill
-static void draw_arrow_at(lv_obj_t *parent, int cx, int cy, int direction)
+// Draw arrow using precomputed points
+static void draw_arrow_at(lv_obj_t *parent, lv_point_precise_t *line_points)
 {
-    lv_point_precise_t *line_points = new lv_point_precise_t[3];  // Stack allocated - LVGL copies the data
-    line_points[0].x = -ARROW_SIZE + cx;
-    line_points[0].y = -4 * direction + cy;
-    line_points[1].x = cx;
-    line_points[1].y = 5 * direction + cy;
-    line_points[2].x = ARROW_SIZE + cx;
-    line_points[2].y = -4 * direction + cy;
-
     // Create arrow line with current theme color (no static style to avoid stale colors)
     lv_obj_t *line = lv_line_create(parent);
     lv_line_set_points(line, line_points, 3);
@@ -209,15 +225,8 @@ static PillButtons createUnifiedPill(lv_obj_t *parent)
     lv_obj_set_style_line_color(divider, lv_color_hex(THEME_COLOR_DARK), 0);
 
     // Draw arrows
-    if (LANDSCAPE_MODE) {
-        // Left side = UP arrow, Right side = DOWN arrow
-        draw_arrow_at(pill.container, PILL_WIDTH / 4, PILL_HEIGHT / 2, -1);
-        draw_arrow_at(pill.container, PILL_WIDTH * 3 / 4, PILL_HEIGHT / 2, 1);
-    } else {
-        // Top = UP arrow, Bottom = DOWN arrow
-        draw_arrow_at(pill.container, PILL_WIDTH / 2, PILL_HEIGHT / 4, -1);
-        draw_arrow_at(pill.container, PILL_WIDTH / 2, PILL_HEIGHT * 3 / 4, 1);
-    }
+    draw_arrow_at(pill.container, ARROW_POINTS_UP);
+    draw_arrow_at(pill.container, ARROW_POINTS_DOWN);
 
     return pill;
 }
