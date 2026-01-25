@@ -4,6 +4,7 @@
 // Project name: SquareLine_Project
 
 #include "ui.h"
+#include "waveshare/board_driver_util.h"
 #include "utils/touch_lib.h"
 #include "components/alert.h"
 
@@ -41,13 +42,10 @@ void ui_reinit(void)
     SCREEN prevScreen = currentScreen;
 
     // Create OASMan splash screen
-    lv_obj_t *tempScr = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(tempScr, lv_color_black(), LV_PART_MAIN);
-    lv_obj_t *splashImg = lv_image_create(tempScr);
-    lv_image_set_src(splashImg, &oasman_splash);
-    lv_obj_set_align(splashImg, LV_ALIGN_CENTER);
-    lv_screen_load(tempScr);
-    lv_timer_handler();
+    set_brightness(0);// turn off brightness to not display gross artifacts while the logo is rendering
+    delay(10); // not sure if this is needed, but just in case
+
+    lv_obj_t *splashScr = applyRotationAndShowSplashScreen();
 
     // Reset state
     currentScreen = SCREEN_NONE;
@@ -76,8 +74,7 @@ void ui_reinit(void)
     // Restore to previous screen
     changeScreen(prevScreen);
 
-    // Delete temporary splash screen
-    lv_obj_del(tempScr);
+    lv_obj_del(splashScr);
 }
 
 void changeScreen(SCREEN screen)
