@@ -6,12 +6,6 @@ void RadioOption::setSelectedOption(int _selected, bool callOnSelect)
     {
         return;
     }
-    // Allow -1 to deselect all (for custom colors)
-    if (_selected < -1)
-    {
-        log_i("ERROR OPTION INDEX NOT FOUND");
-        return;
-    }
     this->selected = _selected;
     for (int i = 0; i < this->size; i++)
     {
