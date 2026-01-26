@@ -12,7 +12,6 @@
 #include "alert.h"
 
 class Alert;
-struct SimplePoint;
 
 struct DialogData
 {

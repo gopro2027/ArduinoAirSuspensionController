@@ -52,59 +52,10 @@ void scale_img(lv_obj_t *obj, lv_image_dsc_t img);
 class Scr;
 class Option;
 
-struct SimplePoint
-{
-    double x, y;
-};
-
-struct SimpleRect
+struct SimpleRect // used in ui_scrPresets.cpp.
 {
     double x, y, w, h;
 };
-
-struct CenterRect
-{
-    double cx, cy, w, h;
-};
-
-int sr_contains(SimpleRect r, SimplePoint p);
-
-int cr_contains(CenterRect cr, SimplePoint p);
-
-// Dynamic arrow button dimensions
-float getArrowButtonWidth();
-float getArrowButtonHeight();
-
-// Dynamic touch area functions (recalculate on each call for rotation support)
-// first column (left)
-CenterRect get_ctr_row0col0up();
-CenterRect get_ctr_row0col0down();
-CenterRect get_ctr_row1col0up();
-CenterRect get_ctr_row1col0down();
-
-// second column (center)
-CenterRect get_ctr_row0col1up();
-CenterRect get_ctr_row0col1down();
-CenterRect get_ctr_row1col1up();
-CenterRect get_ctr_row1col1down();
-
-// third column (right)
-CenterRect get_ctr_row0col2up();
-CenterRect get_ctr_row0col2down();
-CenterRect get_ctr_row1col2up();
-CenterRect get_ctr_row1col2down();
-
-// bottom nav
-SimpleRect get_navbarbtn_home();
-SimpleRect get_navbarbtn_presets();
-SimpleRect get_navbarbtn_settings();
-
-// presets buttons
-CenterRect get_ctr_preset(int num);
-
-// preset save and load
-SimpleRect get_preset_save();
-SimpleRect get_preset_load();
 
 void runNextFrame(std::function<void()> function);
 void handleFunctionRunOnNextFrame();
