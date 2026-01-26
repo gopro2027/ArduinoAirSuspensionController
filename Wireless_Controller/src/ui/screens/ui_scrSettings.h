@@ -47,7 +47,7 @@ public:
     Option *ui_config4;  // Compressor Off PSI (textarea)
     Option *ui_config5;  // Pressure Sensor Rating PSI (textarea)
     Option *ui_config6;  // Bag Volume Percentage (slider)
-    void *ui_updateBtn;  // Update button (Option*)
+    Option *ui_updateBtn;  // Update button (Option*)
     Option *ui_manifoldUpdateStatus;  // Manifold status (text with value)
     Option *ui_mac;  // MAC address (text with value)
     Option *ui_volts;  // Battery voltage (text with value)

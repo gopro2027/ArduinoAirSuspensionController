@@ -183,11 +183,11 @@ void ScrSettings::updateUpdateButtonVisbility()
 {
     if (getwifiSSID().length() > 0 && getwifiPassword().length() > 0)
     {
-        lv_obj_remove_flag(((Option *)this->ui_updateBtn)->root, (lv_obj_flag_t)(LV_OBJ_FLAG_HIDDEN));
+        lv_obj_remove_flag(this->ui_updateBtn->root, (lv_obj_flag_t)(LV_OBJ_FLAG_HIDDEN));
     }
     else
     {
-        lv_obj_add_flag(((Option *)this->ui_updateBtn)->root, (lv_obj_flag_t)(LV_OBJ_FLAG_HIDDEN));
+        lv_obj_add_flag(this->ui_updateBtn->root, (lv_obj_flag_t)(LV_OBJ_FLAG_HIDDEN));
     }
 }
 
@@ -660,7 +660,7 @@ void ScrSettings::init()
     lv_textarea_set_password_mode(pass->rightHandObj, true);
     lv_textarea_set_password_show_time(pass->rightHandObj, 10000);
 
-    this->ui_updateBtn = (Option *)new Option(wifi_update_page, OptionType::BUTTON, "Start Software Update", {.STRING = test}, [](void *data)
+    this->ui_updateBtn = new Option(wifi_update_page, OptionType::BUTTON, "Start Software Update", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Begin update wifi service?",
             "This will use the wifi credentials you entered above to download and install the latest firmware update on both the manifold and controller. If an issue occurs, please go to http://oasman.dev and flash manually. Continue?",
@@ -836,7 +836,7 @@ void ScrSettings::cleanup()
     delete ui_config4;
     delete ui_config5;
     delete ui_config6;
-    delete (Option*)ui_updateBtn;
+    delete ui_updateBtn;
     delete ui_manifoldUpdateStatus;
     delete ui_mac;
     delete ui_volts;
