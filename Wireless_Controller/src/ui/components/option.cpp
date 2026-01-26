@@ -63,6 +63,10 @@ void ui_clicked_button(lv_event_t *e)
 Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue value, option_event_cb_t _event_cb, void *_extraEventClickData)
 {
     this->text = NULL;
+    this->root = NULL;
+    this->rightHandObj = NULL;
+    this->ui_switch = NULL;
+    this->ui_slider_value_text = NULL;
     this->event_cb = NULL;
     this->extraEventClickData = _extraEventClickData;
     this->type = type;
@@ -222,6 +226,26 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     {
         this->event_cb = _event_cb;
     }
+}
+
+Option::~Option()
+{
+    // Option owns the LVGL widget tree rooted at `root`.
+    // Deleting `root` also deletes all children (labels, switches, sliders, etc.).
+    // This prevents LVGL from later firing events with `user_data == this`.
+    if (this->root != NULL)
+    {
+        lv_obj_del(this->root); // Still here because if we happen to decide to delete an option by ittself this is needed. Otherwise, whenever we delete the screen this is actually already done automatically, so it currently has no effect.
+        this->root = NULL;
+    }
+
+    // Clear other pointers for safety (not strictly required).
+    this->text = NULL;
+    this->rightHandObj = NULL;
+    this->ui_switch = NULL;
+    this->ui_slider_value_text = NULL;
+    this->event_cb = NULL;
+    this->extraEventClickData = NULL;
 }
 
 void Option::setSliderParams(int min, int max, bool display_above_value, lv_event_code_t trigger_event)

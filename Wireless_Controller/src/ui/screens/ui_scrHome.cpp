@@ -237,7 +237,6 @@ static PillButtons createUnifiedPill(lv_obj_t *parent)
 static void setupPillButtonCallbacks(PillButtons &pill,
                                      int valveBitsUp[], int valveBitsUpCount,
                                      int valveBitsDown[], int valveBitsDownCount) {
-        
     // Add event callbacks - LVGL handles animations automatically
     for (int i = 0; i < valveBitsUpCount; i++) {
         lv_obj_add_event_cb(pill.btnUp, pill_button_pressed_cb, LV_EVENT_PRESSED, (void*)valveBitsUp[i]);

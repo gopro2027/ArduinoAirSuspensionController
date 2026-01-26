@@ -60,6 +60,7 @@ public:
     lv_event_code_t slider_trigger_event = LV_EVENT_VALUE_CHANGED; // LV_EVENT_RELEASED
 
     Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue value = VALUE_ZERO, option_event_cb_t _event_cb = NULL, void *_extraEventClickData = NULL);
+    ~Option();
     void setRightHandText(const char *str);
     void setSliderParams(int min, int max, bool display_above_value, lv_event_code_t trigger_event = LV_EVENT_VALUE_CHANGED);
     void setBooleanValue(bool value, bool netSend = false);
