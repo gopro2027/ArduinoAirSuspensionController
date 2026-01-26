@@ -213,163 +213,103 @@ void ScrPresets::init()
     // Different layout for landscape vs portrait
     const bool landscape = isLandscape();
 
+    // --- Preset buttons container  ---
+    this->presetButtonsContainer = lv_obj_create(this->scr);
+    lv_obj_remove_style_all(this->presetButtonsContainer);
+    lv_obj_set_flex_flow(this->presetButtonsContainer, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(this->presetButtonsContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(this->presetButtonsContainer, LV_OBJ_FLAG_SCROLLABLE);
+    
+    // circular preset buttons
+    this->btnPreset1 = createPresetButton(this->presetButtonsContainer, "1", 1);
+    this->btnPreset2 = createPresetButton(this->presetButtonsContainer, "2", 2);
+    this->btnPreset3 = createPresetButton(this->presetButtonsContainer, "3", 3);
+    this->btnPreset4 = createPresetButton(this->presetButtonsContainer, "4", 4);
+    this->btnPreset5 = createPresetButton(this->presetButtonsContainer, "5", 5);
+
+    // --- Save/Load buttons container ---
+    lv_obj_t *actionContainer = lv_obj_create(this->scr);
+    lv_obj_remove_style_all(actionContainer);
+    // Save button
+    this->btnSave = lv_btn_create(actionContainer);
+    // Load button
+    this->btnLoad = lv_btn_create(actionContainer);
+
     if (landscape) {
         // LANDSCAPE LAYOUT: Preset buttons at bottom, Save/Load on left side vertically
-        // This keeps the car image fully visible in the center
 
-        // --- Preset buttons container (bottom center) ---
-        this->presetButtonsContainer = lv_obj_create(this->scr);
-        lv_obj_remove_style_all(this->presetButtonsContainer);
         // Leave space on left for save/load buttons
         const int presetsWidth = screenWidth - scaledX(100);  // 100px for save/load on left
         lv_obj_set_size(this->presetButtonsContainer, presetsWidth, presetAreaHeight);
         lv_obj_set_pos(this->presetButtonsContainer, scaledX(100), presetAreaY);  // Offset to the right
-        lv_obj_set_flex_flow(this->presetButtonsContainer, LV_FLEX_FLOW_ROW);
-        lv_obj_set_flex_align(this->presetButtonsContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        lv_obj_remove_flag(this->presetButtonsContainer, LV_OBJ_FLAG_SCROLLABLE);
 
-        // circular preset buttons
-        this->btnPreset1 = createPresetButton(this->presetButtonsContainer, "1", 1);
-        this->btnPreset2 = createPresetButton(this->presetButtonsContainer, "2", 2);
-        this->btnPreset3 = createPresetButton(this->presetButtonsContainer, "3", 3);
-        this->btnPreset4 = createPresetButton(this->presetButtonsContainer, "4", 4);
-        this->btnPreset5 = createPresetButton(this->presetButtonsContainer, "5", 5);
-
-        // --- Save/Load buttons container (left side, vertical stack) ---
-        lv_obj_t *actionContainer = lv_obj_create(this->scr);
-        lv_obj_remove_style_all(actionContainer);
         const int actionWidth = scaledX(85);
         const int actionHeight = scaledY(80);
         const int actionY = screenHeight - navbarHeight - actionHeight - scaledY(8);
         lv_obj_set_size(actionContainer, actionWidth, actionHeight);
         lv_obj_set_pos(actionContainer, scaledX(8), actionY);
         lv_obj_set_flex_flow(actionContainer, LV_FLEX_FLOW_COLUMN);
-        lv_obj_set_flex_align(actionContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        lv_obj_remove_flag(actionContainer, LV_OBJ_FLAG_SCROLLABLE);
-
-        // Save button
-        this->btnSave = lv_btn_create(actionContainer);
         lv_obj_set_size(this->btnSave, scaledX(75), scaledY(32));
-        lv_obj_set_style_bg_color(this->btnSave, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN);
-        lv_obj_set_style_radius(this->btnSave, 16, LV_PART_MAIN);
-        lv_obj_set_style_border_width(this->btnSave, 1, LV_PART_MAIN);
-        lv_obj_set_style_border_color(this->btnSave, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN);
-        lv_obj_t *saveLabel = lv_label_create(this->btnSave);
-        lv_label_set_text(saveLabel, "Save");
-        lv_obj_set_style_text_color(saveLabel, lv_color_hex(0xAAAAAA), LV_PART_MAIN);
-        lv_obj_center(saveLabel);
-        lv_obj_add_event_cb(this->btnSave, [](lv_event_t *e) {
-            if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
-                static char buf[40];
-                snprintf(buf, sizeof(buf), "Save current height to preset %i?", currentPreset);
-                scrPresets.showMsgBox(buf, NULL, "Confirm", "Cancel", []() {
-                    Serial.println("save preset");
-                    SaveCurrentPressuresToProfilePacket pkt(currentPreset - 1);
-                    sendRestPacket(&pkt);
-                    showDialog("Saved Preset!", lv_color_hex(THEME_COLOR_LIGHT));
-                    requestPreset();
-                }, []() {}, false);
-            }
-        }, LV_EVENT_CLICKED, NULL);
-
-        // Load button
-        this->btnLoad = lv_btn_create(actionContainer);
         lv_obj_set_size(this->btnLoad, scaledX(75), scaledY(32));
-        lv_obj_set_style_bg_color(this->btnLoad, lv_color_hex(PRESET_BTN_ACTIVE_COLOR), LV_PART_MAIN);
-        lv_obj_set_style_radius(this->btnLoad, 16, LV_PART_MAIN);
-        lv_obj_t *loadLabel = lv_label_create(this->btnLoad);
-        lv_label_set_text(loadLabel, "Load");
-        lv_obj_set_style_text_color(loadLabel, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-        lv_obj_center(loadLabel);
-        lv_obj_add_event_cb(this->btnLoad, [](lv_event_t *e) {
-            if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
-                if (currentPreset == 1) {
-                    scrPresets.showMsgBox("Air out?", "Preset 1 is typically air out. Please verify your car is not moving.", "Confirm", "Cancel", []() {
-                        loadSelectedPreset();
-                    }, []() {}, false);
-                } else {
-                    loadSelectedPreset();
-                }
-            }
-        }, LV_EVENT_CLICKED, NULL);
 
     } else {
         // PORTRAIT LAYOUT: Original stacked layout
-
-        // --- Preset buttons container using flexbox ---
-        this->presetButtonsContainer = lv_obj_create(this->scr);
-        lv_obj_remove_style_all(this->presetButtonsContainer);
         lv_obj_set_size(this->presetButtonsContainer, screenWidth, presetAreaHeight);
         lv_obj_set_pos(this->presetButtonsContainer, 0, presetAreaY);
-        lv_obj_set_flex_flow(this->presetButtonsContainer, LV_FLEX_FLOW_ROW);
-        lv_obj_set_flex_align(this->presetButtonsContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        lv_obj_remove_flag(this->presetButtonsContainer, LV_OBJ_FLAG_SCROLLABLE);
 
-        // circular preset buttons
-        this->btnPreset1 = createPresetButton(this->presetButtonsContainer, "1", 1);
-        this->btnPreset2 = createPresetButton(this->presetButtonsContainer, "2", 2);
-        this->btnPreset3 = createPresetButton(this->presetButtonsContainer, "3", 3);
-        this->btnPreset4 = createPresetButton(this->presetButtonsContainer, "4", 4);
-        this->btnPreset5 = createPresetButton(this->presetButtonsContainer, "5", 5);
-
-        // --- Save/Load buttons container ---
         const int actionAreaHeight = scaledY(40);
         const int actionAreaY = presetAreaY - actionAreaHeight - scaledY(5);
-
-        lv_obj_t *actionContainer = lv_obj_create(this->scr);
-        lv_obj_remove_style_all(actionContainer);
         lv_obj_set_size(actionContainer, screenWidth, actionAreaHeight);
         lv_obj_set_pos(actionContainer, 0, actionAreaY);
+
         lv_obj_set_flex_flow(actionContainer, LV_FLEX_FLOW_ROW);
-        lv_obj_set_flex_align(actionContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        lv_obj_remove_flag(actionContainer, LV_OBJ_FLAG_SCROLLABLE);
-
-        // Save button
-        this->btnSave = lv_btn_create(actionContainer);
         lv_obj_set_size(this->btnSave, scaledX(90), scaledY(32));
-        lv_obj_set_style_bg_color(this->btnSave, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN);
-        lv_obj_set_style_radius(this->btnSave, 16, LV_PART_MAIN);
-        lv_obj_set_style_border_width(this->btnSave, 1, LV_PART_MAIN);
-        lv_obj_set_style_border_color(this->btnSave, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN);
-        lv_obj_t *saveLabel = lv_label_create(this->btnSave);
-        lv_label_set_text(saveLabel, "Save");
-        lv_obj_set_style_text_color(saveLabel, lv_color_hex(0xAAAAAA), LV_PART_MAIN);
-        lv_obj_center(saveLabel);
-        lv_obj_add_event_cb(this->btnSave, [](lv_event_t *e) {
-            if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
-                static char buf[40];
-                snprintf(buf, sizeof(buf), "Save current height to preset %i?", currentPreset);
-                scrPresets.showMsgBox(buf, NULL, "Confirm", "Cancel", []() {
-                    Serial.println("save preset");
-                    SaveCurrentPressuresToProfilePacket pkt(currentPreset - 1);
-                    sendRestPacket(&pkt);
-                    showDialog("Saved Preset!", lv_color_hex(THEME_COLOR_LIGHT));
-                    requestPreset();
-                }, []() {}, false);
-            }
-        }, LV_EVENT_CLICKED, NULL);
-
-        // Load button
-        this->btnLoad = lv_btn_create(actionContainer);
         lv_obj_set_size(this->btnLoad, scaledX(90), scaledY(32));
-        lv_obj_set_style_bg_color(this->btnLoad, lv_color_hex(PRESET_BTN_ACTIVE_COLOR), LV_PART_MAIN);
-        lv_obj_set_style_radius(this->btnLoad, 16, LV_PART_MAIN);
-        lv_obj_t *loadLabel = lv_label_create(this->btnLoad);
-        lv_label_set_text(loadLabel, "Load");
-        lv_obj_set_style_text_color(loadLabel, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-        lv_obj_center(loadLabel);
-        lv_obj_add_event_cb(this->btnLoad, [](lv_event_t *e) {
-            if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
-                if (currentPreset == 1) {
-                    scrPresets.showMsgBox("Air out?", "Preset 1 is typically air out. Please verify your car is not moving.", "Confirm", "Cancel", []() {
-                        loadSelectedPreset();
-                    }, []() {}, false);
-                } else {
-                    loadSelectedPreset();
-                }
-            }
-        }, LV_EVENT_CLICKED, NULL);
+
     }
+
+    lv_obj_set_flex_align(actionContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_remove_flag(actionContainer, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_set_style_bg_color(this->btnSave, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN);
+    lv_obj_set_style_radius(this->btnSave, 16, LV_PART_MAIN);
+    lv_obj_set_style_border_width(this->btnSave, 1, LV_PART_MAIN);
+    lv_obj_set_style_border_color(this->btnSave, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN);
+    lv_obj_t *saveLabel = lv_label_create(this->btnSave);
+    lv_label_set_text(saveLabel, "Save");
+    lv_obj_set_style_text_color(saveLabel, lv_color_hex(0xAAAAAA), LV_PART_MAIN);
+    lv_obj_center(saveLabel);
+    lv_obj_add_event_cb(this->btnSave, [](lv_event_t *e) {
+        if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
+            static char buf[40];
+            snprintf(buf, sizeof(buf), "Save current height to preset %i?", currentPreset);
+            scrPresets.showMsgBox(buf, NULL, "Confirm", "Cancel", []() {
+                Serial.println("save preset");
+                SaveCurrentPressuresToProfilePacket pkt(currentPreset - 1);
+                sendRestPacket(&pkt);
+                showDialog("Saved Preset!", lv_color_hex(THEME_COLOR_LIGHT));
+                requestPreset();
+            }, []() {}, false);
+        }
+    }, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_set_style_bg_color(this->btnLoad, lv_color_hex(PRESET_BTN_ACTIVE_COLOR), LV_PART_MAIN);
+    lv_obj_set_style_radius(this->btnLoad, 16, LV_PART_MAIN);
+    lv_obj_t *loadLabel = lv_label_create(this->btnLoad);
+    lv_label_set_text(loadLabel, "Load");
+    lv_obj_set_style_text_color(loadLabel, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+    lv_obj_center(loadLabel);
+    lv_obj_add_event_cb(this->btnLoad, [](lv_event_t *e) {
+        if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
+            if (currentPreset == 1) {
+                scrPresets.showMsgBox("Air out?", "Preset 1 is typically air out. Please verify your car is not moving.", "Confirm", "Cancel", []() {
+                    loadSelectedPreset();
+                }, []() {}, false);
+            } else {
+                loadSelectedPreset();
+            }
+        }
+    }, LV_EVENT_CLICKED, NULL);
 
     // Bring overlays to foreground
     if (this->navbar_container) lv_obj_move_foreground(this->navbar_container);
