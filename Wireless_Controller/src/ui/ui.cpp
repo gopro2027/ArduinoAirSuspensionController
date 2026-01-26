@@ -4,26 +4,77 @@
 // Project name: SquareLine_Project
 
 #include "ui.h"
+#include "waveshare/board_driver_util.h"
 #include "utils/touch_lib.h"
+#include "components/alert.h"
+
+LV_IMG_DECLARE(oasman_splash);
 
 SCREEN currentScreen = SCREEN_NONE;
 
 void ui_init(void)
 {
-    lv_disp_t *dispp = lv_display_get_default();
+    // Get reference to temporary screen from board_drivers_init (if any)
+    lv_obj_t *tempScr = lv_screen_active();
+
+    lv_display_t *dispp = lv_display_get_default();
     lv_theme_t *theme = lv_theme_default_init(dispp, lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_RED),
                                               false, LV_FONT_DEFAULT);
-    lv_disp_set_theme(dispp, theme);
-    ui_scrMain_screen_init();
+    lv_display_set_theme(dispp, theme);
     scrHome.init();
     scrPresets.init();
     scrSettings.init();
-    scrMain.ui____initial_actions0 = lv_obj_create(NULL);
     changeScreen(SCREEN_HOME);
+
+    // Delete the temporary screen that was used during splash/init
+    if (tempScr != NULL && tempScr != scrHome.scr) {
+        lv_obj_del(tempScr);
+    }
 
     screens[0] = &scrHome;
     screens[1] = &scrPresets;
     screens[2] = &scrSettings;
+}
+
+void ui_reinit(void)
+{
+    // Store current screen to restore after reinit
+    SCREEN prevScreen = currentScreen;
+
+    // Create OASMan splash screen
+    set_brightness(0);// turn off brightness to not display gross artifacts while the logo is rendering
+    delay(10); // not sure if this is needed, but just in case
+
+    lv_obj_t *splashScr = applyRotationAndShowSplashScreen();
+
+    // Reset state
+    currentScreen = SCREEN_NONE;
+    currentScr = nullptr;
+
+    // Clean up each screen (virtual cleanup handles screen-specific objects)
+    scrHome.cleanup();
+    scrPresets.cleanup();
+    scrSettings.cleanup();
+
+    // Delete LVGL screen objects
+    if (scrHome.scr) { lv_obj_del(scrHome.scr); scrHome.scr = nullptr; }
+    if (scrPresets.scr) { lv_obj_del(scrPresets.scr); scrPresets.scr = nullptr; }
+    if (scrSettings.scr) { lv_obj_del(scrSettings.scr); scrSettings.scr = nullptr; }
+
+    // Reinitialize screens
+    scrHome.init();
+    scrPresets.init();
+    scrSettings.init();
+
+    // Update screens array
+    screens[0] = &scrHome;
+    screens[1] = &scrPresets;
+    screens[2] = &scrSettings;
+
+    // Restore to previous screen
+    changeScreen(prevScreen);
+
+    lv_obj_del(splashScr);
 }
 
 void changeScreen(SCREEN screen)
@@ -38,21 +89,24 @@ void changeScreen(SCREEN screen)
     currentScreen = screen;
     switch (screen)
     {
-    case SCREEN_MAIN:
-        lv_disp_load_scr(scrMain.ui_scrMain);
-        break;
     case SCREEN_HOME:
-        lv_disp_load_scr(scrHome.scr);
+        lv_screen_load(scrHome.scr);
         currentScr = &scrHome;
         break;
     case SCREEN_PRESETS:
-        lv_disp_load_scr(scrPresets.scr);
+        lv_screen_load(scrPresets.scr);
         currentScr = &scrPresets;
         break;
     case SCREEN_SETTINGS:
-        lv_disp_load_scr(scrSettings.scr);
+        lv_screen_load(scrSettings.scr);
         currentScr = &scrSettings;
         break;
+    }
+
+    // Sync alert icon state from global dismissed state when changing screens
+    if (currentScr != NULL && currentScr->alert != NULL)
+    {
+        currentScr->alert->syncFromGlobal();
     }
 
     screenLoop(); // run one screen loop of the new screen to update things like the alert before it gets shown on screen
@@ -84,9 +138,6 @@ void screenLoop()
 {
     switch (currentScreen)
     {
-    case SCREEN_MAIN:
-        ui_scrMain_loop();
-        break;
     case SCREEN_HOME:
         scrHome.loop();
         break;

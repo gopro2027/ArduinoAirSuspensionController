@@ -1,6 +1,9 @@
 #include "Display_ST7789.h"
 
 SPIClass LCDspi(FSPI);
+
+// Current rotation state for LCD_SetCursor offset adjustments
+static uint8_t lcd_rotation = 0;
 void SPI_Init()
 {
   LCDspi.begin(EXAMPLE_PIN_NUM_SCLK, EXAMPLE_PIN_NUM_MISO, EXAMPLE_PIN_NUM_MOSI);
@@ -163,37 +166,26 @@ parameter :
 ******************************************************************************/
 void LCD_SetCursor(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yend)
 {
-  if (HORIZONTAL)
-  {
-    // set the X coordinates
-    LCD_WriteCommand(0x2A);
-    LCD_WriteData(Xstart >> 8);
-    LCD_WriteData(Xstart + Offset_X);
-    LCD_WriteData(Xend >> 8);
-    LCD_WriteData(Xend + Offset_X);
+  // Calculate offsets based on current rotation
+  // ST7789 RAM is 240x320, offsets swap when using MADCTL rotation for landscape
+  uint16_t x_offset = (lcd_rotation == 1) ? Offset_Y : Offset_X;
+  uint16_t y_offset = (lcd_rotation == 1) ? Offset_X : Offset_Y;
 
-    // set the Y coordinates
-    LCD_WriteCommand(0x2B);
-    LCD_WriteData(Ystart >> 8);
-    LCD_WriteData(Ystart + Offset_Y);
-    LCD_WriteData(Yend >> 8);
-    LCD_WriteData(Yend + Offset_Y);
-  }
-  else
-  {
-    // set the X coordinates
-    LCD_WriteCommand(0x2A);
-    LCD_WriteData(Ystart >> 8);
-    LCD_WriteData(Ystart + Offset_Y);
-    LCD_WriteData(Yend >> 8);
-    LCD_WriteData(Yend + Offset_Y);
-    // set the Y coordinates
-    LCD_WriteCommand(0x2B);
-    LCD_WriteData(Xstart >> 8);
-    LCD_WriteData(Xstart + Offset_X);
-    LCD_WriteData(Xend >> 8);
-    LCD_WriteData(Xend + Offset_X);
-  }
+  // Column address set (0x2A)
+  LCD_WriteCommand(0x2A);
+  LCD_WriteData((Xstart + x_offset) >> 8);
+  LCD_WriteData((Xstart + x_offset) & 0xFF);
+  LCD_WriteData((Xend + x_offset) >> 8);
+  LCD_WriteData((Xend + x_offset) & 0xFF);
+
+  // Row address set (0x2B)
+  LCD_WriteCommand(0x2B);
+  LCD_WriteData((Ystart + y_offset) >> 8);
+  LCD_WriteData((Ystart + y_offset) & 0xFF);
+  LCD_WriteData((Yend + y_offset) >> 8);
+  LCD_WriteData((Yend + y_offset) & 0xFF);
+
+  // Write to RAM
   LCD_WriteCommand(0x2C);
 }
 /******************************************************************************
@@ -247,5 +239,29 @@ void Set_Backlight(uint8_t Light)
 #else
     ledcWrite(PWM_CHANNEL_BCKL, Backlight);
 #endif
+  }
+}
+
+/******************************************************************************
+function: Set LCD rotation using MADCTL register (0x36)
+parameter:
+    rotation: 0 = Portrait, 1 = Landscape (90°)
+******************************************************************************/
+void LCD_SetRotation(uint8_t rotation)
+{
+  lcd_rotation = rotation;
+
+  LCD_WriteCommand(0x36); // MADCTL
+  switch (rotation)
+  {
+  case 0: // Portrait (240x320)
+    LCD_WriteData(0x00);
+    break;
+  case 1: // Landscape (320x240) - 90 degrees
+    LCD_WriteData(0x60); // MX + MV
+    break;
+  default:
+    LCD_WriteData(0x00);
+    break;
   }
 }

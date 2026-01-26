@@ -47,19 +47,26 @@ public:
     Option *ui_config4;  // Compressor Off PSI (textarea)
     Option *ui_config5;  // Pressure Sensor Rating PSI (textarea)
     Option *ui_config6;  // Bag Volume Percentage (slider)
-    void *ui_updateBtn;  // Update button (Option*)
+    Option *ui_updateBtn;  // Update button (Option*)
     Option *ui_manifoldUpdateStatus;  // Manifold status (text with value)
     Option *ui_mac;  // MAC address (text with value)
     Option *ui_volts;  // Battery voltage (text with value)
     Option *ui_brightnessSlider;  // Brightness (slider)
+    Option *ui_screenRotation;  // Screen rotation toggle button
+    RadioOption *ui_themePreset;  // Theme preset selection (radio)
     Option *ui_rfbuttonA;
     Option *ui_rfbuttonB;
     Option *ui_rfbuttonC;
     Option *ui_rfbuttonD;
 
+    // Track all Options/RadioOptions for cleanup
+    std::vector<Option*> allOptions;
+    std::vector<RadioOption*> allRadioOptions;
+
     void init();
-    void runTouchInput(SimplePoint pos, bool down);
     void loop();
+    void cleanup() override;
+    void showColorPickerModal();
 };
 
 extern ScrSettings scrSettings;

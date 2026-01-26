@@ -9,3 +9,5 @@
 // power key and battery definitions
 #include "files/PWR_Key.h"
 #include "files/BAT_Driver.h"
+
+#define SUPPORTS_ROTATION 1

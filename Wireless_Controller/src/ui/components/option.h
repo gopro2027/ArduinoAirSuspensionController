@@ -45,11 +45,9 @@ class Option
 {
 public:
     lv_obj_t *root;
-    lv_obj_t *bar;
     lv_obj_t *text;
     lv_obj_t *rightHandObj;
-    lv_obj_t *ui_imgOn;
-    lv_obj_t *ui_imgOff;
+    lv_obj_t *ui_switch;
     void *extraEventClickData;
     option_event_cb_t event_cb;
     OptionType type;
@@ -62,10 +60,12 @@ public:
     lv_event_code_t slider_trigger_event = LV_EVENT_VALUE_CHANGED; // LV_EVENT_RELEASED
 
     Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue value = VALUE_ZERO, option_event_cb_t _event_cb = NULL, void *_extraEventClickData = NULL);
+    ~Option();
     void setRightHandText(const char *str);
     void setSliderParams(int min, int max, bool display_above_value, lv_event_code_t trigger_event = LV_EVENT_VALUE_CHANGED);
     void setBooleanValue(bool value, bool netSend = false);
     void indentText(int extraX = 0);
+    static void resetHeaderStyle();
 };
 
 #endif

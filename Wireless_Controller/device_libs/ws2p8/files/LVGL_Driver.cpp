@@ -1,11 +1,3 @@
-/*****************************************************************************
-  | File        :   LVGL_Driver.c
-
-  | help        :
-    The provided LVGL library file must be installed first
-
-    This file was converted from lvgl 8 to 9 by claude.ai
-******************************************************************************/
 #include "LVGL_Driver.h"
 
 // static lv_color_t buf1[LVGL_BUF_LEN];
@@ -22,10 +14,12 @@ void Lvgl_print(const char *buf)
 
 /*  Display flushing
     Displays LVGL content on the LCD
-    This function implements associating LVGL data to the LCD screen
+    Uses hardware rotation via MADCTL - no software rotation needed
+    LVGL resolution is set to match the rotated display dimensions
 */
 void Lvgl_Display_LCD(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 {
+  // Direct output - hardware MADCTL handles rotation
   LCD_addWindow(area->x1, area->y1, area->x2, area->y2, (uint16_t *)px_map);
   lv_display_flush_ready(disp);
 }
@@ -44,7 +38,6 @@ void Lvgl_Touchpad_Read(lv_indev_t *indev, lv_indev_data_t *data)
     data->point.x = touchpad_x[0];
     data->point.y = touchpad_y[0];
     data->state = LV_INDEV_STATE_PRESSED;
-    // printf("LVGL  : X=%u Y=%u num=%d\r\n", touchpad_x[0], touchpad_y[0],touchpad_cnt);
   }
   else
   {

@@ -49,7 +49,6 @@ void Lvgl_Touchpad_Read(lv_indev_t *indev, lv_indev_data_t *data)
     data->point.x = touchpad_x[0];
     data->point.y = touchpad_y[0];
     data->state = LV_INDEV_STATE_PRESSED;
-    printf("LVGL : X=%u Y=%u num=%d\r\n", touchpad_x[0], touchpad_y[0],touchpad_cnt);
   } else {
     data->state = LV_INDEV_STATE_RELEASED;
   }
@@ -64,17 +63,23 @@ void example_increase_lvgl_tick(void *arg)
 touch_and_screen Lvgl_Init(void)
 {
   lv_init();
-  esp_lcd_rgb_panel_get_frame_buffer(panel_handle, 2, &buf1, &buf2);
+  // esp_lcd_rgb_panel_get_frame_buffer(panel_handle, 2, &buf1, &buf2); // This gave some odd issues when using it with partial rendering. Not sure what's going on with that.
   // esp_lcd_rgb_panel_get_frame_buffer(panel_handle, 1, &buf1);                                          
   
   // buf1 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN * sizeof(lv_color_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA); 
   // buf2 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN * sizeof(lv_color_t), MALLOC_CAP_SPIRAM);
 
+  // Use a smaller, DMA-capable partial draw buffer to avoid full-frame copies on large RGB panels.
+  // (The RGB panel driver maintains its own frame buffer; we just blit updated areas via draw_bitmap.)
+  if (!buf1) buf1 = (lv_color_t*)heap_caps_malloc(LVGL_BUF_LEN * sizeof(lv_color_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+  // On ws2p8b internal RAM can be tight; prefer single buffering to leave heap for other subsystems (e.g. ADC locks).
+  // buf2 = NULL;
+  if (!buf2) buf2 = (lv_color_t*)heap_caps_malloc(LVGL_BUF_LEN * sizeof(lv_color_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+
   /*Initialize the display*/
   disp = lv_display_create(LVGL_WIDTH, LVGL_HEIGHT);
   lv_display_set_flush_cb(disp, Lvgl_Display_LCD);
-  lv_display_set_buffers(disp, buf1, buf2, LVGL_BUF_LEN * sizeof(lv_color_t), LV_DISPLAY_RENDER_MODE_FULL);
-  // lv_display_set_render_mode(disp, LV_DISPLAY_RENDER_MODE_FULL);
+  lv_display_set_buffers(disp, buf1, buf2, LVGL_BUF_LEN * sizeof(lv_color_t), LV_DISPLAY_RENDER_MODE_PARTIAL);
   lv_display_set_user_data(disp, panel_handle); // unsure if this is necessary
 
   /*Initialize the (dummy) input device driver*/

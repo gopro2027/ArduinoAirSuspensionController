@@ -21,7 +21,7 @@
   "platforms": "espressif32",
   "dependencies": {
     "Wire": "",
-    "lvgl/lvgl": "9.2.2",
+    "lvgl/lvgl": "^9.4.0",
     "robtillaart/TCA9554": "0.1.2",
     "moononournation/GFX Library for Arduino": "1.5.5",
     "lewisxhe/XPowersLib": "0.2.6",

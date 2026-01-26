@@ -3,9 +3,6 @@
 
 #include <Arduino.h>
 #include <lvgl.h>
-#include <display/lv_display_private.h>
-#include <misc/lv_timer_private.h>
-#include <indev/lv_indev_private.h>
 
 #include "device_lib_exports.h"
 
@@ -27,5 +24,6 @@ touch_calibration_data_t smartdisplay_compute_touch_calibration(const lv_point_t
 
 void set_brightness(float level);
 void board_drivers_init();
+lv_obj_t *applyRotationAndShowSplashScreen();
 
 #endif

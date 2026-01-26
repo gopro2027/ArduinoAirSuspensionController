@@ -1,5 +1,66 @@
 #include "util.h"
 
+// Dynamic screen dimension helpers for rotation support
+int getScreenWidth() {
+    lv_display_t *disp = lv_display_get_default();
+    if (disp) {
+        return lv_display_get_horizontal_resolution(disp);
+    }
+    return LCD_WIDTH;
+}
+
+int getScreenHeight() {
+    lv_display_t *disp = lv_display_get_default();
+    if (disp) {
+        return lv_display_get_vertical_resolution(disp);
+    }
+    return LCD_HEIGHT;
+}
+
+bool isLandscape() {
+    return getScreenWidth() > getScreenHeight();
+}
+
+// Get base resolution for scaling calculations
+// This detects the smallest dimension in portrait mode
+int getBaseWidth() {
+    int w = LCD_WIDTH;
+    int h = LCD_HEIGHT;
+    // Normalize to portrait (width < height)
+    if (w > h) {
+        int temp = w;
+        w = h;
+        h = temp;
+    }
+    return w;  // Will be 240, 320, or 480
+}
+
+int getBaseHeight() {
+    int w = LCD_WIDTH;
+    int h = LCD_HEIGHT;
+    // Normalize to portrait (width < height)
+    if (w > h) {
+        int temp = w;
+        w = h;
+        h = temp;
+    }
+    return h;  // Will be 320, 480, or 640
+}
+
+// Dynamic scaling functions (recalculate based on current screen size)
+// Scale relative to 240×320 reference design
+float getScaleX() {
+    int baseWidth = getBaseWidth();
+    int currentWidth = isLandscape() ? getScreenHeight() : getScreenWidth();
+    return currentWidth / 240.0f;
+}
+
+float getScaleY() {
+    int baseHeight = getBaseHeight();
+    int currentHeight = isLandscape() ? getScreenWidth() : getScreenHeight();
+    return currentHeight / 320.0f;
+}
+
 void scale_obj(lv_obj_t *obj, int w, int h) {
     // lv_image_set_scale_x(obj, SCALE_X * 256);
     // lv_image_set_scale_y(obj, SCALE_Y * 256);
@@ -9,54 +70,6 @@ void scale_obj(lv_obj_t *obj, int w, int h) {
 void scale_img(lv_obj_t *obj, lv_image_dsc_t img) {
     // scale_obj(obj, img.header.w, img.header.h);
 }
-
-int sr_contains(SimpleRect r, SimplePoint p)
-{
-    return p.x >= r.x && p.y >= r.y && p.x < r.x + r.w && p.y < r.y + r.h;
-}
-
-int cr_contains(CenterRect cr, SimplePoint p)
-{
-    SimpleRect sr = {cr.cx - (cr.w / 2), cr.cy - (cr.h / 2), cr.w, cr.h};
-    return sr_contains(sr, p);
-}
-
-// first column (left)
-CenterRect ctr_row0col0up = {48 * SCALE_X, 89 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row0col0down = {48 * SCALE_X, 137 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-
-CenterRect ctr_row1col0up = {48 * SCALE_X, 193 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row1col0down = {48 * SCALE_X, 241 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-
-// second column (center)
-CenterRect ctr_row0col1up = {118 * SCALE_X, 78 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row0col1down = {118 * SCALE_X, 126 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-
-CenterRect ctr_row1col1up = {118 * SCALE_X, 204 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row1col1down = {118 * SCALE_X, 252 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-
-// third column (right)
-CenterRect ctr_row0col2up = {189 * SCALE_X, 89 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row0col2down = {189 * SCALE_X, 137 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-
-CenterRect ctr_row1col2up = {189 * SCALE_X, 193 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-CenterRect ctr_row1col2down = {189 * SCALE_X, 241 * SCALE_Y, ARROW_BUTTON_WIDTH, ARROW_BUTTON_HEIGHT};
-
-// bottom nav
-SimpleRect navbarbtn_home = {0 * SCALE_X, 291 * SCALE_Y, 80 * SCALE_X, 29 * SCALE_Y};
-SimpleRect navbarbtn_presets = {80 * SCALE_X, 291 * SCALE_Y, 80 * SCALE_X, 29 * SCALE_Y};
-SimpleRect navbarbtn_settings = {160 * SCALE_X, 291 * SCALE_Y, 80 * SCALE_X, 29 * SCALE_Y};
-
-// presets buttons
-CenterRect ctr_preset_1 = {(48 / 2 + 48 * 0) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
-CenterRect ctr_preset_2 = {(48 / 2 + 48 * 1) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
-CenterRect ctr_preset_3 = {(48 / 2 + 48 * 2) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
-CenterRect ctr_preset_4 = {(48 / 2 + 48 * 3) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
-CenterRect ctr_preset_5 = {(48 / 2 + 48 * 4) * SCALE_X, 182 * SCALE_Y, 48 * SCALE_X, 48 * SCALE_Y};
-
-// preset save and load
-SimpleRect preset_save = {18 * SCALE_X, 235 * SCALE_Y, (91 - 18) * SCALE_X, (251 - 235) * SCALE_Y};
-SimpleRect preset_load = {110 * SCALE_X, 225 * SCALE_Y, (221 - 110) * SCALE_X, (256 - 225) * SCALE_Y};
 
 int currentPressures[5];
 uint32_t statusBittset = 0;
@@ -193,9 +206,11 @@ void dialogLoop()
 {
     if (updateDialog)
     {
-        screens[0]->alert->show(dialogColor, dialogText, dialogEndTime);
-        screens[1]->alert->show(dialogColor, dialogText, dialogEndTime);
-        screens[2]->alert->show(dialogColor, dialogText, dialogEndTime);
+        // Only show on current screen - other screens will sync when switched to
+        if (currentScr != NULL && currentScr->alert != NULL)
+        {
+            currentScr->alert->show(dialogColor, dialogText, dialogEndTime);
+        }
         updateDialog = false;
     }
 }
@@ -210,6 +225,10 @@ void setValveBit(int bit)
 {
     valveControlValue = valveControlValue | (1 << bit);
 }
+void unsetValveBit(int bit)
+{
+    valveControlValue = valveControlValue & ~(1 << bit);
+}
 void closeValves()
 {
     valveControlValue = 0;
@@ -219,9 +238,15 @@ void closeValves()
 void setupPressureLabel(lv_obj_t *parent, lv_obj_t **label, int x, int y, lv_align_t align, const char *defaultText)
 {
     *label = lv_label_create(parent);
+
+    // Modern styling with better font and color
     lv_obj_set_style_text_color(*label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_width(*label, LV_SIZE_CONTENT);  /// 1
-    lv_obj_set_height(*label, LV_SIZE_CONTENT); /// 1
+    lv_obj_set_style_text_font(*label, &lv_font_montserrat_14, 0);
+
+    lv_obj_set_style_text_opa(*label, LV_OPA_COVER, 0);
+
+    lv_obj_set_width(*label, LV_SIZE_CONTENT);
+    lv_obj_set_height(*label, LV_SIZE_CONTENT);
     lv_obj_set_x(*label, x);
     lv_obj_set_y(*label, y);
     lv_obj_set_align(*label, align);
@@ -241,6 +266,11 @@ void beginSaveData()
     _SaveData.wifiPassword.loadString("wifiPassword", "");
     _SaveData.updateResult.load("updateResult", 0);
     _SaveData.brightness.load("brightness", 80);
+    _SaveData.screenRotation.load("screenRotation", 0);
+    // Theme colors - using default purple/lavender theme values
+    _SaveData.themeColorLight.load("themeColorLight", THEME_COLOR_OCEAN_BLUE_LIGHT);
+    _SaveData.themeColorDark.load("themeColorDark", THEME_COLOR_OCEAN_BLUE_DARK);
+    _SaveData.themeColorMedium.load("themeColorMedium", THEME_COLOR_OCEAN_BLUE_MEDIUM);
 }
 
 createSaveFuncInt(unitsMode, int);
@@ -251,6 +281,10 @@ createSaveFuncString(wifiSSID);
 createSaveFuncString(wifiPassword);
 createSaveFuncInt(updateResult, byte);
 createSaveFuncInt(brightness, byte);
+createSaveFuncInt(screenRotation, byte);
+createSaveFuncInt(themeColorLight, uint32_t);
+createSaveFuncInt(themeColorDark, uint32_t);
+createSaveFuncInt(themeColorMedium, uint32_t);
 
 float getBrightnessFloat()
 {
@@ -260,6 +294,36 @@ float getBrightnessFloat()
     if (brightnessInt > 100)
         brightnessInt = 100;
     return brightnessInt / 100.0f;
+}
+
+// Forward declaration
+void ui_reinit(void);
+
+#if SUPPORTS_ROTATION == 1
+void applyScreenRotation(byte rotation)
+{
+    lv_display_t *disp = lv_display_get_default();
+    if (!disp) return;
+
+    // Apply hardware rotation via MADCTL register
+    LCD_SetRotation(rotation);
+
+    // Use actual LCD dimensions (works for all display sizes)
+    // LCD_WIDTH and LCD_HEIGHT are defined in board JSON as compile-time constants
+    if (rotation == 1) {
+        // Landscape: swap width and height
+        lv_display_set_resolution(disp, LCD_HEIGHT, LCD_WIDTH);
+    } else {
+        // Portrait: use native dimensions
+        lv_display_set_resolution(disp, LCD_WIDTH, LCD_HEIGHT);
+    }
+    // Do NOT use lv_display_set_rotation - we're using hardware rotation
+}
+#endif
+
+void reinitializeScreens()
+{
+    ui_reinit();
 }
 
 static lv_obj_t *kb = NULL;
@@ -320,7 +384,7 @@ static void kb_event_cb(lv_event_t *e)
 void initKB(Option *option)
 {
     closeKeyboard();
-    kb = lv_keyboard_create(lv_scr_act());
+    kb = lv_keyboard_create(lv_screen_active());
     // lv_obj_set_height(cont, LV_VER_RES / 2);
     if (option->type == OptionType::KEYBOARD_INPUT_NUMBER)
     {
@@ -331,10 +395,10 @@ void initKB(Option *option)
         lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_TEXT_LOWER);
     }
     lv_obj_add_event_cb(kb, kb_event_cb, LV_EVENT_ALL, option);
-    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT);    // lines in between buttons
-    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_ITEMS | LV_STATE_DEFAULT);  // buttons
-    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_ITEMS | LV_STATE_CHECKED);  // buttons (keyboard and checkmark)
-    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_ITEMS | LV_STATE_FOCUSED); // When pressing down on the buttons
+    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN);    // lines in between buttons
+    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_ITEMS);  // buttons
+    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_ITEMS | (lv_style_selector_t)LV_STATE_CHECKED);  // buttons (keyboard and checkmark)
+    lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_ITEMS | (lv_style_selector_t)LV_STATE_FOCUSED); // When pressing down on the buttons
 }
 
 void ta_event_cb(lv_event_t *e)
@@ -427,4 +491,56 @@ void onBLEConnectionCompleted()
     sendConfigValuesPacket(false);   // sends a request of the manifold to send out the manifolds save data
     requestPreset();                 // sends a request of the manifold to send out the current presets values
     sendUpdateStatusRequestPacket(); // sends a request of the manifold to send out the current update status
+}
+
+// Apply a theme preset
+void applyThemePreset(ThemePreset preset) {
+    switch (preset) {
+        case PRESET_PURPLE:
+            setthemeColorLight(THEME_COLOR_PLUMP_PURPLE_LIGHT);   // Light purple
+            setthemeColorMedium(THEME_COLOR_PLUMP_PURPLE_MEDIUM);  // Medium purple
+            setthemeColorDark(THEME_COLOR_PLUMP_PURPLE_DARK);    // Dark purple
+            break;
+        case PRESET_BLUE:
+            setthemeColorLight(THEME_COLOR_OCEAN_BLUE_LIGHT);   // Light blue
+            setthemeColorMedium(THEME_COLOR_OCEAN_BLUE_MEDIUM);  // Medium blue
+            setthemeColorDark(THEME_COLOR_OCEAN_BLUE_DARK);    // Dark blue
+            break;
+        case PRESET_GREEN:
+            setthemeColorLight(THEME_COLOR_FOREST_GREEN_LIGHT);   // Light green
+            setthemeColorMedium(THEME_COLOR_FOREST_GREEN_MEDIUM);  // Medium green
+            setthemeColorDark(THEME_COLOR_FOREST_GREEN_DARK);    // Dark green
+            break;
+        case PRESET_DESERT_SAND:
+            setthemeColorLight(THEME_COLOR_DESERT_SAND_LIGHT);    // Desert Sand (light)
+            setthemeColorMedium(THEME_COLOR_DESERT_SAND_MEDIUM);  // Desert Sand (medium)
+            setthemeColorDark(THEME_COLOR_DESERT_SAND_DARK);      // Desert Sand (dark)
+            break;
+        case PRESET_CUSTOM:
+        default:
+            // Do nothing for custom
+            break;
+    }
+}
+
+// Get current theme preset (-1 if custom)
+int getCurrentThemePreset() {
+    uint32_t light = getthemeColorLight();
+    uint32_t medium = getthemeColorMedium();
+    uint32_t dark = getthemeColorDark();
+    
+    // Check if current colors match any preset
+    if (light == THEME_COLOR_PLUMP_PURPLE_LIGHT && medium == THEME_COLOR_PLUMP_PURPLE_MEDIUM && dark == THEME_COLOR_PLUMP_PURPLE_DARK) {
+        return PRESET_PURPLE;
+    }
+    if (light == THEME_COLOR_OCEAN_BLUE_LIGHT && medium == THEME_COLOR_OCEAN_BLUE_MEDIUM && dark == THEME_COLOR_OCEAN_BLUE_DARK) {
+        return PRESET_BLUE;
+    }
+    if (light == THEME_COLOR_FOREST_GREEN_LIGHT && medium == THEME_COLOR_FOREST_GREEN_MEDIUM && dark == THEME_COLOR_FOREST_GREEN_DARK) {
+        return PRESET_GREEN;
+    }
+    if (light == THEME_COLOR_DESERT_SAND_LIGHT && medium == THEME_COLOR_DESERT_SAND_MEDIUM && dark == THEME_COLOR_DESERT_SAND_DARK) {
+        return PRESET_DESERT_SAND;
+    }
+    return PRESET_CUSTOM;
 }
