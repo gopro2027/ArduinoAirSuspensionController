@@ -142,7 +142,7 @@ static void draw_arrow_at(lv_obj_t *parent, lv_point_precise_t *line_points)
     lv_line_set_points(line, line_points, 3);
     lv_obj_set_style_line_width(line, 3, 0);
     lv_obj_set_style_line_color(line, lv_color_hex(THEME_COLOR_LIGHT), 0);
-    lv_obj_set_style_line_rounded(line, false, 0);
+    lv_obj_set_style_line_rounded(line, false, 0); // Sharp arrow edges
 }
 
 
