@@ -16,7 +16,7 @@ static int saved_page_index = 0;  // Remember page selection across reinits
 static lv_obj_t *menu_container = NULL;
 static const char *section_names[] = {
     "Status", "Game Controller", "ML/AI", "Basic settings",
-    "Levelling Mode", "Units", "Controller Settings", "Config", "Wifi / Update"
+    "Levelling Mode", "Units", "Screen Settings", "Config", "Wifi / Update"
 };
 static const int NUM_SECTIONS = 9;
 
@@ -231,7 +231,7 @@ void ScrSettings::init()
     // Dropdown
     lv_obj_t *dropdown = lv_dropdown_create(menu_bar);
     lv_dropdown_set_options(dropdown,
-        "Status\nGame Controller\nML/AI\nBasic settings\nLevelling Mode\nUnits\nController Settings\nConfig\nWifi / Update");
+        "Status\nGame Controller\nML/AI\nBasic settings\nLevelling Mode\nUnits\nScreen Settings\nConfig\nWifi / Update");
     lv_obj_set_width(dropdown, scrW - scaledX(12));
     lv_obj_set_height(dropdown, scaledY(44));
     style_dropdown_closed(dropdown);
@@ -489,22 +489,22 @@ void ScrSettings::init()
     option_event_cb_t unitsRadioCB = [](void *data) { setunitsMode((int)data); };
     allRadioOptions.push_back(new RadioOption(units_page, unitsRadioText, 2, unitsRadioCB, getunitsMode()));
 
-    // --- Controller Settings page ---
-    lv_obj_t *controller_settings_page = lv_obj_create(pages_container);
-    lv_obj_remove_style_all(controller_settings_page);
-    lv_obj_set_size(controller_settings_page, scrW, LV_SIZE_CONTENT);
-    lv_obj_set_layout(controller_settings_page, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(controller_settings_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_add_flag(controller_settings_page, LV_OBJ_FLAG_HIDDEN);
-    this->pages[6] = controller_settings_page;
+    // --- Screen Settings page ---
+    lv_obj_t *screen_settings_page = lv_obj_create(pages_container);
+    lv_obj_remove_style_all(screen_settings_page);
+    lv_obj_set_size(screen_settings_page, scrW, LV_SIZE_CONTENT);
+    lv_obj_set_layout(screen_settings_page, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(screen_settings_page, LV_FLEX_FLOW_COLUMN);
+    lv_obj_add_flag(screen_settings_page, LV_OBJ_FLAG_HIDDEN);
+    this->pages[6] = screen_settings_page;
 
-    allOptions.push_back(new Option(controller_settings_page, OptionType::KEYBOARD_INPUT_NUMBER, "Dim Screen (Minutes)", {.INT = (int)getscreenDimTimeM()}, [](void *data)
+    allOptions.push_back(new Option(screen_settings_page, OptionType::KEYBOARD_INPUT_NUMBER, "Dim Screen (Minutes)", {.INT = (int)getscreenDimTimeM()}, [](void *data)
     {
         log_i("Pressed %i", ((uint32_t)data));
         setscreenDimTimeM((uint32_t)data);
     }));
 
-    this->ui_brightnessSlider = new Option(controller_settings_page, OptionType::SLIDER, "Brightness", {.INT = getbrightness()}, [](void *data)
+    this->ui_brightnessSlider = new Option(screen_settings_page, OptionType::SLIDER, "Brightness", {.INT = getbrightness()}, [](void *data)
     {
         log_i("Brightness %i", ((uint32_t)data));
         setbrightness((uint32_t)data);
@@ -515,17 +515,16 @@ void ScrSettings::init()
     #if SUPPORTS_ROTATION == 1
     
     // Screen rotation setting - single button that toggles between Portrait/Landscape
-    allOptions.push_back(new Option(controller_settings_page, OptionType::HEADER, "Screen Orientation", {.STRING = ""}));
+    allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Screen Orientation", {.STRING = ""}));
 
     
-    this->ui_screenRotation = new Option(controller_settings_page, OptionType::BUTTON,
+    this->ui_screenRotation = new Option(screen_settings_page, OptionType::BUTTON,
         getscreenRotation() == 0 ? "Switch to Landscape" : "Switch to Portrait",
         {.STRING = ""}, [](void *data)
     {
         byte currentRotation = getscreenRotation();
         byte newRotation = (currentRotation == 0) ? 1 : 0;
         setscreenRotation(newRotation);
-        applyScreenRotation(newRotation);
         ScrSettings *settings = (ScrSettings *)currentScr;
         settings->ui_screenRotation->setRightHandText(newRotation == 0 ? "Switch to Landscape" : "Switch to Portrait");
         // Schedule screen reinit for next frame to allow rotation to complete
@@ -536,7 +535,7 @@ void ScrSettings::init()
     #endif
 
     // Theme colors setting
-    allOptions.push_back(new Option(controller_settings_page, OptionType::HEADER, "Theme Colors", {.STRING = ""}));
+    allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Theme Colors", {.STRING = ""}));
 
     const char *themePresetText[4] = {"Ocean Blue", "Plump Purple", "Forest Green", "Desert Sand"};
     option_event_cb_t themePresetCB = [](void *data)
@@ -545,10 +544,10 @@ void ScrSettings::init()
         applyThemePreset((ThemePreset)presetId);
         runNextFrame([]() { reinitializeScreens(); });
     };
-    this->ui_themePreset = new RadioOption(controller_settings_page, themePresetText, 4, themePresetCB, getCurrentThemePreset() >= 0 ? getCurrentThemePreset() : 0);
+    this->ui_themePreset = new RadioOption(screen_settings_page, themePresetText, 4, themePresetCB, getCurrentThemePreset() >= 0 ? getCurrentThemePreset() : 0);
 
     // Custom color picker button
-    allOptions.push_back(new Option(controller_settings_page, OptionType::BUTTON, "Custom Color Picker", {.STRING = ""}, [](void *data) {
+    allOptions.push_back(new Option(screen_settings_page, OptionType::BUTTON, "Custom Color Picker", {.STRING = ""}, [](void *data) {
         scrSettings.showColorPickerModal();
     }));
 

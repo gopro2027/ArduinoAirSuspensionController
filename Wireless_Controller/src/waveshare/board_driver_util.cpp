@@ -65,6 +65,39 @@ touch_calibration_data_t smartdisplay_compute_touch_calibration(const lv_point_t
 };
 
 LV_IMG_DECLARE(oasman_splash);
+
+lv_obj_t *applyRotationAndShowSplashScreen() {
+    
+    #if SUPPORTS_ROTATION == 1
+    // Apply saved screen rotation using hardware MADCTL rotation
+    // Hardware rotation is more efficient - LCD controller rotates pixels directly
+    extern byte getscreenRotation();
+    byte rotation = getscreenRotation();
+    applyScreenRotation(rotation);
+    #endif
+
+    // Render the splash screen
+    // lv_obj_t *splashScr = lv_screen_active();
+    lv_obj_t *splashScr = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(splashScr, lv_color_black(), LV_PART_MAIN);
+    lv_obj_t *splashscreen = lv_image_create(splashScr);
+    lv_image_set_src(splashscreen, &oasman_splash);
+    lv_obj_set_align(splashscreen, LV_ALIGN_CENTER);
+    lv_screen_load(splashScr);
+    lv_timer_handler(); // Force refresh immediately
+    delay(50);// just a small delay to give the screen time to finish rendering the logo, otherwise we get a few artifacts
+    set_brightness(1); // blind them with the oasman logo
+
+#ifdef BCKL_DELAY_MS
+    vTaskDelay(pdMS_TO_TICKS(BCKL_DELAY_MS));
+#endif
+
+    // Delete temporary splash screen
+    // lv_obj_del(tempScr);
+    return splashScr;
+}
+
+
 void board_drivers_init()
 {
     log_i("Setting up board drivers");
@@ -83,46 +116,10 @@ void board_drivers_init()
     display = tas.screen;
     indev = tas.touch;
 
-    lv_obj_t *splashScr = lv_screen_active();
-    lv_obj_set_style_bg_color(splashScr, lv_color_black(), LV_PART_MAIN);
-    lv_obj_t *splashscreen = lv_image_create(splashScr);
-    lv_image_set_src(splashscreen, &oasman_splash);
-    lv_obj_set_align(splashscreen, LV_ALIGN_CENTER);
-    lv_timer_handler(); // Force refresh immediately
-    delay(50);// just a small delay to give the screen time to finish rendering the logo, otherwise we get a few artifacts
-    set_brightness(1); // blind them with the oasman logo
-
-#ifdef BCKL_DELAY_MS
-    vTaskDelay(pdMS_TO_TICKS(BCKL_DELAY_MS));
-#endif
-
     // Register callback for hardware rotation
     lv_display_add_event_cb(display, lvgl_display_resolution_changed_callback, LV_EVENT_RESOLUTION_CHANGED, NULL);
 
-    // Delete the splash screen completely before applying rotation
-    // First create a new blank screen to be the active one
-    lv_obj_t *blankScr = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(blankScr, lv_color_black(), LV_PART_MAIN);
-    lv_screen_load(blankScr);
-    lv_timer_handler();
-
-    // Now delete the old splash screen
-    lv_obj_del(splashScr);
-
-    #if SUPPORTS_ROTATION == 1
-    // Apply saved screen rotation using hardware MADCTL rotation
-    // Hardware rotation is more efficient - LCD controller rotates pixels directly
-    extern byte getscreenRotation();
-    byte rotation = getscreenRotation();
-    applyScreenRotation(rotation);
-    #endif
-
-    // Create a fresh screen with correct rotated dimensions
-    lv_obj_t *tempScr = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(tempScr, lv_color_black(), LV_PART_MAIN);
-    lv_screen_load(tempScr);
-    lv_timer_handler();
-    lv_obj_del(blankScr);
+    lv_obj_t *splashScr = applyRotationAndShowSplashScreen();
 
     // Setup touch
     // indev = lvgl_touch_init();
@@ -131,6 +128,8 @@ void board_drivers_init()
     driver_touch_read_cb = lv_indev_get_read_cb(indev);
     lv_indev_set_read_cb(indev, lvgl_touch_calibration_transform);
     lv_indev_enable(indev, true);
+
+    lv_obj_del(splashScr);
 }
 
 void lvgl_display_resolution_changed_callback(lv_event_t *event)
