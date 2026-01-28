@@ -69,7 +69,6 @@
 			"cinttypes": "cpp",
 			"typeinfo": "cpp",
 			"ui.h": "c",
-			"ui_helpers.h": "c",
 			"ui_scrmain.h": "c",
 			"arduino.h": "c",
 			"lvgl.h": "c",
