@@ -1,7 +1,7 @@
 #include "ui_scrHome.h"
 #include "ui/ui.h" // sketchy backwards import may break in the future
 
-ScrHome scrHome(true, true, NAV_HOME);
+ScrHome scrHome(true);
 
 // Unified pill button dimensions - calculated dynamically for rotation support
 static int PILL_WIDTH = 60;
@@ -22,7 +22,8 @@ static void calculatePillDimensions() {
     const int screenHeight = getScreenHeight();
     const int pressureAreaHeight = scaledY(55);
     const int navbarHeight = NAVBAR_HEIGHT;
-    const int contentHeight = screenHeight - pressureAreaHeight - navbarHeight;
+    const int statusbarHeight = STATUSBAR_HEIGHT;
+    const int contentHeight = screenHeight - pressureAreaHeight - navbarHeight - statusbarHeight;
 
     LANDSCAPE_MODE = isLandscape();
 
@@ -248,9 +249,9 @@ static void setupPillButtonCallbacks(PillButtons &pill,
     }
 }
 
-void ScrHome::init(void)
+void ScrHome::init(lv_obj_t *parent)
 {
-    Scr::init();
+    Scr::init(parent);
 
     // Calculate pill dimensions based on current screen orientation
     calculatePillDimensions();
@@ -258,15 +259,16 @@ void ScrHome::init(void)
     // Calculate available content area (between pressure labels and navbar)
     const int pressureAreaHeight = scaledY(55);  // Space for pressure labels at top
     const int navbarHeight = NAVBAR_HEIGHT;
+    const int statusbarHeight = STATUSBAR_HEIGHT;
     const int screenWidth = getScreenWidth();
     const int screenHeight = getScreenHeight();
-    const int contentHeight = screenHeight - pressureAreaHeight - navbarHeight;
+    const int contentHeight = screenHeight - pressureAreaHeight - navbarHeight - statusbarHeight;
 
     // Main content container - centers the grid
     lv_obj_t *content = lv_obj_create(this->scr);
     lv_obj_remove_style_all(content);
     lv_obj_set_size(content, screenWidth, contentHeight);
-    lv_obj_set_pos(content, 0, pressureAreaHeight);
+    lv_obj_set_pos(content, 0, statusbarHeight + pressureAreaHeight);
     lv_obj_set_flex_flow(content, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(content, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_all(content, 4, 0);
@@ -325,7 +327,6 @@ void ScrHome::init(void)
     setupPillButtonCallbacks(pillRearPassenger, rearPassengerUp, 1, rearPassengerDown, 1);
 
     // Bring overlays to foreground
-    if (this->navbar_container) lv_obj_move_foreground(this->navbar_container);
     lv_obj_move_foreground(this->ui_lblPressureFrontPassenger);
     lv_obj_move_foreground(this->ui_lblPressureRearPassenger);
     lv_obj_move_foreground(this->ui_lblPressureFrontDriver);

@@ -29,9 +29,9 @@ public:
     lv_obj_t *btnSave;
     lv_obj_t *btnLoad;
 
-    void init();
+    void init(lv_obj_t *parent = nullptr) override;
     void showPresetDialog();
-    void loop();
+    void loop() override;
     void setPreset(int num);
     void updateButtonStyles();
 };

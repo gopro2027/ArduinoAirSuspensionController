@@ -3,32 +3,20 @@
 // LVGL version: 9.1.0
 // Project name: SquareLine_Project
 
-#include "Scr.h"
+#include "Scr.h" 
 #include "ui/ui.h" // sketchy backwards import may break in the future
 
-// Structure for navbar callback data
-struct NavbarCallbackData {
-    NavbarItem item;
-    Scr *scr;
-};
-
-Scr::Scr(bool showPressures, bool showAlertIcon, NavbarItem activeNav)
+Scr::Scr(bool showPressures)
 {
     this->showPressures = showPressures;
-    this->showAlertIcon = showAlertIcon;
-    this->activeNavItem = activeNav;
-    this->navbar_container = NULL;
-    this->navbar_indicator = NULL;
-    for (int i = 0; i < 3; i++) {
-        this->navbar_btns[i] = NULL;
-        this->navbar_icons[i] = NULL;
-        this->navbar_labels[i] = NULL;
-    }
+    this->scr = nullptr;
+    this->rect_bg = nullptr;
+    this->alert = nullptr;
 }
 
-void Scr::init()
+void Scr::init(lv_obj_t *parent)
 {
-    this->scr = lv_obj_create(NULL);
+    this->scr = parent;
     lv_obj_remove_flag(this->scr, LV_OBJ_FLAG_SCROLLABLE); /// Flags
 
     this->mb_dialog = NULL;
@@ -55,22 +43,22 @@ void Scr::init()
     lv_obj_set_style_bg_grad_stop(this->rect_bg, 180, LV_PART_MAIN);
     lv_obj_remove_flag(this->rect_bg, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE));
 
-    // Modern navbar
-    createModernNavbar();
-
-    this->alert = new Alert(this, this->showAlertIcon);
+    this->alert = new Alert(this);
 
     if (this->showPressures)
     {
         // air pressures at top - scale xPadding based on screen width for rotation support
         // 72 pixels at 240 width = 30% offset, maintain same ratio
         const int xPadding = (getScreenWidth() * 72) / 240;
-        // for some reas the text is not letting me specify something like "top right" then centering the text over that coordinate. Instead we must use top mid so that it is centered on ittself (ie grows both left and right with width chantge) and then set the offset of that from center.
-        setupPressureLabel(this->scr, &this->ui_lblPressureFrontDriver, -xPadding, scaledY(10), LV_ALIGN_TOP_MID, "0");
-        setupPressureLabel(this->scr, &this->ui_lblPressureRearDriver, -xPadding, scaledY(40), LV_ALIGN_TOP_MID, "0");
-        setupPressureLabel(this->scr, &this->ui_lblPressureFrontPassenger, xPadding, scaledY(10), LV_ALIGN_TOP_MID, "0");
-        setupPressureLabel(this->scr, &this->ui_lblPressureRearPassenger, xPadding, scaledY(40), LV_ALIGN_TOP_MID, "0");
-        setupPressureLabel(this->scr, &this->ui_lblPressureTank, 0, scaledY(10), LV_ALIGN_TOP_MID, "0");
+        const int statusbarOffset = STATUSBAR_HEIGHT;
+        const int frontY = statusbarOffset + scaledY(4);   // Front row - tight to statusbar
+        const int rearY = statusbarOffset + scaledY(22);   // Rear row - compact spacing
+        // Use top mid alignment so labels are centered on themselves
+        setupPressureLabel(this->scr, &this->ui_lblPressureFrontDriver, -xPadding, frontY, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureRearDriver, -xPadding, rearY, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureFrontPassenger, xPadding, frontY, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureRearPassenger, xPadding, rearY, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureTank, 0, frontY, LV_ALIGN_TOP_MID, "0");
     }
 }
 
@@ -87,36 +75,6 @@ void dialog_clicked_function(lv_event_t *e)
         {
             dialogData->callback();
         }
-    }
-}
-
-// Navbar button click callback - static function to work with LVGL event system
-static void navbar_click_cb(lv_event_t *e)
-{
-    lv_event_code_t event_code = lv_event_get_code(e);
-    if (event_code == LV_EVENT_CLICKED) {
-        NavbarCallbackData *cbData = (NavbarCallbackData *)lv_event_get_user_data(e);
-        
-        if (!cbData || !cbData->scr) return;
-        
-        SCREEN targetScreen;
-        switch (cbData->item) {
-            case NAV_HOME:
-                targetScreen = SCREEN_HOME;
-                break;
-            case NAV_PRESETS:
-                targetScreen = SCREEN_PRESETS;
-                break;
-            case NAV_SETTINGS:
-                targetScreen = SCREEN_SETTINGS;
-                break;
-            default:
-                return;
-        }
-        if (!isKeyboardHidden() || cbData->scr->isMsgBoxDisplayed()) {
-            return;  // Don't change screen if keyboard is visible or message box is displayed
-        }
-        changeScreen(targetScreen);
     }
 }
 
@@ -268,144 +226,6 @@ void Scr::updatePressureValues()
     }
 }
 
-// navbar with sleek underline indicator
-void Scr::createModernNavbar()
-{
-    const int navbarHeight = getNavbarHeight();
-    const int screenWidth = getScreenWidth();
-    const int btnWidth = screenWidth / 3;
-
-    // Colors - sleek dark theme
-    const uint32_t bgColor = GENERIC_GREY_VERY_DARK;
-    const uint32_t accentColor = THEME_COLOR_LIGHT;
-    const uint32_t activeTextColor = 0xFFFFFF;
-    const uint32_t inactiveTextColor = 0x64748B;
-
-    // Main navbar container
-    this->navbar_container = lv_obj_create(this->scr);
-    lv_obj_remove_style_all(this->navbar_container);
-    lv_obj_set_size(this->navbar_container, screenWidth, navbarHeight);
-    lv_obj_set_align(this->navbar_container, LV_ALIGN_BOTTOM_MID);
-    lv_obj_set_style_bg_color(this->navbar_container, lv_color_hex(bgColor), 0);
-    lv_obj_set_style_bg_opa(this->navbar_container, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(this->navbar_container, 0, 0);
-    lv_obj_set_style_pad_all(this->navbar_container, 0, 0);
-    lv_obj_remove_flag(this->navbar_container, LV_OBJ_FLAG_SCROLLABLE);
-
-    // Subtle top border
-    lv_obj_t *topLine = lv_obj_create(this->navbar_container);
-    lv_obj_remove_style_all(topLine);
-    lv_obj_set_size(topLine, screenWidth, 1);
-    lv_obj_set_align(topLine, LV_ALIGN_TOP_MID);
-    lv_obj_set_style_bg_color(topLine, lv_color_hex(0x1E293B), 0);
-    lv_obj_set_style_bg_opa(topLine, LV_OPA_COVER, 0);
-    lv_obj_remove_flag(topLine, (lv_obj_flag_t)(LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE));
-
-    // Sliding underline indicator
-    this->navbar_indicator = lv_obj_create(this->navbar_container);
-    lv_obj_remove_style_all(this->navbar_indicator);
-    const int indicatorWidth = scaledX(40);
-    const int indicatorHeight = scaledY(3);
-    lv_obj_set_size(this->navbar_indicator, indicatorWidth, indicatorHeight);
-    lv_obj_set_style_bg_color(this->navbar_indicator, lv_color_hex(accentColor), 0);
-    lv_obj_set_style_bg_opa(this->navbar_indicator, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(this->navbar_indicator, scaledY(2), 0);
-    // Glow effect
-    lv_obj_set_style_shadow_color(this->navbar_indicator, lv_color_hex(accentColor), 0);
-    lv_obj_set_style_shadow_width(this->navbar_indicator, scaledX(8), 0);
-    lv_obj_set_style_shadow_opa(this->navbar_indicator, LV_OPA_60, 0);
-    lv_obj_remove_flag(this->navbar_indicator, (lv_obj_flag_t)(LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE));
-
-    // Position indicator centered under active item
-    int indicatorX = (btnWidth / 2) - (indicatorWidth / 2) + (this->activeNavItem * btnWidth);
-    lv_obj_set_pos(this->navbar_indicator, indicatorX, navbarHeight - scaledY(6));
-
-    // Icons
-    const char* icons[] = {
-        LV_SYMBOL_HOME,
-        LV_SYMBOL_LIST,
-        LV_SYMBOL_SETTINGS
-    };
-    const char* labels[] = {"Home", "Presets", "Settings"};
-
-    // nav buttons
-    for (int i = 0; i < 3; i++) {
-        this->navbar_btns[i] = lv_obj_create(this->navbar_container);
-        lv_obj_remove_style_all(this->navbar_btns[i]);
-        // Make buttons cover full navbar height for larger touch area
-        lv_obj_set_size(this->navbar_btns[i], btnWidth, navbarHeight);
-        lv_obj_set_pos(this->navbar_btns[i], i * btnWidth, 0);
-        lv_obj_set_style_bg_opa(this->navbar_btns[i], LV_OPA_TRANSP, 0);
-        lv_obj_remove_flag(this->navbar_btns[i], LV_OBJ_FLAG_SCROLLABLE);
-        // Ensure button is clickable
-        lv_obj_add_flag(this->navbar_btns[i], LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_set_flex_flow(this->navbar_btns[i], LV_FLEX_FLOW_COLUMN);
-        lv_obj_set_flex_align(this->navbar_btns[i], LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-        lv_obj_set_style_pad_row(this->navbar_btns[i], 4, 0);
-        
-        // Add click event callback - pass both item and screen pointer
-        static NavbarCallbackData cbData[3];  // Static to persist
-        cbData[i].item = (NavbarItem)i;
-        cbData[i].scr = this;
-        lv_obj_add_event_cb(this->navbar_btns[i], navbar_click_cb, LV_EVENT_CLICKED, &cbData[i]);
-
-        // Icon - make non-clickable so touches pass through to parent button
-        this->navbar_icons[i] = lv_label_create(this->navbar_btns[i]);
-        lv_label_set_text(this->navbar_icons[i], icons[i]);
-        lv_obj_set_style_text_font(this->navbar_icons[i], &lv_font_montserrat_16, 0);
-        lv_obj_remove_flag(this->navbar_icons[i], LV_OBJ_FLAG_CLICKABLE);
-
-        // Label - make non-clickable so touches pass through to parent button
-        this->navbar_labels[i] = lv_label_create(this->navbar_btns[i]);
-        lv_label_set_text(this->navbar_labels[i], labels[i]);
-        lv_obj_set_style_text_font(this->navbar_labels[i], &lv_font_montserrat_10, 0);
-        lv_obj_remove_flag(this->navbar_labels[i], LV_OBJ_FLAG_CLICKABLE);
-
-        // Colors based on active state
-        bool isActive = (i == this->activeNavItem);
-        uint32_t iconColor = isActive ? accentColor : inactiveTextColor;
-        uint32_t labelColor = isActive ? activeTextColor : inactiveTextColor;
-        lv_obj_set_style_text_color(this->navbar_icons[i], lv_color_hex(iconColor), 0);
-        lv_obj_set_style_text_color(this->navbar_labels[i], lv_color_hex(labelColor), 0);
-    }
-}
-
-void Scr::updateNavbarSelection(NavbarItem item)
-{
-    if (this->navbar_container == NULL) return;
-
-    const int screenWidth = getScreenWidth();
-    const int btnWidth = screenWidth / 3;
-    const uint32_t accentColor = THEME_COLOR_LIGHT;
-    const uint32_t activeTextColor = 0xFFFFFF;
-    const uint32_t inactiveTextColor = 0x64748B;
-
-    this->activeNavItem = item;
-
-    // Animated underline indicator
-    const int indicatorWidth = scaledX(40);
-    int indicatorX = (btnWidth / 2) - (indicatorWidth / 2) + (item * btnWidth);
-    lv_anim_t a;
-    lv_anim_init(&a);
-    lv_anim_set_var(&a, this->navbar_indicator);
-    lv_anim_set_values(&a, lv_obj_get_x(this->navbar_indicator), indicatorX);
-    lv_anim_set_time(&a, 200);
-    lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
-    lv_anim_set_exec_cb(&a, [](void* obj, int32_t v) {
-        lv_obj_set_x((lv_obj_t*)obj, v);
-    });
-    lv_anim_start(&a);
-
-    // Update colors
-    for (int i = 0; i < 3; i++) {
-        bool isActive = (i == item);
-        uint32_t iconColor = isActive ? accentColor : inactiveTextColor;
-        uint32_t labelColor = isActive ? activeTextColor : inactiveTextColor;
-        lv_obj_set_style_text_color(this->navbar_icons[i], lv_color_hex(iconColor), 0);
-        lv_obj_set_style_text_color(this->navbar_labels[i], lv_color_hex(labelColor), 0);
-    }
-}
-
 void Scr::cleanup()
 {
     // Base cleanup - delete Alert (common to all screens)
@@ -413,4 +233,6 @@ void Scr::cleanup()
         delete this->alert;
         this->alert = nullptr;
     }
+    this->scr = nullptr;
+    this->rect_bg = nullptr;
 }
