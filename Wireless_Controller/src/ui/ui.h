@@ -9,9 +9,6 @@
 #include "Arduino.h"
 #include "lvgl.h"
 
-#include "ui_helpers.h"
-#include "ui_events.h"
-
 #include "screens/ui_scrHome.h"
 #include "screens/ui_scrPresets.h"
 #include "screens/ui_scrSettings.h"

@@ -3,8 +3,6 @@
 
 #include <Arduino.h>
 #include "lvgl.h"
-#include "../ui_helpers.h"
-#include "../ui_events.h"
 
 #include "utils/util.h"
 #include "utils/touch_lib.h"
