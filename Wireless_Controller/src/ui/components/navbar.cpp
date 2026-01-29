@@ -157,6 +157,13 @@ void Navbar::setActiveTab(uint32_t index, bool animate) {
     if (index >= 3) return;
     lv_tabview_set_active(this->tabview, index,
                           animate ? LV_ANIM_ON : LV_ANIM_OFF);
+    // Manually update state and colors since programmatic changes may not trigger VALUE_CHANGED
+    this->activeTabIndex = index;
+    updateTabColors(index);
+    // Also call the callback to update currentScreen/currentScr
+    if (this->changeCallback) {
+        this->changeCallback(index);
+    }
 }
 
 uint32_t Navbar::getActiveTab() {
