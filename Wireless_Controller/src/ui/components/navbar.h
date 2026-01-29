@@ -24,6 +24,7 @@ public:
     lv_obj_t* tabs[3];           // Tab content objects
     lv_obj_t* tabIcons[3];       // Icon labels for each tab
     lv_obj_t* tabLabels[3];      // Text labels for each tab
+    lv_obj_t* navbarIndicator;   // Sliding underline indicator
 
     Navbar();
 

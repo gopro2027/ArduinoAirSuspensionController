@@ -26,6 +26,7 @@ Navbar::Navbar() {
     activeTabIndex = 0;
     changeCallback = nullptr;
     swipeEnabled = false;
+    navbarIndicator = nullptr;
     for (int i = 0; i < 3; i++) {
         tabs[i] = nullptr;
         tabIcons[i] = nullptr;
@@ -142,6 +143,25 @@ void Navbar::styleTabBar() {
         }
     }
 
+    // Create sliding indicator on tabbar (top line indicator)
+    const int indicatorWidth = scaledX(40);
+    const int indicatorHeight = scaledY(3);
+    const int btnWidth = getScreenWidth() / 3;
+
+    this->navbarIndicator = lv_obj_create(this->tabbar);
+    lv_obj_remove_style_all(this->navbarIndicator);
+    lv_obj_set_size(this->navbarIndicator, indicatorWidth, indicatorHeight);
+    lv_obj_set_style_bg_color(this->navbarIndicator, lv_color_hex(THEME_COLOR_LIGHT), 0);
+    lv_obj_set_style_bg_opa(this->navbarIndicator, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(this->navbarIndicator, indicatorHeight / 2, 0);
+    lv_obj_remove_flag(this->navbarIndicator, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(this->navbarIndicator, LV_OBJ_FLAG_FLOATING);  // Ignore layout
+
+    // Position at bottom of tabbar (below icons/text), centered on active tab
+    int indicatorX = (btnWidth / 2) - (indicatorWidth / 2) + (this->activeTabIndex * btnWidth);
+    int indicatorY = getNavbarHeight() - indicatorHeight - scaledY(4);
+    lv_obj_set_pos(this->navbarIndicator, indicatorX, indicatorY);
+
     // Update tab colors for initial state
     updateTabColors(this->activeTabIndex);
 }
@@ -157,7 +177,6 @@ void Navbar::setActiveTab(uint32_t index, bool animate) {
     if (index >= 3) return;
     lv_tabview_set_active(this->tabview, index,
                           animate ? LV_ANIM_ON : LV_ANIM_OFF);
-    // Manually update state and colors since programmatic changes may not trigger VALUE_CHANGED
     this->activeTabIndex = index;
     updateTabColors(index);
     // Also call the callback to update currentScreen/currentScr
@@ -211,6 +230,34 @@ void Navbar::updateTabColors(uint32_t activeIndex) {
             uint32_t labelColor = isActive ? activeTextColor : inactiveTextColor;
             lv_obj_set_style_text_color(this->tabLabels[i], lv_color_hex(labelColor), 0);
         }
+
+    }
+
+    // Animate indicator to active tab position
+    if (this->navbarIndicator) {
+        const int indicatorWidth = scaledX(40);
+        const int btnWidth = getScreenWidth() / 3;
+        int indicatorX = (btnWidth / 2) - (indicatorWidth / 2) + (activeIndex * btnWidth);
+
+        // Update indicator color to match theme
+        lv_obj_set_style_bg_color(this->navbarIndicator, lv_color_hex(accentColor), 0);
+
+        if (this->swipeEnabled) {
+            // Animate when swipe is enabled
+            lv_anim_t a;
+            lv_anim_init(&a);
+            lv_anim_set_var(&a, this->navbarIndicator);
+            lv_anim_set_values(&a, lv_obj_get_x(this->navbarIndicator), indicatorX);
+            lv_anim_set_time(&a, 200);
+            lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+            lv_anim_set_exec_cb(&a, [](void* obj, int32_t v) {
+                lv_obj_set_x((lv_obj_t*)obj, v);
+            });
+            lv_anim_start(&a);
+        } else {
+            // Snap directly when swipe is disabled
+            lv_obj_set_x(this->navbarIndicator, indicatorX);
+        }
     }
 }
 
@@ -230,6 +277,7 @@ void Navbar::cleanup() {
     tabview = nullptr;
     tabbar = nullptr;
     activeTabIndex = 0;
+    navbarIndicator = nullptr;
     for (int i = 0; i < 3; i++) {
         tabs[i] = nullptr;
         tabIcons[i] = nullptr;
