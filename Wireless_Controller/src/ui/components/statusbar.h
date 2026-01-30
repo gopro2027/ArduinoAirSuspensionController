@@ -27,6 +27,13 @@ public:
     lv_obj_t* panelAlertIcon;     // Alert icon in panel
     lv_obj_t* panelAlertLabel;    // Alert message in panel
 
+    // Status section elements
+    lv_obj_t* statusSection;      // Status info section
+    lv_obj_t* compressorFrozenLabel;
+    lv_obj_t* accStatusLabel;
+    lv_obj_t* ebrakeStatusLabel;
+    lv_obj_t* compressorStatusLabel;
+
     Statusbar();
 
     // Create statusbar at top of screen
@@ -59,6 +66,7 @@ private:
     void createPullDownPanel(lv_obj_t* parent);
     void updateBatteryStatus();
     void updateAlertStatus();
+    void updateStatusSection();
 
     // Animation callbacks need access to instance
     friend void statusbar_panel_close_anim_cb(lv_anim_t* a);
