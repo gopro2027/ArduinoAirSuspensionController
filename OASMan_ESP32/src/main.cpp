@@ -107,6 +107,8 @@ void setup()
 
     setinternalReboot(false);
 
+    setupLEDs();
+
     Serial.println(F("Startup Complete"));
 
     // for (int i = 0; i < 200; i++) {

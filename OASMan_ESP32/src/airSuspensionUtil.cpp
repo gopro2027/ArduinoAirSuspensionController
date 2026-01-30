@@ -605,3 +605,19 @@ bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex)
 }
 
 #pragma endregion
+
+#pragma region LED_functions
+
+CRGB leds[LED_NUM];
+void setupLEDs()
+{
+    // Initialize FastLED
+    FastLED.addLeds<LED_TYPE, LED_PIN, LED_COLOR_ORDER>(leds, LED_NUM);
+    FastLED.setBrightness(50);  // Set brightness (0-255)
+    
+    // Set all LEDs to red
+    fill_solid(leds, LED_NUM, CRGB::Red);
+    FastLED.show();
+}
+
+#pragma endregion

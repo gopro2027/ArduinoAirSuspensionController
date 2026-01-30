@@ -8,6 +8,7 @@
 #include "manifoldSaveData.h"
 #include "sampleReading.tcc"
 #include "components/rf_receiver.h"
+#include <FastLED.h>
 
 extern InputType *pressureInputs[5];
 extern Manifold *manifold;
@@ -50,4 +51,5 @@ namespace PressureSensorCalibration
 void trainAIModels();
 double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure);
 bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex);
+void setupLEDs();
 #endif
