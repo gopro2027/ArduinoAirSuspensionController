@@ -1,0 +1,2 @@
+Pillow>=9.0.0
+tkinterdnd2>=0.3.0
