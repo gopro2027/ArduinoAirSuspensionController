@@ -2,8 +2,15 @@
 
 ScrPresets scrPresets(true, true, NAV_PRESETS);
 
+#ifdef CUSTOM_CAR_IMAGE
+LV_IMG_DECLARE(img_car_custom);
+LV_IMG_DECLARE(img_wheels_custom);
+const lv_image_dsc_t img_car = img_car_custom;
+const lv_image_dsc_t img_wheels = img_wheels_custom;
+#else
 LV_IMG_DECLARE(img_car);
 LV_IMG_DECLARE(img_wheels);
+#endif
 
 // Dynamic car positioning based on screen size
 // In landscape mode, offset car to the right to account for Save/Load buttons on left
