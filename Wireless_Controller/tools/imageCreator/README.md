@@ -18,11 +18,11 @@ Now carefully outline your car by clicking 1 dot at a time. Outline everything e
 
 Now you have to position and scale your car to fit within the image. Ideally you will get the wheel wells to match up as close as possible. Note: Making the car the full width of the area will make it the full width of the device, so you may not want to make it fit the entire area edge to edge.
 
-Click done to export the image.
+Click done to export the image to the src folder.
 
-Next you will be on the wheels page. The wheels are automatically scaled to the same scale as your car was on the page before. A slightly outline of your car will be at the top of the screen for wheel well placement. Ideally you will only do X adjustments, but you can do Y adjustments too if necessary.
+Next you will be on the wheels page. The wheels are automatically scaled to the same scale as your car was on the page before. A slightly outline of your car will be at the top of the screen for wheel well placement. Ideally you will only do X adjustments, but you can do Y adjustments too if necessary. I suggest you test first with only X adjustments, and then go back and make adjustments to the Y if you need to later.
 
-Click done to export the image. Do not close the program yet, as you may want to make adjustments to the wheel positioning after testing!
+Click done to export the image to the src folder. Do not close the program yet, as you may want to make adjustments to the wheel positioning after testing!
 
 Go to https://lvgl.io/tools/imageconverter and set it to RGB565A8 and copy both of the exported png's (found in Wireless_Controller/src/) there and click convert and then copy the resulting files to the same src folder
 

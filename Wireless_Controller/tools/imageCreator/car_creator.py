@@ -48,6 +48,16 @@ def get_presets_dir(folder_name):
     return os.path.join(get_device_libs_path(), folder_name, "images", "presets")
 
 
+def get_export_car_path():
+    """Return the absolute path for exporting the custom car image (Wireless_Controller/src/img_car_custom.png)."""
+    return os.path.normpath(os.path.join(get_script_dir(), "..", "..", "src", "img_car_custom.png"))
+
+
+def get_export_wheels_path():
+    """Return the absolute path for exporting the custom wheels image (Wireless_Controller/src/img_wheels_custom.png)."""
+    return os.path.normpath(os.path.join(get_script_dir(), "..", "..", "src", "img_wheels_custom.png"))
+
+
 def list_device_lib_folders():
     """List each folder in device_libs (direct subdirectories only). Returns sorted list of names."""
     device_libs_path = get_device_libs_path()
@@ -448,6 +458,13 @@ def run_gui():
             show_content()
             messagebox.showerror("Error", str(e))
 
+    def require_device_lib_selected():
+        folder = chosen.get()
+        if folder.startswith("(") or not os.path.isfile(get_img_car_path(folder)):
+            messagebox.showinfo("Info", "Select a device lib first.")
+            return False
+        return True
+
     def load_new_png(filepath):
         if not state["orig_img"]:
             messagebox.showinfo("Info", "Select a device lib with a valid img_car.png first.")
@@ -461,6 +478,7 @@ def run_gui():
         state["wheel_crops"] = []
         state["car_crop"] = None
         state["workflow_step"] = "outline_wheel1"
+        combo.configure(state="disabled")
         show_content()
 
     outline_points_ref = []  # stored in image coordinates
@@ -610,8 +628,8 @@ def run_gui():
             redraw_outline()
 
         def on_release(event):
-            outline_canvas.unbind("<B1-Motion>", on_drag)
-            outline_canvas.unbind("<ButtonRelease-1>", on_release)
+            outline_canvas.unbind("<B1-Motion>")
+            outline_canvas.unbind("<ButtonRelease-1>")
             drag_index[0] = None
 
         def on_done():
@@ -695,17 +713,9 @@ def run_gui():
             if folder.startswith("("):
                 messagebox.showwarning("Warning", "Select a valid device lib first.")
                 return
-            out_dir = get_presets_dir(folder)
-            path = filedialog.asksaveasfilename(
-                title="Export image (original size, new car only)",
-                initialdir=out_dir,
-                initialfile="img_car.png",
-                defaultextension=".png",
-                filetypes=[("PNG", "*.png"), ("All files", "*.*")],
-            )
-            if not path:
-                return
+            path = get_export_car_path()
             try:
+                os.makedirs(os.path.dirname(path), exist_ok=True)
                 exp = build_export_image(
                     state["orig_size"],
                     state["new_img"],
@@ -715,7 +725,7 @@ def run_gui():
                 )
                 exp.save(path)
                 state["car_img_for_wheels"] = exp.copy()
-                messagebox.showinfo("Export", f"Saved to:\n{path}\n\nNow align the wheels.")
+                messagebox.showinfo("Export", "Export successful.\n\nNow align the wheels.")
                 wheels_path = get_img_wheels_path(folder)
                 if not os.path.isfile(wheels_path):
                     messagebox.showwarning("Wheels", "img_wheels.png not found for this device lib. Skipping wheels step.")
@@ -869,17 +879,9 @@ def run_gui():
             if folder.startswith("("):
                 messagebox.showwarning("Warning", "Select a valid device lib first.")
                 return
-            out_dir = get_presets_dir(folder)
-            path = filedialog.asksaveasfilename(
-                title="Export img_wheels.png (original size, wheels only)",
-                initialdir=out_dir,
-                initialfile="img_wheels.png",
-                defaultextension=".png",
-                filetypes=[("PNG", "*.png"), ("All files", "*.*")],
-            )
-            if not path:
-                return
+            path = get_export_wheels_path()
             try:
+                os.makedirs(os.path.dirname(path), exist_ok=True)
                 exp = build_wheels_export_image(
                     state["wheels_size"],
                     state["wheel_crops"],
@@ -887,13 +889,15 @@ def run_gui():
                     state["wheel2_x"], state["wheel2_y"], state["wheel2_scale"],
                 )
                 exp.save(path)
-                messagebox.showinfo("Export", f"Saved to:\n{path}")
+                messagebox.showinfo("Export", "Export successful.")
             except Exception as e:
                 messagebox.showerror("Export error", str(e))
 
         ttk.Button(wheels_controls_frame, text="Export img_wheels.png", command=export_wheels).pack(pady=(4, 0))
 
     def browse_png():
+        if not require_device_lib_selected():
+            return
         path = filedialog.askopenfilename(
             title="Select new car image",
             filetypes=[
@@ -911,6 +915,8 @@ def run_gui():
     def on_drop(event):
         data = event.data
         if isinstance(data, str) and data.strip():
+            if not require_device_lib_selected():
+                return
             path = data.strip().strip("{}")
             if path.lower().endswith((".png", ".jpg", ".jpeg")) and os.path.isfile(path):
                 load_new_png(path)
