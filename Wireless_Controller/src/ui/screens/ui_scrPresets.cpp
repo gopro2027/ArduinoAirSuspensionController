@@ -2,20 +2,30 @@
 
 ScrPresets scrPresets(true, true, NAV_PRESETS);
 
+#ifdef CUSTOM_CAR_IMAGE
+LV_IMG_DECLARE(img_car_custom);
+LV_IMG_DECLARE(img_wheels_custom);
+const lv_image_dsc_t img_car = img_car_custom;
+const lv_image_dsc_t img_wheels = img_wheels_custom;
+#else
 LV_IMG_DECLARE(img_car);
 LV_IMG_DECLARE(img_wheels);
+#endif
 
 // Dynamic car positioning based on screen size
 // In landscape mode, offset car to the right to account for Save/Load buttons on left
-static int getCarX() {
+static int getCarX()
+{
     int offset = isLandscape() ? scaledX(50) : 0;
     return getScreenWidth() / 2 - img_car.header.w / 2 + offset;
 }
-static int getWheelsX() {
+static int getWheelsX()
+{
     int offset = isLandscape() ? scaledX(50) : 0;
     return getScreenWidth() / 2 - img_wheels.header.w / 2 + offset;
 }
-static int getWheelsY() {
+static int getWheelsY()
+{
     // Position wheels in available space between pressure labels and bottom buttons
     // On larger displays, use a smaller multiplier to avoid overlap with buttons
     int baseY = 88 * SCALE_Y;
@@ -43,21 +53,22 @@ SimpleRect fender2Offset = {166 * SCALE_X, 35 * SCALE_Y, 199 * SCALE_X - 166 * S
 
 // Modern button styling constants
 // Dynamic preset button size based on display scaling
-static int getPresetBtnSize() {
-    return scaledX(38);  // Circular button, use X scaling
+static int getPresetBtnSize()
+{
+    return scaledX(38); // Circular button, use X scaling
 }
 #define PRESET_BTN_WIDTH getPresetBtnSize()
 #define PRESET_BTN_HEIGHT getPresetBtnSize()
-#define PRESET_BTN_RADIUS LV_RADIUS_CIRCLE  // Perfect circle regardless of size
+#define PRESET_BTN_RADIUS LV_RADIUS_CIRCLE // Perfect circle regardless of size
 #define PRESET_BTN_COLOR GENERIC_GREY_DARK
 #define PRESET_BTN_ACTIVE_COLOR THEME_COLOR_LIGHT
 #define PRESET_BTN_GLOW_COLOR THEME_COLOR_MEDIUM
 #define PRESET_BTN_BORDER_COLOR THEME_COLOR_DARK
-static const uint32_t PRESET_BTN_TEXT_COLOR = 0x8888AA;     // Muted text when inactive
-static const uint32_t PRESET_BTN_TEXT_ACTIVE = 0xFFFFFF;    // Bright text when active
+static const uint32_t PRESET_BTN_TEXT_COLOR = 0x8888AA;  // Muted text when inactive
+static const uint32_t PRESET_BTN_TEXT_ACTIVE = 0xFFFFFF; // Bright text when active
 
 // Store label references for updating text color
-static lv_obj_t* presetLabels[5] = {NULL};
+static lv_obj_t *presetLabels[5] = {NULL};
 
 // Forward declaration for load function used in lambdas
 void loadSelectedPreset();
@@ -66,15 +77,15 @@ void loadSelectedPreset();
 static void presetBtnEventCb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
-    if (code == LV_EVENT_CLICKED) {
+    if (code == LV_EVENT_CLICKED)
+    {
         int presetNum = (int)(intptr_t)lv_event_get_user_data(e);
         scrPresets.setPreset(presetNum);
     }
 }
 
-
 // Helper to create a modern circular preset button
-static lv_obj_t* createPresetButton(lv_obj_t *parent, const char *text, int presetNum)
+static lv_obj_t *createPresetButton(lv_obj_t *parent, const char *text, int presetNum)
 {
     lv_obj_t *btn = lv_btn_create(parent);
     lv_obj_set_size(btn, PRESET_BTN_WIDTH, PRESET_BTN_HEIGHT);
@@ -110,17 +121,16 @@ static lv_obj_t* createPresetButton(lv_obj_t *parent, const char *text, int pres
     lv_obj_center(label);
 
     // Store label reference for color updates
-    if (presetNum >= 1 && presetNum <= 5) {
+    if (presetNum >= 1 && presetNum <= 5)
+    {
         presetLabels[presetNum - 1] = label;
     }
 
     // Add click event
-    lv_obj_add_event_cb(btn, presetBtnEventCb, LV_EVENT_CLICKED, (void*)(intptr_t)presetNum);
+    lv_obj_add_event_cb(btn, presetBtnEventCb, LV_EVENT_CLICKED, (void *)(intptr_t)presetNum);
 
     return btn;
 }
-
-
 
 // square 1: 40,37 -> 71, 63
 // square 2: 166,35 -> 198, 60
@@ -141,8 +151,10 @@ void animCarPreset(ScrPresets *scr, lv_coord_t end)
 
     // Scale duration based on distance: ~150ms per 4 pixels, min 200ms, max 600ms
     int duration = (distance * 150) / 4;
-    if (duration < 200) duration = 200;
-    if (duration > 600) duration = 600;
+    if (duration < 200)
+        duration = 200;
+    if (duration > 600)
+        duration = 600;
 
     lv_anim_t a;
     lv_anim_init(&a);
@@ -150,7 +162,7 @@ void animCarPreset(ScrPresets *scr, lv_coord_t end)
     lv_anim_set_var(&a, scr->car);
     lv_anim_set_time(&a, duration);
     lv_anim_set_values(&a, start, end);
-    lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);  // Smooth easing
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out); // Smooth easing
     lv_anim_start(&a);
 }
 
@@ -159,7 +171,8 @@ void ScrPresets::init()
     Scr::init();
 
     // Reset static label references on reinit
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 5; i++)
+    {
         presetLabels[i] = NULL;
     }
 
@@ -219,7 +232,7 @@ void ScrPresets::init()
     lv_obj_set_flex_flow(this->presetButtonsContainer, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(this->presetButtonsContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_remove_flag(this->presetButtonsContainer, LV_OBJ_FLAG_SCROLLABLE);
-    
+
     // circular preset buttons
     this->btnPreset1 = createPresetButton(this->presetButtonsContainer, "1", 1);
     this->btnPreset2 = createPresetButton(this->presetButtonsContainer, "2", 2);
@@ -235,13 +248,14 @@ void ScrPresets::init()
     // Load button
     this->btnLoad = lv_btn_create(actionContainer);
 
-    if (landscape) {
+    if (landscape)
+    {
         // LANDSCAPE LAYOUT: Preset buttons at bottom, Save/Load on left side vertically
 
         // Leave space on left for save/load buttons
-        const int presetsWidth = screenWidth - scaledX(100);  // 100px for save/load on left
+        const int presetsWidth = screenWidth - scaledX(100); // 100px for save/load on left
         lv_obj_set_size(this->presetButtonsContainer, presetsWidth, presetAreaHeight);
-        lv_obj_set_pos(this->presetButtonsContainer, scaledX(100), presetAreaY);  // Offset to the right
+        lv_obj_set_pos(this->presetButtonsContainer, scaledX(100), presetAreaY); // Offset to the right
 
         const int actionWidth = scaledX(85);
         const int actionHeight = scaledY(80);
@@ -251,8 +265,9 @@ void ScrPresets::init()
         lv_obj_set_flex_flow(actionContainer, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_size(this->btnSave, scaledX(75), scaledY(32));
         lv_obj_set_size(this->btnLoad, scaledX(75), scaledY(32));
-
-    } else {
+    }
+    else
+    {
         // PORTRAIT LAYOUT: Original stacked layout
         lv_obj_set_size(this->presetButtonsContainer, screenWidth, presetAreaHeight);
         lv_obj_set_pos(this->presetButtonsContainer, 0, presetAreaY);
@@ -265,7 +280,6 @@ void ScrPresets::init()
         lv_obj_set_flex_flow(actionContainer, LV_FLEX_FLOW_ROW);
         lv_obj_set_size(this->btnSave, scaledX(90), scaledY(32));
         lv_obj_set_size(this->btnLoad, scaledX(90), scaledY(32));
-
     }
 
     lv_obj_set_flex_align(actionContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
@@ -279,7 +293,8 @@ void ScrPresets::init()
     lv_label_set_text(saveLabel, "Save");
     lv_obj_set_style_text_color(saveLabel, lv_color_hex(0xAAAAAA), LV_PART_MAIN);
     lv_obj_center(saveLabel);
-    lv_obj_add_event_cb(this->btnSave, [](lv_event_t *e) {
+    lv_obj_add_event_cb(this->btnSave, [](lv_event_t *e)
+                        {
         if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
             static char buf[40];
             snprintf(buf, sizeof(buf), "Save current height to preset %i?", currentPreset);
@@ -290,8 +305,7 @@ void ScrPresets::init()
                 showDialog("Saved Preset!", lv_color_hex(THEME_COLOR_LIGHT));
                 requestPreset();
             }, []() {}, false);
-        }
-    }, LV_EVENT_CLICKED, NULL);
+        } }, LV_EVENT_CLICKED, NULL);
 
     lv_obj_set_style_bg_color(this->btnLoad, lv_color_hex(PRESET_BTN_ACTIVE_COLOR), LV_PART_MAIN);
     lv_obj_set_style_radius(this->btnLoad, 16, LV_PART_MAIN);
@@ -299,7 +313,8 @@ void ScrPresets::init()
     lv_label_set_text(loadLabel, "Load");
     lv_obj_set_style_text_color(loadLabel, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
     lv_obj_center(loadLabel);
-    lv_obj_add_event_cb(this->btnLoad, [](lv_event_t *e) {
+    lv_obj_add_event_cb(this->btnLoad, [](lv_event_t *e)
+                        {
         if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
             if (currentPreset == 1) {
                 scrPresets.showMsgBox("Air out?", "Preset 1 is typically air out. Please verify your car is not moving.", "Confirm", "Cancel", []() {
@@ -308,11 +323,11 @@ void ScrPresets::init()
             } else {
                 loadSelectedPreset();
             }
-        }
-    }, LV_EVENT_CLICKED, NULL);
+        } }, LV_EVENT_CLICKED, NULL);
 
     // Bring overlays to foreground
-    if (this->navbar_container) lv_obj_move_foreground(this->navbar_container);
+    if (this->navbar_container)
+        lv_obj_move_foreground(this->navbar_container);
     lv_obj_move_foreground(this->ui_lblPressureFrontPassenger);
     lv_obj_move_foreground(this->ui_lblPressureRearPassenger);
     lv_obj_move_foreground(this->ui_lblPressureFrontDriver);
@@ -329,9 +344,11 @@ void ScrPresets::init()
 void ScrPresets::updateButtonStyles()
 {
     // Update button styles based on current preset
-    lv_obj_t* btns[] = {btnPreset1, btnPreset2, btnPreset3, btnPreset4, btnPreset5};
-    for (int i = 0; i < 5; i++) {
-        if (i + 1 == currentPreset) {
+    lv_obj_t *btns[] = {btnPreset1, btnPreset2, btnPreset3, btnPreset4, btnPreset5};
+    for (int i = 0; i < 5; i++)
+    {
+        if (i + 1 == currentPreset)
+        {
             // Active button - purple with glow (same shadow width to prevent shifting)
             lv_obj_set_style_bg_color(btns[i], lv_color_hex(PRESET_BTN_ACTIVE_COLOR), LV_PART_MAIN);
             lv_obj_set_style_border_color(btns[i], lv_color_hex(PRESET_BTN_ACTIVE_COLOR), LV_PART_MAIN);
@@ -340,10 +357,13 @@ void ScrPresets::updateButtonStyles()
             lv_obj_set_style_shadow_opa(btns[i], LV_OPA_60, LV_PART_MAIN);
             lv_obj_set_style_shadow_width(btns[i], 8, LV_PART_MAIN);
             // Update label color
-            if (presetLabels[i]) {
+            if (presetLabels[i])
+            {
                 lv_obj_set_style_text_color(presetLabels[i], lv_color_hex(PRESET_BTN_TEXT_ACTIVE), LV_PART_MAIN);
             }
-        } else {
+        }
+        else
+        {
             // Inactive button - dark with subtle styling
             lv_obj_set_style_bg_color(btns[i], lv_color_hex(PRESET_BTN_COLOR), LV_PART_MAIN);
             lv_obj_set_style_border_color(btns[i], lv_color_hex(PRESET_BTN_BORDER_COLOR), LV_PART_MAIN);
@@ -352,7 +372,8 @@ void ScrPresets::updateButtonStyles()
             lv_obj_set_style_shadow_opa(btns[i], LV_OPA_30, LV_PART_MAIN);
             lv_obj_set_style_shadow_width(btns[i], 8, LV_PART_MAIN);
             // Update label color
-            if (presetLabels[i]) {
+            if (presetLabels[i])
+            {
                 lv_obj_set_style_text_color(presetLabels[i], lv_color_hex(PRESET_BTN_TEXT_COLOR), LV_PART_MAIN);
             }
         }
@@ -404,7 +425,6 @@ void loadSelectedPreset()
     sendRestPacket(&pkt);
     showDialog("Loaded Preset!", lv_color_hex(0x22bb33));
 }
-
 
 void ScrPresets::loop()
 {
