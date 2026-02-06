@@ -21,6 +21,7 @@ static const uint32_t PANEL_SLIDER_TRACK_COLOR = 0x4A4A5A;
 static void statusbar_click_cb(lv_event_t* e);
 static void statusbar_overlay_click_cb(lv_event_t* e);
 static void brightness_slider_cb(lv_event_t* e);
+static void brightness_slider_released_cb(lv_event_t* e);
 static void panel_gesture_cb(lv_event_t* e);
 
 Statusbar::Statusbar() {
@@ -244,6 +245,7 @@ void Statusbar::createPullDownPanel(lv_obj_t* parent) {
     lv_obj_set_style_radius(brightnessSlider, scaledY(4), LV_PART_MAIN);
     lv_obj_set_style_radius(brightnessSlider, scaledY(4), LV_PART_INDICATOR);
     lv_obj_add_event_cb(brightnessSlider, brightness_slider_cb, LV_EVENT_VALUE_CHANGED, this);
+    lv_obj_add_event_cb(brightnessSlider, brightness_slider_released_cb, LV_EVENT_RELEASED, this);
 
     // ========== STATUS SECTION ==========
     statusSection = lv_obj_create(pullDownPanel);
@@ -647,6 +649,12 @@ static void brightness_slider_cb(lv_event_t* e) {
     lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
     int32_t val = lv_slider_get_value(slider);
     set_brightness(val / 100.0f);
+}
+
+static void brightness_slider_released_cb(lv_event_t* e) {
+    lv_obj_t* slider = (lv_obj_t*)lv_event_get_target(e);
+    int32_t val = lv_slider_get_value(slider);
+    setbrightness((byte)val);
 }
 
 static void panel_gesture_cb(lv_event_t* e) {

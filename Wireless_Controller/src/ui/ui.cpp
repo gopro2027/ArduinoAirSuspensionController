@@ -154,12 +154,12 @@ void ui_reinit(void)
     lv_screen_load(mainScreen);
 
     // Restore to previous screen
-    changeScreen(prevScreen);
+    changeScreen(prevScreen, false);
 
     lv_obj_del(splashScr);
 }
 
-void changeScreen(SCREEN screen)
+void changeScreen(SCREEN screen, bool animate)
 {
     if (currentScreen == screen)
     {
@@ -183,7 +183,7 @@ void changeScreen(SCREEN screen)
     }
 
     // Set the active tab - this will trigger the callback
-    globalNavbar.setActiveTab(tabIndex, true);
+    globalNavbar.setActiveTab(tabIndex, animate);
 }
 
 void safetyModeMsgBoxCheck()

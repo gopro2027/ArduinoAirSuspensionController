@@ -28,7 +28,7 @@ typedef enum
 
 void ui_init(void);
 void ui_reinit(void);
-void changeScreen(SCREEN screen);
+void changeScreen(SCREEN screen, bool animate = true);
 void screenLoop();
 void safetyModeMsgBoxCheck();
 
