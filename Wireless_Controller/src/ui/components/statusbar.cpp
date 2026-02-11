@@ -48,7 +48,6 @@ Statusbar::Statusbar() {
     visible = true;
     panelOpen = false;
     hasActiveAlert = false;
-    isClosing = false;
 }
 
 void Statusbar::create(lv_obj_t* parent) {
@@ -303,7 +302,6 @@ void Statusbar::openPanel() {
     if (panelOpen || !pullDownPanel || !overlay) return;
 
     panelOpen = true;
-    isClosing = false;
 
     const int screenHeight = getScreenHeight();
     const int handleHeight = scaledY(50);
@@ -313,114 +311,42 @@ void Statusbar::openPanel() {
         lv_slider_set_value(brightnessSlider, (int)(getBrightnessFloat() * 100), LV_ANIM_OFF);
     }
 
-    // Show and animate overlay
+    // Show overlay instantly
     lv_obj_remove_flag(overlay, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_style_bg_opa(overlay, LV_OPA_50, 0);
     lv_obj_move_to_index(overlay, -1);  // Bring to front
 
-    lv_anim_t overlayAnim;
-    lv_anim_init(&overlayAnim);
-    lv_anim_set_var(&overlayAnim, overlay);
-    lv_anim_set_values(&overlayAnim, LV_OPA_TRANSP, LV_OPA_50);
-    lv_anim_set_time(&overlayAnim, 200);
-    lv_anim_set_path_cb(&overlayAnim, lv_anim_path_ease_out);
-    lv_anim_set_exec_cb(&overlayAnim, [](void* obj, int32_t v) {
-        lv_obj_set_style_bg_opa((lv_obj_t*)obj, v, 0);
-    });
-    lv_anim_start(&overlayAnim);
-
-    // Show and animate panel
+    // Show panel instantly
+    lv_obj_set_y(pullDownPanel, 0);
     lv_obj_move_to_index(pullDownPanel, -1);  // Bring to front
 
-    lv_anim_t panelAnim;
-    lv_anim_init(&panelAnim);
-    lv_anim_set_var(&panelAnim, pullDownPanel);
-    lv_anim_set_values(&panelAnim, -screenHeight, 0);
-    lv_anim_set_time(&panelAnim, 200);
-    lv_anim_set_path_cb(&panelAnim, lv_anim_path_ease_out);
-    lv_anim_set_exec_cb(&panelAnim, [](void* obj, int32_t v) {
-        lv_obj_set_y((lv_obj_t*)obj, v);
-    });
-    lv_anim_start(&panelAnim);
-
-    // Show and animate handle bar area (slides in from top to bottom of screen)
+    // Show handle bar area instantly
     if (handleBar) {
         lv_obj_remove_flag(handleBar, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_y(handleBar, screenHeight - handleHeight);
         lv_obj_move_to_index(handleBar, -1);  // Bring to front
-
-        lv_anim_t handleAnim;
-        lv_anim_init(&handleAnim);
-        lv_anim_set_var(&handleAnim, handleBar);
-        lv_anim_set_values(&handleAnim, -handleHeight, screenHeight - handleHeight);
-        lv_anim_set_time(&handleAnim, 200);
-        lv_anim_set_path_cb(&handleAnim, lv_anim_path_ease_out);
-        lv_anim_set_exec_cb(&handleAnim, [](void* obj, int32_t v) {
-            lv_obj_set_y((lv_obj_t*)obj, v);
-        });
-        lv_anim_start(&handleAnim);
-    }
-}
-
-// Animation complete callback for close
-void statusbar_panel_close_anim_cb(lv_anim_t* a) {
-    Statusbar* statusbar = (Statusbar*)lv_anim_get_user_data(a);
-    if (statusbar && statusbar->overlay) {
-        lv_obj_add_flag(statusbar->overlay, LV_OBJ_FLAG_HIDDEN);
-    }
-    if (statusbar && statusbar->handleBar) {
-        lv_obj_add_flag(statusbar->handleBar, LV_OBJ_FLAG_HIDDEN);
-    }
-    if (statusbar) {
-        statusbar->isClosing = false;
     }
 }
 
 void Statusbar::closePanel() {
-    if (!panelOpen || !pullDownPanel || !overlay || isClosing) return;
+    if (!panelOpen || !pullDownPanel || !overlay) return;
 
     panelOpen = false;
-    isClosing = true;
 
     const int screenHeight = getScreenHeight();
     const int handleHeight = scaledY(50);
 
-    // Animate overlay fade out
-    lv_anim_t overlayAnim;
-    lv_anim_init(&overlayAnim);
-    lv_anim_set_var(&overlayAnim, overlay);
-    lv_anim_set_values(&overlayAnim, LV_OPA_50, LV_OPA_TRANSP);
-    lv_anim_set_time(&overlayAnim, 200);
-    lv_anim_set_path_cb(&overlayAnim, lv_anim_path_ease_out);
-    lv_anim_set_exec_cb(&overlayAnim, [](void* obj, int32_t v) {
-        lv_obj_set_style_bg_opa((lv_obj_t*)obj, v, 0);
-    });
-    lv_anim_set_user_data(&overlayAnim, this);
-    lv_anim_set_completed_cb(&overlayAnim, statusbar_panel_close_anim_cb);
-    lv_anim_start(&overlayAnim);
+    // Hide overlay instantly
+    lv_obj_set_style_bg_opa(overlay, LV_OPA_TRANSP, 0);
+    lv_obj_add_flag(overlay, LV_OBJ_FLAG_HIDDEN);
 
-    // Animate panel slide up
-    lv_anim_t panelAnim;
-    lv_anim_init(&panelAnim);
-    lv_anim_set_var(&panelAnim, pullDownPanel);
-    lv_anim_set_values(&panelAnim, 0, -screenHeight);
-    lv_anim_set_time(&panelAnim, 200);
-    lv_anim_set_path_cb(&panelAnim, lv_anim_path_ease_out);
-    lv_anim_set_exec_cb(&panelAnim, [](void* obj, int32_t v) {
-        lv_obj_set_y((lv_obj_t*)obj, v);
-    });
-    lv_anim_start(&panelAnim);
+    // Hide panel instantly
+    lv_obj_set_y(pullDownPanel, -screenHeight);
 
-    // Animate handle bar area slide up
+    // Hide handle bar area instantly
     if (handleBar) {
-        lv_anim_t handleAnim;
-        lv_anim_init(&handleAnim);
-        lv_anim_set_var(&handleAnim, handleBar);
-        lv_anim_set_values(&handleAnim, screenHeight - handleHeight, -handleHeight);
-        lv_anim_set_time(&handleAnim, 200);
-        lv_anim_set_path_cb(&handleAnim, lv_anim_path_ease_out);
-        lv_anim_set_exec_cb(&handleAnim, [](void* obj, int32_t v) {
-            lv_obj_set_y((lv_obj_t*)obj, v);
-        });
-        lv_anim_start(&handleAnim);
+        lv_obj_set_y(handleBar, -handleHeight);
+        lv_obj_add_flag(handleBar, LV_OBJ_FLAG_HIDDEN);
     }
 }
 
@@ -623,7 +549,6 @@ void Statusbar::cleanup() {
     visible = false;
     panelOpen = false;
     hasActiveAlert = false;
-    isClosing = false;
 }
 
 int Statusbar::getHeight() {

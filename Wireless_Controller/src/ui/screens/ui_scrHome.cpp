@@ -81,33 +81,12 @@ static void calculatePillDimensions() {
     }
 }
 
-// Animation callback to set transform scale
-static void anim_scale_cb(void *var, int32_t value) {
-    lv_obj_t *obj = (lv_obj_t *)var;
-    lv_obj_set_style_transform_scale(obj, value, 0);
-}
-
 // Pill button press callback (for PRESSED event)
 static void pill_button_pressed_cb(lv_event_t *e) {
     lv_event_code_t event_code = lv_event_get_code(e);
     if (event_code == LV_EVENT_PRESSED) {
         int valveBit = (int)lv_event_get_user_data(e);
-        lv_obj_t *btn = lv_event_get_target_obj(e);
-        
         setValveBit(valveBit);
-        
-        // Get the pill container (parent of the button) to animate the whole pill
-        lv_obj_t *container = lv_obj_get_parent(btn);
-        
-        // Animate shrink: scale from 256 (100%) to 230 (90%)
-        lv_anim_t a;
-        lv_anim_init(&a);
-        lv_anim_set_var(&a, container);
-        lv_anim_set_values(&a, 256, 230);
-        lv_anim_set_time(&a, 100);
-        lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
-        lv_anim_set_exec_cb(&a, anim_scale_cb);
-        lv_anim_start(&a);
     }
 }
 
@@ -116,22 +95,7 @@ static void pill_button_released_cb(lv_event_t *e) {
     lv_event_code_t event_code = lv_event_get_code(e);
     if (event_code == LV_EVENT_RELEASED) {
         int valveBit = (int)lv_event_get_user_data(e);
-        lv_obj_t *btn = lv_event_get_target_obj(e);
-        
         unsetValveBit(valveBit);
-        
-        // Get the pill container (parent of the button) to animate the whole pill
-        lv_obj_t *container = lv_obj_get_parent(btn);
-        
-        // Animate pop back: scale from 230 (90%) to 256 (100%)
-        lv_anim_t a;
-        lv_anim_init(&a);
-        lv_anim_set_var(&a, container);
-        lv_anim_set_values(&a, 230, 256);
-        lv_anim_set_time(&a, 150);
-        lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
-        lv_anim_set_exec_cb(&a, anim_scale_cb);
-        lv_anim_start(&a);
     }
 }
 
@@ -168,9 +132,6 @@ static PillButtons createUnifiedPill(lv_obj_t *parent)
     lv_obj_set_style_bg_color(pill.container, lv_color_hex(GENERIC_GREY_VERY_DARK), 0);
     lv_obj_set_style_bg_opa(pill.container, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(pill.container, PILL_RADIUS, 0);
-    lv_obj_set_style_transform_scale(pill.container, 256, 0);  // Initialize to 100% scale
-    lv_obj_set_style_transform_pivot_x(pill.container, PILL_WIDTH / 2, 0);  // Center pivot X
-    lv_obj_set_style_transform_pivot_y(pill.container, PILL_HEIGHT / 2, 0);  // Center pivot Y
     lv_obj_remove_flag(pill.container, LV_OBJ_FLAG_SCROLLABLE);
 
     if (LANDSCAPE_MODE) {
@@ -203,7 +164,7 @@ static PillButtons createUnifiedPill(lv_obj_t *parent)
         lv_obj_remove_style_all(pill.btnUp);
         lv_obj_set_size(pill.btnUp, PILL_WIDTH, PILL_HEIGHT / 2);
         lv_obj_set_pos(pill.btnUp, 0, 0);
-        lv_obj_set_style_bg_opa(pill.btnUp, LV_OPA_TRANSP, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(pill.btnUp, LV_OPA_TRANSP, LV_PART_MAIN); // transparent so that the button actually doesn't show anything until it's pressed
         lv_obj_set_style_bg_opa(pill.btnUp, LV_OPA_50, LV_PART_MAIN | (lv_style_selector_t)LV_STATE_PRESSED);
         lv_obj_set_style_bg_color(pill.btnUp, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN | (lv_style_selector_t)LV_STATE_PRESSED);
         lv_obj_set_style_radius(pill.btnUp, PILL_RADIUS, LV_PART_MAIN);

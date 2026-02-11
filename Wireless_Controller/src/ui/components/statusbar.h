@@ -61,15 +61,11 @@ private:
     bool visible;
     bool panelOpen;               // Track panel state
     bool hasActiveAlert;          // Track alert state
-    bool isClosing;               // Prevent double animations
 
     void createPullDownPanel(lv_obj_t* parent);
     void updateBatteryStatus();
     void updateAlertStatus();
     void updateStatusSection();
-
-    // Animation callbacks need access to instance
-    friend void statusbar_panel_close_anim_cb(lv_anim_t* a);
 };
 
 // Global statusbar instance
