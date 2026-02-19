@@ -46,7 +46,7 @@
 /* By default the android app is set up for 4 profiles */
 #define MAX_PROFILE_COUNT 5
 
-#define SIX_VALVE_MANIFOLD true
+#define SIX_VALVE_MANIFOLD false
 
 /* These are the pin numbers used for our manifold solenoids */
 
