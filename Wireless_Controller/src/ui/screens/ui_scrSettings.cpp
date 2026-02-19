@@ -1,6 +1,7 @@
 #include "ui_scrSettings.h"
+#include "ui/components/navbar.h"
 
-ScrSettings scrSettings(false, false, NAV_SETTINGS);  // No pressures, no alert icon
+ScrSettings scrSettings(false);
 
 void alertValueUpdated()
 {
@@ -191,9 +192,9 @@ void ScrSettings::updateUpdateButtonVisbility()
     }
 }
 
-void ScrSettings::init()
+void ScrSettings::init(lv_obj_t *parent)
 {
-    Scr::init();
+    Scr::init(parent);
 
     // Clear tracking vectors for fresh init
     allOptions.clear();
@@ -208,8 +209,8 @@ void ScrSettings::init()
     // Create main container for settings (not scrollable)
     menu_container = lv_obj_create(this->scr);
     lv_obj_remove_style_all(menu_container);
-    lv_obj_set_size(menu_container, scrW, scrH - NAVBAR_HEIGHT);
-    lv_obj_align(menu_container, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_set_size(menu_container, scrW, scrH - NAVBAR_HEIGHT - STATUSBAR_HEIGHT);
+    lv_obj_align(menu_container, LV_ALIGN_TOP_MID, 0, STATUSBAR_HEIGHT);
     lv_obj_set_style_bg_opa(menu_container, LV_OPA_TRANSP, 0);
     lv_obj_set_layout(menu_container, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(menu_container, LV_FLEX_FLOW_COLUMN);
@@ -242,7 +243,7 @@ void ScrSettings::init()
     // Create pages container (scrollable area for content only)
     lv_obj_t *pages_container = lv_obj_create(menu_container);
     lv_obj_remove_style_all(pages_container);
-    lv_obj_set_size(pages_container, scrW, scrH - NAVBAR_HEIGHT - menuBarHeight);
+    lv_obj_set_size(pages_container, scrW, scrH - NAVBAR_HEIGHT - STATUSBAR_HEIGHT - menuBarHeight);
     lv_obj_set_style_bg_opa(pages_container, LV_OPA_TRANSP, 0);
     lv_obj_set_layout(pages_container, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(pages_container, LV_FLEX_FLOW_COLUMN);
@@ -511,6 +512,15 @@ void ScrSettings::init()
         set_brightness(getBrightnessFloat());
     });
     ((Option *)this->ui_brightnessSlider)->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
+
+    // Swipe navigation toggle
+    allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Navigation", {.STRING = ""}));
+    allOptions.push_back(new Option(screen_settings_page, OptionType::ON_OFF, "Swipe Navigation", {.INT = getswipeNavigation() ? 1 : 0}, [](void *data)
+    {
+        bool enabled = (bool)data;
+        setswipeNavigation(enabled);
+        globalNavbar.setSwipeEnabled(enabled);
+    }));
 
     #if SUPPORTS_ROTATION == 1
     

@@ -10,8 +10,8 @@ class ScrHome : public Scr
     using Scr::Scr;
 
 public:
-    void init();
-    void loop();
+    void init(lv_obj_t *parent = nullptr) override;
+    void loop() override;
     void cleanup() override;
     lv_obj_t *icon_home_bg;
 

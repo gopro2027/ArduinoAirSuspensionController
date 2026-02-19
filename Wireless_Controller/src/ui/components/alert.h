@@ -37,22 +37,17 @@ public:
     lv_obj_t *container;      // Toast container at top
     lv_obj_t *text;           // Message text
     lv_obj_t *dismissBtn;     // X dismiss button
-    lv_obj_t *statusIcon;     // Small persistent icon in top-left
-    lv_obj_t *iconContainer;  // Container for status icon
     unsigned long expiry;
     bool dismissed;           // Track if user dismissed manually (local)
-    lv_color_t lastColor;     // Store last notification color for icon
-    char lastMessage[64];     // Store last message for icon tooltip
-    bool showIconEnabled;     // Whether to show the persistent icon on this screen
+    lv_color_t lastColor;     // Store last notification color
+    char lastMessage[64];     // Store last message
 
-    Alert(Scr *scr, bool enableIcon = true);
+    Alert(Scr *scr);
     void show(lv_color_t accentColor, char *text, unsigned long expiry);
-    void showForced(lv_color_t accentColor, char *text, unsigned long expiry); // Force show even if dismissed
+    void showForced(lv_color_t accentColor, char *text, unsigned long expiry);
     void dismiss();
     void loop();
-    void showIcon();
-    void hideIcon();
-    void syncFromGlobal();    // Sync icon state from global dismissed state
+    void syncFromGlobal();
 };
 
 #endif

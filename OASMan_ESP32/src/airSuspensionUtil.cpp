@@ -104,6 +104,8 @@ void setupManifold()
 {
     initializeADS();
 
+#if SIX_VALVE_MANIFOLD == false
+
     manifold = new Manifold(
         solenoidFrontPassengerInPin,
         solenoidFrontPassengerOutPin,
@@ -113,6 +115,18 @@ void setupManifold()
         solenoidFrontDriverOutPin,
         solenoidRearDriverInPin,
         solenoidRearDriverOutPin);
+
+#else
+
+    manifold = new Manifold(
+        m6_solenoidFrontPassengerPin,
+        m6_solenoidRearPassengerPin,
+        m6_solenoidFrontDriverPin,
+        m6_solenoidRearDriverPin,
+        m6_solenoidChamberTankPin,
+        m6_solenoidChamberExhaustPin);
+
+#endif
 }
 
 #pragma endregion

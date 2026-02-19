@@ -50,13 +50,11 @@ int getBaseHeight() {
 // Dynamic scaling functions (recalculate based on current screen size)
 // Scale relative to 240×320 reference design
 float getScaleX() {
-    int baseWidth = getBaseWidth();
     int currentWidth = isLandscape() ? getScreenHeight() : getScreenWidth();
     return currentWidth / 240.0f;
 }
 
 float getScaleY() {
-    int baseHeight = getBaseHeight();
     int currentHeight = isLandscape() ? getScreenWidth() : getScreenHeight();
     return currentHeight / 320.0f;
 }
@@ -271,6 +269,7 @@ void beginSaveData()
     _SaveData.themeColorLight.load("themeColorLight", THEME_COLOR_OCEAN_BLUE_LIGHT);
     _SaveData.themeColorDark.load("themeColorDark", THEME_COLOR_OCEAN_BLUE_DARK);
     _SaveData.themeColorMedium.load("themeColorMedium", THEME_COLOR_OCEAN_BLUE_MEDIUM);
+    _SaveData.swipeNavigation.load("swipeNav", false);
 }
 
 createSaveFuncInt(unitsMode, int);
@@ -285,6 +284,7 @@ createSaveFuncInt(screenRotation, byte);
 createSaveFuncInt(themeColorLight, uint32_t);
 createSaveFuncInt(themeColorDark, uint32_t);
 createSaveFuncInt(themeColorMedium, uint32_t);
+createSaveFuncInt(swipeNavigation, bool);
 
 float getBrightnessFloat()
 {
@@ -347,9 +347,7 @@ void defocus(Option *option)
 }
 static void kb_event_cb(lv_event_t *e)
 {
-
     lv_event_code_t event_code = lv_event_get_code(e);
-    lv_obj_t *target = (lv_obj_t *)lv_event_get_target(e);
     Option *option = (Option *)lv_event_get_user_data(e);
     if (event_code == LV_EVENT_CANCEL)
     {

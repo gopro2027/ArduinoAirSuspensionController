@@ -8,7 +8,6 @@
 #define TOAST_PADDING_Y scaledY(8)
 #define TOAST_BORDER_RADIUS scaledX(12)
 #define DISMISS_BTN_SIZE scaledX(24)
-#define ICON_SIZE scaledX(20)
 #define ACCENT_BAR_WIDTH scaledX(4)
 
 // Global alert state - shared across all screens
@@ -57,23 +56,12 @@ static void dismiss_btn_cb(lv_event_t *e)
     }
 }
 
-// Callback for icon click - shows the toast again (forced, bypasses dismiss check)
-static void icon_click_cb(lv_event_t *e)
-{
-    Alert *alert = (Alert *)lv_event_get_user_data(e);
-    if (alert != NULL && alert->lastMessage[0] != '\0')
-    {
-        alert->showForced(alert->lastColor, alert->lastMessage, millis() + 5000);
-    }
-}
-
-Alert::Alert(Scr *scr, bool enableIcon)
+Alert::Alert(Scr *scr)
 {
     this->parentScr = scr;
     this->dismissed = false;
     this->lastMessage[0] = '\0';
     this->lastColor = lv_color_hex(THEME_COLOR_LIGHT);
-    this->showIconEnabled = enableIcon;
 
     // ============================================
     // MAIN TOAST CONTAINER (top of screen)
@@ -85,7 +73,7 @@ Alert::Alert(Scr *scr, bool enableIcon)
     lv_obj_set_width(this->container, TOAST_WIDTH);
     lv_obj_set_height(this->container, TOAST_HEIGHT);
     lv_obj_set_align(this->container, LV_ALIGN_TOP_MID);
-    lv_obj_set_y(this->container, TOAST_MARGIN);
+    lv_obj_set_y(this->container, STATUSBAR_HEIGHT + TOAST_MARGIN);
 
     // Modern dark background with subtle transparency
     lv_obj_set_style_bg_opa(this->container, LV_OPA_90, LV_PART_MAIN);
@@ -157,34 +145,8 @@ Alert::Alert(Scr *scr, bool enableIcon)
 
     lv_obj_add_event_cb(this->dismissBtn, dismiss_btn_cb, LV_EVENT_CLICKED, this);
 
-    // ============================================
-    // PERSISTENT STATUS ICON (top-left corner)
-    // ============================================
-    this->iconContainer = lv_obj_create(scr->scr);
-    lv_obj_remove_style_all(this->iconContainer);
-    lv_obj_set_size(this->iconContainer, ICON_SIZE + scaledX(8), ICON_SIZE + scaledY(8));
-    lv_obj_set_align(this->iconContainer, LV_ALIGN_TOP_LEFT);
-    lv_obj_set_pos(this->iconContainer, scaledX(6), scaledY(6));
-
-    // Icon container styling
-    lv_obj_set_style_bg_opa(this->iconContainer, LV_OPA_80, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(this->iconContainer, lv_color_hex(0x1E1E2E), LV_PART_MAIN);
-    lv_obj_set_style_radius(this->iconContainer, (ICON_SIZE + scaledX(8)) / 2, LV_PART_MAIN);
-    lv_obj_set_style_border_width(this->iconContainer, scaledX(2), LV_PART_MAIN);
-    lv_obj_set_style_border_color(this->iconContainer, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);
-    lv_obj_remove_flag(this->iconContainer, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(this->iconContainer, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(this->iconContainer, icon_click_cb, LV_EVENT_CLICKED, this);
-
-    // Icon symbol inside
-    this->statusIcon = lv_label_create(this->iconContainer);
-    lv_label_set_text(this->statusIcon, LV_SYMBOL_WARNING);
-    lv_obj_set_style_text_color(this->statusIcon, lv_color_hex(THEME_COLOR_LIGHT), 0);
-    lv_obj_set_align(this->statusIcon, LV_ALIGN_CENTER);
-
-    // Initially hide both
+    // Initially hide toast
     lv_obj_add_flag(this->container, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(this->iconContainer, LV_OBJ_FLAG_HIDDEN);
 
     this->expiry = 0;
 }
@@ -196,8 +158,6 @@ void Alert::dismiss()
     globalAlertDismiss();
 
     lv_obj_add_flag(this->container, LV_OBJ_FLAG_HIDDEN);
-    // Show the small icon indicator
-    showIcon();
 }
 
 void Alert::syncFromGlobal()
@@ -210,38 +170,16 @@ void Alert::syncFromGlobal()
         strncpy(this->lastMessage, globalAlertState.currentMessage, sizeof(this->lastMessage) - 1);
         this->lastMessage[sizeof(this->lastMessage) - 1] = '\0';
 
-        // Always hide the toast on screen switch - only show icon
-        // This prevents glitchy behavior when switching between screens
+        // Always hide the toast on screen switch
         this->dismissed = true;
         lv_obj_add_flag(this->container, LV_OBJ_FLAG_HIDDEN);
-        showIcon();
     }
     else
     {
         // No active alert
         this->dismissed = false;
-        hideIcon();
         lv_obj_add_flag(this->container, LV_OBJ_FLAG_HIDDEN);
     }
-}
-
-void Alert::showIcon()
-{
-    // Don't show icon if disabled for this screen (e.g., settings page)
-    if (!this->showIconEnabled)
-        return;
-
-    lv_obj_remove_flag(this->iconContainer, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_move_foreground(this->iconContainer);
-
-    // Update icon border color to match notification type
-    lv_obj_set_style_border_color(this->iconContainer, this->lastColor, LV_PART_MAIN);
-    lv_obj_set_style_text_color(this->statusIcon, this->lastColor, 0);
-}
-
-void Alert::hideIcon()
-{
-    lv_obj_add_flag(this->iconContainer, LV_OBJ_FLAG_HIDDEN);
 }
 
 void Alert::loop()
@@ -255,8 +193,6 @@ void Alert::loop()
             globalAlertDismiss();
 
             lv_obj_add_flag(this->container, LV_OBJ_FLAG_HIDDEN);
-            // Show icon when toast auto-dismisses
-            showIcon();
         }
     }
 }
@@ -267,16 +203,10 @@ void Alert::show(lv_color_t accentColor, char *text, unsigned long expiry)
     if (globalAlertState.hasActiveAlert && strcmp(globalAlertState.currentMessage, text) == 0)
     {
         // Same message - don't re-show, just maintain current state
-        // Update local data for icon display
+        // Update local data
         this->lastColor = accentColor;
         strncpy(this->lastMessage, text, sizeof(this->lastMessage) - 1);
         this->lastMessage[sizeof(this->lastMessage) - 1] = '\0';
-
-        // Keep showing icon if we're in dismissed state
-        if (this->dismissed)
-        {
-            showIcon();
-        }
         return;
     }
 
@@ -294,9 +224,6 @@ void Alert::showForced(lv_color_t accentColor, char *text, unsigned long expiry)
     this->lastColor = accentColor;
     strncpy(this->lastMessage, text, sizeof(this->lastMessage) - 1);
     this->lastMessage[sizeof(this->lastMessage) - 1] = '\0';
-
-    // Hide the icon when showing full toast
-    hideIcon();
 
     lv_obj_remove_flag(this->container, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(this->container);

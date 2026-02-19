@@ -116,8 +116,11 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
 
         lv_obj_add_event_cb(this->ui_switch, ui_switch_changed, LV_EVENT_VALUE_CHANGED, this);
 
-        // Initialize to off state
-        this->boolValue = false;
+        // Initialize switch state from passed value
+        this->boolValue = (value.INT != 0);
+        if (this->boolValue) {
+            lv_obj_add_state(this->ui_switch, LV_STATE_CHECKED);
+        }
     }
     else if (type == OptionType::BUTTON)
     {
