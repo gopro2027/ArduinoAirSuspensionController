@@ -616,7 +616,7 @@ void setupLEDs()
     FastLED.setBrightness(50);  // Set brightness (0-255)
     
     // Set all LEDs to red
-    fill_solid(leds, LED_NUM, CRGB::Red);
+    fill_solid(leds, LED_NUM, CRGB::DarkCyan);
     FastLED.show();
 }
 
