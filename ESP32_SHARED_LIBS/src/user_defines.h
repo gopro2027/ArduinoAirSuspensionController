@@ -162,6 +162,12 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 
 #define AIR_OUT_AFTER_SHUTDOWN_MS 5000
 
+// LED Configuration
+#define LED_PIN     16
+#define LED_NUM    6        // Change this if you add more LEDs
+#define LED_TYPE    SK6812
+#define LED_COLOR_ORDER GRB
+
 /* DO NOT CHANGE ANY PAST THIS LINE */
 #define WHEEL_FRONT_PASSENGER 0
 #define WHEEL_REAR_PASSENGER 1
