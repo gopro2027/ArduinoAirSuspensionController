@@ -24,7 +24,6 @@ void lvgl_touch_hook(lv_indev_t *indev, lv_indev_data_t *data)
 
         // Get actual LCD dimensions for proper touch transformation
         const int32_t lcdWidth = LCD_WIDTH;   // Native portrait width
-        const int32_t lcdHeight = LCD_HEIGHT; // Native portrait height
 
         switch (rotation)
         {

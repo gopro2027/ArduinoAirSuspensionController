@@ -52,6 +52,28 @@ BLERemoteCharacteristic *pRemoteChar_Status;
 BLERemoteCharacteristic *pRemoteChar_Rest;
 BLERemoteCharacteristic *pRemoteChar_ValveControl;
 
+void waitUntilCharacteristicIsReady(BLERemoteService *pRemoteService, BLEUUID characteristicUUID, BLERemoteCharacteristic *&pRemoteChar) 
+{
+    int timer = 0;
+    pRemoteChar = pRemoteService->getCharacteristic(characteristicUUID);
+    while (pRemoteChar == nullptr && timer < 20) {
+        delay(10);
+        pRemoteChar = pRemoteService->getCharacteristic(characteristicUUID);
+        timer++;
+    }
+}
+
+void waitUntilServiceIsReady(BLEClient *pClient, BLEUUID serviceUUID, BLERemoteService *&pRemoteService)
+{
+    int timer = 0;
+    pRemoteService = pClient->getService(serviceUUID);
+    while (pRemoteService == nullptr && timer < 20) {
+        delay(10);
+        pRemoteService = pClient->getService(serviceUUID);
+        timer++;
+    }
+}
+
 AuthResult authenticationResult = AUTHRESULT_WAITING;
 
 std::stack<const NimBLEAdvertisedDevice *> oasmanClientsFound;
@@ -232,6 +254,7 @@ class MyClientCallback : public NimBLEClientCallbacks
     }
 } clientCallbacks;
 
+char *connectionErrorInfoString = nullptr;
 // Function that is run whenever the server is connected
 bool connectToServer(const BLEAdvertisedDevice *myDevice)
 {
@@ -256,27 +279,32 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     NimBLEDevice::setSecurityAuth(false, false, true);      // Default
 
     pClient->setClientCallbacks(&clientCallbacks, false);
+    pClient->setConnectTimeout(2000);
 
     log_i("Set callbacks");
 
     // Connect to the remove BLE Server.
     log_i("Address type: %d", myDevice->getAddressType());
-    // delay(100);
 
-    // Connect async so we can timeout after 1 second. Unfortunately fairly easily the code can glitch up and get stuck here. Having a 1 second timeout lets us retry the connection, and it is usually successfull the second time around.
-    bool _connected = pClient->connect(myDevice, true, true); // if you pass BLEAdvertisedDevice instead of address, it will be recognized type of peer device address (public or private)
-    unsigned long connectionTimeoutMS = millis() + 1000;
-    while (pClient->isConnected() == false && millis() < connectionTimeoutMS)
+    // Sync connect with 5s timeout and retry once (Options A & D)
+    bool _connected = false;
+    for (int attempt = 0; attempt < 2; attempt++)
     {
-        Serial.print(".");
-        delay(100);
+        if (attempt > 0)
+        {
+            delay(250);// Well, we know this device exissts and it failed connection once, so give it a second try...
+            pClient->cancelConnect();
+        }
+        _connected = pClient->connect(myDevice, true, false); // sync connect, will pause execution until it is completed (capped to 2000ms)
+        if (_connected)
+            break;
     }
-    _connected = pClient->isConnected();
+    // Failed both connections
     if (!_connected)
     {
         pClient->cancelConnect();
-        log_i("Connection error (Timed out!)");
-        // delete pClient;
+        connectionErrorInfoString = "Timed out establishing connection to found manifold";
+        log_i("Connection error: %s", connectionErrorInfoString);
         return false;
     }
     log_i(" - Connected to server");
@@ -294,22 +322,26 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     // Obtain a reference to the service we are after in the remote BLE server.
     // pClient->getServices(); // invoke call to receive list of services
 
-    BLERemoteService *pRemoteService = pClient->getService(serviceUUID);
+    BLERemoteService *pRemoteService = nullptr;
+    waitUntilServiceIsReady(pClient, serviceUUID, pRemoteService);
     if (pRemoteService == nullptr)
     {
         log_i("Failed to find our service UUID: %s", serviceUUID.toString().c_str());
+        connectionErrorInfoString = "Failed to establish communication with found manifold for our service UUID";
+        log_i("Connection error: %s", connectionErrorInfoString);
         // pClient->disconnect();
         return false;
+
     }
     log_i(" - Found our service");
 
     // TODO: it will lock up if it fails in this characteristic code below. Not sure why tbh
     log_i("Checking char: status");
-    pRemoteChar_Status = pRemoteService->getCharacteristic(charUUID_Status);
+    waitUntilCharacteristicIsReady(pRemoteService, charUUID_Status, pRemoteChar_Status);
     log_i("Checking char: rest");
-    pRemoteChar_Rest = pRemoteService->getCharacteristic(charUUID_Rest);
+    waitUntilCharacteristicIsReady(pRemoteService, charUUID_Rest, pRemoteChar_Rest);
     log_i("Checking char: valve");
-    pRemoteChar_ValveControl = pRemoteService->getCharacteristic(charUUID_ValveControl);
+    waitUntilCharacteristicIsReady(pRemoteService, charUUID_ValveControl, pRemoteChar_ValveControl);
 
     delay(50);
 
@@ -333,6 +365,8 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
     {
         // pClient->disconnect();
         log_i("At least one characteristic UUID not found");
+        connectionErrorInfoString = "Failed to establish communication with found manifold for at least one characteristic UUID";
+        log_i("Connection error: %s", connectionErrorInfoString);
         return false;
     }
 
@@ -360,12 +394,14 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
             // authblacklist.push_back(*pClient->getPeerAddress().getBase());
             log_i("Auth failed");
             // pClient->disconnect();
+            connectionErrorInfoString = "Invalid passkey!";
             return false;
         }
         if (millis() > authEnd)
         {
             log_i("Auth timed out");
             // pClient->disconnect();
+            connectionErrorInfoString = "Auth timed out";
             return false;
         }
         Serial.print(".");
@@ -494,14 +530,16 @@ void ble_setup()
     BLEDevice::init("OASMan_Controller");
     NimBLEDevice::setMTU(ESP_GATT_MAX_MTU_SIZE); // default is 255 if not set here!!
 
-    disconnect(); // sets up variables to get it ready to go
+    disconnect(false); // sets up variables to get it ready to go
 
     showDialog("Searching for manifold...", lv_color_hex(0xFFFF00), 30000);
 }
 
+
 void ble_loop()
 {
 
+    connectionErrorInfoString = nullptr;
     static unsigned int previousValveInt = 0;
 
     // if we are connected but the client is not connected, then disconnect
@@ -553,6 +591,10 @@ void ble_loop()
 
     if (!oasmanClientsFound.empty())
     {
+        // Short delay to let advertisement/stack settle after scan. Making sure that the pushed device has all the info we need to connect
+        delay(100);
+
+        connectionErrorInfoString = "Unspecified error, but manifold was found";
         const NimBLEAdvertisedDevice *advertisedDevice = oasmanClientsFound.top();
         oasmanClientsFound.pop();
 
@@ -577,7 +619,10 @@ void ble_loop()
 
     if (connected == false && !NimBLEDevice::getScan()->isScanning() && oasmanClientsFound.empty())
     {
-        log_i("Searching");
+        log_i("disconnecting and rescanning");
+        // failed to connect, do disconnect procedure
+        disconnect();
+
         if (scanCallbacks.anyFound == false)
         {
             if (scanError)
@@ -588,11 +633,14 @@ void ble_loop()
             {
                 showDialog("No manifold found!", lv_color_hex(0xFF0000), 30000);
             }
+        } else {
+            // error was somewhere in the connect function, since it found a device but it errored out. Show the connection error
+            if (connectionErrorInfoString != nullptr) {
+                #ifndef OFFICIAL_RELEASE
+                showDialog(connectionErrorInfoString, lv_color_hex(0xFF0000), 30000);
+                #endif
+            }
         }
-
-        log_i("disconnecting and rescanning");
-        // failed to connect, do disconnect procedure
-        disconnect();
     }
     else
     {

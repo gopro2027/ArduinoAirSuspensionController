@@ -35,12 +35,20 @@ inline int scaledY(int referenceValue) {
 inline int getNavbarHeight() {
     return scaledY(50);
 }
+inline int getStatusbarHeight() {
+    return scaledY(18);
+}
 
 // Override compile-time constant with dynamic value
 #ifdef NAVBAR_HEIGHT
 #undef NAVBAR_HEIGHT
 #endif
 #define NAVBAR_HEIGHT getNavbarHeight()
+
+#ifdef STATUSBAR_HEIGHT
+#undef STATUSBAR_HEIGHT
+#endif
+#define STATUSBAR_HEIGHT getStatusbarHeight()
 
 // Legacy compile-time macros (use dynamic functions for rotation support)
 #define SCALE_X getScaleX()
@@ -54,7 +62,7 @@ class Option;
 
 struct SimpleRect // used in ui_scrPresets.cpp.
 {
-    double x, y, w, h;
+    int x, y, w, h;
 };
 
 void runNextFrame(std::function<void()> function);
@@ -114,6 +122,8 @@ public:
     Preferencable themeColorLight;
     Preferencable themeColorDark;
     Preferencable themeColorMedium;
+    // Navigation
+    Preferencable swipeNavigation;
 };
 
 extern SaveData _SaveData;
@@ -130,6 +140,7 @@ headerDefineSaveFunc(screenRotation, byte);
 headerDefineSaveFunc(themeColorLight, uint32_t);
 headerDefineSaveFunc(themeColorDark, uint32_t);
 headerDefineSaveFunc(themeColorMedium, uint32_t);
+headerDefineSaveFunc(swipeNavigation, bool);
 
 // Theme presets enum
 enum ThemePreset {

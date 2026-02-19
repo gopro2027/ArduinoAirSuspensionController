@@ -63,8 +63,8 @@ public:
     std::vector<Option*> allOptions;
     std::vector<RadioOption*> allRadioOptions;
 
-    void init();
-    void loop();
+    void init(lv_obj_t *parent = nullptr) override;
+    void loop() override;
     void cleanup() override;
     void showColorPickerModal();
 };

@@ -8,6 +8,8 @@
 
 #include "utils/util.h"
 
+SET_LOOP_TASK_STACK_SIZE(12*1024); // the default 1024*8 how now reached it's limit with lvgl. Need to increase accordingly. lv_timer_handler() is the culprit.
+
 #define DIM_SCREEN_TIME 60 * 1000 * getscreenDimTimeM()
 unsigned long dimScreenTime = 0;
 bool dimmed = false;
@@ -88,9 +90,27 @@ void setup()
 }
 
 // auto lv_last_tick = millis();
+static int lastFreeHeap = 0;
+static unsigned long lastMemLog = 0;
+
 void loop()
 {
     auto const now = millis();
+
+    // Dev memory logging every 5 seconds
+    if (now - lastMemLog >= 5000) {
+        lastMemLog = now;
+        int currentFreeHeap = ESP.getFreeHeap();
+        int delta = (lastFreeHeap > 0) ? (currentFreeHeap - lastFreeHeap) : 0;
+        lastFreeHeap = currentFreeHeap;
+
+        // Stack monitoring - get high water mark (minimum free stack space ever seen)
+        // Low values (< 512 bytes) indicate risk of stack overflow
+        UBaseType_t stackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+
+        printf("[MEM] Heap Free: %d | Min: %lu | MaxAlloc: %lu | Delta: %d | Stack Free: %u bytes\n",
+              currentFreeHeap, ESP.getMinFreeHeap(), ESP.getMaxAllocHeap(), delta, stackHighWaterMark);
+    }
 
     if (isTouched())
     {

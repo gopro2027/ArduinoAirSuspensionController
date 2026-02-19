@@ -1,6 +1,6 @@
 #include "ui_scrPresets.h"
 
-ScrPresets scrPresets(true, true, NAV_PRESETS);
+ScrPresets scrPresets(true);
 
 #ifdef CUSTOM_CAR_IMAGE
 LV_IMG_DECLARE(img_car_custom);
@@ -12,30 +12,48 @@ LV_IMG_DECLARE(img_car);
 LV_IMG_DECLARE(img_wheels);
 #endif
 
-// Dynamic car positioning based on screen size
-// In landscape mode, offset car to the right to account for Save/Load buttons on left
+// ============================================
+// RESPONSIVE LAYOUT CALCULATIONS
+// ============================================
+
+// Get available content area dimensions
+static int getContentTop() { return STATUSBAR_HEIGHT + scaledY(55); }  // Below pressure labels
+static int getButtonAreaHeight() { return isLandscape() ? scaledY(55) : scaledY(95); }
+static int getContentBottom() { return getScreenHeight() - getNavbarHeight() - getButtonAreaHeight(); }
+
+// Scaled car/wheel dimensions
+static int getScaledCarWidth() { return (int)(img_car.header.w * SCALE_X); }
+static int getScaledWheelsWidth() { return (int)(img_wheels.header.w * SCALE_X); }
+
+// Car center X - offset in landscape for sidebar
+static int getCarCenterX() {
+    int offset = isLandscape() ? scaledX(40) : 0;
+    return getScreenWidth() / 2 + offset;
+}
+
+// Car/Wheels X positions (left edge, centered)
 static int getCarX() {
-    int offset = isLandscape() ? scaledX(50) : 0;
-    return getScreenWidth() / 2 - img_car.header.w / 2 + offset;
+    return getCarCenterX() - getScaledCarWidth() / 2;
 }
 static int getWheelsX() {
-    int offset = isLandscape() ? scaledX(50) : 0;
-    return getScreenWidth() / 2 - img_wheels.header.w / 2 + offset;
+    return getCarCenterX() - getScaledWheelsWidth() / 2;
 }
-static int getWheelsY() {
-    // Position wheels in available space between pressure labels and bottom buttons
-    // On larger displays, use a smaller multiplier to avoid overlap with buttons
-    int baseY = 88 * SCALE_Y;
-    int maxY = getScreenHeight() - getNavbarHeight() - scaledY(100); // Leave room for buttons
-    return (baseY < maxY) ? baseY : maxY;
-}
-static int getCarY1() { return getWheelsY() - 21 * SCALE_Y; }
-static int getCarY2() { return getCarY1() - 4 * SCALE_Y; }
-static int getCarY3() { return getCarY2() - 4 * SCALE_Y; }
-static int getCarY4() { return getCarY3() - 4 * SCALE_Y; }
-static int getCarY5() { return getCarY4() - 4 * SCALE_Y; }
 
-// Legacy constants for animation functions
+// Wheels Y - centered vertically in available space
+static int getWheelsY() {
+    int availableHeight = getContentBottom() - getContentTop();
+    int carAreaCenter = getContentTop() + availableHeight / 2;
+    return carAreaCenter - scaledY(10);  // Slight offset up for visual balance
+}
+
+// Car Y positions for presets (1=lowest, 5=highest)
+static int getCarY1() { return getWheelsY() - scaledY(21); }
+static int getCarY2() { return getCarY1() - scaledY(5); }
+static int getCarY3() { return getCarY2() - scaledY(5); }
+static int getCarY4() { return getCarY3() - scaledY(5); }
+static int getCarY5() { return getCarY4() - scaledY(5); }
+
+// Legacy macros for animation functions
 #define car_x getCarX()
 #define wheels_x getWheelsX()
 #define wheels_y getWheelsY()
@@ -45,8 +63,9 @@ static int getCarY5() { return getCarY4() - 4 * SCALE_Y; }
 #define car_y_4 getCarY4()
 #define car_y_5 getCarY5()
 
-SimpleRect fender1Offset = {40 * SCALE_X, 37 * SCALE_Y, 72 * SCALE_X - 40 * SCALE_X, 63 * SCALE_Y - 37 * SCALE_Y};
-SimpleRect fender2Offset = {166 * SCALE_X, 35 * SCALE_Y, 199 * SCALE_X - 166 * SCALE_X, 60 * SCALE_Y - 35 * SCALE_Y};
+// Wheel well (fender) offsets - use scaledX/Y for proper scaling
+SimpleRect fender1Offset = {scaledX(40), scaledY(37), scaledX(32), scaledY(26)};
+SimpleRect fender2Offset = {scaledX(166), scaledY(35), scaledX(33), scaledY(25)};
 
 // Modern button styling constants
 // Dynamic preset button size based on display scaling
@@ -161,9 +180,9 @@ void animCarPreset(ScrPresets *scr, lv_coord_t end)
     lv_anim_start(&a);
 }
 
-void ScrPresets::init()
+void ScrPresets::init(lv_obj_t *parent)
 {
-    Scr::init();
+    Scr::init(parent);
 
     // Reset static label references on reinit
     for (int i = 0; i < 5; i++) {
@@ -211,23 +230,18 @@ void ScrPresets::init()
     lv_obj_set_x(this->car, car_x);
     lv_obj_set_y(this->car, car_y_1);
 
-    // --- Preset buttons section ---
-    // Position above navbar - dynamic for rotation support
+    // --- Button layout section ---
     const int navbarHeight = NAVBAR_HEIGHT;
-    const int presetAreaHeight = scaledY(50);
-    const int presetAreaY = screenHeight - navbarHeight - presetAreaHeight - scaledY(5);
-
-    // Different layout for landscape vs portrait
     const bool landscape = isLandscape();
 
-    // --- Preset buttons container  ---
+    // --- Preset buttons container ---
     this->presetButtonsContainer = lv_obj_create(this->scr);
     lv_obj_remove_style_all(this->presetButtonsContainer);
     lv_obj_set_flex_flow(this->presetButtonsContainer, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(this->presetButtonsContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_remove_flag(this->presetButtonsContainer, LV_OBJ_FLAG_SCROLLABLE);
-    
-    // circular preset buttons
+
+    // Circular preset buttons
     this->btnPreset1 = createPresetButton(this->presetButtonsContainer, "1", 1);
     this->btnPreset2 = createPresetButton(this->presetButtonsContainer, "2", 2);
     this->btnPreset3 = createPresetButton(this->presetButtonsContainer, "3", 3);
@@ -237,54 +251,63 @@ void ScrPresets::init()
     // --- Save/Load buttons container ---
     lv_obj_t *actionContainer = lv_obj_create(this->scr);
     lv_obj_remove_style_all(actionContainer);
-    // Save button
     this->btnSave = lv_btn_create(actionContainer);
-    // Load button
     this->btnLoad = lv_btn_create(actionContainer);
 
     if (landscape) {
-        // LANDSCAPE LAYOUT: Preset buttons at bottom, Save/Load on left side vertically
+        // LANDSCAPE: Save/Load on left sidebar, presets at bottom right
+        const int sidebarWidth = scaledX(90);
+        const int presetAreaHeight = scaledY(48);
+        const int presetAreaY = screenHeight - navbarHeight - presetAreaHeight - scaledY(4);
 
-        // Leave space on left for save/load buttons
-        const int presetsWidth = screenWidth - scaledX(100);  // 100px for save/load on left
-        lv_obj_set_size(this->presetButtonsContainer, presetsWidth, presetAreaHeight);
-        lv_obj_set_pos(this->presetButtonsContainer, scaledX(100), presetAreaY);  // Offset to the right
+        // Preset buttons - fill remaining width
+        lv_obj_set_size(this->presetButtonsContainer, screenWidth - sidebarWidth - scaledX(8), presetAreaHeight);
+        lv_obj_set_pos(this->presetButtonsContainer, sidebarWidth + scaledX(4), presetAreaY);
 
-        const int actionWidth = scaledX(85);
-        const int actionHeight = scaledY(80);
-        const int actionY = screenHeight - navbarHeight - actionHeight - scaledY(8);
-        lv_obj_set_size(actionContainer, actionWidth, actionHeight);
-        lv_obj_set_pos(actionContainer, scaledX(8), actionY);
+        // Action buttons - vertical stack on left
+        const int actionHeight = scaledY(75);
+        const int actionY = screenHeight - navbarHeight - actionHeight - scaledY(6);
+        lv_obj_set_size(actionContainer, sidebarWidth - scaledX(8), actionHeight);
+        lv_obj_set_pos(actionContainer, scaledX(4), actionY);
         lv_obj_set_flex_flow(actionContainer, LV_FLEX_FLOW_COLUMN);
-        lv_obj_set_size(this->btnSave, scaledX(75), scaledY(32));
-        lv_obj_set_size(this->btnLoad, scaledX(75), scaledY(32));
+        lv_obj_set_style_pad_row(actionContainer, scaledY(6), 0);
+        lv_obj_set_size(this->btnSave, sidebarWidth - scaledX(16), scaledY(30));
+        lv_obj_set_size(this->btnLoad, sidebarWidth - scaledX(16), scaledY(30));
 
     } else {
-        // PORTRAIT LAYOUT: Original stacked layout
+        // PORTRAIT: Stacked layout - Save/Load above presets
+        const int presetAreaHeight = scaledY(50);
+        const int presetAreaY = screenHeight - navbarHeight - presetAreaHeight - scaledY(5);
+
+        // Preset buttons - full width at bottom
         lv_obj_set_size(this->presetButtonsContainer, screenWidth, presetAreaHeight);
         lv_obj_set_pos(this->presetButtonsContainer, 0, presetAreaY);
 
+        // Action buttons - horizontal row above presets
         const int actionAreaHeight = scaledY(40);
         const int actionAreaY = presetAreaY - actionAreaHeight - scaledY(5);
         lv_obj_set_size(actionContainer, screenWidth, actionAreaHeight);
         lv_obj_set_pos(actionContainer, 0, actionAreaY);
-
         lv_obj_set_flex_flow(actionContainer, LV_FLEX_FLOW_ROW);
+        lv_obj_set_style_pad_column(actionContainer, scaledX(16), 0);
         lv_obj_set_size(this->btnSave, scaledX(90), scaledY(32));
         lv_obj_set_size(this->btnLoad, scaledX(90), scaledY(32));
-
     }
 
-    lv_obj_set_flex_align(actionContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(actionContainer, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_remove_flag(actionContainer, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_set_style_bg_color(this->btnSave, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN);
-    lv_obj_set_style_radius(this->btnSave, 16, LV_PART_MAIN);
-    lv_obj_set_style_border_width(this->btnSave, 1, LV_PART_MAIN);
+    // Save button - secondary style (outline)
+    lv_obj_set_style_bg_color(this->btnSave, lv_color_hex(GENERIC_GREY_DARK), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(this->btnSave, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(this->btnSave, scaledY(8), LV_PART_MAIN);
+    lv_obj_set_style_border_width(this->btnSave, 2, LV_PART_MAIN);
     lv_obj_set_style_border_color(this->btnSave, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN);
+    lv_obj_set_style_shadow_width(this->btnSave, 0, LV_PART_MAIN);
     lv_obj_t *saveLabel = lv_label_create(this->btnSave);
     lv_label_set_text(saveLabel, "Save");
-    lv_obj_set_style_text_color(saveLabel, lv_color_hex(0xAAAAAA), LV_PART_MAIN);
+    lv_obj_set_style_text_color(saveLabel, lv_color_hex(0xCCCCCC), LV_PART_MAIN);
+    lv_obj_set_style_text_font(saveLabel, &lv_font_montserrat_14, LV_PART_MAIN);
     lv_obj_center(saveLabel);
     lv_obj_add_event_cb(this->btnSave, [](lv_event_t *e) {
         if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
@@ -300,11 +323,18 @@ void ScrPresets::init()
         }
     }, LV_EVENT_CLICKED, NULL);
 
-    lv_obj_set_style_bg_color(this->btnLoad, lv_color_hex(PRESET_BTN_ACTIVE_COLOR), LV_PART_MAIN);
-    lv_obj_set_style_radius(this->btnLoad, 16, LV_PART_MAIN);
+    // Load button - primary style (filled, accent color)
+    lv_obj_set_style_bg_color(this->btnLoad, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(this->btnLoad, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_radius(this->btnLoad, scaledY(8), LV_PART_MAIN);
+    lv_obj_set_style_border_width(this->btnLoad, 0, LV_PART_MAIN);
+    lv_obj_set_style_shadow_width(this->btnLoad, scaledX(6), LV_PART_MAIN);
+    lv_obj_set_style_shadow_color(this->btnLoad, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN);
+    lv_obj_set_style_shadow_opa(this->btnLoad, LV_OPA_40, LV_PART_MAIN);
     lv_obj_t *loadLabel = lv_label_create(this->btnLoad);
     lv_label_set_text(loadLabel, "Load");
     lv_obj_set_style_text_color(loadLabel, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+    lv_obj_set_style_text_font(loadLabel, &lv_font_montserrat_14, LV_PART_MAIN);
     lv_obj_center(loadLabel);
     lv_obj_add_event_cb(this->btnLoad, [](lv_event_t *e) {
         if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
@@ -319,7 +349,6 @@ void ScrPresets::init()
     }, LV_EVENT_CLICKED, NULL);
 
     // Bring overlays to foreground
-    if (this->navbar_container) lv_obj_move_foreground(this->navbar_container);
     lv_obj_move_foreground(this->ui_lblPressureFrontPassenger);
     lv_obj_move_foreground(this->ui_lblPressureRearPassenger);
     lv_obj_move_foreground(this->ui_lblPressureFrontDriver);

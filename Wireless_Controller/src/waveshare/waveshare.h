@@ -4,5 +4,6 @@
 void waveshare_init();
 void waveshare_loop();
 char *getBatteryVoltageString();
+bool isBatteryCharging();
 
 #endif

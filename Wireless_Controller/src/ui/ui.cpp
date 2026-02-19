@@ -7,10 +7,30 @@
 #include "waveshare/board_driver_util.h"
 #include "utils/touch_lib.h"
 #include "components/alert.h"
+#include "components/navbar.h"
+#include "components/statusbar.h"
 
 LV_IMG_DECLARE(oasman_splash);
 
 SCREEN currentScreen = SCREEN_NONE;
+static lv_obj_t* mainScreen = nullptr;
+
+// Tab change callback - updates currentScreen and currentScr
+static void onTabChanged(uint32_t tabIndex) {
+    SCREEN newScreen = (SCREEN)(tabIndex + 1);  // SCREEN_HOME = 1
+    if (currentScreen == newScreen) return;
+
+    currentScreen = newScreen;
+    currentScr = screens[tabIndex];
+
+    // Sync alert icon state from global dismissed state when changing screens
+    if (currentScr != nullptr && currentScr->alert != nullptr) {
+        currentScr->alert->syncFromGlobal();
+    }
+
+    // Run one screen loop of the new screen to update things like the alert
+    screenLoop();
+}
 
 void ui_init(void)
 {
@@ -21,19 +41,51 @@ void ui_init(void)
     lv_theme_t *theme = lv_theme_default_init(dispp, lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_RED),
                                               false, LV_FONT_DEFAULT);
     lv_display_set_theme(dispp, theme);
-    scrHome.init();
-    scrPresets.init();
-    scrSettings.init();
-    changeScreen(SCREEN_HOME);
 
-    // Delete the temporary screen that was used during splash/init
-    if (tempScr != NULL && tempScr != scrHome.scr) {
-        lv_obj_del(tempScr);
+    // Create single main screen
+    mainScreen = lv_obj_create(NULL);
+    lv_obj_remove_flag(mainScreen, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_bg_opa(mainScreen, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(mainScreen, 0, 0);
+    lv_obj_set_style_pad_all(mainScreen, 0, 0);
+
+    // Create tabview with navbar
+    globalNavbar.create(mainScreen);
+
+    // Set tab change callback
+    globalNavbar.setChangeCallback(onTabChanged);
+
+    // Apply swipe setting
+    globalNavbar.setSwipeEnabled(getswipeNavigation());
+
+    // Create statusbar (floats above tabview)
+    globalStatusbar.create(mainScreen);
+
+    // Initialize screens with their tab content as parent
+    scrHome.init(globalNavbar.getTabContent(TAB_HOME));
+    scrPresets.init(globalNavbar.getTabContent(TAB_PRESETS));
+    scrSettings.init(globalNavbar.getTabContent(TAB_SETTINGS));
+
+    // Bring statusbar to front to ensure it's always visible
+    if (globalStatusbar.container) {
+        lv_obj_move_foreground(globalStatusbar.container);
     }
+
+    // Load the main screen
+    lv_screen_load(mainScreen);
+
+    // Set initial state
+    currentScreen = SCREEN_HOME;
+    currentScr = &scrHome;
 
     screens[0] = &scrHome;
     screens[1] = &scrPresets;
     screens[2] = &scrSettings;
+
+    // Delete the temporary screen that was used during splash/init
+    if (tempScr != nullptr && tempScr != mainScreen) {
+        lv_obj_del(tempScr);
+    }
 }
 
 void ui_reinit(void)
@@ -56,60 +108,82 @@ void ui_reinit(void)
     scrPresets.cleanup();
     scrSettings.cleanup();
 
-    // Delete LVGL screen objects
-    if (scrHome.scr) { lv_obj_del(scrHome.scr); scrHome.scr = nullptr; }
-    if (scrPresets.scr) { lv_obj_del(scrPresets.scr); scrPresets.scr = nullptr; }
-    if (scrSettings.scr) { lv_obj_del(scrSettings.scr); scrSettings.scr = nullptr; }
+    // Clean up statusbar
+    globalStatusbar.cleanup();
+
+    // Clean up navbar
+    globalNavbar.cleanup();
+
+    // Delete main screen
+    if (mainScreen) {
+        lv_obj_del(mainScreen);
+        mainScreen = nullptr;
+    }
+
+    // Create new main screen
+    mainScreen = lv_obj_create(NULL);
+    lv_obj_remove_flag(mainScreen, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_bg_opa(mainScreen, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(mainScreen, 0, 0);
+    lv_obj_set_style_pad_all(mainScreen, 0, 0);
+
+    // Recreate tabview with navbar
+    globalNavbar.create(mainScreen);
+    globalNavbar.setChangeCallback(onTabChanged);
+    globalNavbar.setSwipeEnabled(getswipeNavigation());
+
+    // Recreate statusbar
+    globalStatusbar.create(mainScreen);
 
     // Reinitialize screens
-    scrHome.init();
-    scrPresets.init();
-    scrSettings.init();
+    scrHome.init(globalNavbar.getTabContent(TAB_HOME));
+    scrPresets.init(globalNavbar.getTabContent(TAB_PRESETS));
+    scrSettings.init(globalNavbar.getTabContent(TAB_SETTINGS));
+
+    // Bring statusbar to front
+    if (globalStatusbar.container) {
+        lv_obj_move_foreground(globalStatusbar.container);
+    }
 
     // Update screens array
     screens[0] = &scrHome;
     screens[1] = &scrPresets;
     screens[2] = &scrSettings;
 
+    // Load main screen
+    lv_screen_load(mainScreen);
+
     // Restore to previous screen
-    changeScreen(prevScreen);
+    changeScreen(prevScreen, false);
 
     lv_obj_del(splashScr);
 }
 
-void changeScreen(SCREEN screen)
+void changeScreen(SCREEN screen, bool animate)
 {
     if (currentScreen == screen)
     {
         return;
     }
 
-    // lv_refr_now(lv_disp_get_default());
-
-    currentScreen = screen;
+    uint32_t tabIndex;
     switch (screen)
     {
     case SCREEN_HOME:
-        lv_screen_load(scrHome.scr);
-        currentScr = &scrHome;
+        tabIndex = TAB_HOME;
         break;
     case SCREEN_PRESETS:
-        lv_screen_load(scrPresets.scr);
-        currentScr = &scrPresets;
+        tabIndex = TAB_PRESETS;
         break;
     case SCREEN_SETTINGS:
-        lv_screen_load(scrSettings.scr);
-        currentScr = &scrSettings;
+        tabIndex = TAB_SETTINGS;
         break;
+    default:
+        return;
     }
 
-    // Sync alert icon state from global dismissed state when changing screens
-    if (currentScr != NULL && currentScr->alert != NULL)
-    {
-        currentScr->alert->syncFromGlobal();
-    }
-
-    screenLoop(); // run one screen loop of the new screen to update things like the alert before it gets shown on screen
+    // Set the active tab - this will trigger the callback
+    globalNavbar.setActiveTab(tabIndex, animate);
 }
 
 void safetyModeMsgBoxCheck()
@@ -123,8 +197,8 @@ void safetyModeMsgBoxCheck()
         static char buf[40];
         snprintf(buf, sizeof(buf), "Save current height to preset %i?", currentPreset);
         currentScr->showMsgBox("Safe Boot is ENABLED!", "Safe boot is enabled meaning some features are disabled (your compressor & rise on start). Please check your settings are correct and then disable safe boot. This includes 'Pressure Sensor Rating PSI'. Then double check system functionality before disabling safety mode.", "View Settings", "Disable Anyway", []() -> void
-                               { 
-                                    changeScreen(SCREEN_SETTINGS); 
+                               {
+                                    changeScreen(SCREEN_SETTINGS);
                                     showDialog("Please check your settings!", lv_color_hex(THEME_COLOR_LIGHT)); }, []() -> void
                                {
                                    Serial.println("Disabling safety mode");
@@ -136,6 +210,9 @@ void safetyModeMsgBoxCheck()
 
 void screenLoop()
 {
+    // Update statusbar (battery, alerts)
+    globalStatusbar.update();
+
     switch (currentScreen)
     {
     case SCREEN_HOME:
@@ -146,6 +223,8 @@ void screenLoop()
         break;
     case SCREEN_SETTINGS:
         scrSettings.loop();
+        break;
+    default:
         break;
     }
 
