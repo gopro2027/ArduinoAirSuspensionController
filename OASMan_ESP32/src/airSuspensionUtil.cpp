@@ -213,6 +213,56 @@ bool isEBrakeOn()
 
 #pragma endregion
 
+#pragma region speed_detection
+
+// TODO: Implement GPS functionality
+bool gps_exists = false;
+int getVehicleSpeed() {
+    return 0;
+}
+bool isGPSCurrentlyAccurate() {
+    return true;
+}
+
+// This function should not be used as a trigger on it's own, it should only be
+bool isVehicleParked() {
+    bool ebrake_exists = false;
+    #if EBRAKE_WIRE_FUNCTIONALITY
+        ebrake_exists = true;
+    #endif
+
+    #if ACCESSORY_WIRE_FUNCTIONALITY
+    // If neither ebrake or gps are available, we don't have anything to double check isVehicleOn against. So we can assume that if the vehicle is off, it is parked, and if it is on, it is not parked.
+    // The alternative to this would be to not trust it at all on it's own, and basically ignore isVehicleOn altogether, but I think that may be a bit too aggressive.
+    if (!ebrake_exists && !gps_exists) {
+        return !isVehicleOn();
+    }
+    #endif
+        
+    // pretty simple, if gps is working and we are moving less than 5mph, we will assume we are parked. This is highly reliable.
+    if (gps_exists && isGPSCurrentlyAccurate()) {
+        if (getVehicleSpeed() < 5) {
+            return true; // vehicle is parked if less than 5mph
+        } else {
+            return false; // vehicle is moving more than 5mph, so it is not parked.
+        }
+    }
+
+    // ebrake is slightly less of a reliable source of whether or not the vehicle is parked because it is highly likely a user may try to bypass it, so we put it after the gps check.
+    if (ebrake_exists && isEBrakeOn()) {
+        return true; // if the ebrake is on, we can assume the vehicle is parked
+    }
+    if (ebrake_exists && !isEBrakeOn()) {
+        // ebrake being disengaged doesn't necessarily mean the vehicle is driving or parked, it could be either, so don't return anything here.
+    }
+
+    // We don't know basically anything, so return false.
+    return false;
+
+}
+
+#pragma endregion
+
 #pragma region wheel_functions
 
 bool isAnyWheelActive()
