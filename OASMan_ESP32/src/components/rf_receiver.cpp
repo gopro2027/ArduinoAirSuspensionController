@@ -1,4 +1,5 @@
 #include "rf_receiver.h"
+#include "airSuspensionUtil.h"
 
 RfReceiver::RfReceiver()
 {
@@ -48,9 +49,9 @@ void RfReceiver::loop()
     #ifdef RF_ENABLED_WITH_CAR_ON_DEBUG
     // if in debug mode, don't care if vehicle is on
     #else
-    // if vehicle is off disable RfReceiver
-    if (!isVehicleOn())
-    {//TODO: wtf was I thinking when I wrote this? Pretty sure we want the opposite here. No clue what I was thinking. We should change this to !isParked() once it is implemented
+    // if vehicle is driving disable rf receiver
+    if (!isVehicleParked())
+    {
         return;
     }
     #endif

@@ -224,8 +224,9 @@ bool isGPSCurrentlyAccurate() {
     return true;
 }
 
-// This function should not be used as a trigger on it's own, it should only be
-bool isVehicleParked() {
+// This function should not be used as a trigger on it's own, it should only be used as a check upon user interaction.
+// Strict mode is used when we need extra precaution against old boards that only have ACC wire. Aka setting strict mode to true forced gps or ebrake to be available to have a chance at returning true
+bool isVehicleParked(bool strict) {
     bool ebrake_exists = false;
     #if EBRAKE_WIRE_FUNCTIONALITY
         ebrake_exists = true;
@@ -233,8 +234,8 @@ bool isVehicleParked() {
 
     #if ACCESSORY_WIRE_FUNCTIONALITY
     // If neither ebrake or gps are available, we don't have anything to double check isVehicleOn against. So we can assume that if the vehicle is off, it is parked, and if it is on, it is not parked.
-    // The alternative to this would be to not trust it at all on it's own, and basically ignore isVehicleOn altogether, but I think that may be a bit too aggressive.
-    if (!ebrake_exists && !gps_exists) {
+    // If strict mode is enabled, we ignore this code, so we basically force ebrake or gps to be available to make a decision.
+    if (!strict && !ebrake_exists && !gps_exists) {
         return !isVehicleOn();
     }
     #endif
@@ -318,7 +319,7 @@ void airOutWithSafetyCheck()
 #if ENABLE_AIR_OUT_ON_SHUTOFF
 #if !AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE
     // only air out if car is in park
-    if (isEBrakeOn())
+    if (isVehicleParked(true))
     {
         if (getairOutOnShutoff())
         {

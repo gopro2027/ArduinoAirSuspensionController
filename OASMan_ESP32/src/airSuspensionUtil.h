@@ -43,6 +43,7 @@ void ebrakeWireLoop();
 bool isEBrakeOn();
 void notifyKeepAlive();
 bool isVehicleOn();
+bool isVehicleParked(bool strict = false);
 bool isKeepAliveTimerExpired();
 namespace PressureSensorCalibration
 {
