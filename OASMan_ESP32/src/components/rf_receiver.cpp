@@ -50,7 +50,7 @@ void RfReceiver::loop()
     #else
     // if vehicle is off disable RfReceiver
     if (!isVehicleOn())
-    {
+    {//TODO: wtf was I thinking when I wrote this? Pretty sure we want the opposite here. No clue what I was thinking. We should change this to !isParked() once it is implemented
         return;
     }
     #endif

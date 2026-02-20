@@ -12,7 +12,9 @@ Wheel *wheel[4];
 Adafruit_ADS1115 ADS1115A;
 Adafruit_ADS1115 ADS1115B;
 Adafruit_ADS1115 ADS1115C;
+Adafruit_ADS1115 ADS1115D;
 bool ADS1115C_exists;
+bool ADS1115D_exists;
 
 Manifold *getManifold()
 {
@@ -96,6 +98,14 @@ void initializeADS()
         Serial.println(F("Failed to initialize ADS C (rf receiver)"));
     } else {
         ADS1115C_exists = true;
+    }
+
+    if (!ADS1115D.begin(ADS_D_ADDRESS))
+    {
+        ADS1115D_exists = false;
+        Serial.println(F("Failed to initialize ADS D (tank & other)"));
+    } else {
+        ADS1115D_exists = true;
     }
 
 }

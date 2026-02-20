@@ -50,7 +50,7 @@
 
 /* These are the pin numbers used for our manifold solenoids */
 
-#ifdef BOARD_VERSION_ATLEAST_4
+#ifdef BOARD_VERSION_4_VALVE_PINOUT
 
 /* On board v4 the orientation of the connector physically is the same, but the pins they were connected too were optimized for routing */
 #define solenoidFrontPassengerInPin new InputType(18, OUTPUT)
@@ -101,11 +101,12 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 */
 
 /* Pressure Sensor Inputs. Why are the ads pin nums in this specific order? Oh the world may never know */
-#define pressureSensorInput0 new InputType(0, &ADS1115A) // ADSA/0   Previous: D36/VP/A4   Default: pressureInputFrontPassenger
-#define pressureSensorInput1 new InputType(3, &ADS1115A) // ADSA/3   Previous: D35/A3      Default: pressureInputRearPassenger
-#define pressureSensorInput2 new InputType(2, &ADS1115A) // ADSA/2   Previous: D34/A2      Default: pressureInputFrontDriver
-#define pressureSensorInput3 new InputType(1, &ADS1115A) // ADSA/1   Previous: D39/VN/A7   Default: pressureInputRearDriver
-#define pressureSensorInput4 new InputType(32, INPUT)    // D32/A0, pressure sensor        Default: pressureInputTank
+#define pressureSensorInput0 new InputType(0, &ADS1115A)             // ADSA/0   Previous: D36/VP/A4   Default: pressureInputFrontPassenger
+#define pressureSensorInput1 new InputType(3, &ADS1115A)             // ADSA/3   Previous: D35/A3      Default: pressureInputRearPassenger
+#define pressureSensorInput2 new InputType(2, &ADS1115A)             // ADSA/2   Previous: D34/A2      Default: pressureInputFrontDriver
+#define pressureSensorInput3 new InputType(1, &ADS1115A)             // ADSA/1   Previous: D39/VN/A7   Default: pressureInputRearDriver
+#define pressureSensorInput4_directesp32 new InputType(32, INPUT)    // D32/A0, pressure sensor        Default: pressureInputTank
+#define pressureSensorInput4_adsd1115d new InputType(0, &ADS1115D)   // ADSD/0, tank pressure sensor on 4.2 boards   Default: pressureInputTank
 
 /* Compressor/tank */
 #define compressorRelayPin new InputType(13, OUTPUT) // D13, solenoid
@@ -141,8 +142,9 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 #define ADS_A_ADDRESS 0x48 // 0x48 is address pin to low
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
 #define ADS_C_ADDRESS 0x4A // 0x4A is address pin to SDA
+#define ADS_D_ADDRESS 0x4B // 0x4B is address pin to SCL
 
-/* Disable the hang if ads fails to load */
+/* Disable the hang if ads A and B fails to load */
 #define ADS_MOCK_BYPASS true
 
 /* For testing purposes: mock tank pressure to 200psi */

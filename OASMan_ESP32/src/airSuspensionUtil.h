@@ -20,6 +20,7 @@ extern bool forceShutoff;
 extern Adafruit_ADS1115 ADS1115A;
 extern Adafruit_ADS1115 ADS1115B;
 extern Adafruit_ADS1115 ADS1115C;
+extern Adafruit_ADS1115 ADS1115D;
 
 Manifold *getManifold();
 Compressor *getCompressor();

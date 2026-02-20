@@ -13,6 +13,8 @@
 
 #include <SPIFFS.h>
 
+extern bool ADS1115D_exists;
+
 void setupSpiffsLog();
 void writeToSpiffsLog(char *text);
 // #define FORCE_UPDATE_TEST
@@ -59,17 +61,17 @@ void setup()
 
     setupManifold();
 
-#if SCREEN_ENABLED == true
-
-#endif
-
     delay(20);
 
     pressureInputs[0] = pressureSensorInput0;
     pressureInputs[1] = pressureSensorInput1;
     pressureInputs[2] = pressureSensorInput2;
     pressureInputs[3] = pressureSensorInput3;
-    pressureInputs[4] = pressureSensorInput4;
+    if (ADS1115D_exists) {
+        pressureInputs[4] = pressureSensorInput4_adsd1115d;
+    } else {
+        pressureInputs[4] = pressureSensorInput4_directesp32;
+    }
 
     wheel[WHEEL_FRONT_PASSENGER] = new Wheel(FRONT_PASSENGER_IN, FRONT_PASSENGER_OUT, pressureInputs[getpressureInputFrontPassenger()], levelInputFrontPassenger, WHEEL_FRONT_PASSENGER);
     wheel[WHEEL_REAR_PASSENGER] = new Wheel(REAR_PASSENGER_IN, REAR_PASSENGER_OUT, pressureInputs[getpressureInputRearPassenger()], levelInputRearPassenger, WHEEL_REAR_PASSENGER);
