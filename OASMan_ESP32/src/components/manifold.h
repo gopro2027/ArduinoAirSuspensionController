@@ -37,6 +37,9 @@ public:
             InputType *chamberExhaustInput
         );
     bool canOpenDirectionSixValveThreadSafe(Solenoid *toPreMarkAsOpening);
+#if SIX_VALVE_MANIFOLD_OPEN_TANK_VALVE_WHEN_COMPRESSOR_IS_RUNNING == true
+    void updateCompressorTankValve();
+#endif
 #endif
 
     Solenoid *get(int solenoid);

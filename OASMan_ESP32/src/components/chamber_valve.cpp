@@ -7,6 +7,9 @@ ChamberValve::ChamberValve(InputType *pin)
 {
     referenceMutex = xSemaphoreCreateMutex();
     this->pin = pin;
+#if SIX_VALVE_MANIFOLD_OPEN_TANK_VALVE_WHEN_COMPRESSOR_IS_RUNNING == true
+    this->compressorHold = false;
+#endif
 
     for (int i = 0; i < NUM_REFERENCES; i++) {
         references[i] = NULL;
@@ -16,6 +19,15 @@ ChamberValve::ChamberValve(InputType *pin)
     this->bopen = false;
     this->pin->digitalWrite(LOW);
 }
+
+#if SIX_VALVE_MANIFOLD_OPEN_TANK_VALVE_WHEN_COMPRESSOR_IS_RUNNING == true
+bool ChamberValve::hasAnyReferences() {
+    for (int i = 0; i < NUM_REFERENCES; i++) {
+        if (references[i] != NULL) return true;
+    }
+    return false;
+}
+#endif
 
 // returns if successful
 bool ChamberValve::checkAndAddReference(Solenoid *reference) {
@@ -87,13 +99,36 @@ void ChamberValve::open(Solenoid *reference)
 void ChamberValve::close(Solenoid *reference)
 {
     if (checkAndRemoveReference(reference)) {
+#if SIX_VALVE_MANIFOLD_OPEN_TANK_VALVE_WHEN_COMPRESSOR_IS_RUNNING == true
+        if (this->bopen == true && !this->compressorHold && !hasAnyReferences())
+#else
         if (this->bopen == true)
+#endif
         {
             this->pin->digitalWrite(LOW);
             this->bopen = false;
         }
     }
 }
+
+#if SIX_VALVE_MANIFOLD_OPEN_TANK_VALVE_WHEN_COMPRESSOR_IS_RUNNING == true
+void ChamberValve::setCompressorHold(bool hold)
+{
+    while (xSemaphoreTake(referenceMutex, 1) != pdTRUE)
+    {
+        delay(1);
+    }
+    this->compressorHold = hold;
+    if (hold) {
+        this->pin->digitalWrite(HIGH);
+        this->bopen = true;
+    } else if (!hasAnyReferences()) {
+        this->pin->digitalWrite(LOW);
+        this->bopen = false;
+    }
+    xSemaphoreGive(referenceMutex);
+}
+#endif
 bool ChamberValve::isOpen()
 {
     return this->bopen;

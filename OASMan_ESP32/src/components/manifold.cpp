@@ -1,4 +1,5 @@
 #include "manifold.h"
+#include "airSuspensionUtil.h"
 
 Manifold::Manifold() {}
 
@@ -69,6 +70,12 @@ void Manifold::debugOut()
 
 #if SIX_VALVE_MANIFOLD == true
 bool Manifold::canOpenDirectionSixValveThreadSafe(Solenoid *toPreMarkAsOpening) {
+#if SIX_VALVE_MANIFOLD_OPEN_TANK_VALVE_WHEN_COMPRESSOR_IS_RUNNING == true
+    // Completely block exhaust from opening whenever compressor is running
+    if (toPreMarkAsOpening->getChamberValve() == chamberExhaust && getCompressor()->isOn()) {
+        return false;
+    }
+#endif
     while (xSemaphoreTake(chamberCheckMutex, 1) != pdTRUE)
     {
         delay(1);
@@ -95,4 +102,10 @@ bool Manifold::canOpenDirectionSixValveThreadSafe(Solenoid *toPreMarkAsOpening) 
     xSemaphoreGive(chamberCheckMutex);
     return ret;
 }
+
+#if SIX_VALVE_MANIFOLD_OPEN_TANK_VALVE_WHEN_COMPRESSOR_IS_RUNNING == true
+void Manifold::updateCompressorTankValve() {
+    chamberTank->setCompressorHold(getCompressor()->isOn());
+}
+#endif
 #endif

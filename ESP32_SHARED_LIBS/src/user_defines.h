@@ -46,7 +46,11 @@
 /* By default the android app is set up for 4 profiles */
 #define MAX_PROFILE_COUNT 5
 
+/* If you are using one of those OEM 6 valve manifolds found in OEM air suspension systems. */
 #define SIX_VALVE_MANIFOLD false
+
+/* Only usable when SIX_VALVE_MANIFOLD is true: keep tank valve open whenever compressor is running, and block exhaust from opening while compressor runs. Enable this when the compressor is connected to the chamber (manifold) instead of to the tank. */
+#define SIX_VALVE_MANIFOLD_OPEN_TANK_VALVE_WHEN_COMPRESSOR_IS_RUNNING false
 
 /* These are the pin numbers used for our manifold solenoids */
 
