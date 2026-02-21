@@ -21,9 +21,10 @@ static int getContentTop() { return STATUSBAR_HEIGHT + scaledY(55); }  // Below 
 static int getButtonAreaHeight() { return isLandscape() ? scaledY(55) : scaledY(95); }
 static int getContentBottom() { return getScreenHeight() - getNavbarHeight() - getButtonAreaHeight(); }
 
-// Scaled car/wheel dimensions
-static int getScaledCarWidth() { return (int)(img_car.header.w * SCALE_X); }
-static int getScaledWheelsWidth() { return (int)(img_wheels.header.w * SCALE_X); }
+// Car/wheel display dimensions - images are device-specific and already at native resolution
+// (scale_img is a no-op), so use raw dimensions for layout calculations
+static int getScaledCarWidth() { return img_car.header.w; }
+static int getScaledWheelsWidth() { return img_wheels.header.w; }
 
 // Car center X - offset in landscape for sidebar
 static int getCarCenterX() {
