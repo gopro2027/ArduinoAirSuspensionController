@@ -1,4 +1,5 @@
 #include "compressor.h"
+#include "airSuspensionUtil.h"
 
 Compressor::Compressor() {}
 
@@ -84,6 +85,10 @@ void Compressor::updateFreezeTimer(unsigned long curTime)
 void Compressor::loop()
 {
     unsigned long curTime = millis();
+
+    #if SIX_VALVE_MANIFOLD_OPEN_TANK_VALVE_WHEN_COMPRESSOR_IS_RUNNING == true
+    getManifold()->updateCompressorTankValve();
+    #endif
 
     // READING TANK PRESSURE LOGIC:
 

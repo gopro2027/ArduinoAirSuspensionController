@@ -3,94 +3,69 @@
 // LVGL version: 9.1.0
 // Project name: SquareLine_Project
 
-#include "Scr.h"
+#include "Scr.h" 
 #include "ui/ui.h" // sketchy backwards import may break in the future
 
-Scr::Scr(lv_image_dsc_t navbarImage, bool showPressures)
+Scr::Scr(bool showPressures)
 {
-    this->navbarImage = navbarImage;
     this->showPressures = showPressures;
+    this->scr = nullptr;
+    this->rect_bg = nullptr;
+    this->alert = nullptr;
 }
 
-void Scr::init()
+void Scr::init(lv_obj_t *parent)
 {
-    this->scr = lv_obj_create(NULL);
+    this->scr = parent;
     lv_obj_remove_flag(this->scr, LV_OBJ_FLAG_SCROLLABLE); /// Flags
 
     this->mb_dialog = NULL;
     this->deleteMessageBoxNextFrame = false;
 
-    // background color
+    // Initialize prevPressures and prevUnitsMode to force update on first loop after reinit
+    for (int i = 0; i < 5; i++) {
+        this->prevPressures[i] = -1;
+    }
+    this->prevUnitsMode = -1;
+
+    // Subtle theme-tinted gradient background
+    const int screenWidth = getScreenWidth();
+    const int screenHeight = getScreenHeight();
     this->rect_bg = lv_obj_create(this->scr);
     lv_obj_remove_style_all(this->rect_bg);
-    lv_obj_set_size(this->rect_bg, LCD_WIDTH, LCD_HEIGHT);
-    lv_obj_set_align(this->rect_bg, LV_ALIGN_TOP_MID);
-    lv_obj_get_style_border_width(this->rect_bg, 0);
-    lv_obj_set_style_bg_color(this->rect_bg, lv_color_hex(GENERIC_GREY_DARK), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_remove_flag(this->rect_bg, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE)); /// Flags
-    lv_obj_set_style_bg_opa(this->rect_bg, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-
-    // navbar image
-    this->icon_navbar = lv_image_create(this->scr);
-    lv_image_set_src(this->icon_navbar, &this->navbarImage);
-    scale_img(this->icon_navbar,this->navbarImage);
-    lv_obj_set_align(this->icon_navbar, LV_ALIGN_BOTTOM_MID);
+    lv_obj_set_size(this->rect_bg, screenWidth, screenHeight);
+    // Mix theme color with dark grey for a very subtle tint
+    lv_obj_set_style_bg_color(this->rect_bg, lv_color_mix(lv_color_hex(THEME_COLOR_DARK), lv_color_hex(GENERIC_GREY_DARK), 25), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(this->rect_bg, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_bg_grad_color(this->rect_bg, lv_color_hex(GENERIC_GREY_VERY_DARK), LV_PART_MAIN);
+    lv_obj_set_style_bg_grad_dir(this->rect_bg, LV_GRAD_DIR_VER, LV_PART_MAIN);
+    lv_obj_set_style_bg_main_stop(this->rect_bg, 60, LV_PART_MAIN);
+    lv_obj_set_style_bg_grad_stop(this->rect_bg, 180, LV_PART_MAIN);
+    lv_obj_remove_flag(this->rect_bg, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE));
 
     this->alert = new Alert(this);
 
     if (this->showPressures)
     {
-        // air pressures at top
-        const int xPadding = 72; // pixels from center to end up centered above left/right buttons
-        // for some reas the text is not letting me specify something like "top right" then centering the text over that coordinate. Instead we must use top mid so that it is centered on ittself (ie grows both left and right with width chantge) and then set the offset of that from center.
-        setupPressureLabel(this->scr, &this->ui_lblPressureFrontDriver, -xPadding, 10, LV_ALIGN_TOP_MID, "0");
-        setupPressureLabel(this->scr, &this->ui_lblPressureRearDriver, -xPadding, 40, LV_ALIGN_TOP_MID, "0");
-        setupPressureLabel(this->scr, &this->ui_lblPressureFrontPassenger, xPadding, 10, LV_ALIGN_TOP_MID, "0");
-        setupPressureLabel(this->scr, &this->ui_lblPressureRearPassenger, xPadding, 40, LV_ALIGN_TOP_MID, "0");
-        setupPressureLabel(this->scr, &this->ui_lblPressureTank, 0, 10, LV_ALIGN_TOP_MID, "0");
+        // air pressures at top - scale xPadding based on screen width for rotation support
+        // 72 pixels at 240 width = 30% offset, maintain same ratio
+        const int xPadding = (getScreenWidth() * 72) / 240;
+        const int statusbarOffset = STATUSBAR_HEIGHT;
+        const int frontY = statusbarOffset + scaledY(4);   // Front row - tight to statusbar
+        const int rearY = statusbarOffset + scaledY(22);   // Rear row - compact spacing
+        // Use top mid alignment so labels are centered on themselves
+        setupPressureLabel(this->scr, &this->ui_lblPressureFrontDriver, -xPadding, frontY, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureRearDriver, -xPadding, rearY, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureFrontPassenger, xPadding, frontY, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureRearPassenger, xPadding, rearY, LV_ALIGN_TOP_MID, "0");
+        setupPressureLabel(this->scr, &this->ui_lblPressureTank, 0, frontY, LV_ALIGN_TOP_MID, "0");
     }
 }
 
-// down = true when just pressed, false when just released
-void Scr::runTouchInput(SimplePoint pos, bool down)
-{
-    if (down)
-    {
-        if (isKeyboardHidden())
-        {
-            if (!isMsgBoxDisplayed())
-            {
-                if (sr_contains(navbarbtn_home, pos))
-                {
-                    changeScreen(SCREEN_HOME);
-                }
-                if (sr_contains(navbarbtn_presets, pos))
-                {
-                    changeScreen(SCREEN_PRESETS);
-                }
-                if (sr_contains(navbarbtn_settings, pos))
-                {
-                    changeScreen(SCREEN_SETTINGS);
-                }
-            }
-        }
-    }
-    else
-    {
-        if (this->mb_dialog != NULL)
-        {
-            if (this->mb_force_button_press == false)
-            {
-                this->deleteMessageBoxNextFrame = true;
-            }
-        }
-    }
-}
 
 void dialog_clicked_function(lv_event_t *e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
-    lv_obj_t *target = (lv_obj_t *)lv_event_get_target(e);
     DialogData *dialogData = (DialogData *)lv_event_get_user_data(e);
     if (event_code == LV_EVENT_CLICKED)
     {
@@ -133,7 +108,7 @@ void Scr::showMsgBox(const char *title, const char *text, const char *yesText, c
         lv_obj_t *yesbtn = lv_msgbox_add_footer_button(this->mb_dialog, yesText);
         lv_obj_set_flex_grow(yesbtn, 1);
         lv_obj_add_event_cb(yesbtn, dialog_clicked_function, LV_EVENT_CLICKED, (void *)&this->dialogDataYes);
-        lv_obj_set_style_bg_color(yesbtn, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(yesbtn, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);
         lv_obj_set_align(yesbtn, LV_ALIGN_TOP_LEFT);
     }
     if (noText != NULL)
@@ -141,21 +116,21 @@ void Scr::showMsgBox(const char *title, const char *text, const char *yesText, c
         lv_obj_t *nobtn = lv_msgbox_add_footer_button(this->mb_dialog, noText);
         lv_obj_set_flex_grow(nobtn, 1);
         lv_obj_add_event_cb(nobtn, dialog_clicked_function, LV_EVENT_CLICKED, (void *)&this->dialogDataNo);
-        lv_obj_set_style_bg_color(nobtn, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(nobtn, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN);
         lv_obj_set_align(nobtn, LV_ALIGN_BOTTOM_LEFT);
     }
     // lv_obj_t *footer = lv_msgbox_get_footer(this->mb_dialog);
     // lv_obj_set_flex_grow(footer, 1);
     //  lv_msgbox_add_close_button(this->mb_dialog); // x button crashes it due to our implementation... I'm guessing it is trying to delete ittself after we have already deleted it? we don't really need it and ui looks better without it anyways.
 
-    lv_obj_set_width(this->mb_dialog, LCD_WIDTH - 20);
+    lv_obj_set_width(this->mb_dialog, getScreenWidth() - 20);
 
-    lv_obj_set_style_bg_color(this->mb_dialog, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN | LV_STATE_DEFAULT); // darker, bg of main
+    lv_obj_set_style_bg_color(this->mb_dialog, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN); // darker, bg of main
     if (lv_msgbox_get_header(this->mb_dialog) != NULL)
     {
-        lv_obj_set_style_bg_color(lv_msgbox_get_header(this->mb_dialog), lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN | LV_STATE_DEFAULT); // halway darkness, header
+        lv_obj_set_style_bg_color(lv_msgbox_get_header(this->mb_dialog), lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN); // halway darkness, header
     }
-    lv_obj_set_style_border_color(this->mb_dialog, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN | LV_STATE_DEFAULT); // light purple, border
+    lv_obj_set_style_border_color(this->mb_dialog, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN); // light purple, border
 }
 
 void Scr::loop()
@@ -167,41 +142,69 @@ void Scr::loop()
         this->deleteMessageBoxNextFrame = false;
     }
     handleFunctionRunOnNextFrame();
-    SimplePoint tp = {touchX(), touchY()};
-    if (isJustPressed())
-    {
-        this->runTouchInput(tp, true);
-    }
     if (isJustReleased())
     {
-        this->runTouchInput(tp, false);
+        if (this->mb_dialog != NULL)
+        {
+            if (this->mb_force_button_press == false)
+            {
+                this->deleteMessageBoxNextFrame = true;
+            }
+        }
     }
     this->updatePressureValues();
     this->alert->loop();
 }
 
-void updatePressure(Scr *scr, lv_obj_t *obj, int index, bool isHeightSensorPercentage)
+void updatePressure(Scr *scr, lv_obj_t *obj, int index, bool isHeightSensorPercentage, bool unitsChanged)
 {
-    if (scr->prevPressures[index] != currentPressures[index])
+    if (scr->prevPressures[index] != currentPressures[index] || unitsChanged)
     {
+        int oldPressure = scr->prevPressures[index];
+        int newPressure = currentPressures[index];
+
         if (isHeightSensorPercentage)
         {
-            lv_label_set_text_fmt(obj, "%u%%", currentPressures[index]);
+            lv_label_set_text_fmt(obj, "%u%%", newPressure);
         }
         else if (getunitsMode() == UNITS_MODE::PSI)
         {
-            lv_label_set_text_fmt(obj, "%u PSI", currentPressures[index]);
+            lv_label_set_text_fmt(obj, "%u PSI", newPressure);
         }
         else
         { // UNITS_MODE::BAR but %f doesn't work
-
-            float val = currentPressures[index] / 14.5038f;
+            float val = newPressure / 14.5038f;
             val = val * 100; // move decimal over 2
             int b = (int)val % 100;
             int a = ((int)val - b) / 100;
             lv_label_set_text_fmt(obj, "%i.%i Bar", a, b);
         }
-        scr->prevPressures[index] = currentPressures[index];
+
+        // Apply color change effect based on pressure direction
+        if (newPressure > oldPressure)
+        {
+            // Pressure increasing - green tint
+            lv_obj_set_style_text_color(obj, lv_color_hex(0x90EE90), 0);
+        }
+        else if (newPressure < oldPressure)
+        {
+            // Pressure decreasing - light red/coral tint
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xF08080), 0);
+        }
+
+        scr->prevPressures[index] = newPressure;
+    }
+    else
+    {
+        // No change - fade back to white (or near-white for visibility)
+        lv_color_t currentColor = lv_obj_get_style_text_color(obj, LV_PART_MAIN);
+        uint32_t currentHex = lv_color_to_u32(currentColor);
+
+        // Gradually return to white if not already white
+        if (currentHex != 0xFFFFFFFF)
+        {
+            lv_obj_set_style_text_color(obj, lv_color_hex(0xFFFFFF), 0);
+        }
     }
 }
 
@@ -209,11 +212,27 @@ void Scr::updatePressureValues()
 {
     if (this->showPressures)
     {
+        int currentUnitsMode = getunitsMode();
+        bool unitsChanged = (this->prevUnitsMode != currentUnitsMode);
+
         bool hs = statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE);
-        updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER, hs);
-        updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER, hs);
-        updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER, hs);
-        updatePressure(this, this->ui_lblPressureRearDriver, WHEEL_REAR_DRIVER, hs);
-        updatePressure(this, this->ui_lblPressureTank, _TANK_INDEX, false);
+        updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER, hs, unitsChanged);
+        updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER, hs, unitsChanged);
+        updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER, hs, unitsChanged);
+        updatePressure(this, this->ui_lblPressureRearDriver, WHEEL_REAR_DRIVER, hs, unitsChanged);
+        updatePressure(this, this->ui_lblPressureTank, _TANK_INDEX, false, unitsChanged);
+
+        this->prevUnitsMode = currentUnitsMode;
     }
+}
+
+void Scr::cleanup()
+{
+    // Base cleanup - delete Alert (common to all screens)
+    if (this->alert) {
+        delete this->alert;
+        this->alert = nullptr;
+    }
+    this->scr = nullptr;
+    this->rect_bg = nullptr;
 }

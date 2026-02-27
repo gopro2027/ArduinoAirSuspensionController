@@ -8,6 +8,7 @@
 #include "manifoldSaveData.h"
 #include "sampleReading.tcc"
 #include "components/rf_receiver.h"
+#include <FastLED.h>
 
 extern InputType *pressureInputs[5];
 extern Manifold *manifold;
@@ -19,6 +20,7 @@ extern bool forceShutoff;
 extern Adafruit_ADS1115 ADS1115A;
 extern Adafruit_ADS1115 ADS1115B;
 extern Adafruit_ADS1115 ADS1115C;
+extern Adafruit_ADS1115 ADS1115D;
 
 Manifold *getManifold();
 Compressor *getCompressor();
@@ -41,6 +43,7 @@ void ebrakeWireLoop();
 bool isEBrakeOn();
 void notifyKeepAlive();
 bool isVehicleOn();
+bool isVehicleParked(bool strict = false);
 bool isKeepAliveTimerExpired();
 namespace PressureSensorCalibration
 {
@@ -50,4 +53,5 @@ namespace PressureSensorCalibration
 void trainAIModels();
 double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure);
 bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex);
+void setupLEDs();
 #endif

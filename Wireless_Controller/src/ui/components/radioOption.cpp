@@ -6,17 +6,12 @@ void RadioOption::setSelectedOption(int _selected, bool callOnSelect)
     {
         return;
     }
-    if (_selected < 0)
-    {
-        log_i("ERROR OPTION INDEX NOT FOUND");
-        return;
-    }
     this->selected = _selected;
     for (int i = 0; i < this->size; i++)
     {
         this->options[i]->setBooleanValue(i == this->selected);
     }
-    if (callOnSelect)
+    if (callOnSelect && _selected >= 0)
     {
         this->onSelect((void *)selected);
     }
@@ -55,4 +50,15 @@ RadioOption::RadioOption(lv_obj_t *parent, const char **text, int _size, option_
 
     // call last
     this->setSelectedOption(_selected);
+}
+
+RadioOption::~RadioOption()
+{
+    if (this->options) {
+        for (int i = 0; i < this->size; i++) {
+            delete this->options[i];
+        }
+        free(this->options);
+        this->options = nullptr;
+    }
 }

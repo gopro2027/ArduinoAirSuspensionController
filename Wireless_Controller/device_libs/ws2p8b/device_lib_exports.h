@@ -11,3 +11,5 @@
 
 // include blank power key implementation
 #include "files/PWR_Key_Dummy.h"
+
+#define SUPPORTS_ROTATION 0

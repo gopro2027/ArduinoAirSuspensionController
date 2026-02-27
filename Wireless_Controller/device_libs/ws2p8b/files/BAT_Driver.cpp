@@ -7,6 +7,9 @@ void BAT_Init(void)
 {
   // set the resolution to 12 bits (0-4095)
   analogReadResolution(12);
+  // Not sure why exactly, but this is needed to be here or the analogReadMilliVolts below will crash.
+  // Possibly something related to lazy loading, and only calling it in the function below makes it get called too late in the runtime that it freaks out? It doesn't appear to be an issue that it's lazy loaded from the task though like AI suggested the root cause may be. Anyways, it works now.
+  (void)analogReadMilliVolts(BAT_ADC_PIN);
 }
 // 4.10 = max voltage
 // 4.22 = charging voltage

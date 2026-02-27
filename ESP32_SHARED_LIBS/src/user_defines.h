@@ -11,6 +11,9 @@
 // Will always be set to false in any official oasman release. Use at your own risk. OASMan is not responsible for damage caused by using this feature
 #define ENABLE_AIR_OUT_ON_SHUTOFF false
 
+// This is a feature that will run a routine to mo0ve your car around. It mostly confuses people but we want to be able to enable it in here in case somebody wants to use it in the future.
+#define ENABLE_DETECT_PRESSURE_SENSORS_BUTTON false
+
 // Addon to ENABLE_AIR_OUT_ON_SHUTOFF. Will change it so you have to trigger the neg input 2 times for about 300ms each within AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE_TIME
 #define AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE false
 #define AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE_TIME 3 * 1000
@@ -43,10 +46,17 @@
 /* By default the android app is set up for 4 profiles */
 #define MAX_PROFILE_COUNT 5
 
+/* If you are using one of those OEM 6 valve manifolds found in OEM air suspension systems. */
+#define SIX_VALVE_MANIFOLD false
+
+/* Only usable when SIX_VALVE_MANIFOLD is true: keep tank valve open whenever compressor is running, and block exhaust from opening while compressor runs. Enable this when the compressor is connected to the chamber (manifold) instead of to the tank. */
+#define SIX_VALVE_MANIFOLD_OPEN_TANK_VALVE_WHEN_COMPRESSOR_IS_RUNNING false
+
 /* These are the pin numbers used for our manifold solenoids */
 
-#ifdef BOARD_VERSION_ATLEAST_4
+#ifdef BOARD_VERSION_4_VALVE_PINOUT
 
+/* On board v4 the orientation of the connector physically is the same, but the pins they were connected too were optimized for routing */
 #define solenoidFrontPassengerInPin new InputType(18, OUTPUT)
 #define solenoidFrontPassengerOutPin new InputType(17, OUTPUT)
 #define solenoidRearPassengerInPin new InputType(19, OUTPUT)
@@ -67,15 +77,40 @@
 #define solenoidFrontDriverOutPin new InputType(27, OUTPUT)
 #define solenoidRearDriverInPin new InputType(18, OUTPUT)
 #define solenoidRearDriverOutPin new InputType(17, OUTPUT)
-
 #endif
 
+/* Definitions for using a six valve manifold, only used when SIX_VALVE_MANIFOLD is true */
+#define m6_solenoidFrontPassengerPin solenoidRearDriverInPin
+#define m6_solenoidRearPassengerPin solenoidRearPassengerInPin
+#define m6_solenoidFrontDriverPin solenoidRearDriverOutPin
+#define m6_solenoidRearDriverPin solenoidFrontDriverInPin
+#define m6_solenoidChamberTankPin solenoidFrontPassengerInPin
+#define m6_solenoidChamberExhaustPin solenoidFrontPassengerOutPin
+// unused in 6 valve manifold is solenoidRearPassengerOutPin and solenoidFrontDriverOutPin, which are the top 2 pins (the constant pin is still used on the 3 pin connector)
+/*
+Wiring for 6 valve manifold on the boards valve connector. This will be the same physical orientation on any board, whether it has the jst or microfit connector, all the same. Remember, USA spec (left hand drive) for driver/passenger designations.
+                         ┌─────────┐
+                         │   FL    │  (Front Left/Driver - RDO label on board)
+                         ├─────────┤
+                         │   FR    │  (Front Right/Passenger - RDI label on board)
+                         ├─────────┤
+                         │   RL    │  (Rear Left/Driver - FDI label on board)
+┌─────────┐              ├─────────┤
+│   +12   │              │   RR    │  (Rear Right/Passenger - RPI label on board)
+├─────────┤              ├─────────┤
+│   N/C   │              │  TANK   │  (Tank Valve - FPI label on board)
+├─────────┤              ├─────────┤
+│   N/C   │              │ EXHAUST │  (Exhaust Valve - FPO label on board)
+└─────────┘              └─────────┘
+*/
+
 /* Pressure Sensor Inputs. Why are the ads pin nums in this specific order? Oh the world may never know */
-#define pressureSensorInput0 new InputType(0, &ADS1115A) // ADSA/0   Previous: D36/VP/A4   Default: pressureInputFrontPassenger
-#define pressureSensorInput1 new InputType(3, &ADS1115A) // ADSA/3   Previous: D35/A3      Default: pressureInputRearPassenger
-#define pressureSensorInput2 new InputType(2, &ADS1115A) // ADSA/2   Previous: D34/A2      Default: pressureInputFrontDriver
-#define pressureSensorInput3 new InputType(1, &ADS1115A) // ADSA/1   Previous: D39/VN/A7   Default: pressureInputRearDriver
-#define pressureSensorInput4 new InputType(32, INPUT)    // D32/A0, pressure sensor        Default: pressureInputTank
+#define pressureSensorInput0 new InputType(0, &ADS1115A)             // ADSA/0   Previous: D36/VP/A4   Default: pressureInputFrontPassenger
+#define pressureSensorInput1 new InputType(3, &ADS1115A)             // ADSA/3   Previous: D35/A3      Default: pressureInputRearPassenger
+#define pressureSensorInput2 new InputType(2, &ADS1115A)             // ADSA/2   Previous: D34/A2      Default: pressureInputFrontDriver
+#define pressureSensorInput3 new InputType(1, &ADS1115A)             // ADSA/1   Previous: D39/VN/A7   Default: pressureInputRearDriver
+#define pressureSensorInput4_directesp32 new InputType(32, INPUT)    // D32/A0, pressure sensor        Default: pressureInputTank
+#define pressureSensorInput4_adsd1115d new InputType(0, &ADS1115D)   // ADSD/0, tank pressure sensor on 4.2 boards   Default: pressureInputTank
 
 /* Compressor/tank */
 #define compressorRelayPin new InputType(13, OUTPUT) // D13, solenoid
@@ -111,8 +146,9 @@
 #define ADS_A_ADDRESS 0x48 // 0x48 is address pin to low
 #define ADS_B_ADDRESS 0x49 // 0x49 is address pin to high
 #define ADS_C_ADDRESS 0x4A // 0x4A is address pin to SDA
+#define ADS_D_ADDRESS 0x4B // 0x4B is address pin to SCL
 
-/* Disable the hang if ads fails to load */
+/* Disable the hang if ads A and B fails to load */
 #define ADS_MOCK_BYPASS true
 
 /* For testing purposes: mock tank pressure to 200psi */
@@ -132,15 +168,11 @@
 
 #define AIR_OUT_AFTER_SHUTDOWN_MS 5000
 
-#define THEME_COLOR_DARK 0x5A4673
-#define THEME_COLOR_VERY_DARK lv_color_darken(lv_color_hex(THEME_COLOR_DARK), 50)
-#define THEME_COLOR_MEDIUM 0x9C4DCC
-#define THEME_COLOR_LIGHT 0xBB86FC
-
-#define GENERIC_GREY_VERY_DARK 0x121212
-#define GENERIC_GREY_DARK 0x1F1F1F
-#define GENERIC_GREY 0x4e4954
-#define GENERIC_GREY_LIGHT 0x6a6571
+// LED Configuration
+#define LED_PIN     16
+#define LED_NUM    6        // Change this if you add more LEDs
+#define LED_TYPE    SK6812
+#define LED_COLOR_ORDER GRB
 
 /* DO NOT CHANGE ANY PAST THIS LINE */
 #define WHEEL_FRONT_PASSENGER 0

@@ -14,17 +14,26 @@ public:
     lv_obj_t *ww1;
     lv_obj_t *ww2;
     lv_obj_t *wheels;
+
+    // LVGL button objects for preset selection (supports rotation/encoder)
     lv_obj_t *btnPreset1;
     lv_obj_t *btnPreset2;
     lv_obj_t *btnPreset3;
     lv_obj_t *btnPreset4;
     lv_obj_t *btnPreset5;
-    void init();
-    void runTouchInput(SimplePoint pos, bool down);
+
+    // Container for preset buttons (for group navigation)
+    lv_obj_t *presetButtonsContainer;
+
+    // Save/Load buttons (LVGL buttons, replaces background image touch areas)
+    lv_obj_t *btnSave;
+    lv_obj_t *btnLoad;
+
+    void init(lv_obj_t *parent = nullptr) override;
     void showPresetDialog();
-    void loop();
+    void loop() override;
     void setPreset(int num);
-    void hideSelectors();
+    void updateButtonStyles();
 };
 
 extern ScrPresets scrPresets;

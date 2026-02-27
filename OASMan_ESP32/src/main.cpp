@@ -13,6 +13,8 @@
 
 #include <SPIFFS.h>
 
+extern bool ADS1115D_exists;
+
 void setupSpiffsLog();
 void writeToSpiffsLog(char *text);
 // #define FORCE_UPDATE_TEST
@@ -59,22 +61,22 @@ void setup()
 
     setupManifold();
 
-#if SCREEN_ENABLED == true
-
-#endif
-
     delay(20);
 
     pressureInputs[0] = pressureSensorInput0;
     pressureInputs[1] = pressureSensorInput1;
     pressureInputs[2] = pressureSensorInput2;
     pressureInputs[3] = pressureSensorInput3;
-    pressureInputs[4] = pressureSensorInput4;
+    if (ADS1115D_exists) {
+        pressureInputs[4] = pressureSensorInput4_adsd1115d;
+    } else {
+        pressureInputs[4] = pressureSensorInput4_directesp32;
+    }
 
-    wheel[WHEEL_FRONT_PASSENGER] = new Wheel(manifold->get(FRONT_PASSENGER_IN), manifold->get(FRONT_PASSENGER_OUT), pressureInputs[getpressureInputFrontPassenger()], levelInputFrontPassenger, WHEEL_FRONT_PASSENGER);
-    wheel[WHEEL_REAR_PASSENGER] = new Wheel(manifold->get(REAR_PASSENGER_IN), manifold->get(REAR_PASSENGER_OUT), pressureInputs[getpressureInputRearPassenger()], levelInputRearPassenger, WHEEL_REAR_PASSENGER);
-    wheel[WHEEL_FRONT_DRIVER] = new Wheel(manifold->get(FRONT_DRIVER_IN), manifold->get(FRONT_DRIVER_OUT), pressureInputs[getpressureInputFrontDriver()], levelInputFrontDriver, WHEEL_FRONT_DRIVER);
-    wheel[WHEEL_REAR_DRIVER] = new Wheel(manifold->get(REAR_DRIVER_IN), manifold->get(REAR_DRIVER_OUT), pressureInputs[getpressureInputRearDriver()], levelInputRearDriver, WHEEL_REAR_DRIVER);
+    wheel[WHEEL_FRONT_PASSENGER] = new Wheel(FRONT_PASSENGER_IN, FRONT_PASSENGER_OUT, pressureInputs[getpressureInputFrontPassenger()], levelInputFrontPassenger, WHEEL_FRONT_PASSENGER);
+    wheel[WHEEL_REAR_PASSENGER] = new Wheel(REAR_PASSENGER_IN, REAR_PASSENGER_OUT, pressureInputs[getpressureInputRearPassenger()], levelInputRearPassenger, WHEEL_REAR_PASSENGER);
+    wheel[WHEEL_FRONT_DRIVER] = new Wheel(FRONT_DRIVER_IN, FRONT_DRIVER_OUT, pressureInputs[getpressureInputFrontDriver()], levelInputFrontDriver, WHEEL_FRONT_DRIVER);
+    wheel[WHEEL_REAR_DRIVER] = new Wheel(REAR_DRIVER_IN, REAR_DRIVER_OUT, pressureInputs[getpressureInputRearDriver()], levelInputRearDriver, WHEEL_REAR_DRIVER);
 
     compressor = new Compressor(compressorRelayPin, pressureInputs[getpressureInputTank()]);
     rfReceiver = new RfReceiver();
@@ -106,6 +108,8 @@ void setup()
 #endif
 
     setinternalReboot(false);
+
+    setupLEDs();
 
     Serial.println(F("Startup Complete"));
 

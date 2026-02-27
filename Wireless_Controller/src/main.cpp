@@ -8,19 +8,7 @@
 
 #include "utils/util.h"
 
-void OnAddOneClicked(lv_event_t *e)
-{
-    static uint32_t cnt = 0;
-    cnt++;
-    lv_label_set_text_fmt(scrMain.ui_lblCountValue, "%u", cnt);
-}
-
-void OnRotateClicked(lv_event_t *e)
-{
-    auto disp = lv_disp_get_default();
-    auto rotation = (lv_display_rotation_t)((lv_disp_get_rotation(disp) + 1) % (LV_DISPLAY_ROTATION_270 + 1));
-    lv_display_set_rotation(disp, rotation);
-}
+SET_LOOP_TASK_STACK_SIZE(12*1024); // the default 1024*8 how now reached it's limit with lvgl. Need to increase accordingly. lv_timer_handler() is the culprit.
 
 #define DIM_SCREEN_TIME 60 * 1000 * getscreenDimTimeM()
 unsigned long dimScreenTime = 0;
@@ -47,9 +35,9 @@ void setup()
     {
         setupdateMode(false);
         Serial.println("Gonna try to download update");
-#if defined(OTA_SUPPORTED)
+    #if defined(OTA_SUPPORTED)
         downloadUpdate(getwifiSSID(), getwifiPassword());
-#endif
+    #endif
         return;
     }
 
@@ -57,10 +45,6 @@ void setup()
 
     board_drivers_init();
 
-    __attribute__((unused)) auto disp = lv_disp_get_default();
-    // lv_disp_set_rotation(disp, LV_DISP_ROT_90);
-    // lv_disp_set_rotation(disp, LV_DISP_ROT_180);
-    // lv_disp_set_rotation(disp, LV_DISP_ROT_270);
 
     ui_init();
 
@@ -106,9 +90,27 @@ void setup()
 }
 
 // auto lv_last_tick = millis();
+static int lastFreeHeap = 0;
+static unsigned long lastMemLog = 0;
+
 void loop()
 {
     auto const now = millis();
+
+    // Dev memory logging every 5 seconds
+    if (now - lastMemLog >= 5000) {
+        lastMemLog = now;
+        int currentFreeHeap = ESP.getFreeHeap();
+        int delta = (lastFreeHeap > 0) ? (currentFreeHeap - lastFreeHeap) : 0;
+        lastFreeHeap = currentFreeHeap;
+
+        // Stack monitoring - get high water mark (minimum free stack space ever seen)
+        // Low values (< 512 bytes) indicate risk of stack overflow
+        UBaseType_t stackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+
+        printf("[MEM] Heap Free: %d | Min: %lu | MaxAlloc: %lu | Delta: %d | Stack Free: %u bytes\n",
+              currentFreeHeap, ESP.getMinFreeHeap(), ESP.getMaxAllocHeap(), delta, stackHighWaterMark);
+    }
 
     if (isTouched())
     {
@@ -125,16 +127,6 @@ void loop()
         set_brightness(0.01f);
         dimmed = true;
     }
-
-    // if (isJustPressed())
-    // {
-    //     log_i("Just Pressed %d %d ", touchX(), touchY());
-    // }
-    // if (isJustReleased())
-    // {
-    //     log_i("Just Released %d %d ", touchX(), touchY());
-    // }
-
 
     // screen code
     screenLoop();

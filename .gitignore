@@ -3,3 +3,6 @@ AirSuspension/app/release/app-release.aab
 AirSuspension/.idea/deploymentTargetDropDown.xml
 OASMan_ESP32/a.exe
 **/.DS_Store
+/OASMan_ESP32/.cache
+OASMan_ESP32/compile_commands.json
+*.pyc

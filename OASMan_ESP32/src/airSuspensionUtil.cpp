@@ -12,7 +12,9 @@ Wheel *wheel[4];
 Adafruit_ADS1115 ADS1115A;
 Adafruit_ADS1115 ADS1115B;
 Adafruit_ADS1115 ADS1115C;
+Adafruit_ADS1115 ADS1115D;
 bool ADS1115C_exists;
+bool ADS1115D_exists;
 
 Manifold *getManifold()
 {
@@ -98,11 +100,21 @@ void initializeADS()
         ADS1115C_exists = true;
     }
 
+    if (!ADS1115D.begin(ADS_D_ADDRESS))
+    {
+        ADS1115D_exists = false;
+        Serial.println(F("Failed to initialize ADS D (tank & other)"));
+    } else {
+        ADS1115D_exists = true;
+    }
+
 }
 
 void setupManifold()
 {
     initializeADS();
+
+#if SIX_VALVE_MANIFOLD == false
 
     manifold = new Manifold(
         solenoidFrontPassengerInPin,
@@ -113,6 +125,18 @@ void setupManifold()
         solenoidFrontDriverOutPin,
         solenoidRearDriverInPin,
         solenoidRearDriverOutPin);
+
+#else
+
+    manifold = new Manifold(
+        m6_solenoidFrontPassengerPin,
+        m6_solenoidRearPassengerPin,
+        m6_solenoidFrontDriverPin,
+        m6_solenoidRearDriverPin,
+        m6_solenoidChamberTankPin,
+        m6_solenoidChamberExhaustPin);
+
+#endif
 }
 
 #pragma endregion
@@ -189,6 +213,57 @@ bool isEBrakeOn()
 
 #pragma endregion
 
+#pragma region speed_detection
+
+// TODO: Implement GPS functionality
+bool gps_exists = false;
+int getVehicleSpeed() {
+    return 0;
+}
+bool isGPSCurrentlyAccurate() {
+    return true;
+}
+
+// This function should not be used as a trigger on it's own, it should only be used as a check upon user interaction.
+// Strict mode is used when we need extra precaution against old boards that only have ACC wire. Aka setting strict mode to true forced gps or ebrake to be available to have a chance at returning true
+bool isVehicleParked(bool strict) {
+    bool ebrake_exists = false;
+    #if EBRAKE_WIRE_FUNCTIONALITY
+        ebrake_exists = true;
+    #endif
+
+    #if ACCESSORY_WIRE_FUNCTIONALITY
+    // If neither ebrake or gps are available, we don't have anything to double check isVehicleOn against. So we can assume that if the vehicle is off, it is parked, and if it is on, it is not parked.
+    // If strict mode is enabled, we ignore this code, so we basically force ebrake or gps to be available to make a decision.
+    if (!strict && !ebrake_exists && !gps_exists) {
+        return !isVehicleOn();
+    }
+    #endif
+        
+    // pretty simple, if gps is working and we are moving less than 5mph, we will assume we are parked. This is highly reliable.
+    if (gps_exists && isGPSCurrentlyAccurate()) {
+        if (getVehicleSpeed() < 5) {
+            return true; // vehicle is parked if less than 5mph
+        } else {
+            return false; // vehicle is moving more than 5mph, so it is not parked.
+        }
+    }
+
+    // ebrake is slightly less of a reliable source of whether or not the vehicle is parked because it is highly likely a user may try to bypass it, so we put it after the gps check.
+    if (ebrake_exists && isEBrakeOn()) {
+        return true; // if the ebrake is on, we can assume the vehicle is parked
+    }
+    if (ebrake_exists && !isEBrakeOn()) {
+        // ebrake being disengaged doesn't necessarily mean the vehicle is driving or parked, it could be either, so don't return anything here.
+    }
+
+    // We don't know basically anything, so return false.
+    return false;
+
+}
+
+#pragma endregion
+
 #pragma region wheel_functions
 
 bool isAnyWheelActive()
@@ -244,7 +319,7 @@ void airOutWithSafetyCheck()
 #if ENABLE_AIR_OUT_ON_SHUTOFF
 #if !AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE
     // only air out if car is in park
-    if (isEBrakeOn())
+    if (isVehicleParked(true))
     {
         if (getairOutOnShutoff())
         {
@@ -602,6 +677,22 @@ bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex)
         return false;
     }
     return getAIModel(aiIndex)->isReadyToUse.get().i;
+}
+
+#pragma endregion
+
+#pragma region LED_functions
+
+CRGB leds[LED_NUM];
+void setupLEDs()
+{
+    // Initialize FastLED
+    FastLED.addLeds<LED_TYPE, LED_PIN, LED_COLOR_ORDER>(leds, LED_NUM);
+    FastLED.setBrightness(50);  // Set brightness (0-255)
+    
+    // Set all LEDs to red
+    fill_solid(leds, LED_NUM, CRGB::DarkCyan);
+    FastLED.show();
 }
 
 #pragma endregion

@@ -40,14 +40,23 @@
  * - LV_STDLIB_RTTHREAD:    RT-Thread implementation
  * - LV_STDLIB_CUSTOM:      Implement the functions externally
  */
-#define LV_USE_STDLIB_MALLOC    LV_STDLIB_BUILTIN // set these to buitin to free some memory for bluetooth
-#define LV_USE_STDLIB_STRING    LV_STDLIB_BUILTIN
-#define LV_USE_STDLIB_SPRINTF   LV_STDLIB_BUILTIN
+/* Allow overriding these from build flags (e.g. per-board) */
+#ifndef LV_USE_STDLIB_MALLOC
+    #define LV_USE_STDLIB_MALLOC    LV_STDLIB_BUILTIN // set these to builtin to free some memory for bluetooth
+#endif
+#ifndef LV_USE_STDLIB_STRING
+    #define LV_USE_STDLIB_STRING    LV_STDLIB_BUILTIN
+#endif
+#ifndef LV_USE_STDLIB_SPRINTF
+    #define LV_USE_STDLIB_SPRINTF   LV_STDLIB_BUILTIN
+#endif
 
 
 #if LV_USE_STDLIB_MALLOC == LV_STDLIB_BUILTIN
     /*Size of the memory available for `lv_malloc()` in bytes (>= 2kB)*/
-    #define LV_MEM_SIZE ((64 + 64) * 1024U)          /*[bytes]*/ // this freaks tf out if i lower it below (64 * 1024U). Random things stop working. UPDATE: increased +11 which nearly maxes out memory on the CYD, to fix the issue with msgbox not working when we switched back to builtin. Using builtin stores the memory in a different area than CLIB. The esp32-s3 can do at least 128 * 1024 total memory
+    #ifndef LV_MEM_SIZE
+        #define LV_MEM_SIZE ((64 + 64 + 16) * 1024U)          /*[bytes]*/ // this freaks tf out if i lower it below (64 * 1024U). Random things stop working. UPDATE: increased +11 which nearly maxes out memory on the CYD, to fix the issue with msgbox not working when we switched back to builtin. Using builtin stores the memory in a different area than CLIB. The esp32-s3 can do at least 128 * 1024 total memory
+    #endif
 
     /*Size of the memory expand for `lv_malloc()` in bytes*/
     #define LV_MEM_POOL_EXPAND_SIZE 0
@@ -388,10 +397,10 @@
 /*Montserrat fonts with ASCII range and some symbols using bpp = 4
  *https://fonts.google.com/specimen/Montserrat*/
 #define LV_FONT_MONTSERRAT_8  0
-#define LV_FONT_MONTSERRAT_10 0
+#define LV_FONT_MONTSERRAT_10 1
 #define LV_FONT_MONTSERRAT_12 0
 #define LV_FONT_MONTSERRAT_14 1
-#define LV_FONT_MONTSERRAT_16 0
+#define LV_FONT_MONTSERRAT_16 1
 #define LV_FONT_MONTSERRAT_18 0
 #define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_MONTSERRAT_22 0
@@ -519,6 +528,8 @@
 
 #define LV_USE_CHECKBOX   1
 
+#define LV_USE_COLORWHEEL 1
+
 #define LV_USE_DROPDOWN   1   /*Requires: lv_label*/
 
 #define LV_USE_IMAGE      1   /*Requires: lv_label*/
@@ -560,7 +571,7 @@
 
 #define LV_USE_SPINNER    0
 
-#define LV_USE_SWITCH     0
+#define LV_USE_SWITCH     1
 
 #define LV_USE_TEXTAREA   1   /*Requires: lv_label*/
 #if LV_USE_TEXTAREA != 0
@@ -569,7 +580,7 @@
 
 #define LV_USE_TABLE      0
 
-#define LV_USE_TABVIEW    0
+#define LV_USE_TABVIEW    1
 
 #define LV_USE_TILEVIEW   0
 
