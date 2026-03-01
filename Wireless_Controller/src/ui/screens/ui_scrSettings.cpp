@@ -180,6 +180,18 @@ static void safety_mode_handler(void *data)
     log_i("Pressed safetymode %i", value);
 }
 
+static void height_invert_handler(int wheelNum, void *data)
+{
+    uint8_t bits = *util_configValues._heightSensorInvertBits();
+    if ((bool)data)
+        bits |= (1 << wheelNum);
+    else
+        bits &= ~(1 << wheelNum);
+    *util_configValues._heightSensorInvertBits() = bits;
+    sendConfigValuesPacket(true);
+    alertValueUpdated();
+}
+
 void ScrSettings::updateUpdateButtonVisbility()
 {
     if (getwifiSSID().length() > 0 && getwifiPassword().length() > 0)
@@ -476,6 +488,11 @@ void ScrSettings::init(lv_obj_t *parent)
         sendRestPacket(&pkt);
     };
     this->ui_heightsensormode = new RadioOption(levelling_page, levelTypeRadioText, 2, levelTypeRadioCB);
+
+    this->ui_heightInvertFP = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Passenger", {.STRING = test}, [](void *data) { height_invert_handler(0, data); });
+    this->ui_heightInvertRP = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Passenger", {.STRING = test}, [](void *data) { height_invert_handler(1, data); });
+    this->ui_heightInvertFD = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Driver", {.STRING = test}, [](void *data) { height_invert_handler(2, data); });
+    this->ui_heightInvertRD = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Driver", {.STRING = test}, [](void *data) { height_invert_handler(3, data); });
 
     // --- Units page ---
     lv_obj_t *units_page = lv_obj_create(pages_container);
@@ -816,6 +833,12 @@ void ScrSettings::loop()
         this->ui_rfbuttonB->setRightHandText(itoa(*util_configValues._rfButtonB() + 1, buf, 10));
         this->ui_rfbuttonC->setRightHandText(itoa(*util_configValues._rfButtonC() + 1, buf, 10));
         this->ui_rfbuttonD->setRightHandText(itoa(*util_configValues._rfButtonD() + 1, buf, 10));
+
+        uint8_t invertBits = *util_configValues._heightSensorInvertBits();
+        this->ui_heightInvertFP->setBooleanValue((invertBits & (1 << 0)) != 0, false);
+        this->ui_heightInvertRP->setBooleanValue((invertBits & (1 << 1)) != 0, false);
+        this->ui_heightInvertFD->setBooleanValue((invertBits & (1 << 2)) != 0, false);
+        this->ui_heightInvertRD->setBooleanValue((invertBits & (1 << 3)) != 0, false);
     }
 }
 
@@ -840,6 +863,10 @@ void ScrSettings::cleanup()
 #endif
     delete ui_safetymode;
     delete ui_heightsensormode;
+    delete ui_heightInvertFP;
+    delete ui_heightInvertRP;
+    delete ui_heightInvertFD;
+    delete ui_heightInvertRD;
     delete ui_config1;
     delete ui_config2;
     delete ui_config3;

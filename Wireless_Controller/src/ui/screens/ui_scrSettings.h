@@ -41,6 +41,10 @@ public:
 #endif
     Option *ui_safetymode;  // Safety Mode (switch)
     RadioOption *ui_heightsensormode;  // Height sensor mode (radio)
+    Option *ui_heightInvertFP;  // Invert Front Passenger height sensor
+    Option *ui_heightInvertRP;  // Invert Rear Passenger height sensor
+    Option *ui_heightInvertFD;  // Invert Front Driver height sensor
+    Option *ui_heightInvertRD;  // Invert Rear Driver height sensor
     Option *ui_config1;  // Bag Max PSI (slider)
     Option *ui_config2;  // Shutoff Time (textarea)
     Option *ui_config3;  // Compressor On PSI (textarea)

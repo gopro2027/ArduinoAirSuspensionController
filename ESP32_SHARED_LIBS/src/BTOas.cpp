@@ -239,7 +239,7 @@ int SetAirheightPacket::getPressure()
 {
     return this->args32()[1].i;
 }
-ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD)
+ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t heightSensorInvertBits)
 {
     this->cmd = GETCONFIGVALUES;
     *this->_systemShutoffTimeM() = systemShutoffTimeM;
@@ -253,6 +253,7 @@ ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, u
     *this->_rfButtonB() = rfButtonB;
     *this->_rfButtonC() = rfButtonC;
     *this->_rfButtonD() = rfButtonD;
+    *this->_heightSensorInvertBits() = heightSensorInvertBits;
 }
 
 uint32_t *ConfigValuesPacket::_systemShutoffTimeM()
@@ -298,6 +299,10 @@ uint8_t *ConfigValuesPacket::_rfButtonC()
 uint8_t *ConfigValuesPacket::_rfButtonD()
 {
     return (uint8_t *)&(this->args8()[8 + 7].i);
+}
+uint8_t *ConfigValuesPacket::_heightSensorInvertBits()
+{
+    return (uint8_t *)&(this->args8()[8 + 8].i);
 }
 AuthPacket::AuthPacket(uint32_t blePasskey, AuthResult authResult)
 {

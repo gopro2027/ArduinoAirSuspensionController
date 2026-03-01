@@ -134,6 +134,10 @@ void Wheel::readInputs()
 float Wheel::getSelectedInputValue()
 {
     float value = getheightSensorMode() ? this->levelValue : this->pressureValue;
+    if (getheightSensorMode() && (getheightSensorInvertBits() & (1 << this->thisWheelNum)))
+    {
+        value = 100.0f - value;
+    }
     if (value < 0)
     {
         return 0;
