@@ -279,7 +279,7 @@ void ScrSettings::init(lv_obj_t *parent)
     this->ui_s3 = new Option(status_page, OptionType::TEXT_WITH_VALUE, "ACC Status:", {.STRING = test});
     this->ui_ebrakeStatus = new Option(status_page, OptionType::TEXT_WITH_VALUE,
         AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE == true ? "Door Lock Status:" : "E-Brake Status:", {.STRING = test});
-    this->ui_s2 = new Option(status_page, OptionType::ON_OFF, "Compressor Status:", {.STRING = test}, compressor_status_handler);
+    this->ui_s2 = new Option(status_page, OptionType::ON_OFF, "Compressor Status:", {.INT = 0}, compressor_status_handler);
 
     this->ui_rebootbutton = new Option(status_page, OptionType::BUTTON, "Reboot/Turn Off", {.STRING = test}, [](void *data)
     {
@@ -366,7 +366,7 @@ void ScrSettings::init(lv_obj_t *parent)
 
     this->ui_aiPercentage = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Learn Progress:", {.STRING = test});
     this->ui_aiReady = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Trained:", {.STRING = test});
-    this->ui_aiEnabled = new Option(ml_ai_page, OptionType::ON_OFF, "Enabled:", {.STRING = test}, ai_status_handler);
+    this->ui_aiEnabled = new Option(ml_ai_page, OptionType::ON_OFF, "Enabled:", {.INT = 0}, ai_status_handler);
 
     allOptions.push_back(new Option(ml_ai_page, OptionType::BUTTON, "Reset Learned Data", {.STRING = test}, [](void *data)
     {
@@ -390,14 +390,14 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_add_flag(basic_settings_page, LV_OBJ_FLAG_HIDDEN);
     this->pages[3] = basic_settings_page;
 
-    this->ui_maintainprssure = new Option(basic_settings_page, OptionType::ON_OFF, "Maintain Preset", {.STRING = test}, maintain_pressure_handler);
-    this->ui_riseonstart = new Option(basic_settings_page, OptionType::ON_OFF, "Rise on start", {.STRING = test}, rise_on_start_handler);
+    this->ui_maintainprssure = new Option(basic_settings_page, OptionType::ON_OFF, "Maintain Preset", {.INT = 0}, maintain_pressure_handler);
+    this->ui_riseonstart = new Option(basic_settings_page, OptionType::ON_OFF, "Rise on start", {.INT = 0}, rise_on_start_handler);
 
 #if ENABLE_AIR_OUT_ON_SHUTOFF
-    this->ui_airoutonshutoff = new Option(basic_settings_page, OptionType::ON_OFF, "Fall on shutdown", {.STRING = test}, fall_on_shutdown_handler);
+    this->ui_airoutonshutoff = new Option(basic_settings_page, OptionType::ON_OFF, "Fall on shutdown", {.INT = 0}, fall_on_shutdown_handler);
 #endif
 
-    this->ui_safetymode = new Option(basic_settings_page, OptionType::ON_OFF, "Safety Mode", {.STRING = test}, safety_mode_handler);
+    this->ui_safetymode = new Option(basic_settings_page, OptionType::ON_OFF, "Safety Mode", {.INT = 0}, safety_mode_handler);
 
 #if ENABLE_DETECT_PRESSURE_SENSORS_BUTTON
     allOptions.push_back(new Option(basic_settings_page, OptionType::BUTTON, "Detect Pressure Sensors", {.STRING = test}, [](void *data)
@@ -489,10 +489,10 @@ void ScrSettings::init(lv_obj_t *parent)
     };
     this->ui_heightsensormode = new RadioOption(levelling_page, levelTypeRadioText, 2, levelTypeRadioCB);
 
-    this->ui_heightInvertFP = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Passenger", {.STRING = test}, [](void *data) { height_invert_handler(0, data); });
-    this->ui_heightInvertRP = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Passenger", {.STRING = test}, [](void *data) { height_invert_handler(1, data); });
-    this->ui_heightInvertFD = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Driver", {.STRING = test}, [](void *data) { height_invert_handler(2, data); });
-    this->ui_heightInvertRD = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Driver", {.STRING = test}, [](void *data) { height_invert_handler(3, data); });
+    this->ui_heightInvertFP = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Passenger", {.INT = 0}, [](void *data) { height_invert_handler(0, data); });
+    this->ui_heightInvertRP = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Passenger", {.INT = 0}, [](void *data) { height_invert_handler(1, data); });
+    this->ui_heightInvertFD = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Driver", {.INT = 0}, [](void *data) { height_invert_handler(2, data); });
+    this->ui_heightInvertRD = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Driver", {.INT = 0}, [](void *data) { height_invert_handler(3, data); });
 
     // --- Units page ---
     lv_obj_t *units_page = lv_obj_create(pages_container);
