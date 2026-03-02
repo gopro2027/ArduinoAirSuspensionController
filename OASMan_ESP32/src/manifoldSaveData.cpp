@@ -149,6 +149,7 @@ void beginSaveData()
     _SaveData.rfButtonBPreset.load("rfButtonBPreset", RIDE_HEIGHT_PRESET_NUMBER);
     _SaveData.rfButtonCPreset.load("rfButtonCPreset", RIDE_HEIGHT_PRESET_NUMBER);
     _SaveData.rfButtonDPreset.load("rfButtonDPreset", RIDE_HEIGHT_PRESET_NUMBER);
+    _SaveData.heightSensorInvertBits.load("heightSensorInvertBits", 0);
 
     _SaveData.systemShutoffTimeM.load("systemShutoffTimeM", SYSTEM_SHUTOFF_TIME_M);
     _SaveData.compressorOnPSI.load("compressorOnPSI", COMPRESSOR_ON_BELOW_PSI);
@@ -384,6 +385,7 @@ createSaveFuncInt(rfButtonAPreset, uint8_t);
 createSaveFuncInt(rfButtonBPreset, uint8_t);
 createSaveFuncInt(rfButtonCPreset, uint8_t);
 createSaveFuncInt(rfButtonDPreset, uint8_t);
+createSaveFuncInt(heightSensorInvertBits, uint8_t);
 
 float getHeightSensorMax()
 {

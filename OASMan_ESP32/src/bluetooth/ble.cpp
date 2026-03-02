@@ -730,8 +730,9 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             setcompressorOffPSI(*recpkt->_compressorOffPSI());
             setpressureSensorMax(*recpkt->_pressureSensorMax());
             setbagVolumePercentage(*recpkt->_bagVolumePercentage());
+            setheightSensorInvertBits(*recpkt->_heightSensorInvertBits());
         }
-        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset());
+        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getheightSensorInvertBits());
         packetMover::sendRestPacket(&pkt, con_handle);
         //  memcpy(rest_characteristic_data, pkt.tx(), BTOAS_PACKET_SIZE);
         //  att_server_notify_SAFE(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);

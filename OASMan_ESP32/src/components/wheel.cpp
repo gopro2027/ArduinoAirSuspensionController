@@ -128,6 +128,10 @@ void Wheel::readInputs()
     if (getheightSensorMode())
     {
         this->levelValue = readPinPressure(this->levelSensorPin, true);
+        if (getheightSensorInvertBits() & (1 << this->thisWheelNum))
+        {
+            this->levelValue = 100.0f - this->levelValue;
+        }
     }
 }
 

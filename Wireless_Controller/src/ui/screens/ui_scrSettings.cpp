@@ -180,6 +180,33 @@ static void safety_mode_handler(void *data)
     log_i("Pressed safetymode %i", value);
 }
 
+static void height_invert_handler(int wheelNum, void *data)
+{
+    uint8_t bits = *util_configValues._heightSensorInvertBits();
+    if ((bool)data)
+        bits |= (1 << wheelNum);
+    else
+        bits &= ~(1 << wheelNum);
+    *util_configValues._heightSensorInvertBits() = bits;
+    sendConfigValuesPacket(true);
+    alertValueUpdated();
+}
+
+void ScrSettings::updateHeightInvertOptionsVisibility(bool isLevelMode)
+{
+    if (isLevelMode) {
+        lv_obj_remove_flag(this->ui_heightInvertFP->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_heightInvertRP->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_heightInvertFD->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_heightInvertRD->root, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(this->ui_heightInvertFP->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_heightInvertRP->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_heightInvertFD->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_heightInvertRD->root, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
 void ScrSettings::updateUpdateButtonVisbility()
 {
     if (getwifiSSID().length() > 0 && getwifiPassword().length() > 0)
@@ -267,7 +294,7 @@ void ScrSettings::init(lv_obj_t *parent)
     this->ui_s3 = new Option(status_page, OptionType::TEXT_WITH_VALUE, "ACC Status:", {.STRING = test});
     this->ui_ebrakeStatus = new Option(status_page, OptionType::TEXT_WITH_VALUE,
         AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE == true ? "Door Lock Status:" : "E-Brake Status:", {.STRING = test});
-    this->ui_s2 = new Option(status_page, OptionType::ON_OFF, "Compressor Status:", {.STRING = test}, compressor_status_handler);
+    this->ui_s2 = new Option(status_page, OptionType::ON_OFF, "Compressor Status:", {.INT = 0}, compressor_status_handler);
 
     this->ui_rebootbutton = new Option(status_page, OptionType::BUTTON, "Reboot/Turn Off", {.STRING = test}, [](void *data)
     {
@@ -354,7 +381,7 @@ void ScrSettings::init(lv_obj_t *parent)
 
     this->ui_aiPercentage = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Learn Progress:", {.STRING = test});
     this->ui_aiReady = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Trained:", {.STRING = test});
-    this->ui_aiEnabled = new Option(ml_ai_page, OptionType::ON_OFF, "Enabled:", {.STRING = test}, ai_status_handler);
+    this->ui_aiEnabled = new Option(ml_ai_page, OptionType::ON_OFF, "Enabled:", {.INT = 0}, ai_status_handler);
 
     allOptions.push_back(new Option(ml_ai_page, OptionType::BUTTON, "Reset Learned Data", {.STRING = test}, [](void *data)
     {
@@ -378,14 +405,14 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_add_flag(basic_settings_page, LV_OBJ_FLAG_HIDDEN);
     this->pages[3] = basic_settings_page;
 
-    this->ui_maintainprssure = new Option(basic_settings_page, OptionType::ON_OFF, "Maintain Preset", {.STRING = test}, maintain_pressure_handler);
-    this->ui_riseonstart = new Option(basic_settings_page, OptionType::ON_OFF, "Rise on start", {.STRING = test}, rise_on_start_handler);
+    this->ui_maintainprssure = new Option(basic_settings_page, OptionType::ON_OFF, "Maintain Preset", {.INT = 0}, maintain_pressure_handler);
+    this->ui_riseonstart = new Option(basic_settings_page, OptionType::ON_OFF, "Rise on start", {.INT = 0}, rise_on_start_handler);
 
 #if ENABLE_AIR_OUT_ON_SHUTOFF
-    this->ui_airoutonshutoff = new Option(basic_settings_page, OptionType::ON_OFF, "Fall on shutdown", {.STRING = test}, fall_on_shutdown_handler);
+    this->ui_airoutonshutoff = new Option(basic_settings_page, OptionType::ON_OFF, "Fall on shutdown", {.INT = 0}, fall_on_shutdown_handler);
 #endif
 
-    this->ui_safetymode = new Option(basic_settings_page, OptionType::ON_OFF, "Safety Mode", {.STRING = test}, safety_mode_handler);
+    this->ui_safetymode = new Option(basic_settings_page, OptionType::ON_OFF, "Safety Mode", {.INT = 0}, safety_mode_handler);
 
 #if ENABLE_DETECT_PRESSURE_SENSORS_BUTTON
     allOptions.push_back(new Option(basic_settings_page, OptionType::BUTTON, "Detect Pressure Sensors", {.STRING = test}, [](void *data)
@@ -476,6 +503,13 @@ void ScrSettings::init(lv_obj_t *parent)
         sendRestPacket(&pkt);
     };
     this->ui_heightsensormode = new RadioOption(levelling_page, levelTypeRadioText, 2, levelTypeRadioCB);
+
+    this->ui_heightInvertFD = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Left", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_FRONT_DRIVER, data); });
+    this->ui_heightInvertFP = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Right", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_FRONT_PASSENGER, data); });
+    this->ui_heightInvertRD = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Left", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_REAR_DRIVER, data); });
+    this->ui_heightInvertRP = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Right", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_REAR_PASSENGER, data); });
+
+    this->updateHeightInvertOptionsVisibility(false);
 
     // --- Units page ---
     lv_obj_t *units_page = lv_obj_create(pages_container);
@@ -778,6 +812,7 @@ void ScrSettings::loop()
     this->ui_aiEnabled->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AI_STATUS_ENABLED), false);
 
     this->ui_heightsensormode->setSelectedOption((statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE)) != 0 ? 1 : 0);
+    this->updateHeightInvertOptionsVisibility((statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE)) != 0);
 
     // Update AI status
     if (util_statusRequestPacket._setStatus)
@@ -816,6 +851,12 @@ void ScrSettings::loop()
         this->ui_rfbuttonB->setRightHandText(itoa(*util_configValues._rfButtonB() + 1, buf, 10));
         this->ui_rfbuttonC->setRightHandText(itoa(*util_configValues._rfButtonC() + 1, buf, 10));
         this->ui_rfbuttonD->setRightHandText(itoa(*util_configValues._rfButtonD() + 1, buf, 10));
+
+        uint8_t invertBits = *util_configValues._heightSensorInvertBits();
+        this->ui_heightInvertFP->setBooleanValue((invertBits & (1 << WHEEL_FRONT_PASSENGER)) != 0, false);
+        this->ui_heightInvertRP->setBooleanValue((invertBits & (1 << WHEEL_REAR_PASSENGER)) != 0, false);
+        this->ui_heightInvertFD->setBooleanValue((invertBits & (1 << WHEEL_FRONT_DRIVER)) != 0, false);
+        this->ui_heightInvertRD->setBooleanValue((invertBits & (1 << WHEEL_REAR_DRIVER)) != 0, false);
     }
 }
 
@@ -840,6 +881,10 @@ void ScrSettings::cleanup()
 #endif
     delete ui_safetymode;
     delete ui_heightsensormode;
+    delete ui_heightInvertFP;
+    delete ui_heightInvertRP;
+    delete ui_heightInvertFD;
+    delete ui_heightInvertRD;
     delete ui_config1;
     delete ui_config2;
     delete ui_config3;
