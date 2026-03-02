@@ -24,7 +24,7 @@
     "Wire":"",
     "lvgl/lvgl":"^9.4.0",
     "RobTillaart/TCA9554":"0.1.2",
-    "moononournation/GFX Library for Arduino":"1.6.0",
+    "moononournation/GFX Library for Arduino": "1.6.5",
     "lewisxhe/XPowersLib":"0.2.6",
     "lewisxhe/SensorLib":""
   }

@@ -4,7 +4,7 @@ bool ps3ServiceStarted = false;
 
 void task_bluetooth(void *parameters)
 {
-    delay(200); // just wait a moment i guess this is legacy
+    delay(200); // just wait a moment
 
     Serial.println(F("Bluetooth Rest Service Beginning"));
 
