@@ -188,7 +188,7 @@ void changeScreen(SCREEN screen, bool animate)
 
 void safetyModeMsgBoxCheck()
 {
-    bool safety_mode = (statusBittset & (1 << StatusPacketBittset::SAFETY_MODE)) != 0 ? 1 : 0;
+    bool safety_mode = (*util_configValues._configFlagsBits() & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0 ? 1 : 0;
     static bool hasShownSafetyMode = false;
     if (safety_mode && hasShownSafetyMode == false)
     {
@@ -202,8 +202,7 @@ void safetyModeMsgBoxCheck()
                                     showDialog("Please check your settings!", lv_color_hex(THEME_COLOR_LIGHT)); }, []() -> void
                                {
                                    Serial.println("Disabling safety mode");
-                                   SafetyModePacket pkt(false);
-                                   sendRestPacket(&pkt);
+                                   setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_SAFETY_MODE, false);
                                    showDialog("Safety mode disabled!", lv_color_hex(0xFF0000)); }, true);
     }
 }

@@ -21,7 +21,6 @@ enum BTOasIdentifier
     AIRUPQUICK = 7,
     BASEPROFILE = 8,
     SETAIRHEIGHT = 9,
-    RISEONSTART = 10,
     RAISEONPRESSURESET = 11,
     REBOOT = 12,
     CALIBRATE = 13,
@@ -30,16 +29,11 @@ enum BTOasIdentifier
     MESSAGE = 16,
     SAVECURRENTPRESSURESTOPROFILE = 17,
     PRESETREPORT = 18,
-    MAINTAINPRESSURE = 19,
-    FALLONSHUTDOWN = 20,
     GETCONFIGVALUES = 21,
     AUTHPACKET = 22,
-    HEIGHTSENSORMODE = 23,
     COMPRESSORSTATUS = 24,
     TURNOFF = 25,
-    SAFETYMODE = 26,
     DETECTPRESSURESENSORS = 27,
-    AISTATUSENABLED = 28,
     RESETAIPKT = 29,
     BP32PKT = 30,
     BROADCASTNAME = 35,
@@ -54,13 +48,18 @@ enum StatusPacketBittset
     ACC_STATUS_ON,
     TIMER_STATUS_EXPIRED, // not really used
     CLOCK,                // not really used
-    MAINTAIN_PRESSURE,
-    RISE_ON_START,
-    AIR_OUT_ON_SHUTOFF,
-    HEIGHT_SENSOR_MODE,
-    SAFETY_MODE,
-    AI_STATUS_ENABLED,
     EBRAKE_STATUS_ON
+};
+
+// User-config flags carried in ConfigValuesPacket (not live status). Single bit / on off config variables can go in here instead of getting a full byte of data
+enum ConfigFlagsBit
+{
+    CONFIG_MAINTAIN_PRESSURE = 0,
+    CONFIG_RISE_ON_START = 1,
+    CONFIG_AIR_OUT_ON_SHUTOFF = 2,
+    CONFIG_HEIGHT_SENSOR_MODE = 3,
+    CONFIG_SAFETY_MODE = 4,
+    CONFIG_AI_STATUS_ENABLED = 5
 };
 
 enum AuthResult
@@ -243,37 +242,16 @@ struct SetAirheightPacket : BTOasPacket
     int getWheelIndex();
     int getPressure();
 };
-struct RiseOnStartPacket : BooleanPacket
-{
-    RiseOnStartPacket(bool enable);
-};
-struct FallOnShutdownPacket : BooleanPacket
-{
-    FallOnShutdownPacket(bool enable);
-};
-struct HeightSensorModePacket : BooleanPacket
-{
-    HeightSensorModePacket(bool enable);
-};
-struct SafetyModePacket : BooleanPacket
-{
-    SafetyModePacket(bool enable);
-};
+// TODO: This is just straight up not used by the controller currently. It's related to the og pressure preset code, where you manually set the values when we only had rest based communication on the original bluetooth (not ble). We really need to remove all of the unused functionality from that.
 struct RaiseOnPressureSetPacket : BooleanPacket
 {
     RaiseOnPressureSetPacket(bool enable);
 };
-struct MaintainPressurePacket : BooleanPacket
-{
-    MaintainPressurePacket(bool enable);
-};
+// This is a 1 way packet, to manually enable/disable the compressor from the controller. The reason this has to stay as a packet is because the manifold can 'override' this value on it's own, eg when pressure reaches max, so this cannot simply live in the config values bittset.
+// It is better to think of this as a 'request on' and 'request off' instead of 'setting status' directly.
 struct CompressorStatusPacket : BooleanPacket
 {
     CompressorStatusPacket(bool enable);
-};
-struct AIStatusPacket : BooleanPacket
-{
-    AIStatusPacket(bool enable);
 };
 struct RebootPacket : BTOasPacket
 {
@@ -295,7 +273,7 @@ struct StartwebPacket : BTOasPacket
 };
 struct ConfigValuesPacket : BTOasPacket
 {
-    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t heightSensorInvertBits);
+    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t heightSensorInvertBits, uint32_t configFlagsBits);
     bool *_setValues();
     uint8_t *_bagMaxPressure();
     uint32_t *_systemShutoffTimeM();
@@ -308,6 +286,7 @@ struct ConfigValuesPacket : BTOasPacket
     uint8_t *_rfButtonC();
     uint8_t *_rfButtonD();
     uint8_t *_heightSensorInvertBits();
+    uint32_t *_configFlagsBits();
 };
 
 struct AuthPacket : BTOasPacket

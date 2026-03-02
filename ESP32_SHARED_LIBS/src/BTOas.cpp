@@ -150,44 +150,14 @@ SetAirheightPacket::SetAirheightPacket(int wheelIndex, int pressure)
     this->args32()[0].i = wheelIndex;
     this->args32()[1].i = pressure;
 }
-RiseOnStartPacket::RiseOnStartPacket(bool enable)
-{
-    this->cmd = RISEONSTART;
-    this->args32()[0].i = enable;
-}
-FallOnShutdownPacket::FallOnShutdownPacket(bool enable)
-{
-    this->cmd = FALLONSHUTDOWN;
-    this->args32()[0].i = enable;
-}
-HeightSensorModePacket::HeightSensorModePacket(bool enable)
-{
-    this->cmd = HEIGHTSENSORMODE;
-    this->args32()[0].i = enable;
-}
-SafetyModePacket::SafetyModePacket(bool enable)
-{
-    this->cmd = SAFETYMODE;
-    this->args32()[0].i = enable;
-}
 RaiseOnPressureSetPacket::RaiseOnPressureSetPacket(bool enable)
 {
     this->cmd = RAISEONPRESSURESET;
     this->args32()[0].i = enable;
 }
-MaintainPressurePacket::MaintainPressurePacket(bool enable)
-{
-    this->cmd = MAINTAINPRESSURE;
-    this->args32()[0].i = enable;
-}
 CompressorStatusPacket::CompressorStatusPacket(bool enable)
 {
     this->cmd = COMPRESSORSTATUS;
-    this->args32()[0].i = enable;
-}
-AIStatusPacket::AIStatusPacket(bool enable)
-{
-    this->cmd = AISTATUSENABLED;
     this->args32()[0].i = enable;
 }
 RebootPacket::RebootPacket()
@@ -239,7 +209,7 @@ int SetAirheightPacket::getPressure()
 {
     return this->args32()[1].i;
 }
-ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t heightSensorInvertBits)
+ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t heightSensorInvertBits, uint32_t configFlagsBits)
 {
     this->cmd = GETCONFIGVALUES;
     *this->_systemShutoffTimeM() = systemShutoffTimeM;
@@ -254,55 +224,60 @@ ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, u
     *this->_rfButtonC() = rfButtonC;
     *this->_rfButtonD() = rfButtonD;
     *this->_heightSensorInvertBits() = heightSensorInvertBits;
+    *this->_configFlagsBits() = configFlagsBits;
 }
 
 uint32_t *ConfigValuesPacket::_systemShutoffTimeM()
 {
     return (uint32_t *)&(this->args32()[0].i);
 }
+uint32_t *ConfigValuesPacket::_configFlagsBits()
+{
+    return (uint32_t *)&(this->args32()[1].i);
+}
 uint16_t *ConfigValuesPacket::_pressureSensorMax()
 {
-    return (uint16_t *)&(this->args16()[2].i);
+    return (uint16_t *)&(this->args16()[4].i);
 }
 uint16_t *ConfigValuesPacket::_bagVolumePercentage()
 {
-    return (uint16_t *)&(this->args16()[3].i);
+    return (uint16_t *)&(this->args16()[5].i);
 }
 uint8_t *ConfigValuesPacket::_bagMaxPressure()
 {
-    return (uint8_t *)&(this->args8()[8 + 0].i);
+    return (uint8_t *)&(this->args8()[12 + 0].i);
 }
 uint8_t *ConfigValuesPacket::_compressorOnPSI()
 {
-    return (uint8_t *)&(this->args8()[8 + 1].i);
+    return (uint8_t *)&(this->args8()[12 + 1].i);
 }
 uint8_t *ConfigValuesPacket::_compressorOffPSI()
 {
-    return (uint8_t *)&(this->args8()[8 + 2].i);
+    return (uint8_t *)&(this->args8()[12 + 2].i);
 }
 bool *ConfigValuesPacket::_setValues()
 {
-    return (bool *)&(this->args8()[8 + 3].i);
+    return (bool *)&(this->args8()[12 + 3].i);
 }
 uint8_t *ConfigValuesPacket::_rfButtonA()
 {
-    return (uint8_t *)&(this->args8()[8 + 4].i);
+    return (uint8_t *)&(this->args8()[12 + 4].i);
 }
 uint8_t *ConfigValuesPacket::_rfButtonB()
 {
-    return (uint8_t *)&(this->args8()[8 + 5].i);
+    return (uint8_t *)&(this->args8()[12 + 5].i);
 }
 uint8_t *ConfigValuesPacket::_rfButtonC()
 {
-    return (uint8_t *)&(this->args8()[8 + 6].i);
+    return (uint8_t *)&(this->args8()[12 + 6].i);
 }
 uint8_t *ConfigValuesPacket::_rfButtonD()
 {
-    return (uint8_t *)&(this->args8()[8 + 7].i);
+    return (uint8_t *)&(this->args8()[12 + 7].i);
 }
 uint8_t *ConfigValuesPacket::_heightSensorInvertBits()
 {
-    return (uint8_t *)&(this->args8()[8 + 8].i);
+    return (uint8_t *)&(this->args8()[12 + 8].i);
 }
 AuthPacket::AuthPacket(uint32_t blePasskey, AuthResult authResult)
 {
