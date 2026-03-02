@@ -853,10 +853,10 @@ void ScrSettings::loop()
         this->ui_rfbuttonD->setRightHandText(itoa(*util_configValues._rfButtonD() + 1, buf, 10));
 
         uint8_t invertBits = *util_configValues._heightSensorInvertBits();
-        this->ui_heightInvertFP->setBooleanValue((invertBits & (1 << 0)) != 0, false);
-        this->ui_heightInvertRP->setBooleanValue((invertBits & (1 << 1)) != 0, false);
-        this->ui_heightInvertFD->setBooleanValue((invertBits & (1 << 2)) != 0, false);
-        this->ui_heightInvertRD->setBooleanValue((invertBits & (1 << 3)) != 0, false);
+        this->ui_heightInvertFP->setBooleanValue((invertBits & (1 << WHEEL_FRONT_PASSENGER)) != 0, false);
+        this->ui_heightInvertRP->setBooleanValue((invertBits & (1 << WHEEL_REAR_PASSENGER)) != 0, false);
+        this->ui_heightInvertFD->setBooleanValue((invertBits & (1 << WHEEL_FRONT_DRIVER)) != 0, false);
+        this->ui_heightInvertRD->setBooleanValue((invertBits & (1 << WHEEL_REAR_DRIVER)) != 0, false);
     }
 }
 
