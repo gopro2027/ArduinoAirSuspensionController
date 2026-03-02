@@ -71,6 +71,7 @@ public:
     void loop() override;
     void cleanup() override;
     void showColorPickerModal();
+    void updateHeightInvertOptionsVisibility(bool isLevelMode);
 };
 
 extern ScrSettings scrSettings;

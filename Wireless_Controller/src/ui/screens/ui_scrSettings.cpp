@@ -192,6 +192,21 @@ static void height_invert_handler(int wheelNum, void *data)
     alertValueUpdated();
 }
 
+void ScrSettings::updateHeightInvertOptionsVisibility(bool isLevelMode)
+{
+    if (isLevelMode) {
+        lv_obj_remove_flag(this->ui_heightInvertFP->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_heightInvertRP->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_heightInvertFD->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_heightInvertRD->root, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(this->ui_heightInvertFP->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_heightInvertRP->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_heightInvertFD->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_heightInvertRD->root, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
 void ScrSettings::updateUpdateButtonVisbility()
 {
     if (getwifiSSID().length() > 0 && getwifiPassword().length() > 0)
@@ -489,10 +504,12 @@ void ScrSettings::init(lv_obj_t *parent)
     };
     this->ui_heightsensormode = new RadioOption(levelling_page, levelTypeRadioText, 2, levelTypeRadioCB);
 
-    this->ui_heightInvertFP = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Passenger", {.INT = 0}, [](void *data) { height_invert_handler(0, data); });
-    this->ui_heightInvertRP = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Passenger", {.INT = 0}, [](void *data) { height_invert_handler(1, data); });
-    this->ui_heightInvertFD = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Driver", {.INT = 0}, [](void *data) { height_invert_handler(2, data); });
-    this->ui_heightInvertRD = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Driver", {.INT = 0}, [](void *data) { height_invert_handler(3, data); });
+    this->ui_heightInvertFD = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Left", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_FRONT_DRIVER, data); });
+    this->ui_heightInvertFP = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Right", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_FRONT_PASSENGER, data); });
+    this->ui_heightInvertRD = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Left", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_REAR_DRIVER, data); });
+    this->ui_heightInvertRP = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Right", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_REAR_PASSENGER, data); });
+
+    this->updateHeightInvertOptionsVisibility(false);
 
     // --- Units page ---
     lv_obj_t *units_page = lv_obj_create(pages_container);
@@ -795,6 +812,7 @@ void ScrSettings::loop()
     this->ui_aiEnabled->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AI_STATUS_ENABLED), false);
 
     this->ui_heightsensormode->setSelectedOption((statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE)) != 0 ? 1 : 0);
+    this->updateHeightInvertOptionsVisibility((statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE)) != 0);
 
     // Update AI status
     if (util_statusRequestPacket._setStatus)
