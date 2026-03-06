@@ -20,7 +20,6 @@ class BTOasIdentifier {
   static const int AIRUPQUICK = 7;
   static const int BASEPROFILE = 8;
   static const int SETAIRHEIGHT = 9;
-  static const int RISEONSTART = 10;
   static const int RAISEONPRESSURESET = 11;
   static const int REBOOT = 12;
   static const int CALIBRATE = 13;
@@ -29,19 +28,24 @@ class BTOasIdentifier {
   static const int MESSAGE = 16;
   static const int SAVECURRENTPRESSURESTOPROFILE = 17;
   static const int PRESETREPORT = 18;
-  static const int MAINTAINPRESSURE = 19;
-  static const int FALLONSHUTDOWN = 20;
   static const int GETCONFIGVALUES = 21;
   static const int AUTHPACKET = 22;
-  static const int HEIGHTSENSORMODE = 23;
   static const int COMPRESSORSTATUS = 24;
   static const int TURNOFF = 25;
-  static const int SAFETYMODE = 26;
   static const int DETECTPRESSURESENSORS = 27;
-  static const int AISTATUSENABLED = 28;
   static const int RESETAIPKT = 29;
   static const int BP32PKT = 30;
   static const int BROADCASTNAME = 35;
+}
+
+/// Config flags in ConfigValuesPacket.configFlagsBits (GETCONFIGVALUES).
+class ConfigFlagsBit {
+  static const int CONFIG_MAINTAIN_PRESSURE = 0;
+  static const int CONFIG_RISE_ON_START = 1;
+  static const int CONFIG_AIR_OUT_ON_SHUTOFF = 2;
+  static const int CONFIG_HEIGHT_SENSOR_MODE = 3;
+  static const int CONFIG_SAFETY_MODE = 4;
+  static const int CONFIG_AI_STATUS_ENABLED = 5;
 }
 
 class BLEByte {
@@ -124,6 +128,7 @@ class BLEManager extends ChangeNotifier {
   bool compressorOn = false;
   bool compressorFrozen = false;
   bool vehicleOn = false;
+  bool ebrakeOn = false;
   bool riseOnStart = false;
   bool maintainPressure = false;
   bool airOutOnShutoff = false;
@@ -135,6 +140,9 @@ class BLEManager extends ChangeNotifier {
   int pressureSensorMax = 0;
   int bagVolumePercentage = 0;
   int bagMaxPressure = 0;
+
+  /// Last received GETCONFIGVALUES args (100 bytes) for echoing back when saving.
+  List<int>? _lastConfigArgs;
 
   int valveControlValue = 0; // uint32
   int getValveControlValue() {
@@ -452,29 +460,28 @@ class BLEManager extends ChangeNotifier {
             );
           }
           break;
-        case BTOasIdentifier.GETCONFIGVALUES: //handle incoming config packages
-          systemShutoffTimeM = _decodeInt32(data, 4); //uint32_t
-          pressureSensorMax = _decodeShort(data, 8); //uint16_t
-          bagVolumePercentage = _decodeShort(data, 10); //uint16_t
-          bagMaxPressure = data[12]; //uint8_t
-          compressorOnPSI = data[13]; //uint8_t
-          compressorOffPSI = data[14]; //uint8_t
-          bool setValues = data[15] != 0;
+        case BTOasIdentifier.GETCONFIGVALUES: // handle incoming config (args32[0], args32[1], args16[4], args16[5], args8[12+0..8])
+          systemShutoffTimeM = _decodeInt32(data, 4); // args32()[0]
+          final configFlagsBits = _decodeInt32(data, 8); // args32()[1]
+          pressureSensorMax = _decodeShort(data, 12); // args16()[4]
+          bagVolumePercentage = _decodeShort(data, 14); // args16()[5]
+          bagMaxPressure = data.length > 16 ? data[16] : 0; // args8()[12+0]
+          compressorOnPSI = data.length > 17 ? data[17] : 0;
+          compressorOffPSI = data.length > 18 ? data[18] : 0;
+          // setValues at data[19] - not needed for display
 
-          print("System shutoff time: ");
-          print(systemShutoffTimeM);
-          print("Pressure sensor max: ");
-          print(pressureSensorMax);
-          print("Bag volume %: ");
-          print(bagVolumePercentage);
-          print("Bag max pressure: ");
-          print(bagMaxPressure);
-          print("Compressor ON PSI: ");
-          print(compressorOnPSI);
-          print("Compressor OFF PSI: ");
-          print(compressorOffPSI);
-          print("Set values flag: ");
-          print(setValues ? "true" : "false");
+          riseOnStart = (configFlagsBits & (1 << ConfigFlagsBit.CONFIG_RISE_ON_START)) != 0;
+          maintainPressure = (configFlagsBits & (1 << ConfigFlagsBit.CONFIG_MAINTAIN_PRESSURE)) != 0;
+          airOutOnShutoff = (configFlagsBits & (1 << ConfigFlagsBit.CONFIG_AIR_OUT_ON_SHUTOFF)) != 0;
+          safetyMode = (configFlagsBits & (1 << ConfigFlagsBit.CONFIG_SAFETY_MODE)) != 0;
+
+          // Store full args (100 bytes) for echoing back when saving config
+          if (data.length >= 104) {
+            _lastConfigArgs = List<int>.from(data.sublist(4, 104));
+            if (_lastConfigArgs!.length < 100) {
+              _lastConfigArgs!.addAll(List.filled(100 - _lastConfigArgs!.length, 0));
+            }
+          }
 
           break;
       }
@@ -508,32 +515,11 @@ class BLEManager extends ChangeNotifier {
     //print(byteData);
     print(statusBittset);
 
-    // Decode individual flags
+    // Live status only (bits 0-5). Config toggles come from GETCONFIGVALUES.
     compressorFrozen = (statusBittset & (1 << 0)) != 0;
     compressorOn = (statusBittset & (1 << 1)) != 0;
     vehicleOn = (statusBittset & (1 << 2)) != 0;
-    final timerExpired = (statusBittset & (1 << 3)) != 0;
-    final clock = (statusBittset & (1 << 4)) != 0;
-    riseOnStart = (statusBittset & (1 << 5)) != 0;
-    maintainPressure = (statusBittset & (1 << 6)) != 0;
-    airOutOnShutoff = (statusBittset & (1 << 7)) != 0;
-    final heightSensorMode = (statusBittset & (1 << 8)) != 0;
-    safetyMode = (statusBittset & (1 << 9)) != 0;
-    final aiStatusEnabled = (statusBittset & (1 << 10)) != 0;
-
-/*        print("""
-     Compressor Frozen: $compressorFrozen
-     Compressor On: $compressorOn
-     Vehicle On: $vehicleOn
-     Timer Expired: $timerExpired
-     Clock: $clock
-     Rise on Start: $riseOnStart
-     Maintain Pressure: $maintainPressure
-     Air out on Shutoff: $airOutOnShutoff
-     Height Sensor Mode: $heightSensorMode
-     Safety Mode: $safetyMode
-     AI Enabled: $aiStatusEnabled
-     """); */
+    ebrakeOn = (statusBittset & (1 << 5)) != 0;
   }
 
   void _handleIncomingData(List<int> data) {
@@ -605,35 +591,33 @@ class BLEManager extends ChangeNotifier {
 
   bool isConnected() => connectedDevice != null;
 
+  int _buildConfigFlagsBits() {
+    int bits = 0;
+    if (maintainPressure) bits |= (1 << ConfigFlagsBit.CONFIG_MAINTAIN_PRESSURE);
+    if (riseOnStart) bits |= (1 << ConfigFlagsBit.CONFIG_RISE_ON_START);
+    if (airOutOnShutoff) bits |= (1 << ConfigFlagsBit.CONFIG_AIR_OUT_ON_SHUTOFF);
+    if (safetyMode) bits |= (1 << ConfigFlagsBit.CONFIG_SAFETY_MODE);
+    return bits;
+  }
+
   void saveConfigToManifold() {
-    List<int> _packetID = _encodeInt32(BTOasIdentifier.GETCONFIGVALUES);
-    List<int> _systemShutoffTimeM = _encodeInt32(systemShutoffTimeM); //uint32_t
-    List<int> _pressureSensorMax = _encodeShort(pressureSensorMax); //uint16_t
-    List<int> _bagVolumePercentage =
-        _encodeShort(bagVolumePercentage); //uint16_t
-    List<int> _data = [
-      ..._packetID,
-      ..._systemShutoffTimeM,
-      ..._pressureSensorMax,
-      ..._bagVolumePercentage,
-      bagMaxPressure,
-      compressorOnPSI,
-      compressorOffPSI,
-      1
-    ];
-    sendRestCommand(_data);
-    sendRestCommand(
-        [..._encodeInt32(BTOasIdentifier.SAFETYMODE), safetyMode ? 1 : 0]);
-    sendRestCommand(
-        [..._encodeInt32(BTOasIdentifier.RISEONSTART), riseOnStart ? 1 : 0]);
-    sendRestCommand([
-      ..._encodeInt32(BTOasIdentifier.MAINTAINPRESSURE),
-      maintainPressure ? 1 : 0
-    ]);
-    sendRestCommand([
-      ..._encodeInt32(BTOasIdentifier.FALLONSHUTDOWN),
-      airOutOnShutoff ? 1 : 0
-    ]);
+    final args = List<int>.filled(100, 0);
+    if (_lastConfigArgs != null && _lastConfigArgs!.length >= 100) {
+      args.setAll(0, _lastConfigArgs!);
+    }
+    // Overwrite with current state (ConfigValuesPacket layout)
+    args.setAll(0, _encodeInt32(systemShutoffTimeM)); // args32()[0]
+    args.setAll(4, _encodeInt32(_buildConfigFlagsBits())); // args32()[1]
+    args.setAll(8, _encodeShort(pressureSensorMax)); // args16()[4]
+    args.setAll(10, _encodeShort(bagVolumePercentage)); // args16()[5]
+    args[12] = bagMaxPressure;
+    args[13] = compressorOnPSI;
+    args[14] = compressorOffPSI;
+    args[15] = 1; // setValues = true
+
+    final packet = [..._encodeInt32(BTOasIdentifier.GETCONFIGVALUES), ...args];
+    sendRestCommand(packet);
+
     sendRestCommandString(
         _encodeInt32(BTOasIdentifier.BROADCASTNAME), bleBroadcastName);
     sendRestCommand([
