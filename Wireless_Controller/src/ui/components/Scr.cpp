@@ -215,7 +215,7 @@ void Scr::updatePressureValues()
         int currentUnitsMode = getunitsMode();
         bool unitsChanged = (this->prevUnitsMode != currentUnitsMode);
 
-        bool hs = statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE);
+        bool hs = (*util_configValues._configFlagsBits() & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE));
         updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER, hs, unitsChanged);
         updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER, hs, unitsChanged);
         updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER, hs, unitsChanged);

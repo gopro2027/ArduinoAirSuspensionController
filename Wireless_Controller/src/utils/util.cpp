@@ -82,12 +82,23 @@ void requestPreset()
     sendRestPacket(&pkt);
 }
 
-ConfigValuesPacket util_configValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+ConfigValuesPacket util_configValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
 void sendConfigValuesPacket(bool saveToManifold)
 {
     *util_configValues._setValues() = saveToManifold;
     sendRestPacket(&util_configValues);
+}
+
+void setManifoldConfigValuesFlag(ConfigFlagsBit configFlagBit, bool value)
+{
+    uint32_t flags = *util_configValues._configFlagsBits();
+    if (value)
+        flags |= (1 << configFlagBit);
+    else
+        flags &= ~(1 << configFlagBit);
+    *util_configValues._configFlagsBits() = flags;
+    sendConfigValuesPacket(true);
 }
 
 UpdateStatusRequestPacket util_statusRequestPacket;

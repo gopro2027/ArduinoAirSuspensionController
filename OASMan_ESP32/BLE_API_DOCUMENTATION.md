@@ -212,10 +212,9 @@ Commands are sent via the packet queue system (see [Packet Queue System](#packet
   - Set first parameter to `false` to read only
   - Set first parameter to `true` and fill values to save
 
-**Feature Toggles:**
+**Feature Toggles (via ConfigValuesPacket):**
 
-- `MaintainPressurePacket`, `RiseOnStartPacket`, `SafetyModePacket`, etc.
-- All take a boolean parameter (true = enable, false = disable)
+- Rise on start, maintain pressure, air-out on shutoff, height sensor mode, safety mode, AI enabled are set via `ConfigValuesPacket` with `setValues = true` and the appropriate bits in `configFlagsBits` (see ConfigFlagsBit enum).
 
 **Wheel Pressure:**
 
@@ -462,17 +461,6 @@ SetAirheightPacket packet(0, 35); // Set front passenger to 35 PSI
 
 ---
 
-#### RISEONSTART
-
-**Command ID**: `10`  
-**Purpose**: Enable/disable automatic rise on vehicle start
-
-**Structure**:
-
-- `args32()[0]`: `bool enable` - 1 to enable, 0 to disable
-
----
-
 #### RAISEONPRESSURESET
 
 **Command ID**: `11`  
@@ -544,30 +532,6 @@ StartwebPacket packet("MyWiFi", "password123");
 
 ---
 
-#### MAINTAINPRESSURE
-
-**Command ID**: `19`  
-**Purpose**: Enable/disable pressure maintenance mode
-
-**Structure**:
-
-- `args32()[0]`: `bool enable` - 1 to enable, 0 to disable
-
----
-
-#### FALLONSHUTDOWN
-
-**Command ID**: `20`  
-**Purpose**: Enable/disable automatic air release on shutdown
-
-**Structure**:
-
-- `args32()[0]`: `bool enable` - 1 to enable, 0 to disable
-
-**Note**: May be disabled via compile flag `ENABLE_AIR_OUT_ON_SHUTOFF`
-
----
-
 #### GETCONFIGVALUES
 
 **Command ID**: `21`  
@@ -576,32 +540,25 @@ StartwebPacket packet("MyWiFi", "password123");
 **Structure**:
 
 - `args32()[0]`: `uint32_t systemShutoffTimeM` - System shutoff time in minutes
-- `args16()[2]`: `uint16_t pressureSensorMax` - Maximum pressure sensor value
-- `args16()[3]`: `uint16_t bagVolumePercentage` - Bag volume percentage
-- `args8()[8+0]`: `uint8_t bagMaxPressure` - Maximum bag pressure
-- `args8()[8+1]`: `uint8_t compressorOnPSI` - Compressor turn-on PSI
-- `args8()[8+2]`: `uint8_t compressorOffPSI` - Compressor turn-off PSI
-- `args8()[8+3]`: `bool setValues` - Set to 1 to write values, 0 to only read
-- `args8()[8+4]`: `uint8_t rfButtonA` - RF button A preset assignment (read-only)
-- `args8()[8+5]`: `uint8_t rfButtonB` - RF button B preset assignment (read-only)
-- `args8()[8+6]`: `uint8_t rfButtonC` - RF button C preset assignment (read-only)
-- `args8()[8+7]`: `uint8_t rfButtonD` - RF button D preset assignment (read-only)
+- `args32()[1]`: `uint32_t configFlagsBits` - User config flags (see ConfigFlagsBit enum)
+- `args16()[4]`: `uint16_t pressureSensorMax` - Maximum pressure sensor value
+- `args16()[5]`: `uint16_t bagVolumePercentage` - Bag volume percentage
+- `args8()[12+0]`: `uint8_t bagMaxPressure` - Maximum bag pressure
+- `args8()[12+1]`: `uint8_t compressorOnPSI` - Compressor turn-on PSI
+- `args8()[12+2]`: `uint8_t compressorOffPSI` - Compressor turn-off PSI
+- `args8()[12+3]`: `bool setValues` - Set to 1 to write values, 0 to only read
+- `args8()[12+4]`: `uint8_t rfButtonA` - RF button A preset assignment (read-only)
+- `args8()[12+5]`: `uint8_t rfButtonB` - RF button B preset assignment (read-only)
+- `args8()[12+6]`: `uint8_t rfButtonC` - RF button C preset assignment (read-only)
+- `args8()[12+7]`: `uint8_t rfButtonD` - RF button D preset assignment (read-only)
+- `args8()[12+8]`: `uint8_t heightSensorInvertBits` - Per-wheel height sensor invert bits
+
+**ConfigFlagsBit** (bits in `configFlagsBits`): Bit 0 = CONFIG_MAINTAIN_PRESSURE, 1 = CONFIG_RISE_ON_START, 2 = CONFIG_AIR_OUT_ON_SHUTOFF, 3 = CONFIG_HEIGHT_SENSOR_MODE, 4 = CONFIG_SAFETY_MODE, 5 = CONFIG_AI_STATUS_ENABLED.
 
 **Usage**:
 
 - To read: Set `setValues = 0`, write packet, receive response with all values
 - To write: Set `setValues = 1`, fill in desired values, write packet, receive confirmation
-
----
-
-#### HEIGHTSENSORMODE
-
-**Command ID**: `23`  
-**Purpose**: Enable/disable height sensor mode
-
-**Structure**:
-
-- `args32()[0]`: `bool enable` - 1 to enable, 0 to disable
 
 ---
 
@@ -625,17 +582,6 @@ StartwebPacket packet("MyWiFi", "password123");
 
 ---
 
-#### SAFETYMODE
-
-**Command ID**: `26`  
-**Purpose**: Enable/disable safety mode
-
-**Structure**:
-
-- `args32()[0]`: `bool enable` - 1 to enable, 0 to disable
-
----
-
 #### DETECTPRESSURESENSORS
 
 **Command ID**: `27`  
@@ -644,17 +590,6 @@ StartwebPacket packet("MyWiFi", "password123");
 **Structure**: No parameters
 
 **Note**: Triggers system reboot after detection
-
----
-
-#### AISTATUSENABLED
-
-**Command ID**: `28`  
-**Purpose**: Enable/disable AI features
-
-**Structure**:
-
-- `args32()[0]`: `bool enable` - 1 to enable, 0 to disable
 
 ---
 
@@ -779,20 +714,14 @@ RfCommandPacket packet(RF_COMMAND_BUTTON_ASSIGN, RF_BUTTON_A, 2); // Assign butt
 - `args8()[11]`: `uint8_t` - AI ready bitset
 - `args32()[3]`: `uint32_t` - Status bitset (see below)
 
-**Status Bitset Flags** (bits in `args32()[3]`):
+**Status Bitset Flags** (bits in `args32()[3]`). Only live status flags; user-config toggles (maintain pressure, rise on start, etc.) are in `ConfigValuesPacket` as `configFlagsBits`.
 
 - Bit 0: `COMPRESSOR_FROZEN` - Compressor is frozen (StatusPacketBittset::COMPRESSOR_FROZEN = 0)
 - Bit 1: `COMPRESSOR_STATUS_ON` - Compressor is running (StatusPacketBittset::COMPRESSOR_STATUS_ON = 1)
 - Bit 2: `ACC_STATUS_ON` - Vehicle ACC is on (StatusPacketBittset::ACC_STATUS_ON = 2)
 - Bit 3: `TIMER_STATUS_EXPIRED` - Keep-alive timer expired (StatusPacketBittset::TIMER_STATUS_EXPIRED = 3)
 - Bit 4: `CLOCK` - Toggles every 250ms (StatusPacketBittset::CLOCK = 4)
-- Bit 5: `MAINTAIN_PRESSURE` - Pressure maintenance enabled (StatusPacketBittset::MAINTAIN_PRESSURE = 5)
-- Bit 6: `RISE_ON_START` - Auto-rise on start enabled (StatusPacketBittset::RISE_ON_START = 6)
-- Bit 7: `AIR_OUT_ON_SHUTOFF` - Auto-air-out on shutdown enabled (StatusPacketBittset::AIR_OUT_ON_SHUTOFF = 7)
-- Bit 8: `HEIGHT_SENSOR_MODE` - Height sensor mode enabled (StatusPacketBittset::HEIGHT_SENSOR_MODE = 8)
-- Bit 9: `SAFETY_MODE` - Safety mode enabled (StatusPacketBittset::SAFETY_MODE = 9)
-- Bit 10: `AI_STATUS_ENABLED` - AI features enabled (StatusPacketBittset::AI_STATUS_ENABLED = 10)
-- Bit 11: `EBRAKE_STATUS_ON` - Emergency brake is on (StatusPacketBittset::EBRAKE_STATUS_ON = 11)
+- Bit 5: `EBRAKE_STATUS_ON` - Emergency brake is on (StatusPacketBittset::EBRAKE_STATUS_ON = 5)
 
 **Parsing Example**:
 
@@ -989,9 +918,9 @@ sendRestPacket(&pkt); // Queue packet for sending
 AirupQuickPacket pkt(presetIndex); // presetIndex is 0-based
 sendRestPacket(&pkt);
 
-// Example 3: Create a boolean setting packet
-RiseOnStartPacket pkt(true); // Enable rise on start
-sendRestPacket(&pkt);
+// Example 3: Set a config toggle (e.g. rise on start) via ConfigValuesPacket
+// Update util_configValues._configFlagsBits() with the desired bits, then:
+// sendConfigValuesPacket(true);
 
 // Example 4: Create a profile save command
 SaveCurrentPressuresToProfilePacket pkt(profileIndex); // 0-based index
@@ -1006,7 +935,7 @@ AuthPacket authPacket(passkey, AUTHRESULT_WAITING);
 pRemoteChar_Rest->writeValue(authPacket.tx(), BTOAS_PACKET_SIZE, true);
 
 // Example 7: Config values request (read-only)
-ConfigValuesPacket pkt(false, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+ConfigValuesPacket pkt(false, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 sendRestPacket(&pkt);
 ```
 
@@ -1034,11 +963,10 @@ void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic,
         AIPercentage = status->args8()[10].i;
         AIReadyBittset = status->args8()[11].i;
 
-        // Check individual status flags
+        // Check individual status flags (live status only; user config from GETCONFIGVALUES)
         bool compressorOn = (statusBittset >> StatusPacketBittset::COMPRESSOR_STATUS_ON) & 1;
         bool accOn = (statusBittset >> StatusPacketBittset::ACC_STATUS_ON) & 1;
         bool compressorFrozen = (statusBittset >> StatusPacketBittset::COMPRESSOR_FROZEN) & 1;
-        bool maintainPressure = (statusBittset >> StatusPacketBittset::MAINTAIN_PRESSURE) & 1;
         // ... etc
 
         // Reset timeout on successful status receipt
@@ -1074,6 +1002,8 @@ void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic,
             // Extract config values using helper methods
             uint8_t bagMaxPressure = *config->_bagMaxPressure();
             uint32_t shutoffTime = *config->_systemShutoffTimeM();
+            uint8_t configFlags = *config->_configFlagsBits();
+            bool maintainPressure = (configFlags & (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE)) != 0;
             // ... etc
         }
     }
@@ -1157,7 +1087,6 @@ enum BTOasIdentifier {
     AIRUPQUICK = 7,
     BASEPROFILE = 8,
     SETAIRHEIGHT = 9,
-    RISEONSTART = 10,
     RAISEONPRESSURESET = 11,
     REBOOT = 12,
     CALIBRATE = 13,
@@ -1166,16 +1095,11 @@ enum BTOasIdentifier {
     MESSAGE = 16,
     SAVECURRENTPRESSURESTOPROFILE = 17,
     PRESETREPORT = 18,
-    MAINTAINPRESSURE = 19,
-    FALLONSHUTDOWN = 20,
     GETCONFIGVALUES = 21,
     AUTHPACKET = 22,
-    HEIGHTSENSORMODE = 23,
     COMPRESSORSTATUS = 24,
     TURNOFF = 25,
-    SAFETYMODE = 26,
     DETECTPRESSURESENSORS = 27,
-    AISTATUSENABLED = 28,
     RESETAIPKT = 29,
     BP32PKT = 30,
     BROADCASTNAME = 35,
@@ -1189,13 +1113,16 @@ enum StatusPacketBittset {
     ACC_STATUS_ON = 2,
     TIMER_STATUS_EXPIRED = 3,
     CLOCK = 4,
-    MAINTAIN_PRESSURE = 5,
-    RISE_ON_START = 6,
-    AIR_OUT_ON_SHUTOFF = 7,
-    HEIGHT_SENSOR_MODE = 8,
-    SAFETY_MODE = 9,
-    AI_STATUS_ENABLED = 10,
-    EBRAKE_STATUS_ON = 11
+    EBRAKE_STATUS_ON = 5
+};
+
+enum ConfigFlagsBit {
+    CONFIG_MAINTAIN_PRESSURE = 0,
+    CONFIG_RISE_ON_START = 1,
+    CONFIG_AIR_OUT_ON_SHUTOFF = 2,
+    CONFIG_HEIGHT_SENSOR_MODE = 3,
+    CONFIG_SAFETY_MODE = 4,
+    CONFIG_AI_STATUS_ENABLED = 5
 };
 
 enum AuthResult {

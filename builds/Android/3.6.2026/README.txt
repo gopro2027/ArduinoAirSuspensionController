@@ -1,0 +1,4 @@
+3/6/2026
+Updated Bluetooth to match the change I made on the status bittset for a few features:
+
+CONFIG_MAINTAIN_PRESSURE, CONFIG_RISE_ON_START, CONFIG_AIR_OUT_ON_SHUTOFF, CONFIG_HEIGHT_SENSOR_MODE, CONFIG_SAFETY_MODE, CONFIG_AI_STATUS_ENABLED

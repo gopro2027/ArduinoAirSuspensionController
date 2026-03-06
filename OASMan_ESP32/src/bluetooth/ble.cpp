@@ -556,30 +556,6 @@ void ble_notify()
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::CLOCK);
         }
-        if (getriseOnStart())
-        {
-            statusBittset = statusBittset | (1 << StatusPacketBittset::RISE_ON_START);
-        }
-        if (getmaintainPressure())
-        {
-            statusBittset = statusBittset | (1 << StatusPacketBittset::MAINTAIN_PRESSURE);
-        }
-        if (getairOutOnShutoff())
-        {
-            statusBittset = statusBittset | (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF);
-        }
-        if (getheightSensorMode())
-        {
-            statusBittset = statusBittset | (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE);
-        }
-        if (getsafetyMode())
-        {
-            statusBittset = statusBittset | (1 << StatusPacketBittset::SAFETY_MODE);
-        }
-        if (getaiEnabled())
-        {
-            statusBittset = statusBittset | (1 << StatusPacketBittset::AI_STATUS_ENABLED);
-        }
 
         // // pack these 2 values together at the top of the statusBittset
         // int aiDataPacked = (AIPercentage << 4) + AIReadyBittset; // combine at bottom
@@ -656,20 +632,6 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         }
     }
     break;
-    case BTOasIdentifier::RISEONSTART:
-        setriseOnStart(((RiseOnStartPacket *)packet)->getBoolean());
-        break;
-#if ENABLE_AIR_OUT_ON_SHUTOFF
-    case BTOasIdentifier::FALLONSHUTDOWN:
-        setairOutOnShutoff(((FallOnShutdownPacket *)packet)->getBoolean());
-        break;
-#endif
-    case BTOasIdentifier::HEIGHTSENSORMODE:
-        setheightSensorMode(((HeightSensorModePacket *)packet)->getBoolean());
-        break;
-    case BTOasIdentifier::SAFETYMODE:
-        setsafetyMode(((SafetyModePacket *)packet)->getBoolean());
-        break;
     case BTOasIdentifier::DETECTPRESSURESENSORS:
         setlearnPressureSensors(true);
         setinternalReboot(true);
@@ -709,15 +671,9 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         // att_server_notify_SAFE(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
         break;
     }
-    case BTOasIdentifier::MAINTAINPRESSURE:
-        setmaintainPressure(((MaintainPressurePacket *)packet)->getBoolean());
-        break;
     case BTOasIdentifier::COMPRESSORSTATUS:
         // TODO: THIS MIGHT HAVE THREADING ISSUES BUT IDK
         getCompressor()->enableDisableOverride(((CompressorStatusPacket *)packet)->getBoolean());
-        break;
-    case BTOasIdentifier::AISTATUSENABLED:
-        setaiEnabled(((AIStatusPacket *)packet)->getBoolean());
         break;
     case BTOasIdentifier::GETCONFIGVALUES:
     {
@@ -731,8 +687,32 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             setpressureSensorMax(*recpkt->_pressureSensorMax());
             setbagVolumePercentage(*recpkt->_bagVolumePercentage());
             setheightSensorInvertBits(*recpkt->_heightSensorInvertBits());
+            uint32_t flags = *recpkt->_configFlagsBits();
+            setriseOnStart((flags & (1 << ConfigFlagsBit::CONFIG_RISE_ON_START)) != 0);
+            setmaintainPressure((flags & (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE)) != 0);
+#if ENABLE_AIR_OUT_ON_SHUTOFF
+            setairOutOnShutoff((flags & (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF)) != 0);
+#endif
+            setheightSensorMode((flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0);
+            setsafetyMode((flags & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0);
+            setaiEnabled((flags & (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED)) != 0);
         }
-        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getheightSensorInvertBits());
+        uint32_t configFlagsBits = 0;
+        if (getriseOnStart())
+            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_RISE_ON_START);
+        if (getmaintainPressure())
+            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE);
+#if ENABLE_AIR_OUT_ON_SHUTOFF
+        if (getairOutOnShutoff())
+            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF);
+#endif
+        if (getheightSensorMode())
+            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE);
+        if (getsafetyMode())
+            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE);
+        if (getaiEnabled())
+            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED);
+        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getheightSensorInvertBits(), configFlagsBits);
         packetMover::sendRestPacket(&pkt, con_handle);
         //  memcpy(rest_characteristic_data, pkt.tx(), BTOAS_PACKET_SIZE);
         //  att_server_notify_SAFE(con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);

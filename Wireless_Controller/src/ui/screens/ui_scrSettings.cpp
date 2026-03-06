@@ -143,40 +143,37 @@ static void compressor_status_handler(void *data)
 static void ai_status_handler(void *data)
 {
     bool value = (bool)data;
-    AIStatusPacket pkt(value);
-    sendRestPacket(&pkt);
+    setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED, value);
     log_i("Pressed ai status %i", value);
 }
 
 static void maintain_pressure_handler(void *data)
 {
     bool value = (bool)data;
-    MaintainPressurePacket pkt(value);
-    sendRestPacket(&pkt);
+    setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE, value);
     log_i("Pressed maintain pressure %i", value);
 }
 
 static void rise_on_start_handler(void *data)
 {
     bool value = (bool)data;
-    RiseOnStartPacket pkt(value);
-    sendRestPacket(&pkt);
+    setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_RISE_ON_START, value);
     log_i("Pressed riseonstart %i", value);
 }
 
 static void fall_on_shutdown_handler(void *data)
 {
     bool value = (bool)data;
-    FallOnShutdownPacket pkt(value);
-    sendRestPacket(&pkt);
+#if ENABLE_AIR_OUT_ON_SHUTOFF
+    setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF, value);
+#endif
     log_i("Pressed fallonshutdown %i", value);
 }
 
 static void safety_mode_handler(void *data)
 {
     bool value = (bool)data;
-    SafetyModePacket pkt(value);
-    sendRestPacket(&pkt);
+    setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_SAFETY_MODE, value);
     log_i("Pressed safetymode %i", value);
 }
 
@@ -499,8 +496,7 @@ void ScrSettings::init(lv_obj_t *parent)
     const char *levelTypeRadioText[2] = {"Pressure Sensor", "Level Sensor"};
     option_event_cb_t levelTypeRadioCB = [](void *data)
     {
-        HeightSensorModePacket pkt(((bool)data));
-        sendRestPacket(&pkt);
+        setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE, ((bool)data));
     };
     this->ui_heightsensormode = new RadioOption(levelling_page, levelTypeRadioText, 2, levelTypeRadioCB);
 
@@ -799,20 +795,9 @@ void ScrSettings::loop()
     // Update reboot button text
     this->ui_rebootbutton->setRightHandText(statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON) ? "Reboot" : "Shut Down");
 
-    // Update switches
+    // Update compressor status (live status from bstatusBittset; override command compressor packet)
     this->ui_s2->setBooleanValue(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON), false);
-    this->ui_riseonstart->setBooleanValue(statusBittset & (1 << StatusPacketBittset::RISE_ON_START), false);
-    this->ui_maintainprssure->setBooleanValue(statusBittset & (1 << StatusPacketBittset::MAINTAIN_PRESSURE), false);
 
-#if ENABLE_AIR_OUT_ON_SHUTOFF
-    this->ui_airoutonshutoff->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AIR_OUT_ON_SHUTOFF), false);
-#endif
-
-    this->ui_safetymode->setBooleanValue(statusBittset & (1 << StatusPacketBittset::SAFETY_MODE), false);
-    this->ui_aiEnabled->setBooleanValue(statusBittset & (1 << StatusPacketBittset::AI_STATUS_ENABLED), false);
-
-    this->ui_heightsensormode->setSelectedOption((statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE)) != 0 ? 1 : 0);
-    this->updateHeightInvertOptionsVisibility((statusBittset & (1 << StatusPacketBittset::HEIGHT_SENSOR_MODE)) != 0);
 
     // Update AI status
     if (util_statusRequestPacket._setStatus)
@@ -857,6 +842,18 @@ void ScrSettings::loop()
         this->ui_heightInvertRP->setBooleanValue((invertBits & (1 << WHEEL_REAR_PASSENGER)) != 0, false);
         this->ui_heightInvertFD->setBooleanValue((invertBits & (1 << WHEEL_FRONT_DRIVER)) != 0, false);
         this->ui_heightInvertRD->setBooleanValue((invertBits & (1 << WHEEL_REAR_DRIVER)) != 0, false);
+
+        uint8_t flags = *util_configValues._configFlagsBits();
+        this->ui_riseonstart->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_RISE_ON_START)) != 0, false);
+        this->ui_maintainprssure->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE)) != 0, false);
+#if ENABLE_AIR_OUT_ON_SHUTOFF
+        this->ui_airoutonshutoff->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF)) != 0, false);
+#endif
+        this->ui_safetymode->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0, false);
+        this->ui_aiEnabled->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED)) != 0, false);
+        bool heightSensorMode = (flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0;
+        this->ui_heightsensormode->setSelectedOption(heightSensorMode ? 1 : 0);
+        this->updateHeightInvertOptionsVisibility(heightSensorMode);
     }
 }
 

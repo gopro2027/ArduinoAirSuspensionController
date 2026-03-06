@@ -79,6 +79,7 @@ void requestPreset();
 extern ConfigValuesPacket util_configValues;
 extern UpdateStatusRequestPacket util_statusRequestPacket;
 void sendConfigValuesPacket(bool saveToManifold);
+void setManifoldConfigValuesFlag(ConfigFlagsBit configFlagBit, bool value);
 void onBLEConnectionCompleted();
 
 // returns 0 if none to send
