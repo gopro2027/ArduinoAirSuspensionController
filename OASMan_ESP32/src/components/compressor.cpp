@@ -87,6 +87,11 @@ void Compressor::loop()
     unsigned long curTime = millis();
 
     #if SIX_VALVE_MANIFOLD_OPEN_TANK_VALVE_WHEN_COMPRESSOR_IS_RUNNING == true
+    if (getManifold()->chamberTankInput->isOpen()) {
+        this->s_trigger.close();
+        getManifold()->updateCompressorTankValve(); // make sure tank valve gets closed
+        return;
+    }
     getManifold()->updateCompressorTankValve();
     #endif
 
