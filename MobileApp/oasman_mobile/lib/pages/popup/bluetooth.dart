@@ -107,15 +107,22 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
       initialData: const [],
       builder: (context, snapshot) {
         final scanResults = snapshot.data ?? [];
+        final oasmanServiceGuid = Guid(oasmanServiceUuid);
         final filteredResults = scanResults
-            .where((result) => result.device.name.isNotEmpty)
+            .where((result) =>
+                result.advertisementData.serviceUuids.contains(oasmanServiceGuid))
+            .toList();
+        final seen = <String>{};
+        final deduped = filteredResults
+            .where((r) => seen.add(r.device.remoteId.str))
             .toList();
 
-        if (filteredResults.isEmpty) {
+        if (deduped.isEmpty) {
           return const Center(
             child: Text(
-              "No devices found. Please refresh.",
+              "No OASMan devices found. Tap Refresh to scan.",
               style: TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center,
             ),
           );
         }
@@ -123,11 +130,11 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
         return ListView.separated(
           shrinkWrap: true,
           physics: const ClampingScrollPhysics(),
-          itemCount: filteredResults.length,
+          itemCount: deduped.length,
           separatorBuilder: (context, index) =>
               const Divider(color: Colors.grey),
           itemBuilder: (context, index) {
-            final device = filteredResults[index].device;
+            final device = deduped[index].device;
             return _buildDeviceTile(device, bleManager);
           },
         );
@@ -143,7 +150,9 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            bleManager.connectedDevice!.name,
+            bleManager.connectedDevice!.name.isNotEmpty
+                ? bleManager.connectedDevice!.name
+                : bleManager.connectedDevice!.remoteId.str,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 16,
@@ -157,6 +166,14 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
               color: Colors.green,
               fontSize: 14,
               fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            "Tap Disconnect to switch to another device.",
+            style: TextStyle(
+              color: Colors.grey[400],
+              fontSize: 12,
             ),
           ),
           const SizedBox(height: 10),
@@ -190,7 +207,9 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
         children: [
           Expanded(
             child: Text(
-              device.name,
+              device.name.isNotEmpty
+                  ? device.name
+                  : device.remoteId.str,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,

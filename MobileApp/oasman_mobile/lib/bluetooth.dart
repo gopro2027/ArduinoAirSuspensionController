@@ -1,3 +1,5 @@
+// UNUSED: This GetX BluetoothController is not used. The app uses BLEManager + Provider (see ble_manager.dart) and popup/bluetooth.dart for the device list.
+
 import 'dart:async';
 import 'dart:developer';
 import 'dart:io';

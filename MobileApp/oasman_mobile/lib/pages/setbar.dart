@@ -1,3 +1,5 @@
+// UNUSED: Placeholder settings page; not in routes. The app uses Setup (setup.dart) as the settings tab.
+
 import 'package:flutter/material.dart';
 
 class setbar extends StatelessWidget {

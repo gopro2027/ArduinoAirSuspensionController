@@ -33,6 +33,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool _isReady = false;
+  bool _autoConnectTriggered = false;
 
   @override
   void initState() {
@@ -42,11 +43,6 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _initializeApp() async {
     await loadGlobalSettings(); // Load settings at startup
-    if (globalSettings?.pairedManifoldId != '') { //in case if saved/paired device exists
-      final bleManager = BLEManager();
-      await bleManager.startScan(); // Auto-connect logic inside startScan
-    }
-
     setState(() => _isReady = true);
   }
 
@@ -59,6 +55,17 @@ class _MyAppState extends State<MyApp> {
           body: Center(child: CircularProgressIndicator()),
         ),
       );
+    }
+
+    // One-time auto-connect to paired manifold when app becomes ready
+    if (!_autoConnectTriggered &&
+        globalSettings?.pairedManifoldId != null &&
+        globalSettings!.pairedManifoldId.isNotEmpty) {
+      _autoConnectTriggered = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        Provider.of<BLEManager>(context, listen: false).startScan();
+      });
     }
 
     // App is ready, use globalSettings

@@ -9,6 +9,9 @@ import 'package:permission_handler/permission_handler.dart';
 import "dart:typed_data";
 import 'models/appSettings.dart';
 
+/// OASMan BLE service UUID; filter scans to only show manifold devices.
+const String oasmanServiceUuid = '679425c8-d3b4-4491-9eb2-3e3d15b625f0';
+
 class BTOasIdentifier {
   static const int IDLE = 0;
   static const int STATUSREPORT = 1;
@@ -133,6 +136,7 @@ class BLEManager extends ChangeNotifier {
   bool maintainPressure = false;
   bool airOutOnShutoff = false;
   bool safetyMode = true;
+  bool aiStatusEnabled = false;
   String bleBroadcastName = '';
   int compressorOnPSI = 0;
   int compressorOffPSI = 0;
@@ -159,12 +163,19 @@ class BLEManager extends ChangeNotifier {
     writeValveValue(valveControlValue);
   }
 
+  /// Valve control is a 4-byte little-endian uint32 (matches Wireless_Controller).
   Future<void> writeValveValue(int value) async {
     if (valveControlCharacteristic != null) {
       try {
         if (valveControlCharacteristic!.properties.write) {
+          final bytes = [
+            value & 0xFF,
+            (value >> 8) & 0xFF,
+            (value >> 16) & 0xFF,
+            (value >> 24) & 0xFF,
+          ];
           await valveControlCharacteristic!
-              .write([value], withoutResponse: false);
+              .write(bytes, withoutResponse: false);
           print("Command sent successfully: $value");
         } else {
           print("Write characteristic does not support write operations.");
@@ -201,7 +212,10 @@ class BLEManager extends ChangeNotifier {
       isScanning = true;
       notifyListeners();
 
-      FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
+      FlutterBluePlus.startScan(
+        timeout: const Duration(seconds: 5),
+        withServices: [Guid(oasmanServiceUuid)],
+      );
       print("ble scan started, paired ID: ${globalSettings!.pairedManifoldId}");
       FlutterBluePlus.scanResults.listen((results) {
         for (ScanResult result in results) {
@@ -256,7 +270,7 @@ class BLEManager extends ChangeNotifier {
     }
   }
 
-  void _connectToDevice(BluetoothDevice device) async {
+  void _connectToDevice(BluetoothDevice device, [BuildContext? context]) async {
     try {
       _startGlobalConnListener(); // ensure listener is active
       print("Connecting to device: ${device.name} (${device.id})");
@@ -265,6 +279,8 @@ class BLEManager extends ChangeNotifier {
       connectedDevice = device;
       notifyListeners();
 
+      await discoverServices(device, context);
+
       await sendRestCommand(
           [BTOasIdentifier.GETCONFIGVALUES]); //ask for config from manifold
 
@@ -272,7 +288,7 @@ class BLEManager extends ChangeNotifier {
       bleBroadcastName = device.name;
       globalSettings?.pairedManifoldId = device.id.toString();
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('_passkeyText', device.id.toString());
+      await prefs.setString('_pairedManifoldId', device.id.toString());
     } catch (e) {
       print("Error connecting to device: $e");
       await disconnectDevice();
@@ -307,6 +323,7 @@ class BLEManager extends ChangeNotifier {
         connectedDevice = null;
         restCharacteristic = null;
         statusCharacteristic = null;
+        valveControlCharacteristic = null;
         notifyListeners();
       }
     }
@@ -352,9 +369,15 @@ class BLEManager extends ChangeNotifier {
         [BLEInt(passkey), BLEInt(0 /*AuthResult::AUTHRESULT_WAITING*/)]));
   }
 
-  /// Discover services and characteristics
+  /// Send compressor on/off (CompressorStatusPacket, cmd 24). When connected only.
+  void sendCompressorStatus(bool on) {
+    sendRestCommand(buildRestPacket(
+        BTOasIdentifier.COMPRESSORSTATUS, [BLEInt(on ? 1 : 0)]));
+  }
+
+  /// Discover services and characteristics. [context] optional for auth-fail dialog.
   Future<void> discoverServices(
-      BluetoothDevice device, BuildContext context) async {
+      BluetoothDevice device, BuildContext? context) async {
     try {
       List<BluetoothService> services = await device.discoverServices();
       for (BluetoothService service in services) {
@@ -440,7 +463,7 @@ class BLEManager extends ChangeNotifier {
     }
   }
 
-  void _handleIncomingRestData(List<int> data, BuildContext context) {
+  void _handleIncomingRestData(List<int> data, BuildContext? context) {
     try {
       //if (data.length >= 16) {
       final packetId = _decodeInt32(data, 0);
@@ -454,10 +477,12 @@ class BLEManager extends ChangeNotifier {
           //print(_decodeInt32(data, 8).toString());
           if (_decodeInt32(data, 8) == 2 /*AuthResult::AUTHRESULT_FAIL*/) {
             disconnectDevice();
-            showDialog(
-              context: context,
-              builder: (_) => const InvalidPasskeyPopup(),
-            );
+            if (context != null && context.mounted) {
+              showDialog(
+                context: context,
+                builder: (_) => const InvalidPasskeyPopup(),
+              );
+            }
           }
           break;
         case BTOasIdentifier.GETCONFIGVALUES: // handle incoming config (args32[0], args32[1], args16[4], args16[5], args8[12+0..8])
@@ -474,6 +499,7 @@ class BLEManager extends ChangeNotifier {
           maintainPressure = (configFlagsBits & (1 << ConfigFlagsBit.CONFIG_MAINTAIN_PRESSURE)) != 0;
           airOutOnShutoff = (configFlagsBits & (1 << ConfigFlagsBit.CONFIG_AIR_OUT_ON_SHUTOFF)) != 0;
           safetyMode = (configFlagsBits & (1 << ConfigFlagsBit.CONFIG_SAFETY_MODE)) != 0;
+          aiStatusEnabled = (configFlagsBits & (1 << ConfigFlagsBit.CONFIG_AI_STATUS_ENABLED)) != 0;
 
           // Store full args (100 bytes) for echoing back when saving config
           if (data.length >= 104) {
@@ -597,6 +623,7 @@ class BLEManager extends ChangeNotifier {
     if (riseOnStart) bits |= (1 << ConfigFlagsBit.CONFIG_RISE_ON_START);
     if (airOutOnShutoff) bits |= (1 << ConfigFlagsBit.CONFIG_AIR_OUT_ON_SHUTOFF);
     if (safetyMode) bits |= (1 << ConfigFlagsBit.CONFIG_SAFETY_MODE);
+    if (aiStatusEnabled) bits |= (1 << ConfigFlagsBit.CONFIG_AI_STATUS_ENABLED);
     return bits;
   }
 
