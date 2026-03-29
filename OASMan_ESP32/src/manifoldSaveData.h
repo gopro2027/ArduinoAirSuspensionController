@@ -8,7 +8,7 @@
 #include <user_defines.h>
 
 #include "pressureMath.h"
-
+#include "BTOas.h"
 class Profile
 {
 public:
@@ -42,6 +42,23 @@ public:
         weights[0].deletePreference();
         weights[1].deletePreference();
         weights[2].deletePreference();
+    }
+};
+
+class AuxillaryOutputPreference {
+    public:
+    Preferencable auxillaryOutputMode; // byte
+    Preferencable auxillaryOutputModeTimeUnit; // byte
+    Preferencable auxillaryOutputTime; // uint32_t
+    void load() {
+        auxillaryOutputMode.load("auxillaryOutputMode", AUX_MODE_MANUAL_SWITCHED);
+        auxillaryOutputModeTimeUnit.load("auxillaryOutputModeTimeUnit", AUX_MODE_TIME_SECONDS);
+        auxillaryOutputTime.load("auxillaryOutputTime", 0);
+    }
+    void save(AuxillaryOutputModePayload payload) {
+        auxillaryOutputMode.set(payload.mode);
+        auxillaryOutputModeTimeUnit.set(payload.timeUnit);
+        auxillaryOutputTime.set(payload.time);
     }
 };
 
@@ -83,6 +100,8 @@ public:
     Preferencable rfButtonCPreset;
     Preferencable rfButtonDPreset;
     Preferencable heightSensorInvertBits;
+
+    AuxillaryOutputPreference auxillaryOutputPreference;
 
     Profile profile[MAX_PROFILE_COUNT];
     AIModelPreference aiModels[4];
@@ -164,6 +183,12 @@ headerDefineSaveFunc(rfButtonBPreset, uint8_t);
 headerDefineSaveFunc(rfButtonCPreset, uint8_t);
 headerDefineSaveFunc(rfButtonDPreset, uint8_t);
 headerDefineSaveFunc(heightSensorInvertBits, uint8_t);
+
+headerDefineSaveFunc(auxillaryOutputMode, AuxillaryOutputMode);
+headerDefineSaveFunc(auxillaryOutputModeTimeUnit, AuxillaryOutputModeTimeUnit);
+headerDefineSaveFunc(auxillaryOutputTime, uint32_t);
+
+void saveAuxillaryOutputPreference(AuxillaryOutputModePayload payload);
 
 float getHeightSensorMax();
 

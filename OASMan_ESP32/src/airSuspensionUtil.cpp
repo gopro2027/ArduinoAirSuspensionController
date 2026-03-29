@@ -6,6 +6,7 @@
 InputType *pressureInputs[5];
 Manifold *manifold;
 Compressor *compressor;
+AuxillaryOutput *auxillaryOutput;
 RfReceiver *rfReceiver;
 Wheel *wheel[4];
 
@@ -23,6 +24,10 @@ Manifold *getManifold()
 Compressor *getCompressor()
 {
     return compressor;
+}
+AuxillaryOutput *getAuxillaryOutput()
+{
+    return auxillaryOutput;
 }
 RfReceiver *getRfReceiver()
 {
@@ -395,6 +400,7 @@ void accessoryWireLoop()
                 hasJustShutoff = true;
                 // actually check if air out code is enabled and do as asked
                 airOutWithSafetyCheck();
+                getAuxillaryOutput()->setDoShutdownEvent(true);
             }
         }
     }

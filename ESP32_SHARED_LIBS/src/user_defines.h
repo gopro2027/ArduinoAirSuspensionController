@@ -115,6 +115,9 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 /* Compressor/tank */
 #define compressorRelayPin new InputType(13, OUTPUT) // D13, solenoid
 
+/* Auxillary Output */
+#define auxillaryOutputPin new InputType(14, OUTPUT) // D14, auxillary output
+
 /* Accessory Wire */
 #define outputKeepAlivePin new InputType(12, OUTPUT) // D12, output high while accessory input is low to keep input on. Should always output high while accessory is on. Output low when accessory is low to turn off system.
 #define accessoryInput new InputType(35, INPUT)      // D35 because it's adc1 input only //D14, digital in high or low. 0 = acc on, 1 = acc off (it's on a pullup resistor)

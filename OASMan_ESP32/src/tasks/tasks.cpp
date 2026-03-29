@@ -75,6 +75,7 @@ void task_compressor(void *parameters)
     for (;;)
     {
         getCompressor()->loop();
+        getAuxillaryOutput()->loop();
         delay(100);
     }
 }

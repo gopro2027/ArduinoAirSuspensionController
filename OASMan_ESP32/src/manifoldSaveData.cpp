@@ -156,6 +156,9 @@ void beginSaveData()
     _SaveData.compressorOffPSI.load("compressorOffPSI", COMPRESSOR_MAX_PSI);
     _SaveData.pressureSensorMax.load("pressureSensorMax", pressuretransducermaxPSI);
     _SaveData.bagVolumePercentage.load("bagVolumePercentage", 100);
+
+    _SaveData.auxillaryOutputPreference.load();
+
     for (int i = 0; i < MAX_PROFILE_COUNT; i++)
     {
         for (int j = 0; j < 4; j++)
@@ -386,6 +389,22 @@ createSaveFuncInt(rfButtonBPreset, uint8_t);
 createSaveFuncInt(rfButtonCPreset, uint8_t);
 createSaveFuncInt(rfButtonDPreset, uint8_t);
 createSaveFuncInt(heightSensorInvertBits, uint8_t);
+
+// auxillary output preference is in it's own class so we have custom functions defined
+AuxillaryOutputMode getauxillaryOutputMode() {
+    return (AuxillaryOutputMode)_SaveData.auxillaryOutputPreference.auxillaryOutputMode.get().i;
+}
+AuxillaryOutputModeTimeUnit getauxillaryOutputModeTimeUnit() {
+    return (AuxillaryOutputModeTimeUnit)_SaveData.auxillaryOutputPreference.auxillaryOutputModeTimeUnit.get().i;
+}
+uint32_t getauxillaryOutputTime() {
+    return _SaveData.auxillaryOutputPreference.auxillaryOutputTime.get().i;
+}
+
+void saveAuxillaryOutputPreference(AuxillaryOutputModePayload payload) {
+    _SaveData.auxillaryOutputPreference.save(payload);
+}
+
 
 float getHeightSensorMax()
 {
