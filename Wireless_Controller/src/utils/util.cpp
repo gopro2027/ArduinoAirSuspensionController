@@ -1,5 +1,9 @@
 #include "util.h"
 
+#ifdef HAS_ROTARY_ENCODER
+knob_handle_t g_knob_handle = nullptr;
+#endif
+
 // Dynamic screen dimension helpers for rotation support
 int getScreenWidth() {
     lv_display_t *disp = lv_display_get_default();

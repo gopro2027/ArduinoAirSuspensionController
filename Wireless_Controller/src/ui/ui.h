@@ -15,12 +15,11 @@
 #ifdef SCREEN_MODE_CIRCLE
 #include "ui_circle/screens/circle_scrHome.h"
 #include "ui_circle/screens/circle_scrPresets.h"
-#include "ui_circle/screens/circle_scrSettings.h"
 #else
 #include "screens/ui_scrHome.h"
 #include "screens/ui_scrPresets.h"
-#include "screens/ui_scrSettings.h"
 #endif
+#include "screens/ui_scrSettings.h"
 
 #include "utils/util.h"
 

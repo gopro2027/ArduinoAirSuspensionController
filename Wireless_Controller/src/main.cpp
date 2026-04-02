@@ -54,6 +54,15 @@ void setup()
 
     board_drivers_init();
 
+#ifdef HAS_ROTARY_ENCODER
+    knob_config_t knob_cfg = {
+        .gpio_encoder_a = ENCODER_PIN_A,
+        .gpio_encoder_b = ENCODER_PIN_B,
+    };
+    g_knob_handle = iot_knob_create(&knob_cfg);
+    if (!g_knob_handle)
+        log_e("Rotary encoder init failed");
+#endif
 
     ui_init();
 

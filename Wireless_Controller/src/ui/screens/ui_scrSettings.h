@@ -1,8 +1,6 @@
 #ifndef ui_scrSettings_h
 #define ui_scrSettings_h
 
-#ifndef SCREEN_MODE_CIRCLE
-
 #include "ui/components/Scr.h"
 #include "ui/components/option.h"
 #include "ui/components/radioOption.h"
@@ -78,7 +76,5 @@ public:
 
 extern ScrSettings scrSettings;
 extern std::vector<ble_addr_t> authblacklist;
-
-#endif /* !SCREEN_MODE_CIRCLE */
 
 #endif /* ui_scrSettings_h */

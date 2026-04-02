@@ -96,6 +96,11 @@ void setValveBit(int bit);
 void unsetValveBit(int bit);
 void closeValves();
 
+#ifdef HAS_ROTARY_ENCODER
+#include "bidi_switch_knob.h"
+extern knob_handle_t g_knob_handle;
+#endif
+
 void setupPressureLabel(lv_obj_t *parent, lv_obj_t **label, int x, int y, lv_align_t align, const char *defaultText);
 
 extern Scr *screens[3];

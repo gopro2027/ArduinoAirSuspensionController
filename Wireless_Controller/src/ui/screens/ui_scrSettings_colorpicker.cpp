@@ -1,7 +1,4 @@
 #include "device_lib_exports.h"
-
-#ifndef SCREEN_MODE_CIRCLE
-
 #include "ui_scrSettings.h"
 #include "../../utils/util.h"
 
@@ -271,5 +268,3 @@ void ScrSettings::showColorPickerModal() {
         lv_event_stop_bubbling(e);
     }, LV_EVENT_ALL, data);
 }
-
-#endif /* !SCREEN_MODE_CIRCLE */

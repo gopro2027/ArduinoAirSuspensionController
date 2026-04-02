@@ -7,28 +7,40 @@
 
 ScrHome scrHome(true);
 
-static void valve_pressed(lv_event_t *e)
+/* Knob-driven valve control: while the knob is being turned, keep valves
+ * open for selected corners.  Once the user stops turning for KNOB_HOLD_MS
+ * the valves close automatically. */
+static const unsigned long KNOB_HOLD_MS = 100;
+
+void ScrHome::arc_click_cb(lv_event_t *e)
 {
-    if (lv_event_get_code(e) == LV_EVENT_PRESSED)
-        setValveBit((int)(intptr_t)lv_event_get_user_data(e));
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED)
+        return;
+
+    int idx = (int)(intptr_t)lv_event_get_user_data(e);
+    scrHome.corners_[idx].selected = !scrHome.corners_[idx].selected;
+    scrHome.applySelectionStyle(idx);
 }
 
-static void valve_released(lv_event_t *e)
+void ScrHome::applySelectionStyle(int idx)
 {
-    if (lv_event_get_code(e) == LV_EVENT_RELEASED)
-        unsetValveBit((int)(intptr_t)lv_event_get_user_data(e));
-}
+    Corner &c = corners_[idx];
+    if (!c.arc)
+        return;
 
-/* ------------------------------------------------------------------ */
-/*  Home screen layout for 360x360 round display                      */
-/*                                                                    */
-/*  Design: Four 120° arc gauges arranged in quadrants around center. */
-/*  Each arc has a pressure label inside and corner abbreviation.     */
-/*  Up/Down valve buttons sit at each arc's outer edge.               */
-/*  Tank pressure displayed as a large centered label.                */
-/*                                                                    */
-/*  The usable circle is ~320px dia to stay clear of round bezel.     */
-/* ------------------------------------------------------------------ */
+    int sz = c.selected ? ARC_SIZE_SELECTED : ARC_SIZE_NORMAL;
+    lv_obj_set_size(c.arc, sz, sz);
+
+    if (c.selected) {
+        lv_obj_set_style_arc_width(c.arc, 14, LV_PART_INDICATOR);
+        lv_obj_set_style_arc_color(c.arc, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR);
+        lv_obj_set_style_arc_opa(c.arc, LV_OPA_COVER, LV_PART_INDICATOR);
+    } else {
+        lv_obj_set_style_arc_width(c.arc, 10, LV_PART_INDICATOR);
+        lv_obj_set_style_arc_color(c.arc, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR);
+        lv_obj_set_style_arc_opa(c.arc, LV_OPA_COVER, LV_PART_INDICATOR);
+    }
+}
 
 void ScrHome::init(lv_obj_t *parent)
 {
@@ -41,40 +53,27 @@ void ScrHome::init(lv_obj_t *parent)
 
     const char *names[] = {"FD", "FP", "RD", "RP"};
 
-    /* Arc layout: four 70° arcs with 20° gaps, forming a symmetric ring.
-     *
-     * LVGL angles: 0° = right (3 o'clock), clockwise.
-     * Quadrant centers:  FD=225° (upper-left), FP=315° (upper-right),
-     *                    RD=135° (lower-left), RP=45°  (lower-right).
-     *
-     * Each arc: rotation places the 0° start, bg_angles(0,70) draws 70°.
-     * Labels sit inside the ring; +/- buttons sit outside it. */
     struct ArcLayout {
         int rotation;
         int startAngle;
         int endAngle;
-        int labelX;        // pressure label offset from center
+        int labelX;
         int labelY;
-        int nameX;         // abbreviation label offset
+        int nameX;
         int nameY;
-        int btnUpX;
-        int btnUpY;
-        int btnDownX;
-        int btnDownY;
     };
 
-    const int arcSize = 180;
     const int arcWidth = 10;
 
     ArcLayout layouts[] = {
-        /* FD: upper-left  (190° → 260°, centered at 225°) */
-        {190, 0, 70,  -34, -34,  -42, -52,  -108, -38,  -38, -108},
-        /* FP: upper-right (280° → 350°, centered at 315°) */
-        {280, 0, 70,   34, -34,   42, -52,   108, -38,   38, -108},
-        /* RD: lower-left  (100° → 170°, centered at 135°) */
-        {100, 0, 70,  -34,  34,  -42,  52,   -38, 108,  -108,  38},
-        /* RP: lower-right ( 10° →  80°, centered at  45°) */
-        { 10, 0, 70,   34,  34,   42,  52,    38, 108,   108,  38},
+        /* FD: upper-left  (190->260, center 225) */
+        {190, 0, 70,  -34, -34,  -42, -52},
+        /* FP: upper-right (280->350, center 315) */
+        {280, 0, 70,   34, -34,   42, -52},
+        /* RD: lower-left  (100->170, center 135) */
+        {100, 0, 70,  -34,  34,  -42,  52},
+        /* RP: lower-right (10->80,   center  45) */
+        { 10, 0, 70,   34,  34,   42,  52},
     };
 
     for (int i = 0; i < 4; i++) {
@@ -82,7 +81,7 @@ void ScrHome::init(lv_obj_t *parent)
         ArcLayout &L = layouts[i];
 
         c.arc = lv_arc_create(scr);
-        lv_obj_set_size(c.arc, arcSize, arcSize);
+        lv_obj_set_size(c.arc, ARC_SIZE_NORMAL, ARC_SIZE_NORMAL);
         lv_arc_set_rotation(c.arc, L.rotation);
         lv_arc_set_bg_angles(c.arc, L.startAngle, L.endAngle);
         lv_arc_set_range(c.arc, 0, 200);
@@ -109,41 +108,19 @@ void ScrHome::init(lv_obj_t *parent)
         lv_obj_set_style_text_font(c.nameLabel, &lv_font_montserrat_10, 0);
         lv_obj_align(c.nameLabel, LV_ALIGN_CENTER, L.nameX, L.nameY);
 
-        const int btnSz = 36;
-        c.btnUp = lv_btn_create(scr);
-        lv_obj_set_size(c.btnUp, btnSz, btnSz);
-        lv_obj_set_style_radius(c.btnUp, LV_RADIUS_CIRCLE, 0);
-        lv_obj_set_style_bg_color(c.btnUp, lv_color_hex(GENERIC_GREY_DARK), 0);
-        lv_obj_set_style_bg_opa(c.btnUp, LV_OPA_80, 0);
-        lv_obj_set_style_border_width(c.btnUp, 1, 0);
-        lv_obj_set_style_border_color(c.btnUp, lv_color_hex(THEME_COLOR_MEDIUM), 0);
-        lv_obj_set_style_shadow_width(c.btnUp, 0, 0);
-        lv_obj_align(c.btnUp, LV_ALIGN_CENTER, L.btnUpX, L.btnUpY);
-        lv_obj_t *lu = lv_label_create(c.btnUp);
-        lv_label_set_text(lu, LV_SYMBOL_PLUS);
-        lv_obj_set_style_text_color(lu, lv_color_hex(0x4ADE80), 0);
-        lv_obj_center(lu);
-        lv_obj_add_event_cb(c.btnUp, valve_pressed, LV_EVENT_PRESSED, (void *)(intptr_t)c.inValve);
-        lv_obj_add_event_cb(c.btnUp, valve_released, LV_EVENT_RELEASED, (void *)(intptr_t)c.inValve);
-
-        c.btnDown = lv_btn_create(scr);
-        lv_obj_set_size(c.btnDown, btnSz, btnSz);
-        lv_obj_set_style_radius(c.btnDown, LV_RADIUS_CIRCLE, 0);
-        lv_obj_set_style_bg_color(c.btnDown, lv_color_hex(GENERIC_GREY_DARK), 0);
-        lv_obj_set_style_bg_opa(c.btnDown, LV_OPA_80, 0);
-        lv_obj_set_style_border_width(c.btnDown, 1, 0);
-        lv_obj_set_style_border_color(c.btnDown, lv_color_hex(THEME_COLOR_MEDIUM), 0);
-        lv_obj_set_style_shadow_width(c.btnDown, 0, 0);
-        lv_obj_align(c.btnDown, LV_ALIGN_CENTER, L.btnDownX, L.btnDownY);
-        lv_obj_t *ld = lv_label_create(c.btnDown);
-        lv_label_set_text(ld, LV_SYMBOL_MINUS);
-        lv_obj_set_style_text_color(ld, lv_color_hex(0xF87171), 0);
-        lv_obj_center(ld);
-        lv_obj_add_event_cb(c.btnDown, valve_pressed, LV_EVENT_PRESSED, (void *)(intptr_t)c.outValve);
-        lv_obj_add_event_cb(c.btnDown, valve_released, LV_EVENT_RELEASED, (void *)(intptr_t)c.outValve);
+        /* Invisible touch zone over each arc quadrant for tap-to-select */
+        c.touchZone = lv_obj_create(scr);
+        lv_obj_remove_style_all(c.touchZone);
+        lv_obj_set_size(c.touchZone, 140, 140);
+        int tzX = (L.labelX > 0) ? 50 : -50;
+        int tzY = (L.labelY > 0) ? 50 : -50;
+        lv_obj_align(c.touchZone, LV_ALIGN_CENTER, tzX, tzY);
+        lv_obj_add_flag(c.touchZone, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_remove_flag(c.touchZone, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_style_bg_opa(c.touchZone, LV_OPA_TRANSP, 0);
+        lv_obj_add_event_cb(c.touchZone, arc_click_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i);
     }
 
-    /* Tank pressure — large centered text */
     tankLabel_ = lv_label_create(scr);
     lv_label_set_text(tankLabel_, "TANK");
     lv_obj_set_style_text_color(tankLabel_, lv_color_hex(GENERIC_GREY_LIGHT), 0);
@@ -151,10 +128,62 @@ void ScrHome::init(lv_obj_t *parent)
     lv_obj_align(tankLabel_, LV_ALIGN_CENTER, 0, -14);
 
     tankValueLabel_ = lv_label_create(scr);
-    lv_label_set_text(tankValueLabel_, "—");
+    lv_label_set_text(tankValueLabel_, LV_SYMBOL_EYE_OPEN);
     lv_obj_set_style_text_color(tankValueLabel_, lv_color_white(), 0);
     lv_obj_set_style_text_font(tankValueLabel_, &lv_font_montserrat_20, 0);
     lv_obj_align(tankValueLabel_, LV_ALIGN_CENTER, 0, 6);
+
+#ifdef HAS_ROTARY_ENCODER
+    if (g_knob_handle)
+        lastKnobCount_ = iot_knob_get_count_value(g_knob_handle);
+#endif
+    knobActiveUntil_ = 0;
+}
+
+void ScrHome::processKnob()
+{
+#ifdef HAS_ROTARY_ENCODER
+    if (!g_knob_handle)
+        return;
+
+    int current = iot_knob_get_count_value(g_knob_handle);
+    int delta = current - lastKnobCount_;
+    if (delta == 0) {
+        if (knobActiveUntil_ && millis() > knobActiveUntil_) {
+            for (int i = 0; i < 4; i++) {
+                Corner &c = corners_[i];
+                if (c.selected) {
+                    unsetValveBit(c.inValve);
+                    unsetValveBit(c.outValve);
+                }
+            }
+            knobActiveUntil_ = 0;
+        }
+        return;
+    }
+
+    lastKnobCount_ = current;
+    knobActiveUntil_ = millis() + KNOB_HOLD_MS;
+
+    bool anySelected = false;
+    for (int i = 0; i < 4; i++) {
+        Corner &c = corners_[i];
+        if (!c.selected)
+            continue;
+        anySelected = true;
+        if (delta > 0) {
+            setValveBit(c.inValve);
+            unsetValveBit(c.outValve);
+        } else {
+            setValveBit(c.outValve);
+            unsetValveBit(c.inValve);
+        }
+    }
+
+    if (!anySelected) {
+        knobActiveUntil_ = 0;
+    }
+#endif
 }
 
 void ScrHome::syncArcs()
@@ -197,11 +226,26 @@ void ScrHome::syncArcs()
 void ScrHome::loop()
 {
     Scr::loop();
+    processKnob();
     syncArcs();
 }
 
 void ScrHome::cleanup()
 {
+    /* Close any active valve bits from knob before leaving */
+#ifdef HAS_ROTARY_ENCODER
+    if (knobActiveUntil_) {
+        for (int i = 0; i < 4; i++) {
+            Corner &c = corners_[i];
+            if (c.selected) {
+                unsetValveBit(c.inValve);
+                unsetValveBit(c.outValve);
+            }
+        }
+        knobActiveUntil_ = 0;
+    }
+#endif
+
     tankLabel_ = nullptr;
     tankValueLabel_ = nullptr;
     for (int i = 0; i < 4; i++)

@@ -9,7 +9,13 @@
 
 #include "files/PWR_Key_Dummy.h"
 
+#include "files/bidi_switch_knob.h"
+
 #define SUPPORTS_ROTATION 0
+
+#define ENCODER_PIN_A 8
+#define ENCODER_PIN_B 7
 
 /** Round 360x360 display: use swipe + circle UI under src/ui_circle/ instead of tab navbar. */
 #define SCREEN_MODE_CIRCLE
+#define HAS_ROTARY_ENCODER

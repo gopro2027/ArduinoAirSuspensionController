@@ -22,15 +22,24 @@ private:
         lv_obj_t *arc = nullptr;
         lv_obj_t *pressLabel = nullptr;
         lv_obj_t *nameLabel = nullptr;
-        lv_obj_t *btnUp = nullptr;
-        lv_obj_t *btnDown = nullptr;
+        lv_obj_t *touchZone = nullptr;
+        bool selected = false;
     };
 
     Corner corners_[4];
     lv_obj_t *tankLabel_ = nullptr;
     lv_obj_t *tankValueLabel_ = nullptr;
 
+    int lastKnobCount_ = 0;
+    unsigned long knobActiveUntil_ = 0;
+
+    static const int ARC_SIZE_NORMAL = 200;
+    static const int ARC_SIZE_SELECTED = 220;
+
     void syncArcs();
+    void applySelectionStyle(int idx);
+    void processKnob();
+    static void arc_click_cb(lv_event_t *e);
 };
 
 extern ScrHome scrHome;
