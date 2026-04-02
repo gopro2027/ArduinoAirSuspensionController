@@ -44,26 +44,18 @@ void ScrPresets::init(lv_obj_t *parent)
         presetBtns[i] = nullptr;
     }
 
-    /* Title */
-    lv_obj_t *title = lv_label_create(scr);
-    lv_label_set_text(title, "PRESETS");
-    lv_obj_set_style_text_color(title, lv_color_hex(GENERIC_GREY_LIGHT), 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_10, 0);
-    lv_obj_align(title, LV_ALIGN_CENTER, 0, -130);
-
-    /* 5 preset buttons arranged in a semicircular arc across the top/middle.
-     * Positions calculated to stay within the round viewport.
-     * Layout: buttons at angles around a 110px radius from center. */
+    /* 5 preset buttons in a gentle arc; positioned to stay well within
+     * the visible circle and avoid overlapping each other. */
     struct BtnPos { int x; int y; };
     BtnPos positions[] = {
-        {-100,  -50},   // P1 - far left
-        { -52,  -95},   // P2 - upper left
-        {   0, -112},   // P3 - top center
-        {  52,  -95},   // P4 - upper right
-        { 100,  -50},   // P5 - far right
+        { -95, -40},   // P1 - far left
+        { -50, -78},   // P2 - upper left
+        {   0, -95},   // P3 - top center
+        {  50, -78},   // P4 - upper right
+        {  95, -40},   // P5 - far right
     };
 
-    const int btnSz = 50;
+    const int btnSz = 52;
     for (int i = 0; i < 5; i++) {
         lv_obj_t *btn = lv_btn_create(scr);
         lv_obj_set_size(btn, btnSz, btnSz);
@@ -204,7 +196,7 @@ void ScrPresets::cleanup()
         presetBtns[i] = nullptr;
         presetLabels[i] = nullptr;
     }
-    presetButtonsContainer = btnSave = btnLoad = nullptr;
+    btnSave = btnLoad = nullptr;
     Scr::cleanup();
 }
 

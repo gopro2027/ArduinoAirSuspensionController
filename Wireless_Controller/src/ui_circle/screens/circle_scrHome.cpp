@@ -41,36 +41,40 @@ void ScrHome::init(lv_obj_t *parent)
 
     const char *names[] = {"FD", "FP", "RD", "RP"};
 
-    /* Arc layout: four arcs, each spanning ~70° with 20° gaps.
-     * FL top-left, FR top-right, RL bottom-left, RR bottom-right.
-     * Start angles measured clockwise from 12 o'clock (LVGL: 0°=3 o'clock).
-     * Rotation offsets: TL=225°, TR=315°, BL=135°, BR=45° (center of each quadrant) */
+    /* Arc layout: four 70° arcs with 20° gaps, forming a symmetric ring.
+     *
+     * LVGL angles: 0° = right (3 o'clock), clockwise.
+     * Quadrant centers:  FD=225° (upper-left), FP=315° (upper-right),
+     *                    RD=135° (lower-left), RP=45°  (lower-right).
+     *
+     * Each arc: rotation places the 0° start, bg_angles(0,70) draws 70°.
+     * Labels sit inside the ring; +/- buttons sit outside it. */
     struct ArcLayout {
-        int rotation;      // lv_arc_set_rotation
-        int startAngle;    // lv_arc_set_bg_angles start
-        int endAngle;      // lv_arc_set_bg_angles end
+        int rotation;
+        int startAngle;
+        int endAngle;
         int labelX;        // pressure label offset from center
         int labelY;
         int nameX;         // abbreviation label offset
         int nameY;
-        int btnUpX;        // up button position
+        int btnUpX;
         int btnUpY;
-        int btnDownX;      // down button position
+        int btnDownX;
         int btnDownY;
     };
 
-    const int arcSize = 140;
+    const int arcSize = 180;
     const int arcWidth = 10;
 
     ArcLayout layouts[] = {
-        /* FD: top-left quadrant */
-        {200, 0, 80, -58, -58, -90, -24, -125, -66, -68, -125},
-        /* FP: top-right quadrant */
-        {280, 0, 80,  58, -58,  90, -24,  125, -66,  68, -125},
-        /* RD: bottom-left quadrant */
-        {110, 0, 80, -58,  58, -90,  24, -68,  125, -125,  66},
-        /* RP: bottom-right quadrant */
-        {  10, 0, 80,  58,  58,  90,  24,  68,  125,  125,  66},
+        /* FD: upper-left  (190° → 260°, centered at 225°) */
+        {190, 0, 70,  -34, -34,  -42, -52,  -108, -38,  -38, -108},
+        /* FP: upper-right (280° → 350°, centered at 315°) */
+        {280, 0, 70,   34, -34,   42, -52,   108, -38,   38, -108},
+        /* RD: lower-left  (100° → 170°, centered at 135°) */
+        {100, 0, 70,  -34,  34,  -42,  52,   -38, 108,  -108,  38},
+        /* RP: lower-right ( 10° →  80°, centered at  45°) */
+        { 10, 0, 70,   34,  34,   42,  52,    38, 108,   108,  38},
     };
 
     for (int i = 0; i < 4; i++) {

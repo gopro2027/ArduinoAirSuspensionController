@@ -240,7 +240,7 @@ void ScrSettings::init(lv_obj_t *parent)
 
     menu_container = lv_obj_create(this->scr);
     lv_obj_remove_style_all(menu_container);
-    lv_obj_set_size(menu_container, scrW, usableH);
+    lv_obj_set_size(menu_container, scrW - 40, usableH);
     lv_obj_align(menu_container, LV_ALIGN_TOP_MID, 0, topInset);
     lv_obj_set_style_bg_opa(menu_container, LV_OPA_TRANSP, 0);
     lv_obj_set_layout(menu_container, LV_LAYOUT_FLEX);
@@ -250,7 +250,7 @@ void ScrSettings::init(lv_obj_t *parent)
     const int menuBarHeight = 46;
     lv_obj_t *menu_bar = lv_obj_create(menu_container);
     lv_obj_remove_style_all(menu_bar);
-    lv_obj_set_size(menu_bar, scrW, menuBarHeight);
+    lv_obj_set_size(menu_bar, LV_PCT(100), menuBarHeight);
     lv_obj_set_style_bg_opa(menu_bar, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_layout(menu_bar, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(menu_bar, LV_FLEX_FLOW_ROW);
@@ -262,7 +262,7 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_t *dropdown = lv_dropdown_create(menu_bar);
     lv_dropdown_set_options(dropdown,
         "Status\nGame Controller\nML/AI\nBasic settings\nLevelling Mode\nUnits\nScreen Settings\nConfig\nWifi / Update");
-    lv_obj_set_width(dropdown, scrW - 80);
+    lv_obj_set_width(dropdown, scrW - 100);
     lv_obj_set_height(dropdown, 40);
     style_dropdown_closed(dropdown);
 
@@ -271,7 +271,7 @@ void ScrSettings::init(lv_obj_t *parent)
 
     lv_obj_t *pages_container = lv_obj_create(menu_container);
     lv_obj_remove_style_all(pages_container);
-    lv_obj_set_size(pages_container, scrW - 40, usableH - menuBarHeight);
+    lv_obj_set_size(pages_container, LV_PCT(100), usableH - menuBarHeight);
     lv_obj_align(pages_container, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_set_style_bg_opa(pages_container, LV_OPA_TRANSP, 0);
     lv_obj_set_layout(pages_container, LV_LAYOUT_FLEX);
@@ -548,15 +548,7 @@ void ScrSettings::init(lv_obj_t *parent)
     });
     ((Option *)this->ui_brightnessSlider)->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
 
-    // Swipe navigation toggle
-    allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Navigation", {.STRING = ""}));
-    allOptions.push_back(new Option(screen_settings_page, OptionType::ON_OFF, "Swipe Navigation", {.INT = getswipeNavigation() ? 1 : 0}, [](void *data)
-    {
-        bool enabled = (bool)data;
-        setswipeNavigation(enabled);
-        /* Rectangular UI uses globalNavbar; circle mode uses tileview only — preference stored for other builds. */
-        (void)enabled;
-    }));
+    /* Swipe navigation is not relevant for the circle UI (no tileview) — omitted. */
 
     #if SUPPORTS_ROTATION == 1
     

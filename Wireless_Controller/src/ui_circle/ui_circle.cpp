@@ -13,40 +13,17 @@ LV_IMG_DECLARE(oasman_splash);
 
 SCREEN currentScreen = SCREEN_NONE;
 static lv_obj_t *mainScreen = nullptr;
-static lv_obj_t *tileview = nullptr;
-static lv_obj_t *tiles[3] = {nullptr, nullptr, nullptr};
+static lv_obj_t *screenContainers[3] = {};
 
-static void syncScreenFromActiveTile()
+static void showContainer(int idx)
 {
-    if (!tileview)
-        return;
-    lv_obj_t *act = lv_tileview_get_tile_active(tileview);
-    int tabIndex = 0;
-    for (; tabIndex < 3; tabIndex++) {
-        if (tiles[tabIndex] == act)
-            break;
+    for (int i = 0; i < 3; i++) {
+        if (!screenContainers[i]) continue;
+        if (i == idx)
+            lv_obj_remove_flag(screenContainers[i], LV_OBJ_FLAG_HIDDEN);
+        else
+            lv_obj_add_flag(screenContainers[i], LV_OBJ_FLAG_HIDDEN);
     }
-    if (tabIndex >= 3)
-        return;
-
-    SCREEN newScreen = (SCREEN)(tabIndex + 1);
-    if (currentScreen == newScreen)
-        return;
-
-    currentScreen = newScreen;
-    currentScr = screens[tabIndex];
-    circlePageDots.setActive((uint8_t)tabIndex);
-
-    if (currentScr != nullptr && currentScr->alert != nullptr)
-        currentScr->alert->syncFromGlobal();
-
-    screenLoop();
-}
-
-static void tileview_value_cb(lv_event_t *e)
-{
-    if (lv_event_get_code(e) == LV_EVENT_VALUE_CHANGED)
-        syncScreenFromActiveTile();
 }
 
 void ui_init(void)
@@ -65,24 +42,26 @@ void ui_init(void)
     lv_obj_set_style_border_width(mainScreen, 0, 0);
     lv_obj_set_style_pad_all(mainScreen, 0, 0);
 
-    tileview = lv_tileview_create(mainScreen);
-    lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
-    lv_obj_set_pos(tileview, 0, 0);
-    lv_obj_set_style_bg_opa(tileview, LV_OPA_TRANSP, 0);
-    lv_obj_add_event_cb(tileview, tileview_value_cb, LV_EVENT_VALUE_CHANGED, nullptr);
+    for (int i = 0; i < 3; i++) {
+        screenContainers[i] = lv_obj_create(mainScreen);
+        lv_obj_remove_style_all(screenContainers[i]);
+        lv_obj_set_size(screenContainers[i], LV_PCT(100), LV_PCT(100));
+        lv_obj_remove_flag(screenContainers[i], LV_OBJ_FLAG_SCROLLABLE);
+        if (i > 0)
+            lv_obj_add_flag(screenContainers[i], LV_OBJ_FLAG_HIDDEN);
+    }
 
-    tiles[0] = lv_tileview_add_tile(tileview, 0, 0, LV_DIR_HOR);
-    tiles[1] = lv_tileview_add_tile(tileview, 1, 0, LV_DIR_HOR);
-    tiles[2] = lv_tileview_add_tile(tileview, 2, 0, LV_DIR_HOR);
+    scrHome.init(screenContainers[0]);
+    scrPresets.init(screenContainers[1]);
+    scrSettings.init(screenContainers[2]);
 
-    scrHome.init(tiles[0]);
-    scrPresets.init(tiles[1]);
-    scrSettings.init(tiles[2]);
-
-    circlePageDots.create(mainScreen);
+    circleMenu.create(mainScreen);
     circleStatusbarMini.create(mainScreen);
-    if (circlePageDots.container)
-        lv_obj_move_foreground(circlePageDots.container);
+
+    if (circleMenu.handle)
+        lv_obj_move_foreground(circleMenu.handle);
+    if (circleMenu.statusHandle)
+        lv_obj_move_foreground(circleMenu.statusHandle);
     if (circleStatusbarMini.container)
         lv_obj_move_foreground(circleStatusbarMini.container);
 
@@ -93,7 +72,7 @@ void ui_init(void)
     screens[0] = &scrHome;
     screens[1] = &scrPresets;
     screens[2] = &scrSettings;
-    circlePageDots.setActive(0);
+    circleMenu.setActive(0);
 
     if (tempScr != nullptr && tempScr != mainScreen)
         lv_obj_del(tempScr);
@@ -116,13 +95,12 @@ void ui_reinit(void)
     scrSettings.cleanup();
 
     circleStatusbarMini.cleanup();
-    circlePageDots.cleanup();
+    circleMenu.cleanup();
 
     if (mainScreen) {
         lv_obj_del(mainScreen);
         mainScreen = nullptr;
-        tileview = nullptr;
-        tiles[0] = tiles[1] = tiles[2] = nullptr;
+        screenContainers[0] = screenContainers[1] = screenContainers[2] = nullptr;
     }
 
     ui_init();
@@ -137,24 +115,24 @@ void changeScreen(SCREEN screen, bool animate)
     if (currentScreen == screen)
         return;
 
-    uint32_t col;
+    int idx;
     switch (screen) {
-    case SCREEN_HOME:
-        col = 0;
-        break;
-    case SCREEN_PRESETS:
-        col = 1;
-        break;
-    case SCREEN_SETTINGS:
-        col = 2;
-        break;
-    default:
-        return;
+    case SCREEN_HOME:     idx = 0; break;
+    case SCREEN_PRESETS:  idx = 1; break;
+    case SCREEN_SETTINGS: idx = 2; break;
+    default: return;
     }
 
-    lv_anim_enable_t a = animate ? LV_ANIM_ON : LV_ANIM_OFF;
-    lv_tileview_set_tile_by_index(tileview, col, 0, a);
-    syncScreenFromActiveTile();
+    showContainer(idx);
+
+    currentScreen = screen;
+    currentScr = screens[idx];
+    circleMenu.setActive((uint8_t)idx);
+
+    if (currentScr != nullptr && currentScr->alert != nullptr)
+        currentScr->alert->syncFromGlobal();
+
+    screenLoop();
 }
 
 void safetyModeMsgBoxCheck()

@@ -3,18 +3,32 @@
 #include <Arduino.h>
 #include "lvgl.h"
 
-/** Three-dot page indicator for circular UI — bottom center, inset from bezel. */
-class CirclePageDots {
+#ifdef SCREEN_MODE_CIRCLE
+
+class CircleMenu {
 public:
-    lv_obj_t *container = nullptr;
-    lv_obj_t *dots[3] = {nullptr, nullptr, nullptr};
+    lv_obj_t *handle = nullptr;
+    lv_obj_t *statusHandle = nullptr;
+    lv_obj_t *overlay = nullptr;
+    lv_obj_t *menuBtns[4] = {};
+    lv_obj_t *menuLabels[4] = {};
+    lv_obj_t *statusOverlay = nullptr;
+
+    bool isOpen = false;
 
     void create(lv_obj_t *parent);
+    void open();
+    void close();
+    void showStatus();
+    void hideStatus();
     void setActive(uint8_t index);
     void cleanup();
 
 private:
     uint8_t active_ = 0;
+    lv_obj_t *parent_ = nullptr;
 };
 
-extern CirclePageDots circlePageDots;
+extern CircleMenu circleMenu;
+
+#endif /* SCREEN_MODE_CIRCLE */
