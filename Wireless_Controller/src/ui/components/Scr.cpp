@@ -12,6 +12,11 @@ Scr::Scr(bool showPressures)
     this->scr = nullptr;
     this->rect_bg = nullptr;
     this->alert = nullptr;
+    this->ui_lblPressureFrontDriver = nullptr;
+    this->ui_lblPressureRearDriver = nullptr;
+    this->ui_lblPressureFrontPassenger = nullptr;
+    this->ui_lblPressureRearPassenger = nullptr;
+    this->ui_lblPressureTank = nullptr;
 }
 
 void Scr::init(lv_obj_t *parent)
@@ -47,6 +52,7 @@ void Scr::init(lv_obj_t *parent)
 
     if (this->showPressures)
     {
+#ifndef SCREEN_MODE_CIRCLE
         // air pressures at top - scale xPadding based on screen width for rotation support
         // 72 pixels at 240 width = 30% offset, maintain same ratio
         const int xPadding = (getScreenWidth() * 72) / 240;
@@ -59,6 +65,9 @@ void Scr::init(lv_obj_t *parent)
         setupPressureLabel(this->scr, &this->ui_lblPressureFrontPassenger, xPadding, frontY, LV_ALIGN_TOP_MID, "0");
         setupPressureLabel(this->scr, &this->ui_lblPressureRearPassenger, xPadding, rearY, LV_ALIGN_TOP_MID, "0");
         setupPressureLabel(this->scr, &this->ui_lblPressureTank, 0, frontY, LV_ALIGN_TOP_MID, "0");
+#else
+        /* Round display: corner labels omitted; circle home uses arcs. Pointers stay null. */
+#endif
     }
 }
 
@@ -216,11 +225,16 @@ void Scr::updatePressureValues()
         bool unitsChanged = (this->prevUnitsMode != currentUnitsMode);
 
         bool hs = (*util_configValues._configFlagsBits() & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE));
-        updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER, hs, unitsChanged);
-        updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER, hs, unitsChanged);
-        updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER, hs, unitsChanged);
-        updatePressure(this, this->ui_lblPressureRearDriver, WHEEL_REAR_DRIVER, hs, unitsChanged);
-        updatePressure(this, this->ui_lblPressureTank, _TANK_INDEX, false, unitsChanged);
+        if (this->ui_lblPressureFrontPassenger)
+            updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER, hs, unitsChanged);
+        if (this->ui_lblPressureRearPassenger)
+            updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER, hs, unitsChanged);
+        if (this->ui_lblPressureFrontDriver)
+            updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER, hs, unitsChanged);
+        if (this->ui_lblPressureRearDriver)
+            updatePressure(this, this->ui_lblPressureRearDriver, WHEEL_REAR_DRIVER, hs, unitsChanged);
+        if (this->ui_lblPressureTank)
+            updatePressure(this, this->ui_lblPressureTank, _TANK_INDEX, false, unitsChanged);
 
         this->prevUnitsMode = currentUnitsMode;
     }

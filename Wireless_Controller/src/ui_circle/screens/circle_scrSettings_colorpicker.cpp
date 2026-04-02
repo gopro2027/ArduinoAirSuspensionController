@@ -1,8 +1,8 @@
 #include "device_lib_exports.h"
 
-#ifndef SCREEN_MODE_CIRCLE
+#ifdef SCREEN_MODE_CIRCLE
 
-#include "ui_scrSettings.h"
+#include "circle_scrSettings.h"
 #include "../../utils/util.h"
 
 // Forward declaration
@@ -272,4 +272,4 @@ void ScrSettings::showColorPickerModal() {
     }, LV_EVENT_ALL, data);
 }
 
-#endif /* !SCREEN_MODE_CIRCLE */
+#endif /* SCREEN_MODE_CIRCLE */

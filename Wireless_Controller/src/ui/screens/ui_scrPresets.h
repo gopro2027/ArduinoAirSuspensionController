@@ -1,6 +1,8 @@
 #ifndef ui_scrPresets_h
 #define ui_scrPresets_h
 
+#ifndef SCREEN_MODE_CIRCLE
+
 #include "ui/components/Scr.h"
 #include "device_lib_exports.h"
 
@@ -38,4 +40,6 @@ public:
 
 extern ScrPresets scrPresets;
 
-#endif
+#endif /* !SCREEN_MODE_CIRCLE */
+
+#endif /* ui_scrPresets_h */

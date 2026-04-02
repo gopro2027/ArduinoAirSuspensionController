@@ -1,3 +1,7 @@
+#include "device_lib_exports.h"
+
+#ifndef SCREEN_MODE_CIRCLE
+
 #include "ui_scrHome.h"
 #include "ui/ui.h" // sketchy backwards import may break in the future
 
@@ -305,3 +309,5 @@ void ScrHome::cleanup()
 {
     Scr::cleanup();  // Base cleanup (Alert)
 }
+
+#endif /* !SCREEN_MODE_CIRCLE */

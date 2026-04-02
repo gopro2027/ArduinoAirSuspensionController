@@ -1,6 +1,10 @@
 #include <Arduino.h>
 #include <Preferences.h> // have to include it here or it isn't found in the shared libs
 
+#if defined(OTA_SUPPORTED)
+#include <directdownload.h>
+#endif
+
 #include <ui/ui.h>
 
 #include "utils/touch_lib.h"
@@ -57,6 +61,7 @@ void setup()
 
     dimScreenTime = millis() + DIM_SCREEN_TIME;
 
+#if defined(OTA_SUPPORTED)
     byte updateResult = getupdateResult();
     if (updateResult != UPDATE_STATUS::UPDATE_STATUS_NONE)
     {
@@ -91,6 +96,7 @@ void setup()
         }
         setupdateResult(0);
     }
+#endif
     set_brightness(getBrightnessFloat());
     pinMode(BootButtonPin, INPUT); 
 }
