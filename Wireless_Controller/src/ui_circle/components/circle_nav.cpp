@@ -229,7 +229,7 @@ void CircleMenu::showStatus()
     bool charging = isBatteryCharging();
     static char battBuf[32];
     snprintf(battBuf, sizeof(battBuf), "%s %s%s",
-             LV_SYMBOL_BATTERY_FULL, battStr, charging ? " chrg" : "");
+             LV_SYMBOL_BATTERY_FULL, battStr, charging ? " (charging)" : "");
     lv_obj_t *battLine = lv_label_create(card);
     lv_label_set_text(battLine, battBuf);
     lv_obj_set_style_text_color(battLine, lv_color_white(), 0);

@@ -22,23 +22,61 @@ void ScrHome::arc_click_cb(lv_event_t *e)
     scrHome.applySelectionStyle(idx);
 }
 
+/* LVGL arcs draw from the outer edge inward, so a glow arc must be
+ * enlarged so its wider stroke is centered on the same radius as the
+ * main arc's stroke.  Formula: glowSize = mainSize - mainWidth + glowWidth.
+ *
+ * Three layers with progressively wider strokes and lower opacities
+ * blend together to approximate a smooth gradient glow. */
+struct GlowDef {
+    int   width;
+    lv_opa_t bgOpa;
+    lv_opa_t indOpa;
+};
+
+static const GlowDef GLOW_TABLE[ScrHome::GLOW_LAYERS] = {
+    /* outermost — widest, faintest (soft outer haze) */
+    { 56,  (lv_opa_t)(255 * 0.04f),  (lv_opa_t)(255 * 0.07f) },
+    /* middle — medium width and brightness */
+    { 38,  (lv_opa_t)(255 * 0.10f),  (lv_opa_t)(255 * 0.18f) },
+    /* innermost — narrowest, brightest (concentrated bloom) */
+    { 24,  (lv_opa_t)(255 * 0.18f),  (lv_opa_t)(255 * 0.35f) },
+};
+
+static int glowSize(int mainSz, int mainW, int glowW)
+{
+    return mainSz - mainW + glowW;
+}
+
 void ScrHome::applySelectionStyle(int idx)
 {
     Corner &c = corners_[idx];
     if (!c.arc)
         return;
 
-    int sz = c.selected ? ARC_SIZE_SELECTED : ARC_SIZE_NORMAL;
-    lv_obj_set_size(c.arc, sz, sz);
+    const int mainW = c.selected ? 20 : 16;
+    const int indW  = c.selected ? 22 : 16;
+    const int sz    = c.selected ? ARC_SIZE_SELECTED : ARC_SIZE_NORMAL;
 
-    if (c.selected) {
-        lv_obj_set_style_arc_width(c.arc, 14, LV_PART_INDICATOR);
-        lv_obj_set_style_arc_color(c.arc, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR);
-        lv_obj_set_style_arc_opa(c.arc, LV_OPA_COVER, LV_PART_INDICATOR);
-    } else {
-        lv_obj_set_style_arc_width(c.arc, 10, LV_PART_INDICATOR);
-        lv_obj_set_style_arc_color(c.arc, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR);
-        lv_obj_set_style_arc_opa(c.arc, LV_OPA_COVER, LV_PART_INDICATOR);
+    lv_obj_set_size(c.arc, sz, sz);
+    lv_obj_align(c.arc, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_arc_width(c.arc, mainW, LV_PART_MAIN);
+    lv_obj_set_style_arc_width(c.arc, indW, LV_PART_INDICATOR);
+
+    for (int g = 0; g < GLOW_LAYERS; g++) {
+        if (!c.glow[g])
+            continue;
+        const GlowDef &gd = GLOW_TABLE[g];
+        int gs = glowSize(sz, mainW, gd.width);
+        lv_obj_set_size(c.glow[g], gs, gs);
+        lv_obj_align(c.glow[g], LV_ALIGN_CENTER, 0, 0);
+        if (c.selected) {
+            lv_obj_set_style_arc_opa(c.glow[g], gd.bgOpa, LV_PART_MAIN);
+            lv_obj_set_style_arc_opa(c.glow[g], gd.indOpa, LV_PART_INDICATOR);
+        } else {
+            lv_obj_set_style_arc_opa(c.glow[g], LV_OPA_TRANSP, LV_PART_MAIN);
+            lv_obj_set_style_arc_opa(c.glow[g], LV_OPA_TRANSP, LV_PART_INDICATOR);
+        }
     }
 }
 
@@ -63,7 +101,7 @@ void ScrHome::init(lv_obj_t *parent)
         int nameY;
     };
 
-    const int arcWidth = 10;
+    const int arcWidth = 16;
 
     ArcLayout layouts[] = {
         /* FD: upper-left  (190->260, center 225) */
@@ -79,6 +117,31 @@ void ScrHome::init(lv_obj_t *parent)
     for (int i = 0; i < 4; i++) {
         Corner &c = corners_[i];
         ArcLayout &L = layouts[i];
+
+        /* Create glow layers from outermost to innermost so the render
+         * order is correct (widest/faintest painted first, behind the rest). */
+        for (int g = 0; g < GLOW_LAYERS; g++) {
+            const GlowDef &gd = GLOW_TABLE[g];
+            int gs = glowSize(ARC_SIZE_NORMAL, arcWidth, gd.width);
+            lv_obj_t *a = lv_arc_create(scr);
+            lv_obj_set_size(a, gs, gs);
+            lv_arc_set_rotation(a, L.rotation);
+            lv_arc_set_bg_angles(a, L.startAngle, L.endAngle);
+            lv_arc_set_range(a, 0, 200);
+            lv_arc_set_value(a, 0);
+            lv_obj_remove_flag(a, LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_set_style_arc_width(a, gd.width, LV_PART_MAIN);
+            lv_obj_set_style_arc_width(a, gd.width, LV_PART_INDICATOR);
+            lv_obj_set_style_arc_color(a, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);
+            lv_obj_set_style_arc_color(a, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR);
+            lv_obj_set_style_arc_opa(a, LV_OPA_TRANSP, LV_PART_MAIN);
+            lv_obj_set_style_arc_opa(a, LV_OPA_TRANSP, LV_PART_INDICATOR);
+            lv_obj_set_style_arc_rounded(a, true, LV_PART_MAIN);
+            lv_obj_set_style_arc_rounded(a, true, LV_PART_INDICATOR);
+            lv_obj_remove_style(a, nullptr, LV_PART_KNOB);
+            lv_obj_align(a, LV_ALIGN_CENTER, 0, 0);
+            c.glow[g] = a;
+        }
 
         c.arc = lv_arc_create(scr);
         lv_obj_set_size(c.arc, ARC_SIZE_NORMAL, ARC_SIZE_NORMAL);
@@ -119,6 +182,17 @@ void ScrHome::init(lv_obj_t *parent)
         lv_obj_remove_flag(c.touchZone, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_style_bg_opa(c.touchZone, LV_OPA_TRANSP, 0);
         lv_obj_add_event_cb(c.touchZone, arc_click_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i);
+    }
+
+    for (int i = 0; i < 4; i++) {
+        if (corners_[i].arc)
+            lv_obj_move_foreground(corners_[i].arc);
+        if (corners_[i].pressLabel)
+            lv_obj_move_foreground(corners_[i].pressLabel);
+        if (corners_[i].nameLabel)
+            lv_obj_move_foreground(corners_[i].nameLabel);
+        if (corners_[i].touchZone)
+            lv_obj_move_foreground(corners_[i].touchZone);
     }
 
     tankLabel_ = lv_label_create(scr);
@@ -197,8 +271,14 @@ void ScrHome::syncArcs()
         int v = currentPressures[c.wheelIdx];
         int maxVal = hs ? 100 : 200;
         lv_arc_set_range(c.arc, 0, maxVal);
+        for (int g = 0; g < GLOW_LAYERS; g++)
+            if (c.glow[g])
+                lv_arc_set_range(c.glow[g], 0, maxVal);
         if (v > maxVal) v = maxVal;
         lv_arc_set_value(c.arc, v);
+        for (int g = 0; g < GLOW_LAYERS; g++)
+            if (c.glow[g])
+                lv_arc_set_value(c.glow[g], v);
 
         if (c.pressLabel) {
             if (hs) {
