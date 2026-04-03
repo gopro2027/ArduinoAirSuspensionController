@@ -1,3 +1,5 @@
+<img width="1045" height="1045" alt="Waveshare_3p5_Case v9" src="https://github.com/user-attachments/assets/13fa3a5a-685b-477b-972f-dd025afe6fd9" />
+
 Remix of Itchyshaft Waveshare 3.5 controller case. 
 - Custom logo
 - Slightly different tolerances 
