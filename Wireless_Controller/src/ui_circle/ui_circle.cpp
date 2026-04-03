@@ -13,11 +13,11 @@ LV_IMG_DECLARE(oasman_splash);
 
 SCREEN currentScreen = SCREEN_NONE;
 static lv_obj_t *mainScreen = nullptr;
-static lv_obj_t *screenContainers[3] = {};
+static lv_obj_t *screenContainers[2] = {};
 
 static void showContainer(int idx)
 {
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
         if (!screenContainers[i]) continue;
         if (i == idx)
             lv_obj_remove_flag(screenContainers[i], LV_OBJ_FLAG_HIDDEN);
@@ -42,7 +42,7 @@ void ui_init(void)
     lv_obj_set_style_border_width(mainScreen, 0, 0);
     lv_obj_set_style_pad_all(mainScreen, 0, 0);
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
         screenContainers[i] = lv_obj_create(mainScreen);
         lv_obj_remove_style_all(screenContainers[i]);
         lv_obj_set_size(screenContainers[i], LV_PCT(100), LV_PCT(100));
@@ -52,8 +52,7 @@ void ui_init(void)
     }
 
     scrHome.init(screenContainers[0]);
-    scrPresets.init(screenContainers[1]);
-    scrSettings.init(screenContainers[2]);
+    scrSettings.init(screenContainers[1]);
 
     circleMenu.create(mainScreen);
     circleStatusbarMini.create(mainScreen);
@@ -70,7 +69,7 @@ void ui_init(void)
     currentScreen = SCREEN_HOME;
     currentScr = &scrHome;
     screens[0] = &scrHome;
-    screens[1] = &scrPresets;
+    screens[1] = &scrHome;
     screens[2] = &scrSettings;
     circleMenu.setActive(0);
 
@@ -91,7 +90,6 @@ void ui_reinit(void)
     currentScr = nullptr;
 
     scrHome.cleanup();
-    scrPresets.cleanup();
     scrSettings.cleanup();
 
     circleStatusbarMini.cleanup();
@@ -100,7 +98,7 @@ void ui_reinit(void)
     if (mainScreen) {
         lv_obj_del(mainScreen);
         mainScreen = nullptr;
-        screenContainers[0] = screenContainers[1] = screenContainers[2] = nullptr;
+        screenContainers[0] = screenContainers[1] = nullptr;
     }
 
     ui_init();
@@ -115,19 +113,29 @@ void changeScreen(SCREEN screen, bool animate)
     if (currentScreen == screen)
         return;
 
-    int idx;
+    int containerIdx;
+    uint8_t menuHighlight;
+
     switch (screen) {
-    case SCREEN_HOME:     idx = 0; break;
-    case SCREEN_PRESETS:  idx = 1; break;
-    case SCREEN_SETTINGS: idx = 2; break;
-    default: return;
+    case SCREEN_HOME:
+    case SCREEN_PRESETS:
+        containerIdx = 0;
+        menuHighlight = 0;
+        currentScr = &scrHome;
+        break;
+    case SCREEN_SETTINGS:
+        containerIdx = 1;
+        menuHighlight = 1;
+        currentScr = &scrSettings;
+        break;
+    default:
+        return;
     }
 
-    showContainer(idx);
+    showContainer(containerIdx);
 
     currentScreen = screen;
-    currentScr = screens[idx];
-    circleMenu.setActive((uint8_t)idx);
+    circleMenu.setActive(menuHighlight);
 
     if (currentScr != nullptr && currentScr->alert != nullptr)
         currentScr->alert->syncFromGlobal();
@@ -163,10 +171,8 @@ void screenLoop()
 
     switch (currentScreen) {
     case SCREEN_HOME:
-        scrHome.loop();
-        break;
     case SCREEN_PRESETS:
-        scrPresets.loop();
+        scrHome.loop();
         break;
     case SCREEN_SETTINGS:
         scrSettings.loop();

@@ -50,12 +50,12 @@ static void menu_btn_cb(lv_event_t *e)
 {
     int idx = (int)(intptr_t)lv_event_get_user_data(e);
     circleMenu.close();
-    if (idx < 3) {
-        SCREEN targets[] = {SCREEN_HOME, SCREEN_PRESETS, SCREEN_SETTINGS};
-        changeScreen(targets[idx], false);
-    } else {
+    if (idx == 0)
+        changeScreen(SCREEN_HOME, false);
+    else if (idx == 1)
+        changeScreen(SCREEN_SETTINGS, false);
+    else if (idx == 2)
         circleMenu.showStatus();
-    }
 }
 
 static void status_dismiss_cb(lv_event_t *e)
@@ -117,14 +117,14 @@ void CircleMenu::create(lv_obj_t *parent)
     lv_obj_remove_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(overlay, overlay_click_cb, LV_EVENT_CLICKED, nullptr);
 
-    /* ── 4 circular menu buttons in a 2x2 grid ── */
-    const char *icons[] = {LV_SYMBOL_HOME, LV_SYMBOL_LIST, LV_SYMBOL_SETTINGS, LV_SYMBOL_EYE_OPEN};
-    const char *labels[] = {"Home", "Presets", "Settings", "Status"};
+    /* ── 3 circular menu buttons (presets live on home) ── */
+    const char *icons[] = {LV_SYMBOL_HOME, LV_SYMBOL_SETTINGS, LV_SYMBOL_EYE_OPEN};
+    const char *labels[] = {"Home", "Settings", "Status"};
     struct Pos { int x; int y; };
-    Pos positions[] = {{-50, -42}, {50, -42}, {-50, 38}, {50, 38}};
+    Pos positions[] = {{-52, -30}, {52, -30}, {0, 44}};
 
     const int btnSz = 60;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 3; i++) {
         menuBtns[i] = lv_btn_create(overlay);
         lv_obj_set_size(menuBtns[i], btnSz, btnSz);
         lv_obj_set_style_radius(menuBtns[i], LV_RADIUS_CIRCLE, 0);
@@ -171,9 +171,9 @@ void CircleMenu::close()
 
 void CircleMenu::setActive(uint8_t index)
 {
-    if (index > 2) return;
+    if (index > 1) return;
     active_ = index;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 3; i++) {
         if (!menuBtns[i]) continue;
         bool sel = (i == index);
         lv_obj_set_style_bg_color(menuBtns[i],
@@ -280,7 +280,7 @@ void CircleMenu::hideStatus()
 void CircleMenu::cleanup()
 {
     hideStatus();
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 3; i++) {
         menuBtns[i] = nullptr;
         menuLabels[i] = nullptr;
     }

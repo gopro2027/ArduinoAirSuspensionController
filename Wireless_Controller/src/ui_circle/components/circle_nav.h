@@ -10,8 +10,8 @@ public:
     lv_obj_t *handle = nullptr;
     lv_obj_t *statusHandle = nullptr;
     lv_obj_t *overlay = nullptr;
-    lv_obj_t *menuBtns[4] = {};
-    lv_obj_t *menuLabels[4] = {};
+    lv_obj_t *menuBtns[3] = {};
+    lv_obj_t *menuLabels[3] = {};
     lv_obj_t *statusOverlay = nullptr;
 
     bool isOpen = false;

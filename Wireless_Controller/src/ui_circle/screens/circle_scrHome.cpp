@@ -4,13 +4,48 @@
 
 #include "circle_scrHome.h"
 #include "ui/ui.h"
+#include <BTOas.h>
 
 ScrHome scrHome(true);
 
-/* Knob-driven valve control: while the knob is being turned, keep valves
- * open for selected corners.  Once the user stops turning for KNOB_HOLD_MS
- * the valves close automatically. */
 static const unsigned long KNOB_HOLD_MS = 100;
+
+static constexpr int kPresetMin = 1;
+static constexpr int kPresetMax = 5;
+static constexpr uint32_t kPresetDoubleTapMs = 300;
+
+static lv_timer_t *s_presetsSingleTapTimer = nullptr;
+
+static void presetsSingleTapTimerCb(lv_timer_t *)
+{
+    s_presetsSingleTapTimer = nullptr;
+    scrHome.togglePresetCircleSelect();
+}
+
+static void loadSelectedPreset()
+{
+    AirupQuickPacket pkt(currentPreset - 1);
+    sendRestPacket(&pkt);
+    showDialog("Loaded Preset!", lv_color_hex(0x22bb33));
+}
+
+static void centerPresetClickCb(lv_event_t *e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED)
+        return;
+
+    if (s_presetsSingleTapTimer) {
+        lv_timer_delete(s_presetsSingleTapTimer);
+        s_presetsSingleTapTimer = nullptr;
+        if (currentPreset >= kPresetMin && currentPreset <= kPresetMax)
+            scrHome.showPresetDialog();
+        return;
+    }
+
+    s_presetsSingleTapTimer = lv_timer_create(presetsSingleTapTimerCb, kPresetDoubleTapMs, nullptr);
+    lv_timer_set_repeat_count(s_presetsSingleTapTimer, 1);
+    lv_timer_set_auto_delete(s_presetsSingleTapTimer, true);
+}
 
 void ScrHome::arc_click_cb(lv_event_t *e)
 {
@@ -22,7 +57,6 @@ void ScrHome::arc_click_cb(lv_event_t *e)
     scrHome.applySelectionStyle(idx);
 }
 
-/** Cached arc range for circle home; reset in cleanup(). */
 static int s_circleArcMaxCached = -1;
 
 void ScrHome::applySelectionStyle(int idx)
@@ -64,26 +98,20 @@ void ScrHome::init(lv_obj_t *parent)
         int rotation;
         int startAngle;
         int endAngle;
-        int pressX;  /* pressure value — nearer the arc */
+        int pressX;
         int pressY;
-        int nameX;   /* FD/FP/RD/RP — farther toward bezel */
+        int nameX;
         int nameY;
     };
 
     const int arcWidth = 16;
-
     const int pressureRad = 87;
     const int nameRad = 100;
 
-    /* press* outside arc stroke (~100px radius); name* further out with clear gap */
     ArcLayout layouts[] = {
-        /* FD: upper-left  (190->260, center 225) */
         {190, 0, 70,  -pressureRad, -pressureRad,  -nameRad, -nameRad},
-        /* FP: upper-right (280->350, center 315) */
         {280, 0, 70,   pressureRad, -pressureRad,   nameRad, -nameRad},
-        /* RD: lower-left  (100->170, center 135) */
         {100, 0, 70,  -pressureRad,  pressureRad,  -nameRad,  nameRad},
-        /* RP: lower-right (10->80,   center  45) */
         { 10, 0, 70,   pressureRad,  pressureRad,   nameRad,  nameRad},
     };
 
@@ -119,7 +147,6 @@ void ScrHome::init(lv_obj_t *parent)
         lv_obj_set_style_text_font(c.nameLabel, &lv_font_montserrat_10, 0);
         lv_obj_align(c.nameLabel, LV_ALIGN_CENTER, L.nameX, L.nameY);
 
-        /* Invisible touch zone over each arc quadrant for tap-to-select */
         c.touchZone = lv_obj_create(scr);
         lv_obj_remove_style_all(c.touchZone);
         lv_obj_set_size(c.touchZone, 140, 140);
@@ -143,7 +170,6 @@ void ScrHome::init(lv_obj_t *parent)
             lv_obj_move_foreground(corners_[i].touchZone);
     }
 
-    /* Below circle_statusbar (TOP_MID y=20 + icon/label row ~22px); centered with battery */
     const int tankLabelY = 40;
     const int tankValueY = 50;
 
@@ -162,11 +188,160 @@ void ScrHome::init(lv_obj_t *parent)
     lv_obj_move_foreground(tankLabel_);
     lv_obj_move_foreground(tankValueLabel_);
 
+    /* Center preset + save/load (merged presets page) */
+    const int presetCircleSz = 100;
+    presetSelectBtn_ = lv_btn_create(scr);
+    lv_obj_set_size(presetSelectBtn_, presetCircleSz, presetCircleSz);
+    lv_obj_set_style_radius(presetSelectBtn_, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(presetSelectBtn_, lv_color_hex(GENERIC_GREY_DARK), 0);
+    lv_obj_set_style_bg_opa(presetSelectBtn_, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(presetSelectBtn_, 3, 0);
+    lv_obj_set_style_border_color(presetSelectBtn_, lv_color_hex(THEME_COLOR_DARK), 0);
+    lv_obj_set_style_shadow_width(presetSelectBtn_, 16, 0);
+    lv_obj_set_style_shadow_color(presetSelectBtn_, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_shadow_opa(presetSelectBtn_, LV_OPA_50, 0);
+    lv_obj_align(presetSelectBtn_, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(presetSelectBtn_, centerPresetClickCb, LV_EVENT_CLICKED, nullptr);
+
+    presetNumberLabel_ = lv_label_create(presetSelectBtn_);
+    lv_label_set_text(presetNumberLabel_, "3");
+    lv_obj_set_style_text_font(presetNumberLabel_, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_color(presetNumberLabel_, lv_color_white(), 0);
+    lv_obj_remove_flag(presetNumberLabel_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_center(presetNumberLabel_);
+
+    /* Tall side “pill” buttons (full radius = arc / stadium) hugging left & right */
+    const int sideBtnW = 52;
+    const int sideBtnH = 132;
+    const int sideBtnInset = 10;
+
+    presetBtnSave_ = lv_btn_create(scr);
+    lv_obj_set_size(presetBtnSave_, sideBtnW, sideBtnH);
+    lv_obj_set_style_radius(presetBtnSave_, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(presetBtnSave_, lv_color_hex(GENERIC_GREY_DARK), 0);
+    lv_obj_set_style_border_width(presetBtnSave_, 2, 0);
+    lv_obj_set_style_border_color(presetBtnSave_, lv_color_hex(THEME_COLOR_MEDIUM), 0);
+    lv_obj_set_style_shadow_width(presetBtnSave_, 10, 0);
+    lv_obj_set_style_shadow_color(presetBtnSave_, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_shadow_opa(presetBtnSave_, LV_OPA_40, 0);
+    lv_obj_set_style_pad_all(presetBtnSave_, 6, 0);
+    lv_obj_align(presetBtnSave_, LV_ALIGN_LEFT_MID, sideBtnInset, 0);
+    lv_obj_t *sl = lv_label_create(presetBtnSave_);
+    lv_label_set_text(sl, LV_SYMBOL_SAVE "\nSave");
+    lv_obj_set_style_text_align(sl, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(sl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_line_space(sl, 4, 0);
+    lv_obj_center(sl);
+    lv_obj_add_event_cb(presetBtnSave_, [](lv_event_t *e) {
+        if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
+            static char buf[48];
+            snprintf(buf, sizeof(buf), "Save current height to preset %i?", currentPreset);
+            scrHome.showMsgBox(buf, nullptr, "Confirm", "Cancel",
+                               []() {
+                                   SaveCurrentPressuresToProfilePacket pkt(currentPreset - 1);
+                                   sendRestPacket(&pkt);
+                                   showDialog("Saved!", lv_color_hex(THEME_COLOR_LIGHT));
+                                   requestPreset();
+                               },
+                               []() {}, false);
+        }
+    }, LV_EVENT_CLICKED, nullptr);
+
+    presetBtnLoad_ = lv_btn_create(scr);
+    lv_obj_set_size(presetBtnLoad_, sideBtnW, sideBtnH);
+    lv_obj_set_style_radius(presetBtnLoad_, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(presetBtnLoad_, lv_color_hex(GENERIC_GREY_DARK), 0);
+    lv_obj_set_style_border_width(presetBtnLoad_, 2, 0);
+    lv_obj_set_style_border_color(presetBtnLoad_, lv_color_hex(THEME_COLOR_MEDIUM), 0);
+    lv_obj_set_style_shadow_width(presetBtnLoad_, 10, 0);
+    lv_obj_set_style_shadow_color(presetBtnLoad_, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_shadow_opa(presetBtnLoad_, LV_OPA_40, 0);
+    lv_obj_set_style_pad_all(presetBtnLoad_, 6, 0);
+    lv_obj_align(presetBtnLoad_, LV_ALIGN_RIGHT_MID, -sideBtnInset, 0);
+    lv_obj_t *ll = lv_label_create(presetBtnLoad_);
+    lv_label_set_text(ll, LV_SYMBOL_UPLOAD "\nLoad");
+    lv_obj_set_style_text_align(ll, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(ll, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_line_space(ll, 4, 0);
+    lv_obj_center(ll);
+    lv_obj_add_event_cb(presetBtnLoad_, [](lv_event_t *e) {
+        if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
+            if (currentPreset == 1) {
+                scrHome.showMsgBox("Air out?", "Preset 1 is typically air out. Verify car is not moving.", "Confirm", "Cancel",
+                                   []() { loadSelectedPreset(); }, []() {}, false);
+            } else {
+                loadSelectedPreset();
+            }
+        }
+    }, LV_EVENT_CLICKED, nullptr);
+
+    lv_obj_move_foreground(presetSelectBtn_);
+    lv_obj_move_foreground(presetBtnSave_);
+    lv_obj_move_foreground(presetBtnLoad_);
+
 #ifdef HAS_ROTARY_ENCODER
     if (g_knob_handle)
         lastKnobCount_ = iot_knob_get_count_value(g_knob_handle);
 #endif
     knobActiveUntil_ = 0;
+
+    presetCircleSelected_ = false;
+    int savedPreset = currentPreset;
+    currentPreset = -1;
+    setPreset(savedPreset > 0 ? savedPreset : 3);
+}
+
+void ScrHome::updatePresetVisuals()
+{
+    if (!presetSelectBtn_ || !presetNumberLabel_)
+        return;
+
+    const bool ok = (currentPreset >= kPresetMin && currentPreset <= kPresetMax);
+    lv_label_set_text_fmt(presetNumberLabel_, "%d", ok ? currentPreset : 0);
+
+    if (presetCircleSelected_) {
+        lv_obj_set_style_bg_color(presetSelectBtn_, lv_color_hex(THEME_COLOR_LIGHT), 0);
+        lv_obj_set_style_border_color(presetSelectBtn_, lv_color_hex(THEME_COLOR_LIGHT), 0);
+        lv_obj_set_style_shadow_color(presetSelectBtn_, lv_color_hex(THEME_COLOR_MEDIUM), 0);
+        lv_obj_set_style_shadow_opa(presetSelectBtn_, LV_OPA_70, 0);
+        lv_obj_set_style_shadow_width(presetSelectBtn_, 22, 0);
+        lv_obj_set_style_text_color(presetNumberLabel_, lv_color_hex(0xFFFFFF), 0);
+    } else {
+        lv_obj_set_style_bg_color(presetSelectBtn_, lv_color_hex(GENERIC_GREY_DARK), 0);
+        lv_obj_set_style_border_color(presetSelectBtn_, lv_color_hex(THEME_COLOR_DARK), 0);
+        lv_obj_set_style_shadow_color(presetSelectBtn_, lv_color_hex(0x000000), 0);
+        lv_obj_set_style_shadow_opa(presetSelectBtn_, LV_OPA_50, 0);
+        lv_obj_set_style_shadow_width(presetSelectBtn_, 16, 0);
+        lv_obj_set_style_text_color(presetNumberLabel_, lv_color_hex(0xAAAAAA), 0);
+    }
+}
+
+void ScrHome::togglePresetCircleSelect()
+{
+    presetCircleSelected_ = !presetCircleSelected_;
+#ifdef HAS_ROTARY_ENCODER
+    if (presetCircleSelected_ && g_knob_handle)
+        lastKnobCount_ = iot_knob_get_count_value(g_knob_handle);
+#endif
+    updatePresetVisuals();
+}
+
+void ScrHome::setPreset(int num)
+{
+    currentPreset = num;
+    updatePresetVisuals();
+    requestPreset();
+}
+
+void ScrHome::showPresetDialog()
+{
+    static char text[100];
+    static char titleBuf[10];
+    snprintf(text, sizeof(text), "  fd: %i                        fp: %i\n  rd: %i                        rp: %i",
+             profilePressures[currentPreset - 1][WHEEL_FRONT_DRIVER], profilePressures[currentPreset - 1][WHEEL_FRONT_PASSENGER],
+             profilePressures[currentPreset - 1][WHEEL_REAR_DRIVER], profilePressures[currentPreset - 1][WHEEL_REAR_PASSENGER]);
+    snprintf(titleBuf, sizeof(titleBuf), "Preset %i", currentPreset);
+    showMsgBox(titleBuf, text, nullptr, "OK", []() {}, []() {}, false);
 }
 
 void ScrHome::processKnob()
@@ -177,6 +352,7 @@ void ScrHome::processKnob()
 
     int current = iot_knob_get_count_value(g_knob_handle);
     int delta = current - lastKnobCount_;
+
     if (delta == 0) {
         if (knobActiveUntil_ && millis() > knobActiveUntil_) {
             for (int i = 0; i < 4; i++) {
@@ -192,6 +368,21 @@ void ScrHome::processKnob()
     }
 
     lastKnobCount_ = current;
+
+    if (presetCircleSelected_) {
+        int p = currentPreset;
+        if (p < kPresetMin || p > kPresetMax)
+            p = 3;
+        p += delta;
+        if (p < kPresetMin)
+            p = kPresetMin;
+        if (p > kPresetMax)
+            p = kPresetMax;
+        if (p != currentPreset)
+            setPreset(p);
+        return;
+    }
+
     knobActiveUntil_ = millis() + KNOB_HOLD_MS;
 
     bool anySelected = false;
@@ -290,7 +481,6 @@ void ScrHome::loop()
 
 void ScrHome::cleanup()
 {
-    /* Close any active valve bits from knob before leaving */
 #ifdef HAS_ROTARY_ENCODER
     if (knobActiveUntil_) {
         for (int i = 0; i < 4; i++) {
@@ -304,6 +494,14 @@ void ScrHome::cleanup()
     }
 #endif
 
+    if (s_presetsSingleTapTimer) {
+        lv_timer_delete(s_presetsSingleTapTimer);
+        s_presetsSingleTapTimer = nullptr;
+    }
+    presetCircleSelected_ = false;
+    presetSelectBtn_ = nullptr;
+    presetNumberLabel_ = nullptr;
+    presetBtnSave_ = presetBtnLoad_ = nullptr;
     tankLabel_ = nullptr;
     tankValueLabel_ = nullptr;
     for (int i = 0; i < 4; i++)

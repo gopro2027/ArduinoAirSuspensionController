@@ -213,7 +213,11 @@ void bootButtonFunctionality() {
 
                 // update presets page if preset changes
                 if (currentPreset != bootButtonPresetCount) {
+#if defined(SCREEN_MODE_CIRCLE)
+                    scrHome.setPreset(bootButtonPresetCount);
+#else
                     scrPresets.setPreset(bootButtonPresetCount);
+#endif
                 }
 
                 // show dialog of selected preset

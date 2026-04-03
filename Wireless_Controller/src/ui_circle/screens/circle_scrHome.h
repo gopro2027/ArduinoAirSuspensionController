@@ -14,6 +14,11 @@ public:
     void loop() override;
     void cleanup() override;
 
+    /** Preset slot 1–5 (merged from former presets page). */
+    void setPreset(int num);
+    void showPresetDialog();
+    void togglePresetCircleSelect();
+
 private:
 
     struct Corner {
@@ -31,6 +36,13 @@ private:
     lv_obj_t *tankLabel_ = nullptr;
     lv_obj_t *tankValueLabel_ = nullptr;
 
+    /* Center preset + save/load */
+    bool presetCircleSelected_ = false;
+    lv_obj_t *presetSelectBtn_ = nullptr;
+    lv_obj_t *presetNumberLabel_ = nullptr;
+    lv_obj_t *presetBtnSave_ = nullptr;
+    lv_obj_t *presetBtnLoad_ = nullptr;
+
     int lastKnobCount_ = 0;
     unsigned long knobActiveUntil_ = 0;
 
@@ -40,6 +52,7 @@ private:
     void syncArcs();
     void applySelectionStyle(int idx);
     void processKnob();
+    void updatePresetVisuals();
     static void arc_click_cb(lv_event_t *e);
 };
 
