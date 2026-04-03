@@ -7,8 +7,17 @@
 class ScrPresets : public Scr {
     using Scr::Scr;
 
+    bool presetCircleSelected_ = false;
+
+#ifdef HAS_ROTARY_ENCODER
+    int lastKnobCount_ = 0;
+    void processKnob();
+#endif
+
 public:
-    lv_obj_t *presetBtns[5] = {};
+    lv_obj_t *presetSelectBtn = nullptr;
+    lv_obj_t *presetNumberLabel = nullptr;
+    lv_obj_t *hintLabel = nullptr;
     lv_obj_t *btnSave = nullptr;
     lv_obj_t *btnLoad = nullptr;
 
@@ -17,6 +26,7 @@ public:
     void loop() override;
     void setPreset(int num);
     void updateButtonStyles();
+    void togglePresetCircleSelect();
     void cleanup() override;
 };
 

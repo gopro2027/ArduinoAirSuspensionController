@@ -58,29 +58,33 @@ void ScrHome::init(lv_obj_t *parent)
     corners_[2] = {WHEEL_REAR_DRIVER, REAR_DRIVER_IN, REAR_DRIVER_OUT};
     corners_[3] = {WHEEL_REAR_PASSENGER, REAR_PASSENGER_IN, REAR_PASSENGER_OUT};
 
-    const char *names[] = {"FD", "FP", "RD", "RP"};
+    const char *names[] = {"FL", "FR", "RL", "RR"};
 
     struct ArcLayout {
         int rotation;
         int startAngle;
         int endAngle;
-        int labelX;
-        int labelY;
-        int nameX;
+        int pressX;  /* pressure value — nearer the arc */
+        int pressY;
+        int nameX;   /* FD/FP/RD/RP — farther toward bezel */
         int nameY;
     };
 
     const int arcWidth = 16;
 
+    const int pressureRad = 87;
+    const int nameRad = 100;
+
+    /* press* outside arc stroke (~100px radius); name* further out with clear gap */
     ArcLayout layouts[] = {
         /* FD: upper-left  (190->260, center 225) */
-        {190, 0, 70,  -34, -34,  -42, -52},
+        {190, 0, 70,  -pressureRad, -pressureRad,  -nameRad, -nameRad},
         /* FP: upper-right (280->350, center 315) */
-        {280, 0, 70,   34, -34,   42, -52},
+        {280, 0, 70,   pressureRad, -pressureRad,   nameRad, -nameRad},
         /* RD: lower-left  (100->170, center 135) */
-        {100, 0, 70,  -34,  34,  -42,  52},
+        {100, 0, 70,  -pressureRad,  pressureRad,  -nameRad,  nameRad},
         /* RP: lower-right (10->80,   center  45) */
-        { 10, 0, 70,   34,  34,   42,  52},
+        { 10, 0, 70,   pressureRad,  pressureRad,   nameRad,  nameRad},
     };
 
     for (int i = 0; i < 4; i++) {
@@ -107,7 +111,7 @@ void ScrHome::init(lv_obj_t *parent)
         lv_label_set_text(c.pressLabel, "0");
         lv_obj_set_style_text_color(c.pressLabel, lv_color_white(), 0);
         lv_obj_set_style_text_font(c.pressLabel, &lv_font_montserrat_16, 0);
-        lv_obj_align(c.pressLabel, LV_ALIGN_CENTER, L.labelX, L.labelY);
+        lv_obj_align(c.pressLabel, LV_ALIGN_CENTER, L.pressX, L.pressY);
 
         c.nameLabel = lv_label_create(scr);
         lv_label_set_text(c.nameLabel, names[i]);
@@ -119,8 +123,8 @@ void ScrHome::init(lv_obj_t *parent)
         c.touchZone = lv_obj_create(scr);
         lv_obj_remove_style_all(c.touchZone);
         lv_obj_set_size(c.touchZone, 140, 140);
-        int tzX = (L.labelX > 0) ? 50 : -50;
-        int tzY = (L.labelY > 0) ? 50 : -50;
+        int tzX = (L.pressX > 0) ? 50 : -50;
+        int tzY = (L.pressY > 0) ? 50 : -50;
         lv_obj_align(c.touchZone, LV_ALIGN_CENTER, tzX, tzY);
         lv_obj_add_flag(c.touchZone, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_remove_flag(c.touchZone, LV_OBJ_FLAG_SCROLLABLE);
@@ -139,17 +143,24 @@ void ScrHome::init(lv_obj_t *parent)
             lv_obj_move_foreground(corners_[i].touchZone);
     }
 
+    /* Below circle_statusbar (TOP_MID y=20 + icon/label row ~22px); centered with battery */
+    const int tankLabelY = 40;
+    const int tankValueY = 50;
+
     tankLabel_ = lv_label_create(scr);
     lv_label_set_text(tankLabel_, "TANK");
     lv_obj_set_style_text_color(tankLabel_, lv_color_hex(GENERIC_GREY_LIGHT), 0);
     lv_obj_set_style_text_font(tankLabel_, &lv_font_montserrat_10, 0);
-    lv_obj_align(tankLabel_, LV_ALIGN_CENTER, 0, -14);
+    lv_obj_align(tankLabel_, LV_ALIGN_TOP_MID, 0, tankLabelY);
 
     tankValueLabel_ = lv_label_create(scr);
     lv_label_set_text(tankValueLabel_, LV_SYMBOL_EYE_OPEN);
     lv_obj_set_style_text_color(tankValueLabel_, lv_color_white(), 0);
     lv_obj_set_style_text_font(tankValueLabel_, &lv_font_montserrat_20, 0);
-    lv_obj_align(tankValueLabel_, LV_ALIGN_CENTER, 0, 6);
+    lv_obj_align(tankValueLabel_, LV_ALIGN_TOP_MID, 0, tankValueY);
+
+    lv_obj_move_foreground(tankLabel_);
+    lv_obj_move_foreground(tankValueLabel_);
 
 #ifdef HAS_ROTARY_ENCODER
     if (g_knob_handle)
