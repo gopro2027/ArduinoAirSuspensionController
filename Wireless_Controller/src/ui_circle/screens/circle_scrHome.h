@@ -17,7 +17,6 @@ public:
     /** Preset slot 1–5 (merged from former presets page). */
     void setPreset(int num);
     void showPresetDialog();
-    void togglePresetCircleSelect();
 
 private:
 
@@ -36,12 +35,9 @@ private:
     lv_obj_t *tankLabel_ = nullptr;
     lv_obj_t *tankValueLabel_ = nullptr;
 
-    /* Center preset + save/load */
-    bool presetCircleSelected_ = false;
+    /* Center preset: tap = dialog (OK / save height); long-press = load */
     lv_obj_t *presetSelectBtn_ = nullptr;
     lv_obj_t *presetNumberLabel_ = nullptr;
-    lv_obj_t *presetBtnSave_ = nullptr;
-    lv_obj_t *presetBtnLoad_ = nullptr;
 
     int lastKnobCount_ = 0;
     unsigned long knobActiveUntil_ = 0;
