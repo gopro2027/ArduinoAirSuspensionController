@@ -22,31 +22,8 @@ void ScrHome::arc_click_cb(lv_event_t *e)
     scrHome.applySelectionStyle(idx);
 }
 
-/* LVGL arcs draw from the outer edge inward, so a glow arc must be
- * enlarged so its wider stroke is centered on the same radius as the
- * main arc's stroke.  Formula: glowSize = mainSize - mainWidth + glowWidth.
- *
- * Three layers with progressively wider strokes and lower opacities
- * blend together to approximate a smooth gradient glow. */
-struct GlowDef {
-    int   width;
-    lv_opa_t bgOpa;
-    lv_opa_t indOpa;
-};
-
-static const GlowDef GLOW_TABLE[ScrHome::GLOW_LAYERS] = {
-    /* outermost — widest, faintest (soft outer haze) */
-    { 56,  (lv_opa_t)(255 * 0.04f),  (lv_opa_t)(255 * 0.07f) },
-    /* middle — medium width and brightness */
-    { 38,  (lv_opa_t)(255 * 0.10f),  (lv_opa_t)(255 * 0.18f) },
-    /* innermost — narrowest, brightest (concentrated bloom) */
-    { 24,  (lv_opa_t)(255 * 0.18f),  (lv_opa_t)(255 * 0.35f) },
-};
-
-static int glowSize(int mainSz, int mainW, int glowW)
-{
-    return mainSz - mainW + glowW;
-}
+/** Cached arc range for circle home; reset in cleanup(). */
+static int s_circleArcMaxCached = -1;
 
 void ScrHome::applySelectionStyle(int idx)
 {
@@ -63,20 +40,12 @@ void ScrHome::applySelectionStyle(int idx)
     lv_obj_set_style_arc_width(c.arc, mainW, LV_PART_MAIN);
     lv_obj_set_style_arc_width(c.arc, indW, LV_PART_INDICATOR);
 
-    for (int g = 0; g < GLOW_LAYERS; g++) {
-        if (!c.glow[g])
-            continue;
-        const GlowDef &gd = GLOW_TABLE[g];
-        int gs = glowSize(sz, mainW, gd.width);
-        lv_obj_set_size(c.glow[g], gs, gs);
-        lv_obj_align(c.glow[g], LV_ALIGN_CENTER, 0, 0);
-        if (c.selected) {
-            lv_obj_set_style_arc_opa(c.glow[g], gd.bgOpa, LV_PART_MAIN);
-            lv_obj_set_style_arc_opa(c.glow[g], gd.indOpa, LV_PART_INDICATOR);
-        } else {
-            lv_obj_set_style_arc_opa(c.glow[g], LV_OPA_TRANSP, LV_PART_MAIN);
-            lv_obj_set_style_arc_opa(c.glow[g], LV_OPA_TRANSP, LV_PART_INDICATOR);
-        }
+    if (c.selected) {
+        lv_obj_set_style_arc_color(c.arc, lv_color_hex(GENERIC_GREY), LV_PART_MAIN);
+        lv_obj_set_style_arc_color(c.arc, lv_color_white(), LV_PART_INDICATOR);
+    } else {
+        lv_obj_set_style_arc_color(c.arc, lv_color_hex(GENERIC_GREY_DARK), LV_PART_MAIN);
+        lv_obj_set_style_arc_color(c.arc, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR);
     }
 }
 
@@ -117,31 +86,6 @@ void ScrHome::init(lv_obj_t *parent)
     for (int i = 0; i < 4; i++) {
         Corner &c = corners_[i];
         ArcLayout &L = layouts[i];
-
-        /* Create glow layers from outermost to innermost so the render
-         * order is correct (widest/faintest painted first, behind the rest). */
-        for (int g = 0; g < GLOW_LAYERS; g++) {
-            const GlowDef &gd = GLOW_TABLE[g];
-            int gs = glowSize(ARC_SIZE_NORMAL, arcWidth, gd.width);
-            lv_obj_t *a = lv_arc_create(scr);
-            lv_obj_set_size(a, gs, gs);
-            lv_arc_set_rotation(a, L.rotation);
-            lv_arc_set_bg_angles(a, L.startAngle, L.endAngle);
-            lv_arc_set_range(a, 0, 200);
-            lv_arc_set_value(a, 0);
-            lv_obj_remove_flag(a, LV_OBJ_FLAG_CLICKABLE);
-            lv_obj_set_style_arc_width(a, gd.width, LV_PART_MAIN);
-            lv_obj_set_style_arc_width(a, gd.width, LV_PART_INDICATOR);
-            lv_obj_set_style_arc_color(a, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);
-            lv_obj_set_style_arc_color(a, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR);
-            lv_obj_set_style_arc_opa(a, LV_OPA_TRANSP, LV_PART_MAIN);
-            lv_obj_set_style_arc_opa(a, LV_OPA_TRANSP, LV_PART_INDICATOR);
-            lv_obj_set_style_arc_rounded(a, true, LV_PART_MAIN);
-            lv_obj_set_style_arc_rounded(a, true, LV_PART_INDICATOR);
-            lv_obj_remove_style(a, nullptr, LV_PART_KNOB);
-            lv_obj_align(a, LV_ALIGN_CENTER, 0, 0);
-            c.glow[g] = a;
-        }
 
         c.arc = lv_arc_create(scr);
         lv_obj_set_size(c.arc, ARC_SIZE_NORMAL, ARC_SIZE_NORMAL);
@@ -262,25 +206,37 @@ void ScrHome::processKnob()
 
 void ScrHome::syncArcs()
 {
-    bool hs = (*util_configValues._configFlagsBits() & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE));
+    const bool hs =
+        (*util_configValues._configFlagsBits() & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE));
+    const int maxVal = hs ? 100 : 200;
+    const int uMode = (int)getunitsMode();
+    const bool unitsChanged = (prevUnitsMode != uMode);
+    const bool maxChanged = (s_circleArcMaxCached != maxVal);
+
+    if (maxChanged) {
+        s_circleArcMaxCached = maxVal;
+        for (int i = 0; i < 4; i++) {
+            if (corners_[i].arc)
+                lv_arc_set_range(corners_[i].arc, 0, maxVal);
+        }
+    }
 
     for (int i = 0; i < 4; i++) {
         Corner &c = corners_[i];
         if (!c.arc)
             continue;
         int v = currentPressures[c.wheelIdx];
-        int maxVal = hs ? 100 : 200;
-        lv_arc_set_range(c.arc, 0, maxVal);
-        for (int g = 0; g < GLOW_LAYERS; g++)
-            if (c.glow[g])
-                lv_arc_set_range(c.glow[g], 0, maxVal);
-        if (v > maxVal) v = maxVal;
-        lv_arc_set_value(c.arc, v);
-        for (int g = 0; g < GLOW_LAYERS; g++)
-            if (c.glow[g])
-                lv_arc_set_value(c.glow[g], v);
+        if (v > maxVal)
+            v = maxVal;
 
-        if (c.pressLabel) {
+        const bool vChanged = (prevPressures[c.wheelIdx] != v);
+        const bool needArc = vChanged || maxChanged;
+        const bool needLabel = vChanged || unitsChanged || maxChanged;
+
+        if (needArc)
+            lv_arc_set_value(c.arc, v);
+
+        if (needLabel && c.pressLabel) {
             if (hs) {
                 lv_label_set_text_fmt(c.pressLabel, "%u%%", (unsigned)v);
             } else if (getunitsMode() == UNITS_MODE::PSI) {
@@ -290,17 +246,28 @@ void ScrHome::syncArcs()
                 lv_label_set_text_fmt(c.pressLabel, "%.1f", (double)bar);
             }
         }
+
+        if (needArc || needLabel)
+            prevPressures[c.wheelIdx] = v;
     }
 
     if (tankValueLabel_) {
         int t = currentPressures[_TANK_INDEX];
-        if (getunitsMode() == UNITS_MODE::PSI)
-            lv_label_set_text_fmt(tankValueLabel_, "%u PSI", (unsigned)t);
-        else {
-            float bar = t / 14.5038f;
-            lv_label_set_text_fmt(tankValueLabel_, "%.1f bar", (double)bar);
+        const bool tChanged = (prevPressures[_TANK_INDEX] != t);
+        const bool needTank = tChanged || unitsChanged;
+        if (needTank) {
+            if (getunitsMode() == UNITS_MODE::PSI)
+                lv_label_set_text_fmt(tankValueLabel_, "%u PSI", (unsigned)t);
+            else {
+                float bar = t / 14.5038f;
+                lv_label_set_text_fmt(tankValueLabel_, "%.1f bar", (double)bar);
+            }
+            prevPressures[_TANK_INDEX] = t;
         }
     }
+
+    if (unitsChanged)
+        prevUnitsMode = uMode;
 }
 
 void ScrHome::loop()
@@ -330,6 +297,7 @@ void ScrHome::cleanup()
     tankValueLabel_ = nullptr;
     for (int i = 0; i < 4; i++)
         corners_[i] = Corner{};
+    s_circleArcMaxCached = -1;
     Scr::cleanup();
 }
 

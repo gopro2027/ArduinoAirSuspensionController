@@ -33,13 +33,11 @@ void Scr::init(lv_obj_t *parent)
     }
     this->prevUnitsMode = -1;
 
-    // Subtle theme-tinted gradient background
     const int screenWidth = getScreenWidth();
     const int screenHeight = getScreenHeight();
     this->rect_bg = lv_obj_create(this->scr);
     lv_obj_remove_style_all(this->rect_bg);
     lv_obj_set_size(this->rect_bg, screenWidth, screenHeight);
-    // Mix theme color with dark grey for a very subtle tint
     lv_obj_set_style_bg_color(this->rect_bg, lv_color_mix(lv_color_hex(THEME_COLOR_DARK), lv_color_hex(GENERIC_GREY_DARK), 25), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(this->rect_bg, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_bg_grad_color(this->rect_bg, lv_color_hex(GENERIC_GREY_VERY_DARK), LV_PART_MAIN);
