@@ -20,7 +20,9 @@ static void loadSelectedPreset()
 {
     AirupQuickPacket pkt(currentPreset - 1);
     sendRestPacket(&pkt);
-    showDialog("Loaded Preset!", lv_color_hex(0x22bb33));
+    static char buf[30];
+    snprintf(buf, sizeof(buf), "Loaded Preset %i!", currentPreset);
+    showDialog(buf, lv_color_hex(0x22bb33));
 }
 
 /** Deferred so preset dialog closes before opening confirm (avoids deleteMessageBoxNextFrame clobbering the new box). */
