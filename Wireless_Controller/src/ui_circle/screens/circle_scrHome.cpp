@@ -47,7 +47,7 @@ static void centerPresetEventCb(lv_event_t *e)
         s_skipNextPresetClick = true;
         if (currentPreset == 1) {
             scrHome.showMsgBox("Air out?", "Preset 1 is typically air out. Verify car is not moving.", "Confirm", "Cancel",
-                               []() { loadSelectedPreset(); }, []() {}, false);
+                               []() { loadSelectedPreset(); }, []() {}, true);
         } else {
             loadSelectedPreset();
         }
@@ -141,6 +141,8 @@ void ScrHome::init(lv_obj_t *parent)
         lv_arc_set_bg_angles(c.arc, L.startAngle, L.endAngle);
         lv_arc_set_range(c.arc, 0, 200);
         lv_arc_set_value(c.arc, 0);
+        if (i == 1 || i == 3)
+            lv_arc_set_mode(c.arc, LV_ARC_MODE_REVERSE);
         lv_obj_remove_flag(c.arc, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_set_style_arc_width(c.arc, arcWidth, LV_PART_MAIN);
         lv_obj_set_style_arc_width(c.arc, arcWidth, LV_PART_INDICATOR);
@@ -290,6 +292,11 @@ void ScrHome::processKnob()
             }
             knobActiveUntil_ = 0;
         }
+        return;
+    }
+
+    if (isMsgBoxDisplayed()) {
+        lastKnobCount_ = current;
         return;
     }
 
