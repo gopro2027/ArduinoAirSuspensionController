@@ -12,7 +12,8 @@
             "+<files/LVGL_Driver.cpp>",
             "+<files/I2C_Driver.cpp>",
             "+<files/PWR_Key_Dummy.cpp>",
-            "+<files/BAT_Driver.cpp>"
+            "+<files/BAT_Driver.cpp>",
+            "+<files/bidi_switch_knob.c>"
         ]
 	},
   "frameworks": "arduino",

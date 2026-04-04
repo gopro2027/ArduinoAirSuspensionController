@@ -1,5 +1,9 @@
 #include "util.h"
 
+#ifdef HAS_ROTARY_ENCODER
+knob_handle_t g_knob_handle = nullptr;
+#endif
+
 // Dynamic screen dimension helpers for rotation support
 int getScreenWidth() {
     lv_display_t *disp = lv_display_get_default();
@@ -394,7 +398,6 @@ void initKB(Option *option)
 {
     closeKeyboard();
     kb = lv_keyboard_create(lv_screen_active());
-    // lv_obj_set_height(cont, LV_VER_RES / 2);
     if (option->type == OptionType::KEYBOARD_INPUT_NUMBER)
     {
         lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_NUMBER);
@@ -408,6 +411,15 @@ void initKB(Option *option)
     lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_ITEMS);  // buttons
     lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_ITEMS | (lv_style_selector_t)LV_STATE_CHECKED);  // buttons (keyboard and checkmark)
     lv_obj_set_style_bg_color(kb, lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_ITEMS | (lv_style_selector_t)LV_STATE_FOCUSED); // When pressing down on the buttons
+#ifdef SCREEN_MODE_CIRCLE
+    /* On round displays the full-width keyboard clips at the bottom corners.
+     * Shrink width and raise it so it stays within the inscribed circle. */
+    int kbW = getScreenWidth() - 80;
+    lv_obj_set_width(kb, kbW);
+    lv_obj_align(kb, LV_ALIGN_BOTTOM_MID, 0, -40);
+    lv_obj_set_style_text_font(kb, &lv_font_montserrat_14, LV_PART_ITEMS);
+    lv_obj_set_style_pad_gap(kb, 2, LV_PART_MAIN);
+#endif
 }
 
 void ta_event_cb(lv_event_t *e)

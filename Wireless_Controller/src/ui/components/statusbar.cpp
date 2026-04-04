@@ -1,3 +1,7 @@
+#include "device_lib_exports.h"
+
+#ifndef SCREEN_MODE_CIRCLE
+
 #include "statusbar.h"
 #include "utils/util.h"
 #include "alert.h"
@@ -599,3 +603,5 @@ static void panel_gesture_cb(lv_event_t* e) {
         statusbar->closePanel();
     }
 }
+
+#endif /* !SCREEN_MODE_CIRCLE */

@@ -7,6 +7,10 @@
 
 #define LCD_BIT_PER_PIXEL  16
 
+/** Must match LVGL partial strip height (LVGL_Driver.h). SPI max_transfer_sz drives internal DMA priv buffer sizing — do not use full-frame size here. */
+#define SH8601_LVGL_PARTIAL_LINES 24
+#define SH8601_MAX_TRANSFER_SZ ((LCD_WIDTH) * (SH8601_LVGL_PARTIAL_LINES) * (LCD_BIT_PER_PIXEL) / 8)
+
 #define EXAMPLE_PIN_NUM_LCD_CS     14
 #define EXAMPLE_PIN_NUM_LCD_PCLK   13
 #define EXAMPLE_PIN_NUM_LCD_DATA0  15

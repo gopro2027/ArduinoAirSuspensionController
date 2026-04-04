@@ -1,3 +1,4 @@
+#include "device_lib_exports.h"
 #include "option.h"
 lv_style_t headerStyle;
 static bool styleCreated = false;
@@ -20,10 +21,12 @@ void createStyle()
 {
     if (styleCreated == false)
     {
-        // create style
         lv_style_init(&headerStyle);
+#ifdef SCREEN_MODE_CIRCLE
+        lv_style_set_text_font(&headerStyle, &lv_font_montserrat_14);
+#else
         lv_style_set_text_font(&headerStyle, &lv_font_montserrat_20);
-        // Don't use transform scaling - it causes issues with rotation changes
+#endif
         styleCreated = true;
     }
 }
@@ -81,7 +84,11 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     createStyle();
     this->root = lv_obj_create(parent);
     lv_obj_remove_style_all(this->root);
+#ifdef SCREEN_MODE_CIRCLE
+    lv_obj_set_size(this->root, LV_PCT(100), this->optionRowHeight);
+#else
     lv_obj_set_size(this->root, getScreenWidth(), this->optionRowHeight);
+#endif
 
     if (type != OptionType::SPACE && type != OptionType::BUTTON)
     {

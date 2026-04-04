@@ -1,3 +1,4 @@
+#include "device_lib_exports.h"
 #include "ui_scrSettings.h"
 #include "../../utils/util.h"
 

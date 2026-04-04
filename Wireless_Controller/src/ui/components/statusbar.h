@@ -1,6 +1,8 @@
 #ifndef statusbar_h
 #define statusbar_h
 
+#ifndef SCREEN_MODE_CIRCLE
+
 #include <Arduino.h>
 #include "lvgl.h"
 
@@ -71,4 +73,6 @@ private:
 // Global statusbar instance
 extern Statusbar globalStatusbar;
 
-#endif
+#endif /* !SCREEN_MODE_CIRCLE */
+
+#endif /* statusbar_h */

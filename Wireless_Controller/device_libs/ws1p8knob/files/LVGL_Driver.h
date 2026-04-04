@@ -9,9 +9,8 @@
 
 #define LVGL_WIDTH  LCD_WIDTH
 #define LVGL_HEIGHT LCD_HEIGHT
-// Partial strip height: each flush is width*lines*2 bytes. Large strips + internal LVGL buffers exhaust
-// spi_master setup_dma_priv_buffer (internal DMA heap); keep this small (16–24 typical).
-#define LVGL_PARTIAL_LINES 16
+// Must equal SH8601_LVGL_PARTIAL_LINES in Display_SH8601.h (SPI max_transfer_sz).
+#define LVGL_PARTIAL_LINES SH8601_LVGL_PARTIAL_LINES
 #define LVGL_BUF_BYTES ((uint32_t)((size_t)LVGL_WIDTH * (size_t)LVGL_PARTIAL_LINES * sizeof(lv_color_t)))
 
 #define EXAMPLE_LVGL_TICK_PERIOD_MS 2

@@ -1,3 +1,7 @@
+#include "device_lib_exports.h"
+
+#ifndef SCREEN_MODE_CIRCLE
+
 #include "ui_scrPresets.h"
 
 ScrPresets scrPresets(true);
@@ -447,3 +451,5 @@ void ScrPresets::loop()
 {
     Scr::loop();
 }
+
+#endif /* !SCREEN_MODE_CIRCLE */

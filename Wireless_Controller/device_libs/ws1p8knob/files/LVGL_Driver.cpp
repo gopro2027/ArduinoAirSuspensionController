@@ -2,10 +2,10 @@
 #include <Arduino.h>
 #include "esp_attr.h"
 #include "esp_cache.h"
+#include "esp_heap_caps.h"
 
-// Partial strip buffers; must match lv_display_set_buffers buf_size.
-// Prefer DMA-capable PSRAM: internal RAM is scarce — large internal buffers starve spi_master priv TX DMA allocs.
-// PSRAM is cache-backed; flush path calls esp_cache_msync before SPI reads the buffer.
+// Partial strips only: full-frame SPI TX needs huge spi_master internal DMA "priv" buffers and fails on this chip (setup_dma_priv_buffer).
+// Draw buffers live in PSRAM; flush path calls esp_cache_msync before SPI reads them.
 static lv_color_t *alloc_draw_buf(void)
 {
     const size_t n = (size_t)LVGL_BUF_BYTES;
@@ -67,10 +67,8 @@ touch_and_screen Lvgl_Init(void)
     lv_init();
 
     static lv_display_t *disp = lv_display_create(LVGL_WIDTH, LVGL_HEIGHT);
-    // QSPI panel expects RGB565 with bytes swapped per pixel (wire order); matches esp_lcd SPI examples.
     lv_display_set_color_format(disp, LV_COLOR_FORMAT_RGB565_SWAPPED);
     lv_display_set_flush_cb(disp, Lvgl_Display_LCD);
-    // PARTIAL only — do not use FULL; full-screen SPI tx fails setup_dma_priv_buffer on internal DMA heap.
     lv_display_set_buffers(disp, buf1, buf2, LVGL_BUF_BYTES, LV_DISPLAY_RENDER_MODE_PARTIAL);
     lv_display_set_default(disp);
     lv_timer_t *refr = lv_display_get_refr_timer(disp);

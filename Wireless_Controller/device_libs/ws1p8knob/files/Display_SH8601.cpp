@@ -503,9 +503,6 @@ static const sh8601_lcd_init_cmd_t lcd_init_cmds[] = {
 
 #define LCD_HOST SPI2_HOST
 
-// Max bytes per SPI transaction; must cover largest LVGL partial flush (LVGL_PARTIAL_LINES in LVGL_Driver.h).
-#define SH8601_MAX_TRANSFER_SZ ((LCD_WIDTH) * (20) * (LCD_BIT_PER_PIXEL) / 8)
-
 esp_lcd_panel_handle_t panel_handle = NULL;
 static esp_lcd_panel_io_handle_t io_handle = NULL;
 
