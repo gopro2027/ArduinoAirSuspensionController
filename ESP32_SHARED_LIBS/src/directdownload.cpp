@@ -65,7 +65,7 @@ int getDownloadFirmwareURL(String &responseURLString)
     if (rateLimited) {
         log_i("Using direct secure connection to github api due to prior rate limiting");
         if (wifiClientSecure != nullptr) {
-            wifiClientSecure->end();
+            wifiClientSecure->stop();
             delete wifiClientSecure;
         }
         wifiClientSecure = new WiFiClientSecure();
