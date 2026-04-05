@@ -40,6 +40,7 @@ class BTOasIdentifier {
   static const int BP32PKT = 30;
   static const int BROADCASTNAME = 35;
   static const int UPDATESTATUSREQUEST = 36;
+  static const int RFCOMMAND = 37;
 }
 
 /// Config flags in ConfigValuesPacket.configFlagsBits (GETCONFIGVALUES).
@@ -171,7 +172,12 @@ class BLEManager extends ChangeNotifier {
   bool airOutOnShutoff = false;
   bool safetyMode = true;
   bool aiStatusEnabled = false;
+  /// Mirrors ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE (preserved on save).
+  bool heightSensorMode = false;
   String bleBroadcastName = '';
+
+  /// Incremented when a GETCONFIGVALUES packet updates local config fields.
+  int configRevision = 0;
   int compressorOnPSI = 0;
   int compressorOffPSI = 0;
   int systemShutoffTimeM = 15;
@@ -576,6 +582,11 @@ class BLEManager extends ChangeNotifier {
           aiStatusEnabled = (configFlagsBits &
                   (1 << ConfigFlagsBit.CONFIG_AI_STATUS_ENABLED)) !=
               0;
+          heightSensorMode = (configFlagsBits &
+                  (1 << ConfigFlagsBit.CONFIG_HEIGHT_SENSOR_MODE)) !=
+              0;
+
+          configRevision++;
 
           // Store full args (100 bytes) for echoing back when saving config
           if (data.length >= 104) {
@@ -717,6 +728,9 @@ class BLEManager extends ChangeNotifier {
 
   bool isConnected() => connectedDevice != null;
 
+  /// Call after mutating config fields from the UI so [Consumer]s rebuild.
+  void refreshFromUi() => notifyListeners();
+
   int _buildConfigFlagsBits() {
     int bits = 0;
     if (maintainPressure)
@@ -726,6 +740,9 @@ class BLEManager extends ChangeNotifier {
       bits |= (1 << ConfigFlagsBit.CONFIG_AIR_OUT_ON_SHUTOFF);
     if (safetyMode) bits |= (1 << ConfigFlagsBit.CONFIG_SAFETY_MODE);
     if (aiStatusEnabled) bits |= (1 << ConfigFlagsBit.CONFIG_AI_STATUS_ENABLED);
+    if (heightSensorMode) {
+      bits |= (1 << ConfigFlagsBit.CONFIG_HEIGHT_SENSOR_MODE);
+    }
     return bits;
   }
 
