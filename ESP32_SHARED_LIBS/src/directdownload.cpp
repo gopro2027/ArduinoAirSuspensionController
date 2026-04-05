@@ -42,15 +42,16 @@ int connectToWifi(String SSID, String PASS)
     return download_firmware_response_success;
 }
 
-HTTPClient https;
+HTTPClient *https;
+WiFiClientSecure *wifiClientSecure = nullptr;
 
 bool check300Redirect(int httpCode, String &responseURLString)
 {
     if (httpCode / 100 == 3) /* any 300 code lets try to redirect */
     {
-        responseURLString = https.getLocation();
+        responseURLString = https->getLocation();
         log_i("Redirected to: %s", responseURLString.c_str());
-        https.end();
+        https->end();
         return true;
     }
     return false;
@@ -58,30 +59,43 @@ bool check300Redirect(int httpCode, String &responseURLString)
 
 int getDownloadFirmwareURL(String &responseURLString)
 {
+    static bool parseFromStream = true;
     static bool rateLimited = false;
     log_i("Downloading json from github api releases");
 
     if (rateLimited) {
         log_i("Using direct secure connection to github api due to prior rate limiting");
-
-        WiFiClientSecure client;
-        client.setInsecure();
-        
-        if (!https.begin(client, "https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest"))
+        if (wifiClientSecure != nullptr) {
+            wifiClientSecure->stop();
+            delete wifiClientSecure;
+        }
+        wifiClientSecure = new WiFiClientSecure();
+        wifiClientSecure->setInsecure();
+        wifiClientSecure->setHandshakeTimeout(30);
+        wifiClientSecure->setTimeout(30000);
+        https->useHTTP10(true);
+        https->setReuse(false);
+        https->setUserAgent("OASMan-ESP32-FirmwareUpdate/1.0");
+        https->addHeader("Accept", "application/vnd.github+json");
+        if (!https->begin(*wifiClientSecure, "https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest"))
         {
             log_i("Connection failed");
+            https->end(); // new, hopefully this doesn't cause issues
             return download_firmware_response_retry;
         }
     } else {
-        if (!https.begin("http://githubreleaselist-http-proxy.gopro2027.workers.dev/"))
+        if (!https->begin("http://githubreleaselist-http-proxy.gopro2027.workers.dev/"))
         {
             log_i("Connection failed");
+            https->end(); // new, hopefully this doesn't cause issues
             return download_firmware_response_retry;
         }
     }
 
+    https->setConnectTimeout(20000);
+    https->setTimeout(30000);
     delay(50);
-    int httpResponseCode = https.GET();
+    int httpResponseCode = https->GET();
     if (check300Redirect(httpResponseCode, responseURLString)) /* any 300 code lets try to redirect */
     {
         return download_firmware_response_retry;
@@ -92,19 +106,20 @@ int getDownloadFirmwareURL(String &responseURLString)
         rateLimited = true;
         log_i("Rate limited by GitHub API, switching to direct secure connection for future requests");
         log_i("HTTP Response code: %d", httpResponseCode);
-        log_i("Error Response: %s", https.getString().c_str());
-        https.end();
+        log_i("Error Response: %s", https->getString().c_str());
+        https->end();
         return download_firmware_response_retry;
     }
 
     if (httpResponseCode != HTTP_CODE_OK)
     {
         log_i("HTTP Response code: %d", httpResponseCode);
-        log_i("Error Response: %s", https.getString().c_str());
-        https.end();
+        log_i("Error Response: %s", https->getString().c_str());
+        https->end();
         return download_firmware_response_retry;
     }
 
+    // now parse the information in the response. This could basically be a separate function, but don't want to make that clutter in the git change right now
     JsonDocument doc;
     log_i("Got 200 response about to deserialize json");
     log_i("looking for %s in the json", FIRMWARE_RELEASE_NAME);
@@ -114,30 +129,51 @@ int getDownloadFirmwareURL(String &responseURLString)
     filter["assets"][0]["name"] = true;
     filter["assets"][0]["browser_download_url"] = true;
 
-    // Stream parse instead of loading entire string
-    WiFiClient *stream = https.getStreamPtr();
-    delay(50);
 
-    // Wait for data to be available (with timeout)
-    unsigned long timeout = millis();
-    while (stream->available() == 0)
-    {
-        if (millis() - timeout > 5000)
-        { // 5 second timeout
-            log_i("Timeout waiting for steam data");
-            https.end();
+    DeserializationError error;
+
+    if (parseFromStream) {
+        // Stream parse instead of loading entire string
+        WiFiClient *stream = https->getStreamPtr();
+        delay(50);
+
+        // Wait for data to be available (with timeout)
+        unsigned long timeout = millis();
+        while (stream->available() == 0)
+        {
+            if (millis() - timeout > 5000)
+            { // 5 second timeout
+                log_i("Timeout waiting for steam data");
+                https->end();
+                return download_firmware_response_retry;
+            }
+            delay(10);
+        }
+        delay(10);
+        error = deserializeJson(doc, *stream, DeserializationOption::Filter(filter));
+    } else {
+        // When reading direct from github (not the proxy) and on the controller, the json does not like to load from the stream, so we must switch to this version of loading the json.
+        // Possible explanation:
+        // Must not parse from getStreamPtr(): that is the raw socket. GitHub uses chunked
+        // transfer encoding, so the undecoded stream is not valid JSON (ArduinoJson → IncompleteInput).
+        // getString() reads the body via writeToStream(), which strips chunk framing.
+        delay(10);
+        String payload = https->getString();
+        if (payload.isEmpty())
+        {
+            log_i("Empty response body from releases API");
+            https->end();
             return download_firmware_response_retry;
         }
         delay(10);
+        error = deserializeJson(doc, payload, DeserializationOption::Filter(filter));
     }
-
-    delay(10);
-    DeserializationError error = deserializeJson(doc, *stream, DeserializationOption::Filter(filter));
 
     if (error)
     {
+        parseFromStream = !parseFromStream; // flip to other method of loading json
         log_i("JSON parse error: %s", error.c_str());
-        https.end();
+        https->end();
         return download_firmware_response_retry;
     }
 
@@ -145,7 +181,7 @@ int getDownloadFirmwareURL(String &responseURLString)
     if (doc["tag_name"] == String(EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME)))
     {
         log_i("Latest already installed. Found tag_name name %s matches installed %s.", jsonStr(doc["tag_name"].as<const char *>()), EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME));
-        https.end();
+        https->end();
         doc.clear();
         setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE);
         ESP.restart();
@@ -166,11 +202,11 @@ int getDownloadFirmwareURL(String &responseURLString)
             if (url == nullptr)
             {
                 log_i("browser_download_url missing for matched asset, retrying...");
-                https.end();
+                https->end();
                 doc.clear();
                 return download_firmware_response_retry;
             }
-            https.end();
+            https->end();
             doc.clear();
             responseURLString = String(url);
             return download_firmware_response_success;
@@ -178,7 +214,7 @@ int getDownloadFirmwareURL(String &responseURLString)
     }
 
     log_i("Could not find correct firmware download url in github api response, retrying...");
-    https.end();
+    https->end();
     doc.clear();
 
     return download_firmware_response_retry;
@@ -186,13 +222,13 @@ int getDownloadFirmwareURL(String &responseURLString)
 
 int installFirmware(String &url)
 {
-    if (!https.begin(url))
+    if (!https->begin(url))
     {
         log_i("Connection failed");
         return download_firmware_response_retry;
     }
 
-    int httpCode = https.GET();
+    int httpCode = https->GET();
     log_i("HTTP GET code: %d", httpCode);
 
     if (check300Redirect(httpCode, url)) /* any 300 code lets try to redirect */
@@ -203,17 +239,17 @@ int installFirmware(String &url)
     if (httpCode != HTTP_CODE_OK)
     {
         Serial.printf("HTTPS GET failed, error: %d\n", httpCode);
-        https.end();
+        https->end();
         return download_firmware_response_retry;
     }
 
-    int fileSize = https.getSize(); // Total size in bytes
+    int fileSize = https->getSize(); // Total size in bytes
     log_i("File size: %d bytes\n", fileSize);
 
     if (fileSize < 1000)
     {
         log_i("Error with file size. Aborting update");
-        https.end();
+        https->end();
         return download_firmware_response_retry;
     }
 
@@ -225,11 +261,11 @@ int installFirmware(String &url)
     if (!Update.begin(fileSize))
     {
         log_i("Update.begin failed");
-        https.end();
+        https->end();
         return download_firmware_response_retry;
     }
 
-    size_t written = Update.writeStream(https.getStream());
+    size_t written = Update.writeStream(https->getStream());
 
     if (written == fileSize)
     {
@@ -238,12 +274,12 @@ int installFirmware(String &url)
     else
     {
         log_i("Written only : %d/%d. Retry?", written, fileSize);
-        https.end();
+        https->end();
         Update.abort();
         return download_firmware_response_retry;
     }
 
-    https.end();
+    https->end();
 
     if (Update.end())
     {
@@ -303,6 +339,11 @@ void downloadUpdate(String SSID, String PASS)
         counter++;
     }
 
+    /* Modem sleep during TLS often shows up as HTTPC_ERROR_CONNECTION_LOST (-5). */
+    WiFi.setSleep(false);
+
+    https = new HTTPClient();
+
     String url;
     int code = 0;
     counter = 0;
@@ -325,6 +366,15 @@ void downloadUpdate(String SSID, String PASS)
     log_i("Downloading firmware from %s", url.c_str());
 
     url = String("http://githubreleasebinary-http-proxy.gopro2027.workers.dev/?url=") + url;
+
+    // get a fresh httpclient since the last one may have used http or https, and this next function only uses https.
+    delete https;
+    https = new HTTPClient();
+
+    if (wifiClientSecure != nullptr) {
+        delete wifiClientSecure;
+        wifiClientSecure = nullptr;
+    }
 
     counter = 0;
     while (installFirmware(url) != download_firmware_response_success)
