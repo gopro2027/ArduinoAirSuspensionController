@@ -72,6 +72,8 @@ class SettingsPageState extends State<SettingsPage> {
   late TextEditingController minPressureController;
   late TextEditingController maxPressureController;
 
+  String? _lastUnits;
+
   @override
   void initState() {
     super.initState();
@@ -372,7 +374,7 @@ class SettingsPageState extends State<SettingsPage> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(
-                'SETTINGS',
+                'Settings',
                 style: const TextStyle(
                   fontSize: 25,
                   fontWeight: FontWeight.w600,
@@ -388,15 +390,12 @@ class SettingsPageState extends State<SettingsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildUploadImageSection(),
-                    _buildBluetoothSection(bleManager),
+                    _buildConfigSection(context, bleManager),
                     if (bleManager.isConnected()) ...[
                       _buildStatusSection(bleManager),
-                      _buildBasicSettingsSection(bleManager),
-                      _buildDropDownWhenOffSection(bleManager),
-                      _buildLiftUpWhenOnSection(bleManager),
-                      _buildUnitsSection(),
-                      _buildTankPressureSection(context, bleManager),
                       _buildAIStatusSection(bleManager),
+                      _buildBasicSettingsSection(bleManager),
+                      _buildUnitsSection(),
                       ElevatedButton(
                         onPressed: () {
                           try {
@@ -415,7 +414,7 @@ class SettingsPageState extends State<SettingsPage> {
                           ),
                         ),
                         child: const Text(
-                          "Reboot the manifold!",
+                          'Reboot/Turn Off',
                           style: TextStyle(fontSize: 16),
                         ),
                       ),
@@ -458,7 +457,7 @@ class SettingsPageState extends State<SettingsPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Compressor on',
+                  'Compressor Status:',
                   style: TextStyle(color: Colors.white, fontSize: 16),
                 ),
                 Switch(
@@ -503,7 +502,7 @@ class SettingsPageState extends State<SettingsPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'AI status',
+                  'Enabled:',
                   style: TextStyle(color: Colors.white, fontSize: 16),
                 ),
                 Switch(
@@ -523,14 +522,14 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildBluetoothSection(BLEManager bm) {
+  Widget _buildConfigSection(BuildContext context, BLEManager bm) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'BLE Settings',
+            'Config',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -548,7 +547,7 @@ class SettingsPageState extends State<SettingsPage> {
             child: Column(
               children: [
                 _buildKeyboardInputRow(
-                  "Passkey",
+                  'Bluetooth Passkey (6 digits)',
                   passkeyController,
                   onChanged: (value) {
                     try {
@@ -566,20 +565,71 @@ class SettingsPageState extends State<SettingsPage> {
                   },
                   isNumberInput: true,
                   limitChar: 6,
-                  tooltipTitle: "Passkey",
+                  tooltipTitle: 'Bluetooth Passkey (6 digits)',
                   tooltip:
-                      "The passkey is a kind of password which should match between the app and the manifold controller. It validates upon connection. If you change during the manifold connected, it will change on it too. The passkey only can be numbers and 6 digits.",
+                      'Must match the manifold. Validates on connection. When the manifold is connected, updating this updates the manifold too. Six digits only.',
                   saveWhenKeyboardDone: true,
                 ),
                 if (bm.connectedDevice != null) ...[
                   _buildKeyboardInputRow(
-                    "Broadcast name",
+                    'Bluetooth broadcast name',
                     broadcastController,
                     limitChar: 10,
-                    tooltipTitle: "Manifold's bluetooth name",
+                    tooltipTitle: 'Bluetooth broadcast name',
                     tooltip:
-                        "Change the name of bluetooth broadcast name of the manifold. The change takes place after a reboot or next start. Max 10 characters.",
+                        'Manifold BLE advertising name. Takes effect after reboot or next start. Max 10 characters.',
                     saveWhenKeyboardDone: true,
+                  ),
+                  _buildKeyboardInputRow(
+                    'Shutoff Time (Minutes)',
+                    shutdownTimeController,
+                    isNumberInput: true,
+                    limitChar: 3,
+                    tooltip:
+                        'Minutes the air ride system stays powered after ignition off.',
+                    saveWhenKeyboardDone: true,
+                  ),
+                  Consumer<UnitProvider>(
+                    builder: (context, unitProvider, _) {
+                      final units = unitProvider.unit;
+                      if (_lastUnits != units) {
+                        minPressureController.text = units == 'Bar'
+                            ? unitProvider
+                                .convertToBar(bm.compressorOnPSI.toDouble())
+                                .toStringAsFixed(2)
+                            : bm.compressorOnPSI.toString();
+                        maxPressureController.text = units == 'Bar'
+                            ? unitProvider
+                                .convertToBar(bm.compressorOffPSI.toDouble())
+                                .toStringAsFixed(2)
+                            : bm.compressorOffPSI.toString();
+                        _lastUnits = units;
+                      }
+                      return Column(
+                        children: [
+                          _buildKeyboardInputRow(
+                            'Compressor On PSI',
+                            minPressureController,
+                            isNumberInput: true,
+                            units: units,
+                            tooltipTitle: 'Compressor On PSI',
+                            tooltip:
+                                'Compressor runs when pressure is below this and stops above Compressor Off PSI. Respect tank and compressor ratings.',
+                            saveWhenKeyboardDone: true,
+                          ),
+                          _buildKeyboardInputRow(
+                            'Compressor Off PSI',
+                            maxPressureController,
+                            isNumberInput: true,
+                            units: units,
+                            tooltipTitle: 'Compressor Off PSI',
+                            tooltip:
+                                'Compressor stops when pressure is above this. Respect tank and compressor ratings.',
+                            saveWhenKeyboardDone: true,
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ],
@@ -614,6 +664,51 @@ class SettingsPageState extends State<SettingsPage> {
             ),
             child: Column(
               children: [
+                _buildSwitch(
+                  'Maintain Preset',
+                  bm.maintainPressure,
+                  (value) {
+                    bm.maintainPressure = value;
+                    bm.refreshFromUi();
+                    _saveManifoldConfigNow();
+                  },
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Rise on start',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                    Switch(
+                      value: bm.riseOnStart,
+                      onChanged: (value) {
+                        bm.riseOnStart = value;
+                        bm.refreshFromUi();
+                        _saveManifoldConfigNow();
+                      },
+                      activeColor: const Color(0xFFBB86FC),
+                    ),
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Fall on shutdown',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                    Switch(
+                      value: bm.airOutOnShutoff,
+                      onChanged: (value) {
+                        bm.airOutOnShutoff = value;
+                        bm.refreshFromUi();
+                        _saveManifoldConfigNow();
+                      },
+                      activeColor: const Color(0xFFBB86FC),
+                    ),
+                  ],
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -621,7 +716,7 @@ class SettingsPageState extends State<SettingsPage> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         const Text(
-                          'Safety mode',
+                          'Safety Mode',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -633,7 +728,7 @@ class SettingsPageState extends State<SettingsPage> {
                           onPressed: () {
                             showInfoDialog(
                               context,
-                              'Safety mode',
+                              'Safety Mode',
                               'When safety mode is enabled the compressor is disabled.',
                             );
                           },
@@ -651,214 +746,11 @@ class SettingsPageState extends State<SettingsPage> {
                     ),
                   ],
                 ),
-                _buildSwitch(
-                  'Maintain pressure',
-                  bm.maintainPressure,
-                  (value) {
-                    bm.maintainPressure = value;
-                    bm.refreshFromUi();
-                    _saveManifoldConfigNow();
-                  },
-                ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: _buildKeyboardInputRow(
-                        "System off delay",
-                        shutdownTimeController,
-                        isNumberInput: true,
-                        limitChar: 3,
-                        units: "min",
-                        tooltip:
-                            "Define the number of minutes the air ride system remains powered after the ignition is switched off.",
-                        saveWhenKeyboardDone: true,
-                      ),
-                    ),
-                  ],
-                )
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildDropDownWhenOffSection(BLEManager bm) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Drop down when off',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            decoration: const BoxDecoration(
-              border: Border(
-                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Air out on shutoff',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
-                Switch(
-                  value: bm.airOutOnShutoff,
-                  onChanged: (value) {
-                    bm.airOutOnShutoff = value;
-                    bm.refreshFromUi();
-                    _saveManifoldConfigNow();
-                  },
-                  activeColor: const Color(0xFFBB86FC),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLiftUpWhenOnSection(BLEManager bm) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Lift up when on',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            decoration: const BoxDecoration(
-              border: Border(
-                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Rise on start',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
-                Switch(
-                  value: bm.riseOnStart,
-                  onChanged: (value) {
-                    bm.riseOnStart = value;
-                    bm.refreshFromUi();
-                    _saveManifoldConfigNow();
-                  },
-                  activeColor: const Color(0xFFBB86FC),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String? _lastUnits;
-  Widget _buildTankPressureSection(BuildContext context, BLEManager bm) {
-    return Consumer<UnitProvider>(
-      builder: (context, unitProvider, child) {
-        final units = unitProvider.unit;
-
-        // Only update text if units changed
-        if (_lastUnits != units) {
-          minPressureController.text = units == 'Bar'
-              ? unitProvider
-                  .convertToBar(bm.compressorOnPSI.toDouble())
-                  .toStringAsFixed(2)
-              : bm.compressorOnPSI.toString();
-
-          maxPressureController.text = units == 'Bar'
-              ? unitProvider
-                  .convertToBar(bm.compressorOffPSI.toDouble())
-                  .toStringAsFixed(2)
-              : bm.compressorOffPSI.toString();
-
-          _lastUnits = units;
-        }
-
-        return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Text(
-                      'Compressor',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.help_outline,
-                          size: 20, color: Colors.grey),
-                      onPressed: () {
-                        showInfoDialog(
-                          context,
-                          'Compressor pressures',
-                          'The compressor will start if pressure is below the "min pressure" and stop when it is above the "max pressure".\nCAUTION! Always check both tank\'s and compressor\'s pressure ratings!',
-                        );
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      left: BorderSide(color: Color(0xFFBB86FC), width: 2),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildKeyboardInputRow(
-                        "Min pressure",
-                        minPressureController,
-                        isNumberInput: true,
-                        units: units,
-                        saveWhenKeyboardDone: true,
-                      ),
-                      _buildKeyboardInputRow(
-                        "Max pressure",
-                        maxPressureController,
-                        isNumberInput: true,
-                        units: units,
-                        saveWhenKeyboardDone: true,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ));
-      },
     );
   }
 
@@ -886,8 +778,8 @@ class SettingsPageState extends State<SettingsPage> {
                     onPressed: () {
                       showInfoDialog(
                         context,
-                        'Pressure unit',
-                        'Choose which pressure unit you prefer. Default is "PSI".',
+                        'Units',
+                        'Choose which pressure unit you prefer. Default is PSI.',
                       );
                     },
                   ),
@@ -904,7 +796,7 @@ class SettingsPageState extends State<SettingsPage> {
                 child: Column(
                   children: [
                     RadioListTile<String>(
-                      title: const Text('Psi',
+                      title: const Text('PSI',
                           style: TextStyle(color: Colors.white)),
                       value: 'Psi',
                       groupValue: unitProvider.unit,
@@ -948,7 +840,7 @@ class SettingsPageState extends State<SettingsPage> {
     String tooltipTitle = '',
     bool saveWhenKeyboardDone = false,
   }) {
-    tooltipTitle = label;
+    final helpTitle = tooltipTitle.isNotEmpty ? tooltipTitle : label;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -967,7 +859,7 @@ class SettingsPageState extends State<SettingsPage> {
               onPressed: () {
                 showInfoDialog(
                   context,
-                  tooltipTitle,
+                  helpTitle,
                   tooltip,
                 );
               },
