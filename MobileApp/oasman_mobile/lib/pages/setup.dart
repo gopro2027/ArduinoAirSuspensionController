@@ -71,6 +71,11 @@ class SettingsPageState extends State<SettingsPage> {
   late TextEditingController shutdownTimeController;
   late TextEditingController minPressureController;
   late TextEditingController maxPressureController;
+  late TextEditingController bagMaxController;
+  late TextEditingController pressureSensorRatingController;
+  late TextEditingController bagVolumeController;
+  late TextEditingController wifiSsidController;
+  late TextEditingController wifiPassController;
 
   String? _lastUnits;
 
@@ -93,6 +98,9 @@ class SettingsPageState extends State<SettingsPage> {
     if (bm.bleBroadcastName.isNotEmpty) {
       broadcastController.text = bm.bleBroadcastName;
     }
+    bagMaxController.text = bm.bagMaxPressure.toString();
+    pressureSensorRatingController.text = bm.pressureSensorMax.toString();
+    bagVolumeController.text = bm.bagVolumePercentage.toString();
     setState(() => _lastUnits = null);
   }
 
@@ -106,6 +114,11 @@ class SettingsPageState extends State<SettingsPage> {
     shutdownTimeController.dispose();
     minPressureController.dispose();
     maxPressureController.dispose();
+    bagMaxController.dispose();
+    pressureSensorRatingController.dispose();
+    bagVolumeController.dispose();
+    wifiSsidController.dispose();
+    wifiPassController.dispose();
     super.dispose();
   }
 
@@ -123,6 +136,8 @@ class SettingsPageState extends State<SettingsPage> {
     passkeyText = globalSettings!.passkeyText;
     await prefs.setString('_units', globalSettings!.units);
     await prefs.setString('_passkeyText', passkeyText);
+    await prefs.setString('_wifiSsid', wifiSsidController.text);
+    await prefs.setString('_wifiPass', wifiPassController.text);
   }
 
   void _applyPasskeyFromController() {
@@ -191,6 +206,19 @@ class SettingsPageState extends State<SettingsPage> {
         bm.compressorOffPSI = bm.compressorOnPSI + 1;
       }
 
+      final bagMax = int.tryParse(bagMaxController.text.trim());
+      if (bagMax != null) {
+        bm.bagMaxPressure = bagMax.clamp(1, 256);
+      }
+      final psMax = int.tryParse(pressureSensorRatingController.text.trim());
+      if (psMax != null) {
+        bm.pressureSensorMax = psMax.clamp(0, 65535);
+      }
+      final bagVol = int.tryParse(bagVolumeController.text.trim());
+      if (bagVol != null) {
+        bm.bagVolumePercentage = bagVol.clamp(10, 600);
+      }
+
       bm.saveConfigToManifold();
       bm.refreshFromUi();
 
@@ -210,6 +238,119 @@ class SettingsPageState extends State<SettingsPage> {
   void _onTextFieldDone() {
     FocusScope.of(context).unfocus();
     _saveManifoldConfigNow();
+  }
+
+  Future<void> _showConfirm({
+    required String title,
+    required String message,
+    String confirmLabel = 'Confirm',
+    required VoidCallback onConfirm,
+  }) async {
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+    if (go == true && mounted) {
+      onConfirm();
+    }
+  }
+
+  String _aiTrainedSummary(int bits) {
+    String y(bool on) => on ? 'Y' : 'n';
+    return 'UF:  ${y((bits & 1) != 0)} UR:  ${y(((bits >> 1) & 1) != 0)}\n'
+        'DF: ${y(((bits >> 2) & 1) != 0)} DR: ${y(((bits >> 3) & 1) != 0)}';
+  }
+
+  int _rfPresetZeroBased(BLEManager bm, int rfButtonNumber) {
+    switch (rfButtonNumber) {
+      case BLEManager.rfButtonA:
+        return bm.rfButtonAPreset;
+      case BLEManager.rfButtonB:
+        return bm.rfButtonBPreset;
+      case BLEManager.rfButtonC:
+        return bm.rfButtonCPreset;
+      case BLEManager.rfButtonD:
+        return bm.rfButtonDPreset;
+      default:
+        return 0;
+    }
+  }
+
+  void _setRfPresetZeroBased(BLEManager bm, int rfButtonNumber, int z) {
+    switch (rfButtonNumber) {
+      case BLEManager.rfButtonA:
+        bm.rfButtonAPreset = z;
+        break;
+      case BLEManager.rfButtonB:
+        bm.rfButtonBPreset = z;
+        break;
+      case BLEManager.rfButtonC:
+        bm.rfButtonCPreset = z;
+        break;
+      case BLEManager.rfButtonD:
+        bm.rfButtonDPreset = z;
+        break;
+    }
+  }
+
+  Widget _buildRfPresetRow(BLEManager bm, String label, int rfButtonNumber) {
+    final z = _rfPresetZeroBased(bm, rfButtonNumber).clamp(0, 4);
+    final displayed = z + 1;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ),
+          DropdownButton<int>(
+            value: displayed,
+            dropdownColor: Colors.grey[850],
+            style: const TextStyle(color: Colors.white),
+            items: [
+              for (var i = 1; i <= 5; i++)
+                DropdownMenuItem(value: i, child: Text('$i')),
+            ],
+            onChanged: (v) {
+              if (v == null) return;
+              bm.sendRfButtonPresetAssign(rfButtonNumber, v);
+              _setRfPresetZeroBased(bm, rfButtonNumber, v - 1);
+              bm.refreshFromUi();
+              setState(() {});
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _readOnlyStatusRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 16)),
+          Text(value, style: const TextStyle(color: Colors.white70, fontSize: 16)),
+        ],
+      ),
+    );
   }
 
   // Load saved settings
@@ -244,9 +385,19 @@ class SettingsPageState extends State<SettingsPage> {
             : '0');
     minPressureController = TextEditingController();
     maxPressureController = TextEditingController();
+    bagMaxController = TextEditingController();
+    pressureSensorRatingController = TextEditingController();
+    bagVolumeController = TextEditingController();
+    wifiSsidController =
+        TextEditingController(text: prefs.getString('_wifiSsid') ?? '');
+    wifiPassController =
+        TextEditingController(text: prefs.getString('_wifiPass') ?? '');
 
     if (bm.connectedDevice != null) {
       _lastSyncedConfigRevision = bm.configRevision;
+      bagMaxController.text = bm.bagMaxPressure.toString();
+      pressureSensorRatingController.text = bm.pressureSensorMax.toString();
+      bagVolumeController.text = bm.bagVolumePercentage.toString();
       print("Manifold's settings loaded");
     }
     _settingsLoaded = true;
@@ -393,31 +544,13 @@ class SettingsPageState extends State<SettingsPage> {
                     _buildConfigSection(context, bleManager),
                     if (bleManager.isConnected()) ...[
                       _buildStatusSection(bleManager),
+                      _buildGameControllerSection(bleManager),
                       _buildAIStatusSection(bleManager),
                       _buildBasicSettingsSection(bleManager),
+                      _buildLevellingSection(bleManager),
                       _buildUnitsSection(),
-                      ElevatedButton(
-                        onPressed: () {
-                          try {
-                            bleManager.sendRestCommand(bleManager
-                                .buildRestPacket(BTOasIdentifier.REBOOT, []));
-                            debugPrint("Reboot the manifold");
-                          } catch (e) {
-                            debugPrint("Failed to send command: $e");
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text(
-                          'Reboot/Turn Off',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
+                      _buildWifiUpdateSection(bleManager),
+                      _buildRebootTurnOffButton(bleManager),
                     ] else ...[
                       const ConnectManifoldCard(),
                     ],
@@ -453,20 +586,37 @@ class SettingsPageState extends State<SettingsPage> {
                 left: BorderSide(color: Color(0xFFBB86FC), width: 2),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Compressor Status:',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
+                _readOnlyStatusRow(
+                  'Compressor Frozen:',
+                  bm.compressorFrozen ? 'Yes' : 'No',
                 ),
-                Switch(
-                  value: bm.compressorOn,
-                  onChanged: (value) {
-                    bm.sendCompressorStatus(value);
-                    setState(() {});
-                  },
-                  activeColor: const Color(0xFFBB86FC),
+                _readOnlyStatusRow(
+                  'ACC Status:',
+                  bm.vehicleOn ? 'On' : 'Off',
+                ),
+                _readOnlyStatusRow(
+                  'E-Brake Status:',
+                  bm.ebrakeOn ? 'On' : 'Off',
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Compressor Status:',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                    Switch(
+                      value: bm.compressorOn,
+                      onChanged: (value) {
+                        bm.sendCompressorStatus(value);
+                        setState(() {});
+                      },
+                      activeColor: const Color(0xFFBB86FC),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -498,21 +648,71 @@ class SettingsPageState extends State<SettingsPage> {
                 left: BorderSide(color: Color(0xFFBB86FC), width: 2),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Enabled:',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
+                _readOnlyStatusRow(
+                  'Learn Progress:',
+                  '${bm.aiLearnPercent}%',
                 ),
-                Switch(
-                  value: bm.aiStatusEnabled,
-                  onChanged: (value) {
-                    bm.aiStatusEnabled = value;
-                    bm.refreshFromUi();
-                    _saveManifoldConfigNow();
-                  },
-                  activeColor: const Color(0xFFBB86FC),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Trained:',
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                      Flexible(
+                        child: Text(
+                          _aiTrainedSummary(bm.aiReadyBittset),
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 14),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Enabled:',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                    Switch(
+                      value: bm.aiStatusEnabled,
+                      onChanged: (value) {
+                        bm.aiStatusEnabled = value;
+                        bm.refreshFromUi();
+                        _saveManifoldConfigNow();
+                      },
+                      activeColor: const Color(0xFFBB86FC),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => _showConfirm(
+                    title: 'Reset Learned AI data?',
+                    message:
+                        'Run this if AI has completed training and you are getting inaccurate presets.',
+                    onConfirm: () {
+                      bm.sendResetAi();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Reset AI command sent'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  child: const Text('Reset Learned Data'),
                 ),
               ],
             ),
@@ -627,11 +827,133 @@ class SettingsPageState extends State<SettingsPage> {
                                 'Compressor stops when pressure is above this. Respect tank and compressor ratings.',
                             saveWhenKeyboardDone: true,
                           ),
+                          _buildKeyboardInputRow(
+                            'Bag Max PSI',
+                            bagMaxController,
+                            isNumberInput: true,
+                            limitChar: 3,
+                            tooltipTitle: 'Bag Max PSI',
+                            tooltip:
+                                'Maximum bag pressure target (1–256 PSI). Sent to the manifold with Save.',
+                            saveWhenKeyboardDone: true,
+                          ),
+                          _buildKeyboardInputRow(
+                            'Pressure Sensor Rating PSI',
+                            pressureSensorRatingController,
+                            isNumberInput: true,
+                            limitChar: 5,
+                            tooltipTitle: 'Pressure Sensor Rating PSI',
+                            tooltip:
+                                'Rated range of your pressure sensors. Must match manifold configuration.',
+                            saveWhenKeyboardDone: true,
+                          ),
+                          _buildKeyboardInputRow(
+                            'Bag Volume Percentage',
+                            bagVolumeController,
+                            isNumberInput: true,
+                            limitChar: 3,
+                            tooltipTitle: 'Bag Volume Percentage',
+                            tooltip:
+                                'Bag volume factor (10–600). Matches the wireless controller slider range.',
+                            saveWhenKeyboardDone: true,
+                          ),
                         ],
                       );
                     },
                   ),
                 ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGameControllerSection(BLEManager bm) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Game Controller',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            decoration: const BoxDecoration(
+              border: Border(
+                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextButton(
+                  onPressed: () => _showConfirm(
+                    title: 'Confirm?',
+                    message:
+                        'After confirming, OASMan will become pairable and the next controller to pair will be allowed and remembered (max 20 devices).',
+                    onConfirm: () {
+                      bm.sendBp32Command(BLEManager.bp32EnableNewConn);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Connect your controller'),
+                            duration: Duration(seconds: 3),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  child: const Text('Allow New Controller'),
+                ),
+                TextButton(
+                  onPressed: () => _showConfirm(
+                    title: 'Confirm?',
+                    message:
+                        'All paired game controllers will be removed from memory and actively connected ones disconnected.',
+                    onConfirm: () {
+                      bm.sendBp32Command(BLEManager.bp32ForgetDevices,
+                          value: false);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Controllers forgotten'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  child: const Text('Un-pair All Controllers'),
+                ),
+                TextButton(
+                  onPressed: () => _showConfirm(
+                    title: 'Confirm?',
+                    message:
+                        'Disconnects paired controllers. On some devices, use the system button to disconnect.',
+                    onConfirm: () {
+                      bm.sendBp32Command(BLEManager.bp32DisconnectDevices,
+                          value: false);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Controllers disconnected'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  child: const Text('Disconnect Controllers'),
+                ),
               ],
             ),
           ),
@@ -663,6 +985,7 @@ class SettingsPageState extends State<SettingsPage> {
               ),
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildSwitch(
                   'Maintain Preset',
@@ -746,10 +1069,318 @@ class SettingsPageState extends State<SettingsPage> {
                     ),
                   ],
                 ),
+                TextButton(
+                  onPressed: () => _showConfirm(
+                    title: 'Detect Pressure Sensors?',
+                    message:
+                        'WARNING: YOUR CAR WILL BE AIRED OUT. This routine learns which pressure sensors map to which wheels.',
+                    onConfirm: () {
+                      bm.sendDetectPressureSensors();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Detection routine started'),
+                            duration: Duration(seconds: 3),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  child: const Text('Detect Pressure Sensors'),
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(top: 16, bottom: 8),
+                  child: Text(
+                    'Key Fob Settings',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => _showConfirm(
+                    title: 'Unlearn key fob?',
+                    message:
+                        'Your key fob will be unlearned. Requires an OASMan Key Fob Receiver (RX480E).',
+                    onConfirm: () {
+                      bm.sendRfUnlearnFob();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Unlearning key fob…'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  child: const Text('Unlearn Fob'),
+                ),
+                TextButton(
+                  onPressed: () => _showConfirm(
+                    title: 'Learn fob?',
+                    message:
+                        'Requires an OASMan Key Fob Receiver (RX480E).',
+                    onConfirm: () {
+                      bm.sendRfLearnFobMomentary();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Learning key fob mode…'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  child: const Text('Learn Fob'),
+                ),
+                _buildRfPresetRow(
+                    bm, 'Button A Preset Number', BLEManager.rfButtonA),
+                _buildRfPresetRow(
+                    bm, 'Button B Preset Number', BLEManager.rfButtonB),
+                _buildRfPresetRow(
+                    bm, 'Button C Preset Number', BLEManager.rfButtonC),
+                _buildRfPresetRow(
+                    bm, 'Button D Preset Number', BLEManager.rfButtonD),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLevellingSection(BLEManager bm) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Levelling Mode',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            decoration: const BoxDecoration(
+              border: Border(
+                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                RadioListTile<bool>(
+                  title: const Text('Pressure Sensor',
+                      style: TextStyle(color: Colors.white)),
+                  value: false,
+                  groupValue: bm.heightSensorMode,
+                  onChanged: (v) {
+                    if (v == null) return;
+                    bm.heightSensorMode = v;
+                    bm.refreshFromUi();
+                    _saveManifoldConfigNow();
+                  },
+                  activeColor: const Color(0xFFBB86FC),
+                ),
+                RadioListTile<bool>(
+                  title: const Text('Level Sensor',
+                      style: TextStyle(color: Colors.white)),
+                  value: true,
+                  groupValue: bm.heightSensorMode,
+                  onChanged: (v) {
+                    if (v == null) return;
+                    bm.heightSensorMode = v;
+                    bm.refreshFromUi();
+                    _saveManifoldConfigNow();
+                  },
+                  activeColor: const Color(0xFFBB86FC),
+                ),
+                if (bm.heightSensorMode) ...[
+                  const SizedBox(height: 8),
+                  _buildSwitch(
+                    'Invert Front Right',
+                    (bm.heightSensorInvertBits & (1 << 0)) != 0,
+                    (value) {
+                      bm.setHeightInvertWheel(0, value);
+                      bm.refreshFromUi();
+                      _saveManifoldConfigNow();
+                    },
+                  ),
+                  _buildSwitch(
+                    'Invert Rear Right',
+                    (bm.heightSensorInvertBits & (1 << 1)) != 0,
+                    (value) {
+                      bm.setHeightInvertWheel(1, value);
+                      bm.refreshFromUi();
+                      _saveManifoldConfigNow();
+                    },
+                  ),
+                  _buildSwitch(
+                    'Invert Front Left',
+                    (bm.heightSensorInvertBits & (1 << 2)) != 0,
+                    (value) {
+                      bm.setHeightInvertWheel(2, value);
+                      bm.refreshFromUi();
+                      _saveManifoldConfigNow();
+                    },
+                  ),
+                  _buildSwitch(
+                    'Invert Rear Left',
+                    (bm.heightSensorInvertBits & (1 << 3)) != 0,
+                    (value) {
+                      bm.setHeightInvertWheel(3, value);
+                      bm.refreshFromUi();
+                      _saveManifoldConfigNow();
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWifiUpdateSection(BLEManager bm) {
+    final canUpdate = wifiSsidController.text.trim().isNotEmpty &&
+        wifiPassController.text.trim().isNotEmpty;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Wi-Fi / Update',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            decoration: const BoxDecoration(
+              border: Border(
+                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildKeyboardInputRow(
+                  'SSID',
+                  wifiSsidController,
+                  onChanged: (_) => setState(() {}),
+                  limitChar: 49,
+                  tooltipTitle: 'Wi-Fi SSID',
+                  tooltip:
+                      'Network the manifold uses to download updates. Saved on this phone when you save settings.',
+                  saveWhenKeyboardDone: true,
+                ),
+                _buildKeyboardInputRow(
+                  'PASS',
+                  wifiPassController,
+                  obscureText: true,
+                  onChanged: (_) => setState(() {}),
+                  limitChar: 49,
+                  tooltipTitle: 'Wi-Fi password',
+                  tooltip: 'Saved on this phone when you save settings.',
+                  saveWhenKeyboardDone: true,
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: !canUpdate
+                      ? null
+                      : () => _showConfirm(
+                            title: 'Begin update Wi-Fi service?',
+                            message:
+                                'Uses the credentials above to download firmware on the manifold. If something goes wrong, open https://oasman.dev on a computer and flash manually. Continue?',
+                            confirmLabel: 'Start',
+                            onConfirm: () {
+                              bm.sendStartWebUpdate(
+                                wifiSsidController.text.trim(),
+                                wifiPassController.text.trim(),
+                              );
+                              _persistPhoneSettings();
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Start web update sent'),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Start Software Update'),
+                ),
+                const SizedBox(height: 12),
+                _readOnlyStatusRow(
+                  'Manifold:',
+                  bm.updateStatus.isEmpty ? '—' : bm.updateStatus,
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(top: 8.0),
+                  child: SelectableText(
+                    'https://oasman.dev',
+                    style: TextStyle(color: Color(0xFF7B9FFF), fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRebootTurnOffButton(BLEManager bm) {
+    final accOn = bm.vehicleOn;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 24),
+      child: ElevatedButton(
+        onPressed: () => _showConfirm(
+          title: 'Reboot/Turn Off?',
+          message: accOn
+              ? 'The manifold will reboot.'
+              : 'The manifold will shut down.',
+          confirmLabel: accOn ? 'Reboot' : 'Shut Down',
+          onConfirm: () {
+            if (accOn) {
+              bm.sendRebootManifold();
+            } else {
+              bm.sendTurnOffManifold();
+            }
+          },
+        ),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Text(
+          accOn ? 'Reboot' : 'Shut Down',
+          style: const TextStyle(fontSize: 16),
+        ),
       ),
     );
   }
@@ -839,6 +1470,7 @@ class SettingsPageState extends State<SettingsPage> {
     String tooltip = '',
     String tooltipTitle = '',
     bool saveWhenKeyboardDone = false,
+    bool obscureText = false,
   }) {
     final helpTitle = tooltipTitle.isNotEmpty ? tooltipTitle : label;
     return Padding(
@@ -867,6 +1499,7 @@ class SettingsPageState extends State<SettingsPage> {
           Expanded(
             child: TextFormField(
               controller: controller,
+              obscureText: obscureText,
               keyboardType:
                   isNumberInput ? TextInputType.number : TextInputType.text,
               textInputAction: saveWhenKeyboardDone
