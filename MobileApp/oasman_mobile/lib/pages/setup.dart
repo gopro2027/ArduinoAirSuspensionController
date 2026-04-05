@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ConnectManifoldCard extends StatelessWidget {
   const ConnectManifoldCard({super.key});
@@ -266,6 +267,30 @@ class SettingsPageState extends State<SettingsPage> {
     if (go == true && mounted) {
       onConfirm();
     }
+  }
+
+  Future<void> _openPrivacyPolicy() async {
+    final uri = Uri.parse('https://oasman.dev/privacy');
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the privacy policy')),
+      );
+    }
+  }
+
+  Widget _buildPrivacyPolicySection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      child: TextButton.icon(
+        onPressed: _openPrivacyPolicy,
+        icon: const Icon(Icons.open_in_new, size: 20, color: Color(0xFFBB86FC)),
+        label: const Text(
+          'Privacy policy',
+          style: TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+      ),
+    );
   }
 
   String _aiTrainedSummary(int bits) {
@@ -554,6 +579,7 @@ class SettingsPageState extends State<SettingsPage> {
                     ] else ...[
                       const ConnectManifoldCard(),
                     ],
+                    _buildPrivacyPolicySection(),
                   ],
                 ),
               ),
