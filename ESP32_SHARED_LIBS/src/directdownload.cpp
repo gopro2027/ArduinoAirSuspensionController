@@ -8,6 +8,12 @@
 #define download_firmware_response_retry 2
 #define download_firmware_response_fail -1
 
+/** ArduinoJson's as<const char*>() can return nullptr; printf %s must never get nullptr. */
+static const char *jsonStr(const char *p)
+{
+    return p != nullptr ? p : "(null)";
+}
+
 int connectToWifi(String SSID, String PASS)
 {
     WiFi.mode(WIFI_STA);
@@ -138,7 +144,7 @@ int getDownloadFirmwareURL(String &responseURLString)
     delay(10);
     if (doc["tag_name"] == String(EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME)))
     {
-        log_i("Latest already installed. Found tag_name name %s matches installed %s.", doc["tag_name"].as<const char *>(), EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME));
+        log_i("Latest already installed. Found tag_name name %s matches installed %s.", jsonStr(doc["tag_name"].as<const char *>()), EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME));
         https.end();
         doc.clear();
         setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE);
@@ -146,17 +152,24 @@ int getDownloadFirmwareURL(String &responseURLString)
         return download_firmware_response_fail;
     }
 
-    log_i("Found update: %s. Current update: %s", doc["tag_name"].as<const char *>(), EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME));
+    log_i("Found update: %s. Current update: %s", jsonStr(doc["tag_name"].as<const char *>()), EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME));
 
     for (int j = 0; j < doc["assets"].size(); j++)
     {
-        log_i("Checking asset %d: %s", j, doc["assets"][j]["name"].as<const char *>());
+        log_i("Checking asset %d: %s", j, jsonStr(doc["assets"][j]["name"].as<const char *>()));
         delay(10);
 
         if (doc["assets"][j]["name"] == String(FIRMWARE_RELEASE_NAME) + String("_") + String("firmware.bin"))
         {
-            const char *url = doc["assets"][j]["browser_download_url"];
-            log_i("Found firmware download url: %s", url);
+            const char *url = doc["assets"][j]["browser_download_url"].as<const char *>();
+            log_i("Found firmware download url: %s", jsonStr(url));
+            if (url == nullptr)
+            {
+                log_i("browser_download_url missing for matched asset, retrying...");
+                https.end();
+                doc.clear();
+                return download_firmware_response_retry;
+            }
             https.end();
             doc.clear();
             responseURLString = String(url);
