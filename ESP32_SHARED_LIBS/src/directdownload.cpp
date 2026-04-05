@@ -59,6 +59,7 @@ bool check300Redirect(int httpCode, String &responseURLString)
 
 int getDownloadFirmwareURL(String &responseURLString)
 {
+    static bool parseFromStream = true;
     static bool rateLimited = false;
     log_i("Downloading json from github api releases");
 
@@ -128,28 +129,49 @@ int getDownloadFirmwareURL(String &responseURLString)
     filter["assets"][0]["name"] = true;
     filter["assets"][0]["browser_download_url"] = true;
 
-    // Stream parse instead of loading entire string
-    WiFiClient *stream = https->getStreamPtr();
-    delay(50);
 
-    // Wait for data to be available (with timeout)
-    unsigned long timeout = millis();
-    while (stream->available() == 0)
-    {
-        if (millis() - timeout > 5000)
-        { // 5 second timeout
-            log_i("Timeout waiting for steam data");
+    DeserializationError error;
+
+    if (parseFromStream) {
+        // Stream parse instead of loading entire string
+        WiFiClient *stream = https->getStreamPtr();
+        delay(50);
+
+        // Wait for data to be available (with timeout)
+        unsigned long timeout = millis();
+        while (stream->available() == 0)
+        {
+            if (millis() - timeout > 5000)
+            { // 5 second timeout
+                log_i("Timeout waiting for steam data");
+                https->end();
+                return download_firmware_response_retry;
+            }
+            delay(10);
+        }
+        delay(10);
+        error = deserializeJson(doc, *stream, DeserializationOption::Filter(filter));
+    } else {
+        // When reading direct from github (not the proxy) and on the controller, the json does not like to load from the stream, so we must switch to this version of loading the json.
+        // Possible explanation:
+        // Must not parse from getStreamPtr(): that is the raw socket. GitHub uses chunked
+        // transfer encoding, so the undecoded stream is not valid JSON (ArduinoJson → IncompleteInput).
+        // getString() reads the body via writeToStream(), which strips chunk framing.
+        delay(10);
+        String payload = https->getString();
+        if (payload.isEmpty())
+        {
+            log_i("Empty response body from releases API");
             https->end();
             return download_firmware_response_retry;
         }
         delay(10);
+        error = deserializeJson(doc, payload, DeserializationOption::Filter(filter));
     }
-
-    delay(10);
-    DeserializationError error = deserializeJson(doc, *stream, DeserializationOption::Filter(filter));
 
     if (error)
     {
+        parseFromStream = !parseFromStream; // flip to other method of loading json
         log_i("JSON parse error: %s", error.c_str());
         https->end();
         return download_firmware_response_retry;
