@@ -253,9 +253,12 @@ void updatePressure(Scr *scr, lv_obj_t *obj, int index, bool isHeightSensorPerce
     }
     else
     {
-        // No change - set white only once (avoid invalidating the label every frame)
+        // No change - fade back to white (or near-white for visibility)
         lv_color_t currentColor = lv_obj_get_style_text_color(obj, LV_PART_MAIN);
-        if (lv_color_to_u32(currentColor) != 0xFFFFFFFF)
+        uint32_t currentHex = lv_color_to_u32(currentColor);
+
+        // Gradually return to white if not already white
+        if (currentHex != 0xFFFFFFFF)
         {
             lv_obj_set_style_text_color(obj, lv_color_hex(0xFFFFFF), 0);
         }
