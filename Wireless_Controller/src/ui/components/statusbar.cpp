@@ -1,3 +1,7 @@
+#include "device_lib_exports.h"
+
+#ifndef SCREEN_MODE_CIRCLE
+
 #include "statusbar.h"
 #include "utils/util.h"
 #include "alert.h"
@@ -48,6 +52,10 @@ Statusbar::Statusbar() {
     visible = true;
     panelOpen = false;
     hasActiveAlert = false;
+    cachedBattStr[0] = '\0';
+    cachedBattIcon = nullptr;
+    cachedBattColor = 0;
+    cachedStatusBits = 0xFF; // Force first update
 }
 
 void Statusbar::create(lv_obj_t* parent) {
@@ -370,23 +378,28 @@ void Statusbar::updateBatteryStatus() {
     char* battStr = getBatteryVoltageString();
     if (!battStr) return;
 
-    // Update top bar battery label (just percentage)
-    lv_label_set_text(batteryLabel, battStr);
+    // Only update labels when battery string actually changed
+    bool textChanged = (strcmp(cachedBattStr, battStr) != 0);
+    if (textChanged) {
+        strncpy(cachedBattStr, battStr, sizeof(cachedBattStr) - 1);
+        cachedBattStr[sizeof(cachedBattStr) - 1] = '\0';
 
-    // Update panel battery label with charging status
-    if (panelBatteryLabel) {
-        static char fullBattStr[48];
-        if (isBatteryCharging()) {
-            snprintf(fullBattStr, sizeof(fullBattStr), "Battery: %s (Charging)", battStr);
-        } else {
-            snprintf(fullBattStr, sizeof(fullBattStr), "Battery: %s", battStr);
+        lv_label_set_text(batteryLabel, battStr);
+
+        if (panelBatteryLabel) {
+            static char fullBattStr[48];
+            if (isBatteryCharging()) {
+                snprintf(fullBattStr, sizeof(fullBattStr), "Battery: %s (Charging)", battStr);
+            } else {
+                snprintf(fullBattStr, sizeof(fullBattStr), "Battery: %s", battStr);
+            }
+            lv_label_set_text(panelBatteryLabel, fullBattStr);
         }
-        lv_label_set_text(panelBatteryLabel, fullBattStr);
     }
 
     // Determine battery icon
     bool isCharging = isBatteryCharging();
-    int percent = atoi(battStr);  // Parse percentage from "XX%"
+    int percent = atoi(battStr);
 
     const char* icon;
     if (isCharging) {
@@ -406,35 +419,45 @@ void Statusbar::updateBatteryStatus() {
     // Determine battery color based on level
     uint32_t battColor;
     if (isCharging) {
-        battColor = 0x60A5FA;  // Blue when charging
+        battColor = 0x60A5FA; // Blue when charging
     } else if (percent > 50) {
-        battColor = 0x4ADE80;  // Green for good
+        battColor = 0x4ADE80; // Green for good
     } else if (percent > 20) {
-        battColor = 0xFBBF24;  // Yellow for medium
+        battColor = 0xFBBF24; // Yellow for medium
     } else {
-        battColor = 0xFF6B6B;  // Red for low
+        battColor = 0xFF6B6B; // Red for low
     }
 
-    lv_label_set_text(batteryIcon, icon);
-    lv_obj_set_style_text_color(batteryIcon, lv_color_hex(battColor), 0);
+    // Only update icon/color when they actually changed
+    if (icon != cachedBattIcon) {
+        cachedBattIcon = icon;
+        lv_label_set_text(batteryIcon, icon);
+        if (panelBatteryIcon) {
+            lv_label_set_text(panelBatteryIcon, icon);
+        }
+    }
 
-    if (panelBatteryIcon) {
-        lv_label_set_text(panelBatteryIcon, icon);
-        lv_obj_set_style_text_color(panelBatteryIcon, lv_color_hex(battColor), 0);
+    if (battColor != cachedBattColor) {
+        cachedBattColor = battColor;
+        lv_obj_set_style_text_color(batteryIcon, lv_color_hex(battColor), 0);
+        if (panelBatteryIcon) {
+            lv_obj_set_style_text_color(panelBatteryIcon, lv_color_hex(battColor), 0);
+        }
     }
 }
 
 void Statusbar::updateAlertStatus() {
     if (!alertIcon) return;
 
-    // Always show alert icon when there's an active alert (ignore dismissed state)
     bool hasAlert = globalAlertState.hasActiveAlert;
+
+    // Only update when alert state actually changes
+    if (hasAlert == hasActiveAlert) return;
 
     if (hasAlert) {
         lv_obj_remove_flag(alertIcon, LV_OBJ_FLAG_HIDDEN);
         lv_obj_set_style_text_color(alertIcon, globalAlertState.currentColor, 0);
 
-        // Update panel alert section
         if (panelAlertLabel) {
             lv_label_set_text(panelAlertLabel, globalAlertState.currentMessage);
         }
@@ -458,9 +481,20 @@ void Statusbar::updateAlertStatus() {
 void Statusbar::updateStatusSection() {
     if (!statusSection) return;
 
+    // Build current status bits to compare against cached
+    uint8_t currentBits = 0;
+    if (statusBittset & (1 << StatusPacketBittset::COMPRESSOR_FROZEN)) currentBits |= 0x01;
+    if (statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON))     currentBits |= 0x02;
+    if (statusBittset & (1 << StatusPacketBittset::EBRAKE_STATUS_ON))  currentBits |= 0x04;
+    if (statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON)) currentBits |= 0x08;
+
+    // Skip entirely if nothing changed
+    if (currentBits == cachedStatusBits) return;
+    cachedStatusBits = currentBits;
+
     // Compressor Frozen
     if (compressorFrozenLabel) {
-        bool frozen = statusBittset & (1 << StatusPacketBittset::COMPRESSOR_FROZEN);
+        bool frozen = currentBits & 0x01;
         lv_label_set_text(compressorFrozenLabel, frozen ? "Frozen: Yes" : "Frozen: No");
         lv_obj_t* row = lv_obj_get_parent(compressorFrozenLabel);
         lv_obj_t* icon = lv_obj_get_child(row, 0);
@@ -473,7 +507,7 @@ void Statusbar::updateStatusSection() {
 
     // ACC Status
     if (accStatusLabel) {
-        bool accOn = statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON);
+        bool accOn = currentBits & 0x02;
         lv_label_set_text(accStatusLabel, accOn ? "ACC: On" : "ACC: Off");
         lv_obj_t* row = lv_obj_get_parent(accStatusLabel);
         lv_obj_t* icon = lv_obj_get_child(row, 0);
@@ -486,7 +520,7 @@ void Statusbar::updateStatusSection() {
 
     // E-Brake Status
     if (ebrakeStatusLabel) {
-        bool ebrakeOn = statusBittset & (1 << StatusPacketBittset::EBRAKE_STATUS_ON);
+        bool ebrakeOn = currentBits & 0x04;
         lv_label_set_text(ebrakeStatusLabel, ebrakeOn ? "E-Brake: On" : "E-Brake: Off");
         lv_obj_t* row = lv_obj_get_parent(ebrakeStatusLabel);
         lv_obj_t* icon = lv_obj_get_child(row, 0);
@@ -499,7 +533,7 @@ void Statusbar::updateStatusSection() {
 
     // Compressor Status
     if (compressorStatusLabel) {
-        bool compressorOn = statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON);
+        bool compressorOn = currentBits & 0x08;
         lv_label_set_text(compressorStatusLabel, compressorOn ? "Compressor: Running" : "Compressor: Off");
         lv_obj_t* row = lv_obj_get_parent(compressorStatusLabel);
         lv_obj_t* icon = lv_obj_get_child(row, 0);
@@ -599,3 +633,5 @@ static void panel_gesture_cb(lv_event_t* e) {
         statusbar->closePanel();
     }
 }
+
+#endif /* !SCREEN_MODE_CIRCLE */
