@@ -1,3 +1,7 @@
+#include "device_lib_exports.h"
+
+#ifndef SCREEN_MODE_CIRCLE
+
 #include "navbar.h"
 #include "utils/util.h"
 #include "utils/touch_lib.h"
@@ -284,3 +288,5 @@ void Navbar::cleanup() {
         tabLabels[i] = nullptr;
     }
 }
+
+#endif /* !SCREEN_MODE_CIRCLE */

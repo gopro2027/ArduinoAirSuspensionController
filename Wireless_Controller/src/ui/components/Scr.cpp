@@ -6,12 +6,63 @@
 #include "Scr.h" 
 #include "ui/ui.h" // sketchy backwards import may break in the future
 
+#ifdef SCREEN_MODE_CIRCLE
+/** Round 1.8″ display: default msgbox footer buttons are too small to tap reliably. */
+static void enlarge_msgbox_footer_for_circle(lv_obj_t *mbox)
+{
+    /* Space below the footer so tall buttons do not sit flush on the dialog border. */
+    lv_obj_set_style_pad_bottom(mbox, 8, LV_PART_MAIN);
+
+    lv_obj_t *footer = lv_msgbox_get_footer(mbox);
+    if (footer == nullptr)
+        return;
+
+    lv_obj_set_style_pad_top(footer, 12, LV_PART_MAIN);
+    lv_obj_set_style_pad_bottom(footer, 18, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(footer, 8, LV_PART_MAIN);
+    lv_obj_set_style_pad_right(footer, 8, LV_PART_MAIN);
+    lv_obj_set_style_pad_column(footer, 8, LV_PART_MAIN);
+
+    const int32_t btnMinH = 52;
+    const int btnPadV = 12;
+    const int btnPadH = 8;
+
+    const uint32_t n = lv_obj_get_child_count(footer);
+    for (uint32_t i = 0; i < n; i++) {
+        lv_obj_t *btn = lv_obj_get_child(footer, (int32_t)i);
+        if (btn == nullptr)
+            continue;
+        lv_obj_set_style_min_height(btn, btnMinH, LV_PART_MAIN);
+        lv_obj_set_style_pad_top(btn, btnPadV, LV_PART_MAIN);
+        lv_obj_set_style_pad_bottom(btn, btnPadV, LV_PART_MAIN);
+        lv_obj_set_style_pad_left(btn, btnPadH, LV_PART_MAIN);
+        lv_obj_set_style_pad_right(btn, btnPadH, LV_PART_MAIN);
+
+        const uint32_t nc = lv_obj_get_child_count(btn);
+        for (uint32_t j = 0; j < nc; j++) {
+            lv_obj_t *ch = lv_obj_get_child(btn, (int32_t)j);
+            if (lv_obj_check_type(ch, &lv_label_class)) {
+                lv_obj_set_style_text_font(ch, &lv_font_montserrat_14, LV_PART_MAIN);
+                lv_label_set_long_mode(ch, LV_LABEL_LONG_WRAP);
+                lv_obj_set_width(ch, lv_pct(100));
+                lv_obj_set_style_text_align(ch, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+            }
+        }
+    }
+}
+#endif
+
 Scr::Scr(bool showPressures)
 {
     this->showPressures = showPressures;
     this->scr = nullptr;
     this->rect_bg = nullptr;
     this->alert = nullptr;
+    this->ui_lblPressureFrontDriver = nullptr;
+    this->ui_lblPressureRearDriver = nullptr;
+    this->ui_lblPressureFrontPassenger = nullptr;
+    this->ui_lblPressureRearPassenger = nullptr;
+    this->ui_lblPressureTank = nullptr;
 }
 
 void Scr::init(lv_obj_t *parent)
@@ -28,13 +79,11 @@ void Scr::init(lv_obj_t *parent)
     }
     this->prevUnitsMode = -1;
 
-    // Subtle theme-tinted gradient background
     const int screenWidth = getScreenWidth();
     const int screenHeight = getScreenHeight();
     this->rect_bg = lv_obj_create(this->scr);
     lv_obj_remove_style_all(this->rect_bg);
     lv_obj_set_size(this->rect_bg, screenWidth, screenHeight);
-    // Mix theme color with dark grey for a very subtle tint
     lv_obj_set_style_bg_color(this->rect_bg, lv_color_mix(lv_color_hex(THEME_COLOR_DARK), lv_color_hex(GENERIC_GREY_DARK), 25), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(this->rect_bg, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_bg_grad_color(this->rect_bg, lv_color_hex(GENERIC_GREY_VERY_DARK), LV_PART_MAIN);
@@ -47,6 +96,7 @@ void Scr::init(lv_obj_t *parent)
 
     if (this->showPressures)
     {
+#ifndef SCREEN_MODE_CIRCLE
         // air pressures at top - scale xPadding based on screen width for rotation support
         // 72 pixels at 240 width = 30% offset, maintain same ratio
         const int xPadding = (getScreenWidth() * 72) / 240;
@@ -59,6 +109,9 @@ void Scr::init(lv_obj_t *parent)
         setupPressureLabel(this->scr, &this->ui_lblPressureFrontPassenger, xPadding, frontY, LV_ALIGN_TOP_MID, "0");
         setupPressureLabel(this->scr, &this->ui_lblPressureRearPassenger, xPadding, rearY, LV_ALIGN_TOP_MID, "0");
         setupPressureLabel(this->scr, &this->ui_lblPressureTank, 0, frontY, LV_ALIGN_TOP_MID, "0");
+#else
+        /* Round display: corner labels omitted; circle home uses arcs. Pointers stay null. */
+#endif
     }
 }
 
@@ -131,6 +184,10 @@ void Scr::showMsgBox(const char *title, const char *text, const char *yesText, c
         lv_obj_set_style_bg_color(lv_msgbox_get_header(this->mb_dialog), lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN); // halway darkness, header
     }
     lv_obj_set_style_border_color(this->mb_dialog, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN); // light purple, border
+
+#ifdef SCREEN_MODE_CIRCLE
+    enlarge_msgbox_footer_for_circle(this->mb_dialog);
+#endif
 }
 
 void Scr::loop()
@@ -216,11 +273,16 @@ void Scr::updatePressureValues()
         bool unitsChanged = (this->prevUnitsMode != currentUnitsMode);
 
         bool hs = (*util_configValues._configFlagsBits() & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE));
-        updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER, hs, unitsChanged);
-        updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER, hs, unitsChanged);
-        updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER, hs, unitsChanged);
-        updatePressure(this, this->ui_lblPressureRearDriver, WHEEL_REAR_DRIVER, hs, unitsChanged);
-        updatePressure(this, this->ui_lblPressureTank, _TANK_INDEX, false, unitsChanged);
+        if (this->ui_lblPressureFrontPassenger)
+            updatePressure(this, this->ui_lblPressureFrontPassenger, WHEEL_FRONT_PASSENGER, hs, unitsChanged);
+        if (this->ui_lblPressureRearPassenger)
+            updatePressure(this, this->ui_lblPressureRearPassenger, WHEEL_REAR_PASSENGER, hs, unitsChanged);
+        if (this->ui_lblPressureFrontDriver)
+            updatePressure(this, this->ui_lblPressureFrontDriver, WHEEL_FRONT_DRIVER, hs, unitsChanged);
+        if (this->ui_lblPressureRearDriver)
+            updatePressure(this, this->ui_lblPressureRearDriver, WHEEL_REAR_DRIVER, hs, unitsChanged);
+        if (this->ui_lblPressureTank)
+            updatePressure(this, this->ui_lblPressureTank, _TANK_INDEX, false, unitsChanged);
 
         this->prevUnitsMode = currentUnitsMode;
     }

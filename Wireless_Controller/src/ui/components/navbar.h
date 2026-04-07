@@ -1,6 +1,8 @@
 #ifndef navbar_h
 #define navbar_h
 
+#ifndef SCREEN_MODE_CIRCLE
+
 #include <Arduino.h>
 #include "lvgl.h"
 
@@ -71,4 +73,6 @@ private:
 // Global navbar instance
 extern Navbar globalNavbar;
 
-#endif
+#endif /* !SCREEN_MODE_CIRCLE */
+
+#endif /* navbar_h */
