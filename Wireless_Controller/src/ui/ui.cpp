@@ -3,6 +3,10 @@
 // LVGL version: 9.1.0
 // Project name: SquareLine_Project
 
+#include "device_lib_exports.h"
+
+#ifndef SCREEN_MODE_CIRCLE
+
 #include "ui.h"
 #include "waveshare/board_driver_util.h"
 #include "utils/touch_lib.h"
@@ -229,3 +233,5 @@ void screenLoop()
 
     resetTouchInputFrame();
 }
+
+#endif /* !SCREEN_MODE_CIRCLE */

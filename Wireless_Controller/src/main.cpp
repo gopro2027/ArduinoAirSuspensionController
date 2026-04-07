@@ -1,6 +1,10 @@
 #include <Arduino.h>
 #include <Preferences.h> // have to include it here or it isn't found in the shared libs
 
+#if defined(OTA_SUPPORTED)
+#include <directdownload.h>
+#endif
+
 #include <ui/ui.h>
 
 #include "utils/touch_lib.h"
@@ -50,6 +54,15 @@ void setup()
 
     board_drivers_init();
 
+#ifdef HAS_ROTARY_ENCODER
+    knob_config_t knob_cfg = {
+        .gpio_encoder_a = ENCODER_PIN_A,
+        .gpio_encoder_b = ENCODER_PIN_B,
+    };
+    g_knob_handle = iot_knob_create(&knob_cfg);
+    if (!g_knob_handle)
+        log_e("Rotary encoder init failed");
+#endif
 
     ui_init();
 
@@ -57,6 +70,7 @@ void setup()
 
     dimScreenTime = millis() + DIM_SCREEN_TIME;
 
+#if defined(OTA_SUPPORTED)
     byte updateResult = getupdateResult();
     if (updateResult != UPDATE_STATUS::UPDATE_STATUS_NONE)
     {
@@ -91,6 +105,7 @@ void setup()
         }
         setupdateResult(0);
     }
+#endif
     set_brightness(getBrightnessFloat());
     pinMode(BootButtonPin, INPUT); 
 }
@@ -198,7 +213,11 @@ void bootButtonFunctionality() {
 
                 // update presets page if preset changes
                 if (currentPreset != bootButtonPresetCount) {
+#if defined(SCREEN_MODE_CIRCLE)
+                    scrHome.setPreset(bootButtonPresetCount);
+#else
                     scrPresets.setPreset(bootButtonPresetCount);
+#endif
                 }
 
                 // show dialog of selected preset

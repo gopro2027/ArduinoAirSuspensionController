@@ -60,5 +60,9 @@
         <intent>
             <action android:name="android.bluetooth.device.action.FOUND" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
     </queries>
 </manifest>
