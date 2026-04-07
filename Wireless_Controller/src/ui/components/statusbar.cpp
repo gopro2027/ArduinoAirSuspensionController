@@ -481,20 +481,13 @@ void Statusbar::updateAlertStatus() {
 void Statusbar::updateStatusSection() {
     if (!statusSection) return;
 
-    // Build current status bits to compare against cached
-    uint8_t currentBits = 0;
-    if (statusBittset & (1 << StatusPacketBittset::COMPRESSOR_FROZEN)) currentBits |= 0x01;
-    if (statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON))     currentBits |= 0x02;
-    if (statusBittset & (1 << StatusPacketBittset::EBRAKE_STATUS_ON))  currentBits |= 0x04;
-    if (statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON)) currentBits |= 0x08;
-
     // Skip entirely if nothing changed
-    if (currentBits == cachedStatusBits) return;
-    cachedStatusBits = currentBits;
+    if (statusBittset == cachedStatusBits) return;
+    cachedStatusBits = statusBittset;
 
     // Compressor Frozen
     if (compressorFrozenLabel) {
-        bool frozen = currentBits & 0x01;
+        bool frozen = statusBittset & (1 << StatusPacketBittset::COMPRESSOR_FROZEN);
         lv_label_set_text(compressorFrozenLabel, frozen ? "Frozen: Yes" : "Frozen: No");
         lv_obj_t* row = lv_obj_get_parent(compressorFrozenLabel);
         lv_obj_t* icon = lv_obj_get_child(row, 0);
@@ -507,7 +500,7 @@ void Statusbar::updateStatusSection() {
 
     // ACC Status
     if (accStatusLabel) {
-        bool accOn = currentBits & 0x02;
+        bool accOn = statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON);
         lv_label_set_text(accStatusLabel, accOn ? "ACC: On" : "ACC: Off");
         lv_obj_t* row = lv_obj_get_parent(accStatusLabel);
         lv_obj_t* icon = lv_obj_get_child(row, 0);
@@ -520,7 +513,7 @@ void Statusbar::updateStatusSection() {
 
     // E-Brake Status
     if (ebrakeStatusLabel) {
-        bool ebrakeOn = currentBits & 0x04;
+        bool ebrakeOn = statusBittset & (1 << StatusPacketBittset::EBRAKE_STATUS_ON);
         lv_label_set_text(ebrakeStatusLabel, ebrakeOn ? "E-Brake: On" : "E-Brake: Off");
         lv_obj_t* row = lv_obj_get_parent(ebrakeStatusLabel);
         lv_obj_t* icon = lv_obj_get_child(row, 0);
@@ -533,7 +526,7 @@ void Statusbar::updateStatusSection() {
 
     // Compressor Status
     if (compressorStatusLabel) {
-        bool compressorOn = currentBits & 0x08;
+        bool compressorOn = statusBittset & (1 << StatusPacketBittset::COMPRESSOR_STATUS_ON);
         lv_label_set_text(compressorStatusLabel, compressorOn ? "Compressor: Running" : "Compressor: Off");
         lv_obj_t* row = lv_obj_get_parent(compressorStatusLabel);
         lv_obj_t* icon = lv_obj_get_child(row, 0);
