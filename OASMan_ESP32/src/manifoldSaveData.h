@@ -49,11 +49,11 @@ class AuxillaryOutputPreference {
     public:
     Preferencable auxillaryOutputMode; // byte
     Preferencable auxillaryOutputModeTimeUnit; // byte
-    Preferencable auxillaryOutputTime; // uint32_t
+    Preferencable auxillaryOutputTime; // uint16_t
     void load() {
-        auxillaryOutputMode.load("auxillaryOutputMode", AUX_MODE_MANUAL_SWITCHED);
+        auxillaryOutputMode.load("auxillaryOutputMode", AUX_MODE_NONE);
         auxillaryOutputModeTimeUnit.load("auxillaryOutputModeTimeUnit", AUX_MODE_TIME_SECONDS);
-        auxillaryOutputTime.load("auxillaryOutputTime", 0);
+        auxillaryOutputTime.load("auxillaryOutputTime", 1);
     }
     void save(AuxillaryOutputModePayload payload) {
         auxillaryOutputMode.set(payload.mode);
@@ -186,7 +186,7 @@ headerDefineSaveFunc(heightSensorInvertBits, uint8_t);
 
 headerDefineSaveFunc(auxillaryOutputMode, AuxillaryOutputMode);
 headerDefineSaveFunc(auxillaryOutputModeTimeUnit, AuxillaryOutputModeTimeUnit);
-headerDefineSaveFunc(auxillaryOutputTime, uint32_t);
+headerDefineSaveFunc(auxillaryOutputTime, uint16_t);
 
 void saveAuxillaryOutputPreference(AuxillaryOutputModePayload payload);
 

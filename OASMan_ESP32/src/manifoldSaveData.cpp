@@ -397,7 +397,7 @@ AuxillaryOutputMode getauxillaryOutputMode() {
 AuxillaryOutputModeTimeUnit getauxillaryOutputModeTimeUnit() {
     return (AuxillaryOutputModeTimeUnit)_SaveData.auxillaryOutputPreference.auxillaryOutputModeTimeUnit.get().i;
 }
-uint32_t getauxillaryOutputTime() {
+uint16_t getauxillaryOutputTime() {
     return _SaveData.auxillaryOutputPreference.auxillaryOutputTime.get().i;
 }
 

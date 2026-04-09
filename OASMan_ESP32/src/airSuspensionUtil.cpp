@@ -382,9 +382,13 @@ int vehicleOnCounter = 0;
 bool hasJustShutoff = true;
 void accessoryWireLoop()
 {
+    bool previousVehicleOn = vehicleOn;
     sampleReading(vehicleOn, accessoryWire->digitalRead() == HIGH, vehicleOnHistory, vehicleOnCounter, accessoryWireSampleSize);
     if (isVehicleOn())
     {
+        if (previousVehicleOn == false) {
+            getAuxillaryOutput()->setDoStartupEvent(true);
+        }
         // accessory wire is supplying 12v (car on)
         notifyKeepAlive();
         hasJustShutoff = false;

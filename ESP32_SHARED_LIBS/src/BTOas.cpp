@@ -209,7 +209,7 @@ int SetAirheightPacket::getPressure()
 {
     return this->args32()[1].i;
 }
-ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t heightSensorInvertBits, uint32_t configFlagsBits)
+ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t heightSensorInvertBits, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig)
 {
     this->cmd = GETCONFIGVALUES;
     *this->_systemShutoffTimeM() = systemShutoffTimeM;
@@ -225,6 +225,9 @@ ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, u
     *this->_rfButtonD() = rfButtonD;
     *this->_heightSensorInvertBits() = heightSensorInvertBits;
     *this->_configFlagsBits() = configFlagsBits;
+    this->_auxillaryOutputConfig()->mode = auxillaryOutputConfig.mode;
+    this->_auxillaryOutputConfig()->timeUnit = auxillaryOutputConfig.timeUnit;
+    this->_auxillaryOutputConfig()->time = auxillaryOutputConfig.time;
 }
 
 uint32_t *ConfigValuesPacket::_systemShutoffTimeM()
@@ -279,6 +282,23 @@ uint8_t *ConfigValuesPacket::_heightSensorInvertBits()
 {
     return (uint8_t *)&(this->args8()[12 + 8].i);
 }
+// uint8_t *ConfigValuesPacket::unused1()
+// {
+//     return (uint8_t *)&(this->args8()[12 + 9].i);
+// }
+// uint8_t *ConfigValuesPacket::unused2()
+// {
+//     return (uint8_t *)&(this->args8()[12 + 10].i);
+// }
+// uint8_t *ConfigValuesPacket::unused3()
+// {
+//     return (uint8_t *)&(this->args8()[12 + 11].i);
+// }
+AuxillaryOutputModePayload *ConfigValuesPacket::_auxillaryOutputConfig()
+{
+    return (AuxillaryOutputModePayload *)&(this->args32()[6].i); // 12 + 12 bytes / 4 = 6
+}
+
 AuthPacket::AuthPacket(uint32_t blePasskey, AuthResult authResult)
 {
     this->cmd = AUTHPACKET;
@@ -365,4 +385,9 @@ int RfCommandPacket::getPresetNumber()
 {
     // only when getCommandType() == RF_COMMAND_BUTTON_ASSIGN
     return this->args32()[2].i;
+}
+AuxillaryOutputControlPacket::AuxillaryOutputControlPacket(bool on)
+{
+    this->cmd = AUXILLARYOUTPUTCONTROL;
+    this->args32()[0].i = on;
 }

@@ -696,6 +696,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             setheightSensorMode((flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0);
             setsafetyMode((flags & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0);
             setaiEnabled((flags & (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED)) != 0);
+            saveAuxillaryOutputPreference(*recpkt->_auxillaryOutputConfig());
         }
         uint32_t configFlagsBits = 0;
         if (getriseOnStart())
@@ -712,7 +713,12 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE);
         if (getaiEnabled())
             configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED);
-        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getheightSensorInvertBits(), configFlagsBits);
+        
+        AuxillaryOutputModePayload auxillaryOutputConfig;
+        auxillaryOutputConfig.mode = (AuxillaryOutputMode)getauxillaryOutputMode();
+        auxillaryOutputConfig.timeUnit = (AuxillaryOutputModeTimeUnit)getauxillaryOutputModeTimeUnit();
+        auxillaryOutputConfig.time = getauxillaryOutputTime();
+        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getheightSensorInvertBits(), configFlagsBits, auxillaryOutputConfig);
         if (*recpkt->_setValues())
         {
             // if we changes values, update all the connected clients
@@ -849,6 +855,9 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         
     }
     break;
+    case BTOasIdentifier::AUXILLARYOUTPUTCONTROL:
+        getAuxillaryOutput()->onOffOverride(((AuxillaryOutputControlPacket *)packet)->getBoolean());
+        break;
     }
 }
 

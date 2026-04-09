@@ -2,7 +2,7 @@
 
 AuxillaryOutput::AuxillaryOutput(InputType *pin) {
     this->solenoid = Solenoid(pin);
-    this->doStartupEvent = true;
+    this->doStartupEvent = true; // true on creation, so will trigger on startup
     this->doShutdownEvent = false;
 
     this->checkForCloseTime = false;
@@ -24,21 +24,16 @@ void AuxillaryOutput::loop() {
     //     }
     // }
 
-    switch (getauxillaryOutputMode()) {
-        case AUX_MODE_MANUAL_SWITCHED:
-            break;
-        case AUX_MODE_MANUAL_TIMED:
-            break;
-        case AUX_MODE_STARTUP_TIMED:
-            if (doStartupEvent) {
-                openForDuration(getDurationInMillis());
-            }
-            break;
-        case AUX_MODE_SHUTDOWN_TIMED:
-            if (doShutdownEvent) {
-                openForDuration(getDurationInMillis());
-            }
-            break;
+    int bittset = getauxillaryOutputMode();
+    if (bittset & (1 << AUX_MODE_STARTUP_TIMED)) {
+        if (doStartupEvent) {
+            openForDuration(getDurationInMillis());
+        }
+    }
+    if (bittset & (1 << AUX_MODE_SHUTDOWN_TIMED)) {
+        if (doShutdownEvent) {
+            openForDuration(getDurationInMillis());
+        }
     }
 
     if (checkForCloseTime && millis() > closeTime) {
@@ -67,5 +62,13 @@ uint32_t AuxillaryOutput::getDurationInMillis() {
             return duration * 60000;
         case AUX_MODE_TIME_HOURS:
             return duration * 3600000;
+    }
+}
+
+void AuxillaryOutput::onOffOverride(bool on) {
+    if (on) {
+        this->solenoid.open();
+    } else {
+        this->solenoid.close();
     }
 }

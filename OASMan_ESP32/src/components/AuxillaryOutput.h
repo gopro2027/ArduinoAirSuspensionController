@@ -24,6 +24,7 @@ public:
     uint32_t getDurationInMillis();
     void setDoStartupEvent(bool doStartupEvent) { this->doStartupEvent = doStartupEvent; }
     void setDoShutdownEvent(bool doShutdownEvent) { this->doShutdownEvent = doShutdownEvent; }
+    void onOffOverride(bool on);
 };
 
 #endif
