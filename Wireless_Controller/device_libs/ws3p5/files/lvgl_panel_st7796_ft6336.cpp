@@ -4,6 +4,7 @@
 // Added: Waveshare vendor-specific ST7796 init + tunable software color correction.
 
 #include <Arduino.h>
+#include <SPI.h>
 #include <Arduino_GFX_Library.h>
 #include <lvgl.h>
 #include <Wire.h>
@@ -32,6 +33,24 @@
 
 #define TCA_ADDR        0x20
 #define TCA_LCD_RSTBIT  1
+
+// Arduino_GFX 1.5.6+ sets SPI_MODE3 for ST7796 on ESP32; this panel needs MODE0 (same as pre-1.5.6 default).
+namespace {
+class Arduino_ST7796_SPI_MODE0 : public Arduino_ST7796 {
+public:
+  Arduino_ST7796_SPI_MODE0(
+      Arduino_DataBus *b, int8_t rst = GFX_NOT_DEFINED, uint8_t r = 0,
+      bool ips = false, int16_t w = ST7796_TFTWIDTH, int16_t h = ST7796_TFTHEIGHT,
+      uint8_t col_offset1 = 0, uint8_t row_offset1 = 0,
+      uint8_t col_offset2 = 0, uint8_t row_offset2 = 0)
+      : Arduino_ST7796(b, rst, r, ips, w, h, col_offset1, row_offset1, col_offset2, row_offset2) {}
+
+  bool begin(int32_t speed = GFX_NOT_DEFINED) override {
+    _override_datamode = SPI_MODE0;
+    return Arduino_TFT::begin(speed);
+  }
+};
+} // namespace
 
 // Partial buffer size tuned for internal RAM on Arduino_GFX 1.5.5
 #define LVGL_BUFFER_LINES   480
@@ -296,8 +315,9 @@ extern "C" lv_display_t *lvgl_lcd_init_perf(void)
   }
 
   if (!gfx) {
+    // TODO: SPI_MODE0 via Arduino_ST7796_SPI_MODE0 (see above). Change this to Arduino_ST7796 when this github issue is solved: https://github.com/moononournation/Arduino_GFX/issues/788
     // IPS = true (per Waveshare docs)
-    gfx = new Arduino_ST7796(bus, LCD_RST, 0 /* rotation */, true /* IPS */, LCD_WIDTH, LCD_HEIGHT);
+    gfx = new Arduino_ST7796_SPI_MODE0(bus, LCD_RST, 0 /* rotation */, true /* IPS */, LCD_WIDTH, LCD_HEIGHT);
   }
 
   Serial.println("[PANEL] gfx->begin()");

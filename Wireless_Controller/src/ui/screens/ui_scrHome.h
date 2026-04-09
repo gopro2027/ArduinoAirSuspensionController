@@ -1,6 +1,8 @@
 #ifndef ui_scrHome_h
 #define ui_scrHome_h
 
+#ifndef SCREEN_MODE_CIRCLE
+
 #include <user_defines.h>
 #include "ui/components/Scr.h"
 #include "utils/util.h"
@@ -26,4 +28,6 @@ public:
 
 extern ScrHome scrHome;
 
-#endif
+#endif /* !SCREEN_MODE_CIRCLE */
+
+#endif /* ui_scrHome_h */

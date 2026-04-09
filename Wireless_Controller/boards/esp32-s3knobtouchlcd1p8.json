@@ -1,0 +1,95 @@
+{
+  "build": {
+    "arduino": {
+      "ldscript": "esp32s3_out.ld",
+      "memory_type": "qio_opi"
+    },
+    "core": "esp32",
+    "extra_flags": [
+      "'-D ARDUINO_ESP32S3_DEV'",
+      "'-D BOARD_HAS_PSRAM'",
+      "'-D ARDUINO_USB_MODE=1'",
+      "'-D ARDUINO_RUNNING_CORE=1'",
+      "'-D ARDUINO_EVENT_RUNNING_CORE=1'",
+      "'-D ARDUINO_USB_CDC_ON_BOOT=0'",
+      "'-D ESP32_S3KNOBTOUCHLCD1P8'",
+      "'-D DISPLAY_WIDTH=360'",
+      "'-D DISPLAY_HEIGHT=360'",
+      "'-D LVGL_BUFFER_PIXELS=(DISPLAY_WIDTH*DISPLAY_HEIGHT/4)'",
+      "'-D LVGL_BUFFER_MALLOC_FLAGS=(MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT)'",
+      "'-D GPIO_BCKL=47'",
+
+      "'-D DISPLAY_SH8601_QSPI'",
+      "'-D SH8601_QSPI_HOST=SPI2_HOST'",
+      "'-D SH8601_QSPI_DMA_CHANNEL=SPI_DMA_CH_AUTO'",
+      "'-D SH8601_QSPI_BUS_PCLK_IO_NUM=13'",
+      "'-D SH8601_QSPI_BUS_DATA0_IO_NUM=15'",
+      "'-D SH8601_QSPI_BUS_DATA1_IO_NUM=16'",
+      "'-D SH8601_QSPI_BUS_DATA2_IO_NUM=17'",
+      "'-D SH8601_QSPI_BUS_DATA3_IO_NUM=18'",
+      "'-D SH8601_QSPI_CONFIG_CS_GPIO_NUM=14'",
+      "'-D SH8601_QSPI_CONFIG_PCLK_HZ=40000000'",
+      "'-D SH8601_QSPI_CONFIG_TRANS_QUEUE_DEPTH=10'",
+      "'-D SH8601_QSPI_CONFIG_LCD_CMD_BITS=32'",
+      "'-D SH8601_QSPI_CONFIG_LCD_PARAM_BITS=8'",
+      "'-D SH8601_DEV_CONFIG_RESET_GPIO_NUM=21'",
+      "'-D SH8601_DEV_CONFIG_COLOR_SPACE=LCD_RGB_ELEMENT_ORDER_RGB'",
+      "'-D SH8601_DEV_CONFIG_BITS_PER_PIXEL=16'",
+
+      "'-D DISPLAY_SWAP_XY=false'",
+      "'-D DISPLAY_MIRROR_X=false'",
+      "'-D DISPLAY_MIRROR_Y=false'",
+
+      "'-D BOARD_HAS_TOUCH'",
+      "'-D CONFIG_ESP_LCD_TOUCH_MAX_POINTS=1'",
+      "'-D CONFIG_ESP_LCD_TOUCH_MAX_BUTTONS=0'",
+
+      "'-D TOUCH_CST816_I2C'",
+      "'-D CST816_IO_I2C_CONFIG_DEV_ADDRESS=0x15'",
+      "'-D CST816_I2C_HOST=I2C_NUM_0'",
+      "'-D CST816_I2C_CONFIG_SDA_IO_NUM=11'",
+      "'-D CST816_I2C_CONFIG_SCL_IO_NUM=12'",
+      "'-D CST816_I2C_CONFIG_SDA_PULLUP_EN=GPIO_PULLUP_ENABLE'",
+      "'-D CST816_I2C_CONFIG_SCL_PULLUP_EN=GPIO_PULLUP_ENABLE'",
+      "'-D CST816_I2C_CONFIG_MASTER_CLK_SPEED=300000'",
+      "'-D CST816_TOUCH_CONFIG_X_MAX=DISPLAY_WIDTH'",
+      "'-D CST816_TOUCH_CONFIG_Y_MAX=DISPLAY_HEIGHT'",
+
+      "'-D TOUCH_SWAP_XY=false'",
+      "'-D TOUCH_MIRROR_X=false'",
+      "'-D TOUCH_MIRROR_Y=false'",
+
+      "'-D BOARD_HAS_ENCODER'",
+      "'-D ENCODER_A_PIN=8'",
+      "'-D ENCODER_B_PIN=7'"
+    ],
+    "f_cpu": "240000000L",
+    "f_flash": "80000000L",
+    "flash_mode": "qio",
+    "mcu": "esp32s3",
+    "variant": "esp32s3"
+  },
+  "connectivity": [
+    "wifi",
+    "bluetooth",
+    "ethernet",
+    "can"
+  ],
+  "debug": {
+    "openocd_board": "esp32s3.cfg"
+  },
+  "frameworks": [
+    "arduino",
+    "espidf"
+  ],
+  "name": "esp32-s3-knob-touch-lcd-1p8",
+  "upload": {
+    "flash_size": "16MB",
+    "maximum_ram_size": 327680,
+    "maximum_size": 4194304,
+    "require_upload_port": true,
+    "speed": 115200
+  },
+  "url": "https://www.waveshare.com/wiki/ESP32-S3-Knob-Touch-LCD-1.8",
+  "vendor": "Waveshare"
+}

@@ -9,8 +9,15 @@
 #include "Arduino.h"
 #include "lvgl.h"
 
+/* Must be before SCREEN_MODE_CIRCLE branching — device_lib_exports.h defines the macro per board. */
+#include "device_lib_exports.h"
+
+#ifdef SCREEN_MODE_CIRCLE
+#include "ui_circle/screens/circle_scrHome.h"
+#else
 #include "screens/ui_scrHome.h"
 #include "screens/ui_scrPresets.h"
+#endif
 #include "screens/ui_scrSettings.h"
 
 #include "utils/util.h"

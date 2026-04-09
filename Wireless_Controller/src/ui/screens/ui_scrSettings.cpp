@@ -1,5 +1,9 @@
+#include "device_lib_exports.h"
 #include "ui_scrSettings.h"
+
+#ifndef SCREEN_MODE_CIRCLE
 #include "ui/components/navbar.h"
+#endif
 
 ScrSettings scrSettings(false);
 
@@ -35,13 +39,19 @@ static void style_dropdown_closed(lv_obj_t *dd)
     lv_obj_set_style_radius(dd, 12, LV_PART_MAIN);
 
     lv_obj_set_style_text_color(dd, lv_color_hex(0xF2F4F7), LV_PART_MAIN);
+#ifdef SCREEN_MODE_CIRCLE
+    lv_obj_set_style_text_font(dd, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(dd, 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_right(dd, 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_top(dd, 8, LV_PART_MAIN);
+    lv_obj_set_style_pad_bottom(dd, 8, LV_PART_MAIN);
+#else
     lv_obj_set_style_text_font(dd, &lv_font_montserrat_20, LV_PART_MAIN);
-
-    // Comfortable touch padding
     lv_obj_set_style_pad_left(dd, 14, LV_PART_MAIN);
     lv_obj_set_style_pad_right(dd, 14, LV_PART_MAIN);
     lv_obj_set_style_pad_top(dd, 10, LV_PART_MAIN);
     lv_obj_set_style_pad_bottom(dd, 10, LV_PART_MAIN);
+#endif
 
     // Indicator (arrow) - present but not screaming
     lv_obj_set_style_text_color(dd, lv_color_hex(0xC9D0D8), LV_PART_INDICATOR);
@@ -230,44 +240,63 @@ void ScrSettings::init(lv_obj_t *parent)
     int scrW = getScreenWidth();
     int scrH = getScreenHeight();
 
-    // Create main container for settings (not scrollable)
+#ifdef SCREEN_MODE_CIRCLE
+    const int topInset = 44;
+    const int bottomInset = 40;
+    const int usableH = scrH - topInset - bottomInset;
+    const int containerW = scrW - 40;
+    const int menuBarHeight = 46;
+#else
+    const int topInset = STATUSBAR_HEIGHT;
+    const int usableH = scrH - NAVBAR_HEIGHT - STATUSBAR_HEIGHT;
+    const int containerW = scrW;
+    const int menuBarHeight = scaledY(54);
+#endif
+
     menu_container = lv_obj_create(this->scr);
     lv_obj_remove_style_all(menu_container);
-    lv_obj_set_size(menu_container, scrW, scrH - NAVBAR_HEIGHT - STATUSBAR_HEIGHT);
-    lv_obj_align(menu_container, LV_ALIGN_TOP_MID, 0, STATUSBAR_HEIGHT);
+    lv_obj_set_size(menu_container, containerW, usableH);
+    lv_obj_align(menu_container, LV_ALIGN_TOP_MID, 0, topInset);
     lv_obj_set_style_bg_opa(menu_container, LV_OPA_TRANSP, 0);
     lv_obj_set_layout(menu_container, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(menu_container, LV_FLEX_FLOW_COLUMN);
     lv_obj_clear_flag(menu_container, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Create top menu bar with dropdown (fixed, not scrollable)
-    const int menuBarHeight = scaledY(54);
     lv_obj_t *menu_bar = lv_obj_create(menu_container);
     lv_obj_remove_style_all(menu_bar);
-    lv_obj_set_size(menu_bar, scrW, menuBarHeight);
-    // lv_obj_set_style_bg_color(menu_bar, lv_color_hex(0x0B0E12), 0);
+    lv_obj_set_size(menu_bar, LV_PCT(100), menuBarHeight);
     lv_obj_set_style_bg_opa(menu_bar, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_layout(menu_bar, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(menu_bar, LV_FLEX_FLOW_ROW);
+#ifdef SCREEN_MODE_CIRCLE
+    lv_obj_set_flex_align(menu_bar, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_hor(menu_bar, 40, 0);
+    lv_obj_set_style_pad_ver(menu_bar, 2, 0);
+#else
     lv_obj_set_flex_align(menu_bar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_all(menu_bar, 6, 0);
+#endif
     lv_obj_clear_flag(menu_bar, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Dropdown
     lv_obj_t *dropdown = lv_dropdown_create(menu_bar);
     lv_dropdown_set_options(dropdown,
         "Status\nGame Controller\nML/AI\nBasic settings\nLevelling Mode\nUnits\nScreen Settings\nConfig\nWifi / Update");
+#ifdef SCREEN_MODE_CIRCLE
+    lv_obj_set_width(dropdown, scrW - 100);
+    lv_obj_set_height(dropdown, 40);
+#else
     lv_obj_set_width(dropdown, scrW - scaledX(12));
     lv_obj_set_height(dropdown, scaledY(44));
+#endif
     style_dropdown_closed(dropdown);
 
     lv_obj_add_event_cb(dropdown, section_dropdown_event_cb, LV_EVENT_VALUE_CHANGED, this);
     lv_obj_add_event_cb(dropdown, section_dropdown_event_cb, LV_EVENT_READY, this);
 
-    // Create pages container (scrollable area for content only)
     lv_obj_t *pages_container = lv_obj_create(menu_container);
     lv_obj_remove_style_all(pages_container);
-    lv_obj_set_size(pages_container, scrW, scrH - NAVBAR_HEIGHT - STATUSBAR_HEIGHT - menuBarHeight);
+    lv_obj_set_size(pages_container, LV_PCT(100), usableH - menuBarHeight);
+    lv_obj_align(pages_container, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_set_style_bg_opa(pages_container, LV_OPA_TRANSP, 0);
     lv_obj_set_layout(pages_container, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(pages_container, LV_FLEX_FLOW_COLUMN);
@@ -282,7 +311,7 @@ void ScrSettings::init(lv_obj_t *parent)
     // --- Status page ---
     lv_obj_t *status_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(status_page);
-    lv_obj_set_size(status_page, scrW, LV_SIZE_CONTENT);
+    lv_obj_set_size(status_page, LV_PCT(100), LV_SIZE_CONTENT);
     lv_obj_set_layout(status_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(status_page, LV_FLEX_FLOW_COLUMN);
     this->pages[0] = status_page;
@@ -319,7 +348,7 @@ void ScrSettings::init(lv_obj_t *parent)
     // --- Game Controller page ---
     lv_obj_t *game_controller_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(game_controller_page);
-    lv_obj_set_size(game_controller_page, scrW, LV_SIZE_CONTENT);
+    lv_obj_set_size(game_controller_page, LV_PCT(100), LV_SIZE_CONTENT);
     lv_obj_set_layout(game_controller_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(game_controller_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(game_controller_page, LV_OBJ_FLAG_HIDDEN);
@@ -370,7 +399,7 @@ void ScrSettings::init(lv_obj_t *parent)
     // --- ML/AI page ---
     lv_obj_t *ml_ai_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(ml_ai_page);
-    lv_obj_set_size(ml_ai_page, scrW, LV_SIZE_CONTENT);
+    lv_obj_set_size(ml_ai_page, LV_PCT(100), LV_SIZE_CONTENT);
     lv_obj_set_layout(ml_ai_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(ml_ai_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(ml_ai_page, LV_OBJ_FLAG_HIDDEN);
@@ -396,7 +425,7 @@ void ScrSettings::init(lv_obj_t *parent)
     // --- Basic settings page ---
     lv_obj_t *basic_settings_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(basic_settings_page);
-    lv_obj_set_size(basic_settings_page, scrW, LV_SIZE_CONTENT);
+    lv_obj_set_size(basic_settings_page, LV_PCT(100), LV_SIZE_CONTENT);
     lv_obj_set_layout(basic_settings_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(basic_settings_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(basic_settings_page, LV_OBJ_FLAG_HIDDEN);
@@ -487,7 +516,7 @@ void ScrSettings::init(lv_obj_t *parent)
     // --- Levelling Mode page ---
     lv_obj_t *levelling_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(levelling_page);
-    lv_obj_set_size(levelling_page, scrW, LV_SIZE_CONTENT);
+    lv_obj_set_size(levelling_page, LV_PCT(100), LV_SIZE_CONTENT);
     lv_obj_set_layout(levelling_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(levelling_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(levelling_page, LV_OBJ_FLAG_HIDDEN);
@@ -510,7 +539,7 @@ void ScrSettings::init(lv_obj_t *parent)
     // --- Units page ---
     lv_obj_t *units_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(units_page);
-    lv_obj_set_size(units_page, scrW, LV_SIZE_CONTENT);
+    lv_obj_set_size(units_page, LV_PCT(100), LV_SIZE_CONTENT);
     lv_obj_set_layout(units_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(units_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(units_page, LV_OBJ_FLAG_HIDDEN);
@@ -523,7 +552,7 @@ void ScrSettings::init(lv_obj_t *parent)
     // --- Screen Settings page ---
     lv_obj_t *screen_settings_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(screen_settings_page);
-    lv_obj_set_size(screen_settings_page, scrW, LV_SIZE_CONTENT);
+    lv_obj_set_size(screen_settings_page, LV_PCT(100), LV_SIZE_CONTENT);
     lv_obj_set_layout(screen_settings_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(screen_settings_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(screen_settings_page, LV_OBJ_FLAG_HIDDEN);
@@ -543,7 +572,7 @@ void ScrSettings::init(lv_obj_t *parent)
     });
     ((Option *)this->ui_brightnessSlider)->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
 
-    // Swipe navigation toggle
+#ifndef SCREEN_MODE_CIRCLE
     allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Navigation", {.STRING = ""}));
     allOptions.push_back(new Option(screen_settings_page, OptionType::ON_OFF, "Swipe Navigation", {.INT = getswipeNavigation() ? 1 : 0}, [](void *data)
     {
@@ -551,6 +580,7 @@ void ScrSettings::init(lv_obj_t *parent)
         setswipeNavigation(enabled);
         globalNavbar.setSwipeEnabled(enabled);
     }));
+#endif
 
     #if SUPPORTS_ROTATION == 1
     
@@ -594,7 +624,7 @@ void ScrSettings::init(lv_obj_t *parent)
     // --- Config page ---
     lv_obj_t *config_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(config_page);
-    lv_obj_set_size(config_page, scrW, LV_SIZE_CONTENT);
+    lv_obj_set_size(config_page, LV_PCT(100), LV_SIZE_CONTENT);
     lv_obj_set_layout(config_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(config_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(config_page, LV_OBJ_FLAG_HIDDEN);
@@ -666,7 +696,7 @@ void ScrSettings::init(lv_obj_t *parent)
     // --- Wifi / Update page ---
     lv_obj_t *wifi_update_page = lv_obj_create(pages_container);
     lv_obj_remove_style_all(wifi_update_page);
-    lv_obj_set_size(wifi_update_page, scrW, LV_SIZE_CONTENT);
+    lv_obj_set_size(wifi_update_page, LV_PCT(100), LV_SIZE_CONTENT);
     lv_obj_set_layout(wifi_update_page, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(wifi_update_page, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_flag(wifi_update_page, LV_OBJ_FLAG_HIDDEN);
@@ -893,7 +923,9 @@ void ScrSettings::cleanup()
     delete ui_mac;
     delete ui_volts;
     delete ui_brightnessSlider;
+#if SUPPORTS_ROTATION == 1
     delete ui_screenRotation;
+#endif
     delete ui_themePreset;
     delete ui_rfbuttonA;
     delete ui_rfbuttonB;

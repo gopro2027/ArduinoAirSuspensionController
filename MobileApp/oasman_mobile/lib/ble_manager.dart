@@ -40,6 +40,7 @@ class BTOasIdentifier {
   static const int BP32PKT = 30;
   static const int BROADCASTNAME = 35;
   static const int UPDATESTATUSREQUEST = 36;
+  static const int RFCOMMAND = 37;
 }
 
 /// Config flags in ConfigValuesPacket.configFlagsBits (GETCONFIGVALUES).
@@ -171,13 +172,31 @@ class BLEManager extends ChangeNotifier {
   bool airOutOnShutoff = false;
   bool safetyMode = true;
   bool aiStatusEnabled = false;
+  /// Mirrors ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE (preserved on save).
+  bool heightSensorMode = false;
   String bleBroadcastName = '';
+
+  /// Incremented when a GETCONFIGVALUES packet updates local config fields.
+  int configRevision = 0;
   int compressorOnPSI = 0;
   int compressorOffPSI = 0;
   int systemShutoffTimeM = 15;
   int pressureSensorMax = 0;
   int bagVolumePercentage = 0;
   int bagMaxPressure = 0;
+
+  /// From STATUSREPORT args (AI learning UI).
+  int aiLearnPercent = 0;
+  int aiReadyBittset = 0;
+
+  /// Height sensor invert flags (ConfigValuesPacket byte 20 / args offset 16+8).
+  int heightSensorInvertBits = 0;
+
+  /// RF key fob button preset indices on manifold (0–4 = presets 1–5).
+  int rfButtonAPreset = 0;
+  int rfButtonBPreset = 0;
+  int rfButtonCPreset = 0;
+  int rfButtonDPreset = 0;
 
   /// Saved preset pressures: presetPressures[profileIndex] = [FP, RP, FD, RD]
   Map<int, List<int>> presetPressures = {};
@@ -416,6 +435,92 @@ class BLEManager extends ChangeNotifier {
         BTOasIdentifier.COMPRESSORSTATUS, [BLEInt(on ? 1 : 0)]));
   }
 
+  /// RfCommandType / chip / button numbers match [BTOas.h].
+  static const int rfCommandChipCmd = 1;
+  static const int rfCommandButtonAssign = 2;
+  static const int rfCmdDelete = 1;
+  static const int rfCmdLearnMomentary = 2;
+  static const int rfButtonA = 1;
+  static const int rfButtonB = 2;
+  static const int rfButtonC = 3;
+  static const int rfButtonD = 4;
+
+  static const int bp32EnableNewConn = 0;
+  static const int bp32ForgetDevices = 1;
+  static const int bp32DisconnectDevices = 2;
+
+  void sendBp32Command(int cmd, {bool value = true}) {
+    sendRestCommand(buildRestPacket(BTOasIdentifier.BP32PKT,
+        [BLEShort(cmd), BLEShort(value ? 1 : 0)]));
+  }
+
+  void sendRfCommand(int commandType, int valueOne, int valueTwo) {
+    sendRestCommand(buildRestPacket(BTOasIdentifier.RFCOMMAND, [
+      BLEInt(commandType),
+      BLEInt(valueOne),
+      BLEInt(valueTwo),
+    ]));
+  }
+
+  /// Assign key fob button to preset [presetOneToFive] (1–5).
+  void sendRfButtonPresetAssign(int rfButtonNumber, int presetOneToFive) {
+    final p = presetOneToFive.clamp(1, 5);
+    sendRfCommand(
+        rfCommandButtonAssign, rfButtonNumber, p - 1);
+  }
+
+  void sendDetectPressureSensors() {
+    sendRestCommand(
+        buildRestPacket(BTOasIdentifier.DETECTPRESSURESENSORS, []));
+  }
+
+  void sendResetAi() {
+    sendRestCommand(buildRestPacket(BTOasIdentifier.RESETAIPKT, []));
+  }
+
+  void sendTurnOffManifold() {
+    sendRestCommand(buildRestPacket(BTOasIdentifier.TURNOFF, []));
+  }
+
+  void sendRebootManifold() {
+    sendRestCommand(buildRestPacket(BTOasIdentifier.REBOOT, []));
+  }
+
+  /// Unlearn key fob (RF_COMMAND_CHIP_CMD + RF_CMD_DELETE).
+  void sendRfUnlearnFob() {
+    sendRfCommand(rfCommandChipCmd, rfCmdDelete, 0);
+  }
+
+  /// Enter learn mode for momentary key fob.
+  void sendRfLearnFobMomentary() {
+    sendRfCommand(rfCommandChipCmd, rfCmdLearnMomentary, 0);
+  }
+
+  /// OTA / Wi-Fi download (StartwebPacket): SSID in args[0..49], password in args[50..99].
+  void sendStartWebUpdate(String ssid, String password) {
+    final args = List<int>.filled(100, 0);
+    final s = utf8.encode(ssid);
+    final p = utf8.encode(password);
+    for (var i = 0; i < s.length && i < 49; i++) {
+      args[i] = s[i];
+    }
+    for (var i = 0; i < p.length && i < 49; i++) {
+      args[50 + i] = p[i];
+    }
+    sendRestCommand(
+        [..._encodeInt32(BTOasIdentifier.STARTWEB), ...args]);
+  }
+
+  /// Toggle one wheel bit in [heightSensorInvertBits] (0..3 = FP, RP, FD, RD order matches wireless labels).
+  void setHeightInvertWheel(int wheelBitIndex, bool inverted) {
+    if (wheelBitIndex < 0 || wheelBitIndex > 3) return;
+    if (inverted) {
+      heightSensorInvertBits |= (1 << wheelBitIndex);
+    } else {
+      heightSensorInvertBits &= ~(1 << wheelBitIndex);
+    }
+  }
+
   /// Mirrors Wireless_Controller's onBLEConnectionCompleted():
   ///   sendConfigValuesPacket(false) + requestPreset() + sendUpdateStatusRequestPacket()
   Future<void> _onConnectionCompleted() async {
@@ -576,8 +681,21 @@ class BLEManager extends ChangeNotifier {
           aiStatusEnabled = (configFlagsBits &
                   (1 << ConfigFlagsBit.CONFIG_AI_STATUS_ENABLED)) !=
               0;
+          heightSensorMode = (configFlagsBits &
+                  (1 << ConfigFlagsBit.CONFIG_HEIGHT_SENSOR_MODE)) !=
+              0;
+
+          configRevision++;
 
           // Store full args (100 bytes) for echoing back when saving config
+          if (data.length > 23) {
+            rfButtonAPreset = data[20] & 0xFF;
+            rfButtonBPreset = data[21] & 0xFF;
+            rfButtonCPreset = data[22] & 0xFF;
+            rfButtonDPreset = data[23] & 0xFF;
+            heightSensorInvertBits = data[24] & 0xFF;
+          }
+
           if (data.length >= 104) {
             _lastConfigArgs = List<int>.from(data.sublist(4, 104));
             if (_lastConfigArgs!.length < 100) {
@@ -650,10 +768,11 @@ class BLEManager extends ChangeNotifier {
 
   void _handleIncomingData(List<int> data) {
     try {
-      if (data.length >= 16) {
+      if (data.length >= 4) {
         final packetId = _decodeInt32(data, 0);
         switch (packetId) {
           case BTOasIdentifier.STATUSREPORT: //handle incoming status packages
+            if (data.length < 14) break;
             final wheelPressures = [
               _decodeShort(data, 4),
               _decodeShort(data, 6),
@@ -661,11 +780,16 @@ class BLEManager extends ChangeNotifier {
               _decodeShort(data, 10),
             ];
             final tankPressure = _decodeShort(data, 12);
-
-            final statusBittset = data.sublist(16, 20);
-            print(data);
-            print(statusBittset);
-            handleStatusBittset(statusBittset);
+            if (data.length >= 16) {
+              aiLearnPercent = data[14] & 0xFF;
+              aiReadyBittset = data[15] & 0xFF;
+            }
+            if (data.length >= 20) {
+              final statusBittset = data.sublist(16, 20);
+              print(data);
+              print(statusBittset);
+              handleStatusBittset(statusBittset);
+            }
 
             pressureValues = {
               "frontLeft": wheelPressures[2].toString(),
@@ -717,6 +841,9 @@ class BLEManager extends ChangeNotifier {
 
   bool isConnected() => connectedDevice != null;
 
+  /// Call after mutating config fields from the UI so [Consumer]s rebuild.
+  void refreshFromUi() => notifyListeners();
+
   int _buildConfigFlagsBits() {
     int bits = 0;
     if (maintainPressure)
@@ -726,6 +853,9 @@ class BLEManager extends ChangeNotifier {
       bits |= (1 << ConfigFlagsBit.CONFIG_AIR_OUT_ON_SHUTOFF);
     if (safetyMode) bits |= (1 << ConfigFlagsBit.CONFIG_SAFETY_MODE);
     if (aiStatusEnabled) bits |= (1 << ConfigFlagsBit.CONFIG_AI_STATUS_ENABLED);
+    if (heightSensorMode) {
+      bits |= (1 << ConfigFlagsBit.CONFIG_HEIGHT_SENSOR_MODE);
+    }
     return bits;
   }
 
@@ -743,6 +873,11 @@ class BLEManager extends ChangeNotifier {
     args[13] = compressorOnPSI;
     args[14] = compressorOffPSI;
     args[15] = 1; // setValues = true
+    args[16] = rfButtonAPreset.clamp(0, 255);
+    args[17] = rfButtonBPreset.clamp(0, 255);
+    args[18] = rfButtonCPreset.clamp(0, 255);
+    args[19] = rfButtonDPreset.clamp(0, 255);
+    args[20] = heightSensorInvertBits.clamp(0, 255);
 
     final packet = [..._encodeInt32(BTOasIdentifier.GETCONFIGVALUES), ...args];
     sendRestCommand(packet);

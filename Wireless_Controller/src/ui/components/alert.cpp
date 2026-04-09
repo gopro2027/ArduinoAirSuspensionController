@@ -1,7 +1,15 @@
 #include "alert.h"
+#include "device_lib_exports.h"
 
 // Dynamic toast dimensions based on screen size
+#ifdef SCREEN_MODE_CIRCLE
+/* Round panel: keep the top toast inside the visible circle (full logical
+ * width minus small margin was clipping at the sides). */
+#define TOAST_H_INSET 56
+#define TOAST_WIDTH (getScreenWidth() - (TOAST_H_INSET)*2)
+#else
 #define TOAST_WIDTH (getScreenWidth() - scaledX(20))
+#endif
 #define TOAST_HEIGHT scaledY(50)
 #define TOAST_MARGIN scaledY(10)
 #define TOAST_PADDING_X scaledX(12)

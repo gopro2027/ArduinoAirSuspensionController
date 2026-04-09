@@ -1,6 +1,8 @@
 #ifndef statusbar_h
 #define statusbar_h
 
+#ifndef SCREEN_MODE_CIRCLE
+
 #include <Arduino.h>
 #include "lvgl.h"
 
@@ -62,6 +64,12 @@ private:
     bool panelOpen;               // Track panel state
     bool hasActiveAlert;          // Track alert state
 
+    // Cached values to avoid per-frame invalidation
+    char cachedBattStr[8];        // Last battery string
+    const char* cachedBattIcon;   // Last battery icon symbol
+    uint32_t cachedBattColor;     // Last battery icon color
+    uint8_t cachedStatusBits;     // Last status bitmask
+
     void createPullDownPanel(lv_obj_t* parent);
     void updateBatteryStatus();
     void updateAlertStatus();
@@ -71,4 +79,6 @@ private:
 // Global statusbar instance
 extern Statusbar globalStatusbar;
 
-#endif
+#endif /* !SCREEN_MODE_CIRCLE */
+
+#endif /* statusbar_h */
