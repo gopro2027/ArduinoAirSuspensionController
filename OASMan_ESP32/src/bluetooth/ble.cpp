@@ -718,6 +718,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         auxillaryOutputConfig.mode = (AuxillaryOutputMode)getauxillaryOutputMode();
         auxillaryOutputConfig.timeUnit = (AuxillaryOutputModeTimeUnit)getauxillaryOutputModeTimeUnit();
         auxillaryOutputConfig.time = getauxillaryOutputTime();
+        auxillaryOutputConfig.interval = getauxillaryOutputInterval();
         ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getheightSensorInvertBits(), configFlagsBits, auxillaryOutputConfig);
         if (*recpkt->_setValues())
         {

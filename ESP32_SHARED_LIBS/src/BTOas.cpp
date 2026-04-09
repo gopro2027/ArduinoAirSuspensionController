@@ -228,6 +228,7 @@ ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, u
     this->_auxillaryOutputConfig()->mode = auxillaryOutputConfig.mode;
     this->_auxillaryOutputConfig()->timeUnit = auxillaryOutputConfig.timeUnit;
     this->_auxillaryOutputConfig()->time = auxillaryOutputConfig.time;
+    this->_auxillaryOutputConfig()->interval = auxillaryOutputConfig.interval;
 }
 
 uint32_t *ConfigValuesPacket::_systemShutoffTimeM()

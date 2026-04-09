@@ -397,9 +397,21 @@ AuxillaryOutputMode getauxillaryOutputMode() {
 AuxillaryOutputModeTimeUnit getauxillaryOutputModeTimeUnit() {
     return (AuxillaryOutputModeTimeUnit)_SaveData.auxillaryOutputPreference.auxillaryOutputModeTimeUnit.get().i;
 }
-uint16_t getauxillaryOutputTime() {
+uint8_t getauxillaryOutputTime() {
     return _SaveData.auxillaryOutputPreference.auxillaryOutputTime.get().i;
 }
+uint8_t getauxillaryOutputInterval() {
+    return _SaveData.auxillaryOutputPreference.auxillaryOutputInterval.get().i;
+}
+
+// not part of the config, this is the counter value we store to decide when to trigger based on the interval
+uint8_t getauxillaryIntervalCounter() {
+    return _SaveData.auxillaryOutputPreference.auxillaryIntervalCounter.get().i;
+}
+void setauxillaryIntervalCounter(uint8_t value) {
+    _SaveData.auxillaryOutputPreference.auxillaryIntervalCounter.set(value);
+}
+
 
 void saveAuxillaryOutputPreference(AuxillaryOutputModePayload payload) {
     _SaveData.auxillaryOutputPreference.save(payload);

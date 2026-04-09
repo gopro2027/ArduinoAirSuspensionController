@@ -10,6 +10,17 @@ AuxillaryOutput::AuxillaryOutput(InputType *pin) {
     
 }
 
+void AuxillaryOutput::eventTriggered() {
+    // logic may be a little odd, but that is because we want it to avoid writing to memory if interval is 0, so we never increment if interval is set to 0. Typical shorter code would have likely involved a roll-over to 1 at the end and immediately back to 0 but we want to avoid that.
+    int count = getauxillaryIntervalCounter();
+    if (count >= getauxillaryOutputInterval()) {
+        setauxillaryIntervalCounter(0);
+        openForDuration(getDurationInMillis());
+    } else {
+        setauxillaryIntervalCounter(count + 1);
+    }
+}
+
 void AuxillaryOutput::loop() {
     // getauxillaryOutputMode()
     // getauxillaryOutputModeTimeUnit()
@@ -27,12 +38,12 @@ void AuxillaryOutput::loop() {
     int bittset = getauxillaryOutputMode();
     if (bittset & (1 << AUX_MODE_STARTUP_TIMED)) {
         if (doStartupEvent) {
-            openForDuration(getDurationInMillis());
+            eventTriggered();
         }
     }
     if (bittset & (1 << AUX_MODE_SHUTDOWN_TIMED)) {
         if (doShutdownEvent) {
-            openForDuration(getDurationInMillis());
+            eventTriggered();
         }
     }
 

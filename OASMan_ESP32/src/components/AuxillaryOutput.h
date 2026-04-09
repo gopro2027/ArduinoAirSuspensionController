@@ -16,6 +16,8 @@ private:
     bool checkForCloseTime;
     unsigned long closeTime;
 
+    void eventTriggered();
+
 public:
     AuxillaryOutput();
     AuxillaryOutput(InputType *pin);

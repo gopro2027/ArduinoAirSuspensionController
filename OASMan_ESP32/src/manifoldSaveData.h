@@ -49,16 +49,23 @@ class AuxillaryOutputPreference {
     public:
     Preferencable auxillaryOutputMode; // byte
     Preferencable auxillaryOutputModeTimeUnit; // byte
-    Preferencable auxillaryOutputTime; // uint16_t
+    Preferencable auxillaryOutputTime; // uint8_t
+    Preferencable auxillaryOutputInterval; // uint8_t
+
+    Preferencable auxillaryIntervalCounter; // uint8_t
     void load() {
         auxillaryOutputMode.load("auxillaryOutputMode", AUX_MODE_NONE);
         auxillaryOutputModeTimeUnit.load("auxillaryOutputModeTimeUnit", AUX_MODE_TIME_SECONDS);
         auxillaryOutputTime.load("auxillaryOutputTime", 1);
+        auxillaryOutputInterval.load("auxillaryOutputInterval", 0);
+
+        auxillaryIntervalCounter.load("auxillaryIntervalCounter", 0);
     }
     void save(AuxillaryOutputModePayload payload) {
         auxillaryOutputMode.set(payload.mode);
         auxillaryOutputModeTimeUnit.set(payload.timeUnit);
         auxillaryOutputTime.set(payload.time);
+        auxillaryOutputInterval.set(payload.interval);
     }
 };
 
@@ -186,7 +193,9 @@ headerDefineSaveFunc(heightSensorInvertBits, uint8_t);
 
 headerDefineSaveFunc(auxillaryOutputMode, AuxillaryOutputMode);
 headerDefineSaveFunc(auxillaryOutputModeTimeUnit, AuxillaryOutputModeTimeUnit);
-headerDefineSaveFunc(auxillaryOutputTime, uint16_t);
+headerDefineSaveFunc(auxillaryOutputTime, uint8_t);
+headerDefineSaveFunc(auxillaryOutputInterval, uint8_t);
+headerDefineSaveFunc(auxillaryIntervalCounter, uint8_t);
 
 void saveAuxillaryOutputPreference(AuxillaryOutputModePayload payload);
 

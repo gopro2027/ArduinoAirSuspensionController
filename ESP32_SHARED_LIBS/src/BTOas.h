@@ -89,7 +89,8 @@ struct AuxillaryOutputModePayload
 {
     AuxillaryOutputMode mode;
     AuxillaryOutputModeTimeUnit timeUnit;
-    uint16_t time;
+    uint8_t time;
+    uint8_t interval;
 };
 static_assert(sizeof(AuxillaryOutputModePayload) == 4,
               "AuxillaryOutputModePayload must pack into 32 bits");
