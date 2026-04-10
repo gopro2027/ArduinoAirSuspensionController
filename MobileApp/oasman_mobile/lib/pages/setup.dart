@@ -390,15 +390,26 @@ class SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _readOnlyStatusRow(String label, String value) {
+    const labelStyle = TextStyle(color: Colors.white, fontSize: 16);
+    const valueStyle = TextStyle(color: Colors.white70, fontSize: 16);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(color: Colors.white, fontSize: 16)),
-          Text(value,
-              style: const TextStyle(color: Colors.white70, fontSize: 16)),
+          Expanded(
+            flex: 2,
+            child: Text(label, style: labelStyle),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              style: valueStyle,
+              textAlign: TextAlign.end,
+            ),
+          ),
         ],
       ),
     );
@@ -1476,7 +1487,7 @@ class SettingsPageState extends State<SettingsPage> {
                   selector: (_, m) => m.updateStatus,
                   builder: (context, statusText, _) {
                     return _readOnlyStatusRow(
-                      'Manifold:',
+                      'Manifold Update Status:',
                       statusText.isEmpty ? '—' : statusText,
                     );
                   },
