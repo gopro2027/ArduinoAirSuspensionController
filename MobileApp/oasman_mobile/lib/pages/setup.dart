@@ -269,6 +269,16 @@ class SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _openWebsite() async {
+    final uri = Uri.parse('https://oasman.dev');
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the website')),
+      );
+    }
+  }
+
   Future<void> _openPrivacyPolicy() async {
     final uri = Uri.parse('https://oasman.dev/privacy');
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -277,6 +287,20 @@ class SettingsPageState extends State<SettingsPage> {
         const SnackBar(content: Text('Could not open the privacy policy')),
       );
     }
+  }
+
+  Widget _buildWebsiteLinkSection() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16.0, bottom: 0),
+      child: TextButton.icon(
+        onPressed: _openWebsite,
+        icon: const Icon(Icons.open_in_new, size: 20, color: Color(0xFFBB86FC)),
+        label: const Text(
+          'View website',
+          style: TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+      ),
+    );
   }
 
   Widget _buildPrivacyPolicySection() {
@@ -580,6 +604,7 @@ class SettingsPageState extends State<SettingsPage> {
                     ] else ...[
                       const ConnectManifoldCard(),
                     ],
+                    _buildWebsiteLinkSection(),
                     _buildPrivacyPolicySection(),
                   ],
                 ),
@@ -1363,13 +1388,6 @@ class SettingsPageState extends State<SettingsPage> {
                 _readOnlyStatusRow(
                   'Manifold:',
                   bm.updateStatus.isEmpty ? '—' : bm.updateStatus,
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(top: 8.0),
-                  child: SelectableText(
-                    'https://oasman.dev',
-                    style: TextStyle(color: Color(0xFF7B9FFF), fontSize: 14),
-                  ),
                 ),
               ],
             ),
