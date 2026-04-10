@@ -22,7 +22,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove" />
 
     <application
-        android:label="oasman_mobile"
+        android:label="OASMan"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

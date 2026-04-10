@@ -82,7 +82,7 @@ class _MyAppState extends State<MyApp> {
 
     // App is ready, use globalSettings
     return MaterialApp(
-      title: 'OAS-Man',
+      title: 'OASMan',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF000000)),
         useMaterial3: true,
