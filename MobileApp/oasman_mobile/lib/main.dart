@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker_android/image_picker_android.dart';
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +16,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (defaultTargetPlatform == TargetPlatform.android) {
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     final impl = ImagePickerPlatform.instance;
     if (impl is ImagePickerAndroid) {
       impl.useAndroidPhotoPicker = true;
@@ -62,7 +64,9 @@ class _MyAppState extends State<MyApp> {
       // Show loading indicator while settings load
       return const MaterialApp(
         home: Scaffold(
-          body: Center(child: CircularProgressIndicator()),
+          body: SafeArea(
+            child: Center(child: CircularProgressIndicator()),
+          ),
         ),
       );
     }
@@ -128,6 +132,7 @@ class _MainPageState extends State<MainPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       body: SafeArea(
+        bottom: false,
         child: orientation == Orientation.portrait
             ? Column(
                 children: [
@@ -145,10 +150,14 @@ class _MainPageState extends State<MainPage> {
                 ],
               ),
       ),
-      bottomNavigationBar: CustomBottomNavigationBar(
-        selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
-        itemCount: _pages.length,
+      bottomNavigationBar: SafeArea(
+        top: false,
+        maintainBottomViewPadding: true,
+        child: CustomBottomNavigationBar(
+          selectedIndex: _selectedIndex,
+          onItemTapped: _onItemTapped,
+          itemCount: _pages.length,
+        ),
       ),
     );
   }
