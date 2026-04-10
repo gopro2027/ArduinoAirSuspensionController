@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker_android/image_picker_android.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:provider/provider.dart';
 import 'models/appSettings.dart';
 import 'package:oasman_mobile/ble_manager.dart';
@@ -10,6 +13,13 @@ import 'package:oasman_mobile/pages/header.dart'; // Import your header
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (defaultTargetPlatform == TargetPlatform.android) {
+    final impl = ImagePickerPlatform.instance;
+    if (impl is ImagePickerAndroid) {
+      impl.useAndroidPhotoPicker = true;
+    }
+  }
 
   runApp(
     MultiProvider(

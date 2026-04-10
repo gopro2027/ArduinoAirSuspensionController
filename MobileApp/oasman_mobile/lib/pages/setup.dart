@@ -1095,25 +1095,25 @@ class SettingsPageState extends State<SettingsPage> {
                     ),
                   ],
                 ),
-                TextButton(
-                  onPressed: () => _showConfirm(
-                    title: 'Detect Pressure Sensors?',
-                    message:
-                        'WARNING: YOUR CAR WILL BE AIRED OUT. This routine learns which pressure sensors map to which wheels.',
-                    onConfirm: () {
-                      bm.sendDetectPressureSensors();
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Detection routine started'),
-                            duration: Duration(seconds: 3),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                  child: const Text('Detect Pressure Sensors'),
-                ),
+                // TextButton(
+                //   onPressed: () => _showConfirm(
+                //     title: 'Detect Pressure Sensors?',
+                //     message:
+                //         'WARNING: YOUR CAR WILL BE AIRED OUT. This routine learns which pressure sensors map to which wheels.',
+                //     onConfirm: () {
+                //       bm.sendDetectPressureSensors();
+                //       if (mounted) {
+                //         ScaffoldMessenger.of(context).showSnackBar(
+                //           const SnackBar(
+                //             content: Text('Detection routine started'),
+                //             duration: Duration(seconds: 3),
+                //           ),
+                //         );
+                //       }
+                //     },
+                //   ),
+                //   child: const Text('Detect Pressure Sensors'),
+                // ),
                 const Padding(
                   padding: EdgeInsets.only(top: 16, bottom: 8),
                   child: Text(
