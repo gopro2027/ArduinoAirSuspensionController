@@ -67,6 +67,8 @@ uint32_t AuxillaryOutput::getDurationInMillis() {
     uint32_t duration = getauxillaryOutputTime();
     AuxillaryOutputModeTimeUnit timeUnit = (AuxillaryOutputModeTimeUnit)getauxillaryOutputModeTimeUnit();
     switch (timeUnit) {
+        case AUX_MODE_TIME_DECISECONDS:
+            return duration * 100;
         case AUX_MODE_TIME_SECONDS:
             return duration * 1000;
         case AUX_MODE_TIME_MINUTES:

@@ -80,6 +80,7 @@ enum AuxillaryOutputMode : uint8_t
 
 enum AuxillaryOutputModeTimeUnit : uint8_t
 {
+    AUX_MODE_TIME_DECISECONDS,
     AUX_MODE_TIME_SECONDS,
     AUX_MODE_TIME_MINUTES,
     AUX_MODE_TIME_HOURS

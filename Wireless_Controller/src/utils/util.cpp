@@ -86,7 +86,7 @@ void requestPreset()
     sendRestPacket(&pkt);
 }
 
-ConfigValuesPacket util_configValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, {AUX_MODE_NONE, AUX_MODE_TIME_SECONDS, 0});
+ConfigValuesPacket util_configValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, {AUX_MODE_NONE, AUX_MODE_TIME_DECISECONDS, 0});
 
 void sendConfigValuesPacket(bool saveToManifold)
 {

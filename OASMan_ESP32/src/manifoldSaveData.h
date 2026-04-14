@@ -55,7 +55,7 @@ class AuxillaryOutputPreference {
     Preferencable auxillaryIntervalCounter; // uint8_t
     void load() {
         auxillaryOutputMode.load("auxillaryOutputMode", AUX_MODE_NONE);
-        auxillaryOutputModeTimeUnit.load("auxillaryOutputModeTimeUnit", AUX_MODE_TIME_SECONDS);
+        auxillaryOutputModeTimeUnit.load("auxillaryOutputModeTimeUnit", AUX_MODE_TIME_DECISECONDS);
         auxillaryOutputTime.load("auxillaryOutputTime", 1);
         auxillaryOutputInterval.load("auxillaryOutputInterval", 0);
 
