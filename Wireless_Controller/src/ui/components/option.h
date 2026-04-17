@@ -27,7 +27,8 @@ enum OptionType
     KEYBOARD_INPUT_NUMBER,
     KEYBOARD_INPUT_TEXT,
     BUTTON,
-    SLIDER
+    SLIDER,
+    DROPDOWN_SELECT
 };
 
 union OptionValue
@@ -42,6 +43,9 @@ const OptionValue VALUE_ONE = {.INT = 1};
 class Option
 {
 public:
+    /** Pass as `extraEventClickData` for `OptionType::BUTTON` to get press/release: callback receives `(void *)1` then `(void *)0`. */
+    static constexpr uintptr_t kButtonMomentaryExtraTag = 1u;
+
     lv_obj_t *root;
     lv_obj_t *text;
     lv_obj_t *rightHandObj;
@@ -50,6 +54,7 @@ public:
     option_event_cb_t event_cb;
     OptionType type;
     bool boolValue = false;
+    bool buttonMomentary = false;
     int optionRowHeight;
     lv_obj_t *ui_slider_value_text;
     int slider_min = 1;
@@ -60,7 +65,11 @@ public:
     Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue value = VALUE_ZERO, option_event_cb_t _event_cb = NULL, void *_extraEventClickData = NULL);
     ~Option();
     void setRightHandText(const char *str);
+    void setDropdownSelectedIndex(uint32_t index);
     void setSliderParams(int min, int max, bool display_above_value, lv_event_code_t trigger_event = LV_EVENT_VALUE_CHANGED);
+
+    static void styleDropdownClosed(lv_obj_t *dd);
+    static void styleDropdownList(lv_obj_t *dd);
     void setBooleanValue(bool value, bool netSend = false);
     void indentText(int extraX = 0);
     static void resetHeaderStyle();
