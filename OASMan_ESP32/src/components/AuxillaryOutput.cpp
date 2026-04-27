@@ -22,18 +22,6 @@ void AuxillaryOutput::eventTriggered() {
 }
 
 void AuxillaryOutput::loop() {
-    // getauxillaryOutputMode()
-    // getauxillaryOutputModeTimeUnit()
-    // getauxillaryOutputTime()
-    // if (getauxillaryOutputMode() == AUX_MODE_MANUAL_SWITCHED) {
-    //     if (getauxillaryOutputModeTimeUnit() == AUX_MODE_TIME_SECONDS) {
-    //         if (getauxillaryOutputTime() > 0) {
-    //             this->solenoid.open();
-    //         } else {
-    //             this->solenoid.close();
-    //         }
-    //     }
-    // }
 
     int bittset = getauxillaryOutputMode();
     if (bittset & (1 << AUX_MODE_STARTUP_TIMED)) {
