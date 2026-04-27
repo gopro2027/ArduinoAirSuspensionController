@@ -231,6 +231,34 @@ void ScrSettings::updateUpdateButtonVisbility()
     }
 }
 
+void styleSettingsSectionDropdown(lv_obj_t *dd)
+{
+    lv_obj_set_style_bg_color(dd, lv_color_hex(0x161A1F), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(dd, LV_OPA_COVER, LV_PART_MAIN);
+
+    lv_obj_set_style_border_width(dd, 2, LV_PART_MAIN);
+    lv_obj_set_style_border_color(dd, lv_color_hex(0x2A313A), LV_PART_MAIN);
+
+    lv_obj_set_style_radius(dd, 12, LV_PART_MAIN);
+
+    lv_obj_set_style_text_color(dd, lv_color_hex(0xF2F4F7), LV_PART_MAIN);
+#ifdef SCREEN_MODE_CIRCLE
+    lv_obj_set_style_text_font(dd, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(dd, 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_right(dd, 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_top(dd, 8, LV_PART_MAIN);
+    lv_obj_set_style_pad_bottom(dd, 8, LV_PART_MAIN);
+#else
+    lv_obj_set_style_text_font(dd, &lv_font_montserrat_20, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(dd, 14, LV_PART_MAIN);
+    lv_obj_set_style_pad_right(dd, 14, LV_PART_MAIN);
+    lv_obj_set_style_pad_top(dd, 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_bottom(dd, 10, LV_PART_MAIN);
+#endif
+
+    lv_obj_set_style_text_color(dd, lv_color_hex(0xC9D0D8), LV_PART_INDICATOR);
+}
+
 void ScrSettings::init(lv_obj_t *parent)
 {
     Scr::init(parent);
@@ -293,7 +321,7 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_set_width(dropdown, scrW - scaledX(12));
     lv_obj_set_height(dropdown, scaledY(44));
 #endif
-    Option::styleDropdownClosed(dropdown);
+    styleSettingsSectionDropdown(dropdown);
 
     lv_obj_add_event_cb(dropdown, section_dropdown_event_cb, LV_EVENT_VALUE_CHANGED, this);
     lv_obj_add_event_cb(dropdown, section_dropdown_event_cb, LV_EVENT_READY, this);

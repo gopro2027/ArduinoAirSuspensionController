@@ -50,19 +50,6 @@ void Option::styleDropdownClosed(lv_obj_t *dd)
     lv_obj_set_style_radius(dd, 12, LV_PART_MAIN);
 
     lv_obj_set_style_text_color(dd, lv_color_hex(0xF2F4F7), LV_PART_MAIN);
-#ifdef SCREEN_MODE_CIRCLE
-    lv_obj_set_style_text_font(dd, &lv_font_montserrat_14, LV_PART_MAIN);
-    lv_obj_set_style_pad_left(dd, 10, LV_PART_MAIN);
-    lv_obj_set_style_pad_right(dd, 10, LV_PART_MAIN);
-    lv_obj_set_style_pad_top(dd, 8, LV_PART_MAIN);
-    lv_obj_set_style_pad_bottom(dd, 8, LV_PART_MAIN);
-#else
-    lv_obj_set_style_text_font(dd, &lv_font_montserrat_20, LV_PART_MAIN);
-    lv_obj_set_style_pad_left(dd, 14, LV_PART_MAIN);
-    lv_obj_set_style_pad_right(dd, 14, LV_PART_MAIN);
-    lv_obj_set_style_pad_top(dd, 10, LV_PART_MAIN);
-    lv_obj_set_style_pad_bottom(dd, 10, LV_PART_MAIN);
-#endif
 
     lv_obj_set_style_text_color(dd, lv_color_hex(0xC9D0D8), LV_PART_INDICATOR);
 }
@@ -323,15 +310,15 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_dropdown_set_options(this->rightHandObj, ddOptions != NULL ? ddOptions : "");
         lv_obj_set_width(this->rightHandObj, LV_PCT(52));
 #ifdef SCREEN_MODE_CIRCLE
-        lv_obj_set_height(this->rightHandObj, 40);
+        lv_obj_set_height(this->rightHandObj, scaledY(32));
 #else
-        lv_obj_set_height(this->rightHandObj, scaledY(44));
+        lv_obj_set_height(this->rightHandObj, scaledY(36));
 #endif
         lv_obj_set_align(this->rightHandObj, LV_ALIGN_RIGHT_MID);
         lv_obj_set_x(this->rightHandObj, -MARGIN);
         lv_obj_set_y(this->rightHandObj, 0);
 
-        Option::styleDropdownClosed(this->rightHandObj);
+        styleDropdownClosed(this->rightHandObj);
         lv_obj_add_event_cb(this->rightHandObj, option_dropdown_ready_cb, LV_EVENT_READY, this);
         lv_obj_add_event_cb(this->rightHandObj, option_dropdown_value_cb, LV_EVENT_VALUE_CHANGED, this);
 
