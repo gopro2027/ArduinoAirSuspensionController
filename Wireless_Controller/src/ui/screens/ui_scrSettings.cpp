@@ -1,11 +1,29 @@
 #include "device_lib_exports.h"
 #include "ui_scrSettings.h"
+#include <stdint.h>
 
 #ifndef SCREEN_MODE_CIRCLE
 #include "ui/components/navbar.h"
 #endif
 
 ScrSettings scrSettings(false);
+
+lv_obj_t *ScrSettings::addSettingsPage(lv_obj_t *pages_container, bool hiddenInitially)
+{
+    if (this->settingsPageCount >= kSettingsMaxPages) {
+        log_e("ScrSettings::addSettingsPage overflow (max %i)", (int)kSettingsMaxPages);
+        return nullptr;
+    }
+    lv_obj_t *page = lv_obj_create(pages_container);
+    lv_obj_remove_style_all(page);
+    lv_obj_set_size(page, LV_PCT(100), LV_SIZE_CONTENT);
+    lv_obj_set_layout(page, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(page, LV_FLEX_FLOW_COLUMN);
+    if (hiddenInitially)
+        lv_obj_add_flag(page, LV_OBJ_FLAG_HIDDEN);
+    this->pages[this->settingsPageCount++] = page;
+    return page;
+}
 
 void alertValueUpdated()
 {
@@ -21,93 +39,21 @@ static int saved_page_index = 0;  // Remember page selection across reinits
 static lv_obj_t *menu_container = NULL;
 static const char *section_names[] = {
     "Status", "Game Controller", "ML/AI", "Basic settings",
-    "Levelling Mode", "Units", "Screen Settings", "Config", "Wifi / Update"
+    "Levelling Mode", "Auxillary Output", "Units", "Screen Settings", "Config", "Wifi / Update"
 };
-static const int NUM_SECTIONS = 9;
+static constexpr int kSettingsSectionNameCount = sizeof(section_names) / sizeof(section_names[0]);
+static char s_sectionDropdownOpts[512];
 
-// ---------- Automotive-ish dropdown styling (LVGL v9) ----------
-
-static void style_dropdown_closed(lv_obj_t *dd)
+static void fillSectionDropdownOptionsFromNames(void)
 {
-    // Closed dropdown (the "button")
-    lv_obj_set_style_bg_color(dd, lv_color_hex(0x161A1F), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(dd, LV_OPA_COVER, LV_PART_MAIN);
-
-    lv_obj_set_style_border_width(dd, 2, LV_PART_MAIN);
-    lv_obj_set_style_border_color(dd, lv_color_hex(0x2A313A), LV_PART_MAIN);
-
-    lv_obj_set_style_radius(dd, 12, LV_PART_MAIN);
-
-    lv_obj_set_style_text_color(dd, lv_color_hex(0xF2F4F7), LV_PART_MAIN);
-#ifdef SCREEN_MODE_CIRCLE
-    lv_obj_set_style_text_font(dd, &lv_font_montserrat_14, LV_PART_MAIN);
-    lv_obj_set_style_pad_left(dd, 10, LV_PART_MAIN);
-    lv_obj_set_style_pad_right(dd, 10, LV_PART_MAIN);
-    lv_obj_set_style_pad_top(dd, 8, LV_PART_MAIN);
-    lv_obj_set_style_pad_bottom(dd, 8, LV_PART_MAIN);
-#else
-    lv_obj_set_style_text_font(dd, &lv_font_montserrat_20, LV_PART_MAIN);
-    lv_obj_set_style_pad_left(dd, 14, LV_PART_MAIN);
-    lv_obj_set_style_pad_right(dd, 14, LV_PART_MAIN);
-    lv_obj_set_style_pad_top(dd, 10, LV_PART_MAIN);
-    lv_obj_set_style_pad_bottom(dd, 10, LV_PART_MAIN);
-#endif
-
-    // Indicator (arrow) - present but not screaming
-    lv_obj_set_style_text_color(dd, lv_color_hex(0xC9D0D8), LV_PART_INDICATOR);
-}
-
-static void style_dropdown_list(lv_obj_t *dd)
-{
-    lv_obj_t *list = lv_dropdown_get_list(dd);
-    if(!list) return;
-
-    // Popup panel
-    lv_obj_set_style_bg_color(list, lv_color_hex(0x161A1F), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(list, LV_OPA_COVER, LV_PART_MAIN);
-
-    lv_obj_set_style_border_width(list, 2, LV_PART_MAIN);
-    lv_obj_set_style_border_color(list, lv_color_hex(0x2A313A), LV_PART_MAIN);
-    lv_obj_set_style_radius(list, 14, LV_PART_MAIN);
-
-    // Keep it from covering your whole UI
-    lv_obj_set_style_max_height(list, (int)(getScreenHeight() * 0.65f), LV_PART_MAIN);
-
-    // Items (normal)
-    lv_obj_set_style_text_color(list, lv_color_white(),
-                                LV_PART_MAIN);
-    lv_obj_set_style_text_color(list, lv_color_white(),
-                                LV_PART_SELECTED);
-
-    lv_obj_set_style_pad_left(list, 16, LV_PART_SELECTED);
-    lv_obj_set_style_pad_right(list, 16, LV_PART_SELECTED);
-    lv_obj_set_style_pad_top(list, 12, LV_PART_SELECTED);
-    lv_obj_set_style_pad_bottom(list, 12, LV_PART_SELECTED);
-
-    // No hard separators
-    lv_obj_set_style_border_width(list, 0, LV_PART_SELECTED);
-
-    // Selected item (checked) = subtle pill
-    lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_LIGHT),
-                              LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
-    lv_obj_set_style_bg_opa(list, LV_OPA_COVER,
-                            LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
-    lv_obj_set_style_radius(list, 12, LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
-    lv_obj_set_style_text_color(list, lv_color_white(),
-                                LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
-
-    // Pressed item = same as selected (maintains color when pressing)
-    lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_LIGHT),
-                              LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
-    lv_obj_set_style_bg_opa(list, LV_OPA_COVER,
-                            LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
-    lv_obj_set_style_radius(list, 12, LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
-    lv_obj_set_style_text_color(list, lv_color_white(),
-                                LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
-
-    // Scrollbar subtle
-    lv_obj_set_style_bg_opa(list, LV_OPA_20, LV_PART_SCROLLBAR);
-    lv_obj_set_style_radius(list, 8, LV_PART_SCROLLBAR);
+    int pos = 0;
+    for (int i = 0; i < kSettingsSectionNameCount; i++) {
+        if (i > 0 && pos < (int)sizeof(s_sectionDropdownOpts) - 1)
+            s_sectionDropdownOpts[pos++] = '\n';
+        for (const char *p = section_names[i]; *p && pos < (int)sizeof(s_sectionDropdownOpts) - 1; p++)
+            s_sectionDropdownOpts[pos++] = *p;
+    }
+    s_sectionDropdownOpts[pos] = '\0';
 }
 
 // Dropdown event handler
@@ -119,9 +65,11 @@ static void section_dropdown_event_cb(lv_event_t *e)
     if (code == LV_EVENT_VALUE_CHANGED) {
         uint32_t id = lv_dropdown_get_selected(dropdown);
         ScrSettings *settings = (ScrSettings *)lv_event_get_user_data(e);
+        if (settings->settingsPageCount <= 0 || id >= (uint32_t)settings->settingsPageCount)
+            return;
 
         // Save page selection for reinit
-        saved_page_index = id;
+        saved_page_index = (int)id;
 
         // Hide current page
         if (current_page) {
@@ -136,8 +84,7 @@ static void section_dropdown_event_cb(lv_event_t *e)
         }
     }
     else if (code == LV_EVENT_READY) {
-        // Style the list when dropdown opens
-        style_dropdown_list(dropdown);
+        Option::styleDropdownList(dropdown);
     }
 }
 
@@ -199,6 +146,64 @@ static void height_invert_handler(int wheelNum, void *data)
     alertValueUpdated();
 }
 
+static void aux_output_switch_handler(void *data)
+{
+    bool on = (bool)data;
+    AuxillaryOutputControlPacket pkt(on);
+    sendRestPacket(&pkt);
+}
+
+static void aux_hold_output_handler(void *data)
+{
+    bool on = ((uintptr_t)data != 0u);
+    AuxillaryOutputControlPacket pkt(on);
+    sendRestPacket(&pkt);
+    if (!on && scrSettings.ui_auxOutputSwitch != NULL) {
+        scrSettings.ui_auxOutputSwitch->setBooleanValue(false, false);
+    }
+}
+
+static void aux_time_unit_handler(void *data)
+{
+    uintptr_t sel = (uintptr_t)data;
+    AuxillaryOutputModePayload *cfg = util_configValues._auxillaryOutputConfig();
+    if (sel > (uintptr_t)AUX_MODE_TIME_HOURS)
+        return;
+    if (cfg->timeUnit == (AuxillaryOutputModeTimeUnit)sel)
+        return;
+    cfg->timeUnit = (AuxillaryOutputModeTimeUnit)sel;
+    sendConfigValuesPacket(true);
+    alertValueUpdated();
+}
+
+static void aux_mode_startup_handler(void *data)
+{
+    bool on = (bool)data;
+    AuxillaryOutputModePayload *cfg = util_configValues._auxillaryOutputConfig();
+    uint8_t m = (uint8_t)cfg->mode;
+    if (on)
+        m |= (uint8_t)(1u << AUX_MODE_STARTUP_TIMED);
+    else
+        m &= (uint8_t)~(1u << AUX_MODE_STARTUP_TIMED);
+    cfg->mode = (AuxillaryOutputMode)m;
+    sendConfigValuesPacket(true);
+    alertValueUpdated();
+}
+
+static void aux_mode_shutdown_handler(void *data)
+{
+    bool on = (bool)data;
+    AuxillaryOutputModePayload *cfg = util_configValues._auxillaryOutputConfig();
+    uint8_t m = (uint8_t)cfg->mode;
+    if (on)
+        m |= (uint8_t)(1u << AUX_MODE_SHUTDOWN_TIMED);
+    else
+        m &= (uint8_t)~(1u << AUX_MODE_SHUTDOWN_TIMED);
+    cfg->mode = (AuxillaryOutputMode)m;
+    sendConfigValuesPacket(true);
+    alertValueUpdated();
+}
+
 void ScrSettings::updateHeightInvertOptionsVisibility(bool isLevelMode)
 {
     if (isLevelMode) {
@@ -224,6 +229,34 @@ void ScrSettings::updateUpdateButtonVisbility()
     {
         lv_obj_add_flag(this->ui_updateBtn->root, (lv_obj_flag_t)(LV_OBJ_FLAG_HIDDEN));
     }
+}
+
+void styleSettingsSectionDropdown(lv_obj_t *dd)
+{
+    lv_obj_set_style_bg_color(dd, lv_color_hex(0x161A1F), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(dd, LV_OPA_COVER, LV_PART_MAIN);
+
+    lv_obj_set_style_border_width(dd, 2, LV_PART_MAIN);
+    lv_obj_set_style_border_color(dd, lv_color_hex(0x2A313A), LV_PART_MAIN);
+
+    lv_obj_set_style_radius(dd, 12, LV_PART_MAIN);
+
+    lv_obj_set_style_text_color(dd, lv_color_hex(0xF2F4F7), LV_PART_MAIN);
+#ifdef SCREEN_MODE_CIRCLE
+    lv_obj_set_style_text_font(dd, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(dd, 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_right(dd, 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_top(dd, 8, LV_PART_MAIN);
+    lv_obj_set_style_pad_bottom(dd, 8, LV_PART_MAIN);
+#else
+    lv_obj_set_style_text_font(dd, &lv_font_montserrat_20, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(dd, 14, LV_PART_MAIN);
+    lv_obj_set_style_pad_right(dd, 14, LV_PART_MAIN);
+    lv_obj_set_style_pad_top(dd, 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_bottom(dd, 10, LV_PART_MAIN);
+#endif
+
+    lv_obj_set_style_text_color(dd, lv_color_hex(0xC9D0D8), LV_PART_INDICATOR);
 }
 
 void ScrSettings::init(lv_obj_t *parent)
@@ -278,9 +311,9 @@ void ScrSettings::init(lv_obj_t *parent)
 #endif
     lv_obj_clear_flag(menu_bar, LV_OBJ_FLAG_SCROLLABLE);
 
+    fillSectionDropdownOptionsFromNames();
     lv_obj_t *dropdown = lv_dropdown_create(menu_bar);
-    lv_dropdown_set_options(dropdown,
-        "Status\nGame Controller\nML/AI\nBasic settings\nLevelling Mode\nUnits\nScreen Settings\nConfig\nWifi / Update");
+    lv_dropdown_set_options(dropdown, s_sectionDropdownOpts);
 #ifdef SCREEN_MODE_CIRCLE
     lv_obj_set_width(dropdown, scrW - 100);
     lv_obj_set_height(dropdown, 40);
@@ -288,7 +321,7 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_set_width(dropdown, scrW - scaledX(12));
     lv_obj_set_height(dropdown, scaledY(44));
 #endif
-    style_dropdown_closed(dropdown);
+    styleSettingsSectionDropdown(dropdown);
 
     lv_obj_add_event_cb(dropdown, section_dropdown_event_cb, LV_EVENT_VALUE_CHANGED, this);
     lv_obj_add_event_cb(dropdown, section_dropdown_event_cb, LV_EVENT_READY, this);
@@ -303,18 +336,13 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_set_scrollbar_mode(pages_container, LV_SCROLLBAR_MODE_AUTO);
     lv_obj_set_scroll_dir(pages_container, LV_DIR_VER);
 
-    // Initialize pages array
-    for (int i = 0; i < NUM_SECTIONS; i++) {
+    this->settingsPageCount = 0;
+    for (int i = 0; i < kSettingsMaxPages; i++) {
         this->pages[i] = NULL;
     }
 
     // --- Status page ---
-    lv_obj_t *status_page = lv_obj_create(pages_container);
-    lv_obj_remove_style_all(status_page);
-    lv_obj_set_size(status_page, LV_PCT(100), LV_SIZE_CONTENT);
-    lv_obj_set_layout(status_page, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(status_page, LV_FLEX_FLOW_COLUMN);
-    this->pages[0] = status_page;
+    lv_obj_t *status_page = this->addSettingsPage(pages_container, false);
 
     this->ui_s1 = new Option(status_page, OptionType::TEXT_WITH_VALUE, "Compressor Frozen:", {.STRING = test});
     this->ui_s3 = new Option(status_page, OptionType::TEXT_WITH_VALUE, "ACC Status:", {.STRING = test});
@@ -346,13 +374,7 @@ void ScrSettings::init(lv_obj_t *parent)
     });
 
     // --- Game Controller page ---
-    lv_obj_t *game_controller_page = lv_obj_create(pages_container);
-    lv_obj_remove_style_all(game_controller_page);
-    lv_obj_set_size(game_controller_page, LV_PCT(100), LV_SIZE_CONTENT);
-    lv_obj_set_layout(game_controller_page, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(game_controller_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_add_flag(game_controller_page, LV_OBJ_FLAG_HIDDEN);
-    this->pages[1] = game_controller_page;
+    lv_obj_t *game_controller_page = this->addSettingsPage(pages_container, true);
 
     allOptions.push_back(new Option(game_controller_page, OptionType::BUTTON, "Allow New Controller", {.STRING = test}, [](void *data)
     {
@@ -397,13 +419,7 @@ void ScrSettings::init(lv_obj_t *parent)
     }));
 
     // --- ML/AI page ---
-    lv_obj_t *ml_ai_page = lv_obj_create(pages_container);
-    lv_obj_remove_style_all(ml_ai_page);
-    lv_obj_set_size(ml_ai_page, LV_PCT(100), LV_SIZE_CONTENT);
-    lv_obj_set_layout(ml_ai_page, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(ml_ai_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_add_flag(ml_ai_page, LV_OBJ_FLAG_HIDDEN);
-    this->pages[2] = ml_ai_page;
+    lv_obj_t *ml_ai_page = this->addSettingsPage(pages_container, true);
 
     this->ui_aiPercentage = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Learn Progress:", {.STRING = test});
     this->ui_aiReady = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Trained:", {.STRING = test});
@@ -423,13 +439,7 @@ void ScrSettings::init(lv_obj_t *parent)
     }));
 
     // --- Basic settings page ---
-    lv_obj_t *basic_settings_page = lv_obj_create(pages_container);
-    lv_obj_remove_style_all(basic_settings_page);
-    lv_obj_set_size(basic_settings_page, LV_PCT(100), LV_SIZE_CONTENT);
-    lv_obj_set_layout(basic_settings_page, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(basic_settings_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_add_flag(basic_settings_page, LV_OBJ_FLAG_HIDDEN);
-    this->pages[3] = basic_settings_page;
+    lv_obj_t *basic_settings_page = this->addSettingsPage(pages_container, true);
 
     this->ui_maintainprssure = new Option(basic_settings_page, OptionType::ON_OFF, "Maintain Preset", {.INT = 0}, maintain_pressure_handler);
     this->ui_riseonstart = new Option(basic_settings_page, OptionType::ON_OFF, "Rise on start", {.INT = 0}, rise_on_start_handler);
@@ -514,13 +524,7 @@ void ScrSettings::init(lv_obj_t *parent)
     ((Option *)this->ui_rfbuttonD)->setSliderParams(1, 5, true, LV_EVENT_RELEASED);
 
     // --- Levelling Mode page ---
-    lv_obj_t *levelling_page = lv_obj_create(pages_container);
-    lv_obj_remove_style_all(levelling_page);
-    lv_obj_set_size(levelling_page, LV_PCT(100), LV_SIZE_CONTENT);
-    lv_obj_set_layout(levelling_page, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(levelling_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_add_flag(levelling_page, LV_OBJ_FLAG_HIDDEN);
-    this->pages[4] = levelling_page;
+    lv_obj_t *levelling_page = this->addSettingsPage(pages_container, true);
 
     const char *levelTypeRadioText[2] = {"Pressure Sensor", "Level Sensor"};
     option_event_cb_t levelTypeRadioCB = [](void *data)
@@ -536,27 +540,53 @@ void ScrSettings::init(lv_obj_t *parent)
 
     this->updateHeightInvertOptionsVisibility(false);
 
+    // --- Auxillary Output page ---
+    lv_obj_t *aux_page = this->addSettingsPage(pages_container, true);
+
+    // allOptions.push_back(new Option(aux_page, OptionType::HEADER, "Manual control", {.STRING = test}));
+
+    this->ui_auxHoldButton = new Option(aux_page, OptionType::BUTTON, "Hold: Aux output on", {.STRING = test}, aux_hold_output_handler,
+        (void *)(uintptr_t)Option::kButtonMomentaryExtraTag);
+
+    this->ui_auxOutputSwitch = new Option(aux_page, OptionType::ON_OFF, "Aux output", {.INT = 0}, aux_output_switch_handler);
+
+    // allOptions.push_back(new Option(aux_page, OptionType::HEADER, "Saved to manifold", {.STRING = test}));
+    this->ui_auxModeStartup = new Option(aux_page, OptionType::ON_OFF, "Timed pulse on startup", {.INT = 0}, aux_mode_startup_handler);
+    this->ui_auxModeShutdown = new Option(aux_page, OptionType::ON_OFF, "Timed pulse on shutdown", {.INT = 0}, aux_mode_shutdown_handler);
+
+    static const char auxTimeUnitOpts[] = "Deciseconds\nSeconds\nMinutes\nHours";
+    this->ui_auxTimeUnit = new Option(aux_page, OptionType::DROPDOWN_SELECT, "Duration unit:", {.INT = 0},
+        aux_time_unit_handler, (void *)auxTimeUnitOpts);
+
+    this->ui_auxPulseDuration = new Option(aux_page, OptionType::KEYBOARD_INPUT_NUMBER, "Pulse duration", {.INT = 0}, [](void *data)
+    {
+        uint32_t v = (uint32_t)data;
+        if (v > 255U)
+            v = 255U;
+        util_configValues._auxillaryOutputConfig()->time = (uint8_t)v;
+        sendConfigValuesPacket(true);
+        alertValueUpdated();
+    });
+
+    this->ui_auxIntervalCycles = new Option(aux_page, OptionType::KEYBOARD_INPUT_NUMBER, "Interval (cycles)", {.INT = 0}, [](void *data)
+    {
+        uint32_t v = (uint32_t)data;
+        if (v > 255U)
+            v = 255U;
+        util_configValues._auxillaryOutputConfig()->interval = (uint8_t)v;
+        sendConfigValuesPacket(true);
+        alertValueUpdated();
+    });
+
     // --- Units page ---
-    lv_obj_t *units_page = lv_obj_create(pages_container);
-    lv_obj_remove_style_all(units_page);
-    lv_obj_set_size(units_page, LV_PCT(100), LV_SIZE_CONTENT);
-    lv_obj_set_layout(units_page, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(units_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_add_flag(units_page, LV_OBJ_FLAG_HIDDEN);
-    this->pages[5] = units_page;
+    lv_obj_t *units_page = this->addSettingsPage(pages_container, true);
 
     const char *unitsRadioText[2] = {"PSI", "Bar"};
     option_event_cb_t unitsRadioCB = [](void *data) { setunitsMode((int)data); };
     allRadioOptions.push_back(new RadioOption(units_page, unitsRadioText, 2, unitsRadioCB, getunitsMode()));
 
     // --- Screen Settings page ---
-    lv_obj_t *screen_settings_page = lv_obj_create(pages_container);
-    lv_obj_remove_style_all(screen_settings_page);
-    lv_obj_set_size(screen_settings_page, LV_PCT(100), LV_SIZE_CONTENT);
-    lv_obj_set_layout(screen_settings_page, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(screen_settings_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_add_flag(screen_settings_page, LV_OBJ_FLAG_HIDDEN);
-    this->pages[6] = screen_settings_page;
+    lv_obj_t *screen_settings_page = this->addSettingsPage(pages_container, true);
 
     allOptions.push_back(new Option(screen_settings_page, OptionType::KEYBOARD_INPUT_NUMBER, "Dim Screen (Minutes)", {.INT = (int)getscreenDimTimeM()}, [](void *data)
     {
@@ -622,13 +652,7 @@ void ScrSettings::init(lv_obj_t *parent)
     }));
 
     // --- Config page ---
-    lv_obj_t *config_page = lv_obj_create(pages_container);
-    lv_obj_remove_style_all(config_page);
-    lv_obj_set_size(config_page, LV_PCT(100), LV_SIZE_CONTENT);
-    lv_obj_set_layout(config_page, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(config_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_add_flag(config_page, LV_OBJ_FLAG_HIDDEN);
-    this->pages[7] = config_page;
+    lv_obj_t *config_page = this->addSettingsPage(pages_container, true);
 
     this->ui_config1 = new Option(config_page, OptionType::SLIDER, "Bag Max PSI", {.INT = 200}, [](void *data)
     {
@@ -694,13 +718,7 @@ void ScrSettings::init(lv_obj_t *parent)
     ((Option *)this->ui_config6)->setSliderParams(10, 600, true, LV_EVENT_RELEASED);
 
     // --- Wifi / Update page ---
-    lv_obj_t *wifi_update_page = lv_obj_create(pages_container);
-    lv_obj_remove_style_all(wifi_update_page);
-    lv_obj_set_size(wifi_update_page, LV_PCT(100), LV_SIZE_CONTENT);
-    lv_obj_set_layout(wifi_update_page, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(wifi_update_page, LV_FLEX_FLOW_COLUMN);
-    lv_obj_add_flag(wifi_update_page, LV_OBJ_FLAG_HIDDEN);
-    this->pages[8] = wifi_update_page;
+    lv_obj_t *wifi_update_page = this->addSettingsPage(pages_container, true);
 
     char buf[50];
     strncpy(buf, getwifiSSID().c_str(), sizeof(buf));
@@ -795,11 +813,18 @@ void ScrSettings::init(lv_obj_t *parent)
     this->ui_volts = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Battery:", {.STRING = getBatteryVoltageString()});
 
     // Restore previously selected page (or default to Status)
+    if (saved_page_index < 0 || saved_page_index >= this->settingsPageCount) {
+        saved_page_index = 0;
+    }
+    if (this->settingsPageCount != kSettingsSectionNameCount) {
+        log_e("ScrSettings: page count %i != section name count %i",
+            this->settingsPageCount, kSettingsSectionNameCount);
+    }
     lv_dropdown_set_selected(dropdown, saved_page_index);
     current_page = this->pages[saved_page_index];
 
     // Hide all pages except the selected one
-    for (int i = 0; i < NUM_SECTIONS; i++) {
+    for (int i = 0; i < this->settingsPageCount; i++) {
         if (this->pages[i] != NULL) {
             if (i == saved_page_index) {
                 lv_obj_remove_flag(this->pages[i], LV_OBJ_FLAG_HIDDEN);
@@ -884,6 +909,18 @@ void ScrSettings::loop()
         bool heightSensorMode = (flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0;
         this->ui_heightsensormode->setSelectedOption(heightSensorMode ? 1 : 0);
         this->updateHeightInvertOptionsVisibility(heightSensorMode);
+
+        AuxillaryOutputModePayload *aux = util_configValues._auxillaryOutputConfig();
+        this->ui_auxModeStartup->setBooleanValue((aux->mode & (1u << AUX_MODE_STARTUP_TIMED)) != 0, false);
+        this->ui_auxModeShutdown->setBooleanValue((aux->mode & (1u << AUX_MODE_SHUTDOWN_TIMED)) != 0, false);
+
+        unsigned tu = (unsigned)aux->timeUnit;
+        if (tu > (unsigned)AUX_MODE_TIME_HOURS)
+            tu = 0;
+        this->ui_auxTimeUnit->setDropdownSelectedIndex(tu);
+
+        this->ui_auxPulseDuration->setRightHandText(itoa(aux->time, buf, 10));
+        this->ui_auxIntervalCycles->setRightHandText(itoa(aux->interval, buf, 10));
     }
 }
 
@@ -931,6 +968,14 @@ void ScrSettings::cleanup()
     delete ui_rfbuttonB;
     delete ui_rfbuttonC;
     delete ui_rfbuttonD;
+
+    delete ui_auxHoldButton;
+    delete ui_auxOutputSwitch;
+    delete ui_auxModeStartup;
+    delete ui_auxModeShutdown;
+    delete ui_auxTimeUnit;
+    delete ui_auxPulseDuration;
+    delete ui_auxIntervalCycles;
 
     // Delete vector-tracked objects (non-stored Options/RadioOptions)
     for (Option* opt : allOptions) {

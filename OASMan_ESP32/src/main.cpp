@@ -5,6 +5,7 @@
 #include "input_type.h"
 #include "components/wheel.h"
 #include "components/compressor.h"
+#include "components/AuxillaryOutput.h"
 #include "bitmaps.h"
 #include "manifoldSaveData.h"
 #include "airSuspensionUtil.h"
@@ -79,6 +80,7 @@ void setup()
     wheel[WHEEL_REAR_DRIVER] = new Wheel(REAR_DRIVER_IN, REAR_DRIVER_OUT, pressureInputs[getpressureInputRearDriver()], levelInputRearDriver, WHEEL_REAR_DRIVER);
 
     compressor = new Compressor(compressorRelayPin, pressureInputs[getpressureInputTank()]);
+    auxillaryOutput = new AuxillaryOutput(auxillaryOutputPin);
     rfReceiver = new RfReceiver();
 
     if (getlearnPressureSensors())

@@ -5,6 +5,7 @@
 #include "components/manifold.h"
 #include "components/compressor.h"
 #include "components/wheel.h"
+#include "components/AuxillaryOutput.h"
 #include "manifoldSaveData.h"
 #include "sampleReading.tcc"
 #include "components/rf_receiver.h"
@@ -13,6 +14,7 @@
 extern InputType *pressureInputs[5];
 extern Manifold *manifold;
 extern Compressor *compressor;
+extern AuxillaryOutput *auxillaryOutput;
 extern Wheel *wheel[4];
 extern RfReceiver *rfReceiver;
 extern bool forceShutoff;
@@ -24,6 +26,7 @@ extern Adafruit_ADS1115 ADS1115D;
 
 Manifold *getManifold();
 Compressor *getCompressor();
+AuxillaryOutput *getAuxillaryOutput();
 Wheel *getWheel(int i);
 void setRideHeightFrontPassenger(byte value);
 void setRideHeightRearPassenger(byte value);

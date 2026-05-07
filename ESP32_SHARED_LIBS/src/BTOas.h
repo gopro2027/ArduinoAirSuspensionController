@@ -38,7 +38,8 @@ enum BTOasIdentifier
     BP32PKT = 30,
     BROADCASTNAME = 35,
     UPDATESTATUSREQUEST = 36,
-    RFCOMMAND = 37
+    RFCOMMAND = 37,
+    AUXILLARYOUTPUTCONTROL = 38
 };
 
 enum StatusPacketBittset
@@ -70,16 +71,16 @@ enum AuthResult
     AUTHRESULT_UPDATEKEY
 };
 
-enum AuxillaryOutputMode
+enum AuxillaryOutputMode : uint8_t
 {
-    AUX_MODE_MANUAL_SWITCHED,
-    AUX_MODE_MANUAL_TIMED,
+    AUX_MODE_NONE,
     AUX_MODE_STARTUP_TIMED,
     AUX_MODE_SHUTDOWN_TIMED,
 };
 
-enum AuxillaryOutputModeTimeUnit
+enum AuxillaryOutputModeTimeUnit : uint8_t
 {
+    AUX_MODE_TIME_DECISECONDS,
     AUX_MODE_TIME_SECONDS,
     AUX_MODE_TIME_MINUTES,
     AUX_MODE_TIME_HOURS
@@ -89,8 +90,11 @@ struct AuxillaryOutputModePayload
 {
     AuxillaryOutputMode mode;
     AuxillaryOutputModeTimeUnit timeUnit;
-    uint32_t time;
+    uint8_t time;
+    uint8_t interval;
 };
+static_assert(sizeof(AuxillaryOutputModePayload) == 4,
+              "AuxillaryOutputModePayload must pack into 32 bits");
 
 enum RfCommandType
 {
@@ -273,7 +277,7 @@ struct StartwebPacket : BTOasPacket
 };
 struct ConfigValuesPacket : BTOasPacket
 {
-    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t heightSensorInvertBits, uint32_t configFlagsBits);
+    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t heightSensorInvertBits, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig);
     bool *_setValues();
     uint8_t *_bagMaxPressure();
     uint32_t *_systemShutoffTimeM();
@@ -287,6 +291,7 @@ struct ConfigValuesPacket : BTOasPacket
     uint8_t *_rfButtonD();
     uint8_t *_heightSensorInvertBits();
     uint32_t *_configFlagsBits();
+    AuxillaryOutputModePayload *_auxillaryOutputConfig();
 };
 
 struct AuthPacket : BTOasPacket
@@ -316,12 +321,6 @@ struct UpdateStatusRequestPacket : BTOasPacket
     void setStatus(String status);
 };
 
-struct AuxillaryOutputModePacket : BTOasPacket
-{
-    AuxillaryOutputModePacket();
-    AuxillaryOutputModePacket(AuxillaryOutputModePayload payload) ;
-};
-
 struct RfCommandPacket : BTOasPacket
 {
     RfCommandPacket(RfCommandType commandType, int commandValueOne, int commandValueTwo);
@@ -329,6 +328,11 @@ struct RfCommandPacket : BTOasPacket
     RfCommandChipNumber getChipCommandNumber();
     RfCommandButtonNumber getButtonNumber();
     int getPresetNumber();
+};
+
+struct AuxillaryOutputControlPacket : BooleanPacket
+{
+    AuxillaryOutputControlPacket(bool on);
 };
 
 #endif
