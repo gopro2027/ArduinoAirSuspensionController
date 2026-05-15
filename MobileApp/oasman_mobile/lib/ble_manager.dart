@@ -245,9 +245,14 @@ class BLEManager extends ChangeNotifier {
     return valveControlValue;
   }
 
-  void setValveBit(int bit) {
-    valveControlValue = valveControlValue | (1 << bit);
+  /// ORs [mask] into the valve bitmask and sends a single BLE write.
+  void setValveMask(int mask) {
+    valveControlValue |= mask;
     writeValveValue(valveControlValue);
+  }
+
+  void setValveBit(int bit) {
+    setValveMask(1 << bit);
   }
 
   void closeValves() {
