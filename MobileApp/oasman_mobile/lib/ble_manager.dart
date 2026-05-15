@@ -41,6 +41,7 @@ class BTOasIdentifier {
   static const int BROADCASTNAME = 35;
   static const int UPDATESTATUSREQUEST = 36;
   static const int RFCOMMAND = 37;
+  static const int AUXILLARYOUTPUTCONTROL = 38;
 }
 
 /// Config flags in ConfigValuesPacket.configFlagsBits (GETCONFIGVALUES).
@@ -197,6 +198,38 @@ class BLEManager extends ChangeNotifier {
   int rfButtonBPreset = 0;
   int rfButtonCPreset = 0;
   int rfButtonDPreset = 0;
+
+  /// Auxillary output config (`AuxillaryOutputModePayload` at args[24..27], matches BTOas / Wireless_Controller).
+  static const int _auxStartupTimedEnum = 1;
+  static const int _auxShutdownTimedEnum = 2;
+  static const int auxStartupTimedMask = 1 << _auxStartupTimedEnum; // 2
+  static const int auxShutdownTimedMask = 1 << _auxShutdownTimedEnum; // 4
+
+  int auxModeByte = 0;
+  int auxTimeUnit = 0;
+  int auxPulseDuration = 1;
+  int auxIntervalCycles = 0;
+
+  bool get auxStartupTimed =>
+      (auxModeByte & auxStartupTimedMask) != 0;
+  bool get auxShutdownTimed =>
+      (auxModeByte & auxShutdownTimedMask) != 0;
+
+  void setAuxStartupTimed(bool on) {
+    if (on) {
+      auxModeByte |= auxStartupTimedMask;
+    } else {
+      auxModeByte &= ~auxStartupTimedMask;
+    }
+  }
+
+  void setAuxShutdownTimed(bool on) {
+    if (on) {
+      auxModeByte |= auxShutdownTimedMask;
+    } else {
+      auxModeByte &= ~auxShutdownTimedMask;
+    }
+  }
 
   /// Saved preset pressures: presetPressures[profileIndex] = [FP, RP, FD, RD]
   Map<int, List<int>> presetPressures = {};
@@ -433,6 +466,12 @@ class BLEManager extends ChangeNotifier {
   void sendCompressorStatus(bool on) {
     sendRestCommand(buildRestPacket(
         BTOasIdentifier.COMPRESSORSTATUS, [BLEInt(on ? 1 : 0)]));
+  }
+
+  /// Manual aux output on/off (AuxillaryOutputControlPacket, cmd 38).
+  void sendAuxillaryOutputControl(bool on) {
+    sendRestCommand(buildRestPacket(
+        BTOasIdentifier.AUXILLARYOUTPUTCONTROL, [BLEInt(on ? 1 : 0)]));
   }
 
   /// RfCommandType / chip / button numbers match [BTOas.h].
@@ -696,6 +735,15 @@ class BLEManager extends ChangeNotifier {
             heightSensorInvertBits = data[24] & 0xFF;
           }
 
+          if (data.length >= 32) {
+            auxModeByte = data[28] & 0xFF;
+            var tu = data[29] & 0xFF;
+            if (tu > 3) tu = 0;
+            auxTimeUnit = tu;
+            auxPulseDuration = data[30] & 0xFF;
+            auxIntervalCycles = data[31] & 0xFF;
+          }
+
           if (data.length >= 104) {
             _lastConfigArgs = List<int>.from(data.sublist(4, 104));
             if (_lastConfigArgs!.length < 100) {
@@ -878,6 +926,11 @@ class BLEManager extends ChangeNotifier {
     args[18] = rfButtonCPreset.clamp(0, 255);
     args[19] = rfButtonDPreset.clamp(0, 255);
     args[20] = heightSensorInvertBits.clamp(0, 255);
+
+    args[24] = auxModeByte.clamp(0, 255);
+    args[25] = auxTimeUnit.clamp(0, 3);
+    args[26] = auxPulseDuration.clamp(0, 255);
+    args[27] = auxIntervalCycles.clamp(0, 255);
 
     final packet = [..._encodeInt32(BTOasIdentifier.GETCONFIGVALUES), ...args];
     sendRestCommand(packet);
