@@ -1436,8 +1436,12 @@ class SettingsPageState extends State<SettingsPage> {
       'Minutes',
       'Hours',
     ];
-    return Consumer<BLEManager>(
-      builder: (context, bm, _) {
+    // Only aux config fields — not live pressure/status — so this subtree does not
+    // rebuild on every STATUSREPORT when nothing aux-related changed.
+    return Selector<BLEManager, (int, int)>(
+      selector: (_, m) => (m.auxModeByte, m.auxTimeUnit),
+      builder: (context, _, __) {
+        final bm = context.read<BLEManager>();
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 24.0),
           child: Column(

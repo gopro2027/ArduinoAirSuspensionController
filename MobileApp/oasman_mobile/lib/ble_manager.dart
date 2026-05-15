@@ -808,10 +808,6 @@ class BLEManager extends ChangeNotifier {
     final byteData = ByteData.sublistView(Uint8List.fromList(statusBytes));
     final statusBittset = byteData.getUint32(0, Endian.little);
 
-    print(toUint32(statusBytes));
-    //print(byteData);
-    print(statusBittset);
-
     // Live status only (bits 0-5). Config toggles come from GETCONFIGVALUES.
     compressorFrozen = (statusBittset & (1 << 0)) != 0;
     compressorOn = (statusBittset & (1 << 1)) != 0;
@@ -821,47 +817,68 @@ class BLEManager extends ChangeNotifier {
 
   void _handleIncomingData(List<int> data) {
     try {
-      if (data.length >= 4) {
-        final packetId = _decodeInt32(data, 0);
-        switch (packetId) {
-          case BTOasIdentifier.STATUSREPORT: //handle incoming status packages
-            if (data.length < 14) break;
-            final wheelPressures = [
-              _decodeShort(data, 4),
-              _decodeShort(data, 6),
-              _decodeShort(data, 8),
-              _decodeShort(data, 10),
-            ];
-            final tankPressure = _decodeShort(data, 12);
-            if (data.length >= 16) {
-              aiLearnPercent = data[14] & 0xFF;
-              aiReadyBittset = data[15] & 0xFF;
-            }
-            if (data.length >= 20) {
-              final statusBittset = data.sublist(16, 20);
-              print(data);
-              print(statusBittset);
-              handleStatusBittset(statusBittset);
-            }
+      if (data.length < 4) {
+        debugPrint("Received status data is too short: ${data.length} bytes");
+        return;
+      }
+      final packetId = _decodeInt32(data, 0);
+      if (packetId != BTOasIdentifier.STATUSREPORT) {
+        return;
+      }
+      if (data.length < 14) return;
 
-            pressureValues = {
-              "frontLeft": wheelPressures[2].toString(),
-              "frontRight": wheelPressures[0].toString(),
-              "rearLeft": wheelPressures[3].toString(),
-              "rearRight": wheelPressures[1].toString(),
-              "tankPressure": tankPressure.toString(),
-            };
-            break;
-        }
+      final prevFrozen = compressorFrozen;
+      final prevCompOn = compressorOn;
+      final prevVeh = vehicleOn;
+      final prevEb = ebrakeOn;
+      final prevAiLearn = aiLearnPercent;
+      final prevAiReady = aiReadyBittset;
+      final prevFl = pressureValues['frontLeft'];
+      final prevFr = pressureValues['frontRight'];
+      final prevRl = pressureValues['rearLeft'];
+      final prevRr = pressureValues['rearRight'];
+      final prevTank = pressureValues['tankPressure'];
 
-        print("Packet ID: $packetId");
-        //print("Updated Pressure Values: $pressureValues");
+      final wheelPressures = [
+        _decodeShort(data, 4),
+        _decodeShort(data, 6),
+        _decodeShort(data, 8),
+        _decodeShort(data, 10),
+      ];
+      final tankPressure = _decodeShort(data, 12);
+      if (data.length >= 16) {
+        aiLearnPercent = data[14] & 0xFF;
+        aiReadyBittset = data[15] & 0xFF;
+      }
+      if (data.length >= 20) {
+        handleStatusBittset(data.sublist(16, 20));
+      }
+
+      pressureValues = {
+        "frontLeft": wheelPressures[2].toString(),
+        "frontRight": wheelPressures[0].toString(),
+        "rearLeft": wheelPressures[3].toString(),
+        "rearRight": wheelPressures[1].toString(),
+        "tankPressure": tankPressure.toString(),
+      };
+
+      final changed = prevFrozen != compressorFrozen ||
+          prevCompOn != compressorOn ||
+          prevVeh != vehicleOn ||
+          prevEb != ebrakeOn ||
+          prevAiLearn != aiLearnPercent ||
+          prevAiReady != aiReadyBittset ||
+          prevFl != pressureValues['frontLeft'] ||
+          prevFr != pressureValues['frontRight'] ||
+          prevRl != pressureValues['rearLeft'] ||
+          prevRr != pressureValues['rearRight'] ||
+          prevTank != pressureValues['tankPressure'];
+
+      if (changed) {
         notifyListeners();
-      } else {
-        print("Received data is too short: $data");
       }
     } catch (e) {
-      print("Error handling incoming data: $e");
+      debugPrint("Error handling incoming data: $e");
     }
   }
 
