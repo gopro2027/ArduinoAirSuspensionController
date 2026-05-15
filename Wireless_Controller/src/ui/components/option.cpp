@@ -66,6 +66,8 @@ void Option::styleDropdownList(lv_obj_t *dd)
     lv_obj_set_style_border_width(list, 2, LV_PART_MAIN);
     lv_obj_set_style_border_color(list, lv_color_hex(0x2A313A), LV_PART_MAIN);
     lv_obj_set_style_radius(list, 14, LV_PART_MAIN);
+    /* Clip drawing to rounded list bounds so the selected-row highlight does not bleed when scrolling. */
+    lv_obj_set_style_clip_corner(list, true, LV_PART_MAIN);
 
     lv_obj_set_style_max_height(list, (int)(getScreenHeight() * 0.65f), LV_PART_MAIN);
 
@@ -74,10 +76,13 @@ void Option::styleDropdownList(lv_obj_t *dd)
 
     lv_obj_set_style_pad_left(list, 16, LV_PART_SELECTED);
     lv_obj_set_style_pad_right(list, 16, LV_PART_SELECTED);
-    lv_obj_set_style_pad_top(list, 12, LV_PART_SELECTED);
-    lv_obj_set_style_pad_bottom(list, 12, LV_PART_SELECTED);
+    /* No vertical pad on LV_PART_SELECTED: dropdown draw_box uses font height only. */
+    lv_obj_set_style_pad_top(list, 0, LV_PART_SELECTED);
+    lv_obj_set_style_pad_bottom(list, 0, LV_PART_SELECTED);
 
     lv_obj_set_style_border_width(list, 0, LV_PART_SELECTED);
+    lv_obj_set_style_shadow_opa(list, LV_OPA_TRANSP, LV_PART_SELECTED);
+    lv_obj_set_style_drop_shadow_opa(list, LV_OPA_TRANSP, LV_PART_SELECTED);
 
     lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_LIGHT),
         LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
@@ -86,6 +91,10 @@ void Option::styleDropdownList(lv_obj_t *dd)
     lv_obj_set_style_radius(list, 12, LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
     lv_obj_set_style_text_color(list, lv_color_white(),
         LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
+    lv_obj_set_style_shadow_opa(list, LV_OPA_TRANSP,
+        LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
+    lv_obj_set_style_drop_shadow_opa(list, LV_OPA_TRANSP,
+        LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
 
     lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_LIGHT),
         LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
@@ -93,6 +102,10 @@ void Option::styleDropdownList(lv_obj_t *dd)
         LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
     lv_obj_set_style_radius(list, 12, LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
     lv_obj_set_style_text_color(list, lv_color_white(),
+        LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
+    lv_obj_set_style_shadow_opa(list, LV_OPA_TRANSP,
+        LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
+    lv_obj_set_style_drop_shadow_opa(list, LV_OPA_TRANSP,
         LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
 
     lv_obj_set_style_bg_opa(list, LV_OPA_20, LV_PART_SCROLLBAR);
