@@ -209,6 +209,7 @@ void Statusbar::createPullDownPanel(lv_obj_t* parent) {
     lv_obj_set_flex_align(alertSection, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_column(alertSection, scaledX(12), 0);
     lv_obj_remove_flag(alertSection, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(alertSection, LV_OBJ_FLAG_HIDDEN);
 
     panelAlertIcon = lv_label_create(alertSection);
     lv_label_set_text(panelAlertIcon, LV_SYMBOL_WARNING);
@@ -449,7 +450,8 @@ void Statusbar::updateBatteryStatus() {
 void Statusbar::updateAlertStatus() {
     if (!alertIcon) return;
 
-    bool hasAlert = globalAlertState.hasActiveAlert;
+    // TODO: Future improvement Wire up the alert icon for other features such as bluetooth unable to find device or something else important. It's just kind of broken at the moment if i allow this, it never goes away.
+    bool hasAlert = false;//globalAlertState.hasActiveAlert;
 
     // Only update when alert state actually changes
     if (hasAlert == hasActiveAlert) return;
@@ -464,15 +466,11 @@ void Statusbar::updateAlertStatus() {
         if (panelAlertIcon) {
             lv_obj_set_style_text_color(panelAlertIcon, globalAlertState.currentColor, 0);
         }
+        lv_obj_remove_flag(alertSection, LV_OBJ_FLAG_HIDDEN);
     } else {
         lv_obj_add_flag(alertIcon, LV_OBJ_FLAG_HIDDEN);
 
-        if (panelAlertLabel) {
-            lv_label_set_text(panelAlertLabel, "No alerts");
-        }
-        if (panelAlertIcon) {
-            lv_obj_set_style_text_color(panelAlertIcon, lv_color_hex(STATUSBAR_ICON_COLOR), 0);
-        }
+        lv_obj_add_flag(alertSection, LV_OBJ_FLAG_HIDDEN);
     }
 
     hasActiveAlert = hasAlert;
