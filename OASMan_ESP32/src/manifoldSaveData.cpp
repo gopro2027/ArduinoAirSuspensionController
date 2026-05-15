@@ -144,6 +144,7 @@ void beginSaveData()
     _SaveData.bagMaxPressure.load("bagMaxPressure", MAX_PRESSURE_SAFETY);
     _SaveData.blePasskey.load("blePasskey", BLE_PASSKEY);
     _SaveData.bleName.loadString("bleName", BT_NAME);
+    _SaveData.oledI2cAddr.load("oledI2cAddr", (uint64_t)SCREEN_ADDRESS);
 
     _SaveData.rfButtonAPreset.load("rfButtonAPreset", RIDE_HEIGHT_PRESET_NUMBER);
     _SaveData.rfButtonBPreset.load("rfButtonBPreset", RIDE_HEIGHT_PRESET_NUMBER);
@@ -378,6 +379,7 @@ createSaveFuncInt(pressureInputTank, byte);
 createSaveFuncInt(bagMaxPressure, uint8_t);
 createSaveFuncInt(blePasskey, uint32_t); // 6 digits base 10
 createSaveFuncString(bleName);
+createSaveFuncInt(oledI2cAddr, uint8_t);
 createSaveFuncInt(systemShutoffTimeM, uint32_t); // may have to change
 createSaveFuncInt(compressorOnPSI, uint8_t);
 createSaveFuncInt(compressorOffPSI, uint8_t);
