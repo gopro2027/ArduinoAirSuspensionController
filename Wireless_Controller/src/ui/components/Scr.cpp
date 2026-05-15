@@ -139,7 +139,8 @@ bool Scr::isMsgBoxDisplayed()
 void Scr::showMsgBox(const char *title, const char *text, const char *yesText, const char *noText, std::function<void()> onYes, std::function<void()> onNo, bool forceButtonPress)
 {
     resetTouchInputFrame();
-    this->mb_dialog = lv_msgbox_create(this->scr);
+    /* NULL parent: LVGL creates a fullscreen backdrop on lv_layer_top() so input does not reach the UI behind. */
+    this->mb_dialog = lv_msgbox_create(NULL);
     this->mb_force_button_press = forceButtonPress;
 
     this->dialogDataYes.callback = onYes;
@@ -184,6 +185,12 @@ void Scr::showMsgBox(const char *title, const char *text, const char *yesText, c
         lv_obj_set_style_bg_color(lv_msgbox_get_header(this->mb_dialog), lv_color_hex(THEME_COLOR_MEDIUM), LV_PART_MAIN); // halway darkness, header
     }
     lv_obj_set_style_border_color(this->mb_dialog, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN); // light purple, border
+
+    lv_obj_t *backdrop = lv_obj_get_parent(this->mb_dialog);
+    if (backdrop != NULL) {
+        lv_obj_set_style_bg_color(backdrop, lv_color_black(), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(backdrop, LV_OPA_40, LV_PART_MAIN);
+    }
 
 #ifdef SCREEN_MODE_CIRCLE
     enlarge_msgbox_footer_for_circle(this->mb_dialog);
