@@ -77,6 +77,11 @@ class SettingsPageState extends State<SettingsPage> {
   late TextEditingController bagVolumeController;
   late TextEditingController wifiSsidController;
   late TextEditingController wifiPassController;
+  late TextEditingController auxPulseDurationController;
+  late TextEditingController auxIntervalCyclesController;
+
+  /// Local latch for "Aux output" switch (not in GETCONFIGVALUES; matches wireless).
+  bool _auxOutputLatchUi = false;
 
   String? _lastUnits;
 
@@ -102,6 +107,8 @@ class SettingsPageState extends State<SettingsPage> {
     bagMaxController.text = bm.bagMaxPressure.toString();
     pressureSensorRatingController.text = bm.pressureSensorMax.toString();
     bagVolumeController.text = bm.bagVolumePercentage.toString();
+    auxPulseDurationController.text = bm.auxPulseDuration.toString();
+    auxIntervalCyclesController.text = bm.auxIntervalCycles.toString();
     setState(() => _lastUnits = null);
   }
 
@@ -120,6 +127,8 @@ class SettingsPageState extends State<SettingsPage> {
     bagVolumeController.dispose();
     wifiSsidController.dispose();
     wifiPassController.dispose();
+    auxPulseDurationController.dispose();
+    auxIntervalCyclesController.dispose();
     super.dispose();
   }
 
@@ -218,6 +227,15 @@ class SettingsPageState extends State<SettingsPage> {
       final bagVol = int.tryParse(bagVolumeController.text.trim());
       if (bagVol != null) {
         bm.bagVolumePercentage = bagVol.clamp(10, 600);
+      }
+
+      final auxPulse = int.tryParse(auxPulseDurationController.text.trim());
+      if (auxPulse != null) {
+        bm.auxPulseDuration = auxPulse.clamp(0, 255);
+      }
+      final auxIntv = int.tryParse(auxIntervalCyclesController.text.trim());
+      if (auxIntv != null) {
+        bm.auxIntervalCycles = auxIntv.clamp(0, 255);
       }
 
       bm.saveConfigToManifold();
@@ -454,6 +472,16 @@ class SettingsPageState extends State<SettingsPage> {
         TextEditingController(text: prefs.getString('_wifiSsid') ?? '');
     wifiPassController =
         TextEditingController(text: prefs.getString('_wifiPass') ?? '');
+    auxPulseDurationController = TextEditingController(
+      text: bm.connectedDevice != null
+          ? bm.auxPulseDuration.toString()
+          : '1',
+    );
+    auxIntervalCyclesController = TextEditingController(
+      text: bm.connectedDevice != null
+          ? bm.auxIntervalCycles.toString()
+          : '0',
+    );
 
     if (bm.connectedDevice != null) {
       _lastSyncedConfigRevision = bm.configRevision;
@@ -616,6 +644,7 @@ class SettingsPageState extends State<SettingsPage> {
                         _buildGameControllerSection(context),
                         _buildAIStatusSection(context),
                         _buildManifoldConfigSections(context),
+                        _buildAuxillaryOutputSection(context),
                         _buildUnitsSection(),
                         _buildWifiUpdateSection(context),
                         _buildRebootTurnOffButton(context),
@@ -1397,6 +1426,166 @@ class SettingsPageState extends State<SettingsPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAuxillaryOutputSection(BuildContext context) {
+    const unitLabels = [
+      'Deciseconds',
+      'Seconds',
+      'Minutes',
+      'Hours',
+    ];
+    return Consumer<BLEManager>(
+      builder: (context, bm, _) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Auxillary Output',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: GestureDetector(
+                        onTapDown: (_) {
+                          bm.sendAuxillaryOutputControl(true);
+                        },
+                        onTapUp: (_) {
+                          bm.sendAuxillaryOutputControl(false);
+                          setState(() => _auxOutputLatchUi = false);
+                        },
+                        onTapCancel: () {
+                          bm.sendAuxillaryOutputControl(false);
+                          setState(() => _auxOutputLatchUi = false);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 14, horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[900],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: const Text(
+                            'Hold: Aux output on',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Aux output',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                        Switch(
+                          value: _auxOutputLatchUi,
+                          onChanged: (value) {
+                            setState(() => _auxOutputLatchUi = value);
+                            bm.sendAuxillaryOutputControl(value);
+                          },
+                          activeColor: const Color(0xFFBB86FC),
+                        ),
+                      ],
+                    ),
+                    _buildSwitch(
+                      'Timed pulse on startup',
+                      bm.auxStartupTimed,
+                      (value) {
+                        bm.setAuxStartupTimed(value);
+                        bm.refreshFromUi();
+                        _saveManifoldConfigNow();
+                      },
+                    ),
+                    _buildSwitch(
+                      'Timed pulse on shutdown',
+                      bm.auxShutdownTimed,
+                      (value) {
+                        bm.setAuxShutdownTimed(value);
+                        bm.refreshFromUi();
+                        _saveManifoldConfigNow();
+                      },
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Duration unit:',
+                              style: TextStyle(color: Colors.white, fontSize: 16),
+                            ),
+                          ),
+                          DropdownButton<int>(
+                            value: bm.auxTimeUnit.clamp(0, 3),
+                            dropdownColor: Colors.grey[850],
+                            style: const TextStyle(color: Colors.white),
+                            items: [
+                              for (var i = 0; i < 4; i++)
+                                DropdownMenuItem(
+                                  value: i,
+                                  child: Text(unitLabels[i]),
+                                ),
+                            ],
+                            onChanged: (v) {
+                              if (v == null) return;
+                              bm.auxTimeUnit = v;
+                              bm.refreshFromUi();
+                              _saveManifoldConfigNow();
+                              setState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    _buildKeyboardInputRow(
+                      'Pulse duration',
+                      auxPulseDurationController,
+                      isNumberInput: true,
+                      limitChar: 3,
+                      tooltipTitle: 'Pulse duration',
+                      tooltip:
+                          'Length of each aux pulse (0–255) in the selected duration unit.',
+                      saveWhenKeyboardDone: true,
+                    ),
+                    _buildKeyboardInputRow(
+                      'Interval (cycles)',
+                      auxIntervalCyclesController,
+                      isNumberInput: true,
+                      limitChar: 3,
+                      tooltipTitle: 'Interval (cycles)',
+                      tooltip:
+                          'Interval between pulses in cycle count (0–255), as on the wireless controller.',
+                      saveWhenKeyboardDone: true,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
