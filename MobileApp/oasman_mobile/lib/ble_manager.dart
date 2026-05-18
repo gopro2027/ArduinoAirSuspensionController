@@ -12,6 +12,12 @@ import 'models/appSettings.dart';
 /// OASMan BLE service UUID; filter scans to only show manifold devices.
 const String oasmanServiceUuid = '679425c8-d3b4-4491-9eb2-3e3d15b625f0';
 
+/// Full [BTOasPacket] wire size (cmd + sender + recipient + args[100]).
+const int btoasPacketSize = 104;
+
+/// Args payload size inside a [BTOasPacket].
+const int btoasArgsSize = 100;
+
 class BTOasIdentifier {
   static const int IDLE = 0;
   static const int STATUSREPORT = 1;
@@ -43,6 +49,11 @@ class BTOasIdentifier {
   static const int RFCOMMAND = 37;
   static const int AUXILLARYOUTPUTCONTROL = 38;
 }
+
+/// GETCONFIGVALUES read request (cmd only, args zeroed). Reused on every connect.
+final List<int> kConfigReadPacket = List<int>.filled(btoasPacketSize, 0)
+  ..[0] = BTOasIdentifier.GETCONFIGVALUES & 0xFF
+  ..[1] = BTOasIdentifier.GETCONFIGVALUES >> 8;
 
 /// Config flags in ConfigValuesPacket.configFlagsBits (GETCONFIGVALUES).
 class ConfigFlagsBit {
@@ -427,39 +438,54 @@ class BLEManager extends ChangeNotifier {
     }
   }
 
-// uses our versions of short and int
-  Uint8List int32BigEndianBytes(BLEInt value) =>
-      Uint8List(4)..buffer.asByteData().setInt32(0, value.toInt(), Endian.big);
-
-  Uint8List int16BigEndianBytes(BLEShort value) => Uint8List(2)
-    ..buffer.asByteData().setInt16(0, value.toShort(), Endian.big);
-
   List<int> buildRestPacket(int cmd, List<Object> data) {
-    print("Building rest packet");
-    List<int> ret = [];
-    ret.add(cmd);
-    ret.add(0);
-    ret.add(0);
-    ret.add(0);
+    final ret = List<int>.filled(btoasPacketSize, 0);
+    ret[0] = cmd & 0xFF;
+    ret[1] = (cmd >> 8) & 0xFF;
 
-    int carrier = 4;
-    for (Object obj in data) {
+    var offset = 4;
+    for (final obj in data) {
       if (obj is BLEInt) {
-        Uint8List intbytes = int32BigEndianBytes(obj);
-        ret.add(intbytes[3]); //(obj >> 24) & 0xFF;
-        ret.add(intbytes[2]); //(obj >> 16) & 0xFF;
-        ret.add(intbytes[1]); //(obj >> 8) & 0xFF;
-        ret.add(intbytes[0]); //obj & 0xFF;
-        carrier = carrier + 4;
-      }
-      if (obj is BLEShort) {
-        Uint8List shortbytes = int16BigEndianBytes(obj);
-        ret.add(shortbytes[1]);
-        ret.add(shortbytes[0]);
-        carrier = carrier + 2;
+        _writeInt32Le(ret, offset, obj.toInt());
+        offset += 4;
+      } else if (obj is BLEShort) {
+        _writeUint16Le(ret, offset, obj.toShort());
+        offset += 2;
       }
     }
     return ret;
+  }
+
+  /// Read-only GETCONFIGVALUES request (setValues = 0), full 104-byte packet.
+  List<int> buildConfigReadPacket() => kConfigReadPacket;
+
+  static void _writeInt32Le(List<int> buf, int offset, int value) {
+    buf[offset] = value & 0xFF;
+    buf[offset + 1] = (value >> 8) & 0xFF;
+    buf[offset + 2] = (value >> 16) & 0xFF;
+    buf[offset + 3] = (value >> 24) & 0xFF;
+  }
+
+  static void _writeUint16Le(List<int> buf, int offset, int value) {
+    buf[offset] = value & 0xFF;
+    buf[offset + 1] = (value >> 8) & 0xFF;
+  }
+
+  static void _writeCmdLe(List<int> packet, int cmd) {
+    packet[0] = cmd & 0xFF;
+    packet[1] = (cmd >> 8) & 0xFF;
+  }
+
+  List<int> _buildGetConfigValuesPacket(List<int> args) {
+    final packet = List<int>.filled(btoasPacketSize, 0);
+    _writeCmdLe(packet, BTOasIdentifier.GETCONFIGVALUES);
+    packet.setRange(4, btoasPacketSize, args);
+    return packet;
+  }
+
+  int _restPacketCmd(List<int> data) {
+    if (data.length < 2) return -1;
+    return data[0] | (data[1] << 8);
   }
 
   Future<void> authCheck() async {
@@ -568,7 +594,7 @@ class BLEManager extends ChangeNotifier {
   /// Mirrors Wireless_Controller's onBLEConnectionCompleted():
   ///   sendConfigValuesPacket(false) + requestPreset() + sendUpdateStatusRequestPacket()
   Future<void> _onConnectionCompleted() async {
-    await sendRestCommand(buildRestPacket(BTOasIdentifier.GETCONFIGVALUES, []));
+    await sendRestCommand(buildConfigReadPacket());
     requestPresetData(2); // default preset 3 → 0-based index 2
     sendUpdateStatusRequest();
   }
@@ -645,7 +671,6 @@ class BLEManager extends ChangeNotifier {
       try {
         if (restCharacteristic!.properties.write) {
           await restCharacteristic!.write(command, withoutResponse: false);
-          print("Command sent successfully: $command");
         } else {
           print("Write characteristic does not support write operations.");
         }
@@ -680,17 +705,12 @@ class BLEManager extends ChangeNotifier {
 
   void _handleIncomingRestData(List<int> data, BuildContext? context) {
     try {
-      //if (data.length >= 16) {
-      final packetId = _decodeInt32(data, 0);
-      print("Received data: $data");
-      print("Rest Packet ID: $packetId");
+      final packetCmd = _restPacketCmd(data);
 
-      switch (packetId) {
-        case BTOasIdentifier.AUTHPACKET: //handle incoming status packages
-          print("Received auth result");
-          //print(_decodeInt32(data, 4).toString());
-          //print(_decodeInt32(data, 8).toString());
-          if (_decodeInt32(data, 8) == 2 /*AuthResult::AUTHRESULT_FAIL*/) {
+      switch (packetCmd) {
+        case BTOasIdentifier.AUTHPACKET:
+          if (data.length >= 12 &&
+              _decodeInt32(data, 8) == 2 /*AuthResult::AUTHRESULT_FAIL*/) {
             disconnectDevice();
             if (context != null && context.mounted) {
               showDialog(
@@ -700,16 +720,19 @@ class BLEManager extends ChangeNotifier {
             }
           }
           break;
-        case BTOasIdentifier
-              .GETCONFIGVALUES: // handle incoming config (args32[0], args32[1], args16[4], args16[5], args8[12+0..8])
+        case BTOasIdentifier.GETCONFIGVALUES:
+          if (data.length < btoasPacketSize) {
+            debugPrint(
+                'GETCONFIGVALUES ignored: expected $btoasPacketSize bytes, got ${data.length}');
+            break;
+          }
           systemShutoffTimeM = _decodeInt32(data, 4); // args32()[0]
           final configFlagsBits = _decodeInt32(data, 8); // args32()[1]
           pressureSensorMax = _decodeShort(data, 12); // args16()[4]
           bagVolumePercentage = _decodeShort(data, 14); // args16()[5]
-          bagMaxPressure = data.length > 16 ? data[16] : 0; // args8()[12+0]
-          compressorOnPSI = data.length > 17 ? data[17] : 0;
-          compressorOffPSI = data.length > 18 ? data[18] : 0;
-          // setValues at data[19] - not needed for display
+          bagMaxPressure = data[16];
+          compressorOnPSI = data[17];
+          compressorOffPSI = data[18];
 
           riseOnStart =
               (configFlagsBits & (1 << ConfigFlagsBit.CONFIG_RISE_ON_START)) !=
@@ -731,31 +754,19 @@ class BLEManager extends ChangeNotifier {
 
           configRevision++;
 
-          // Store full args (100 bytes) for echoing back when saving config
-          if (data.length > 23) {
-            rfButtonAPreset = data[20] & 0xFF;
-            rfButtonBPreset = data[21] & 0xFF;
-            rfButtonCPreset = data[22] & 0xFF;
-            rfButtonDPreset = data[23] & 0xFF;
-            heightSensorInvertBits = data[24] & 0xFF;
-          }
+          rfButtonAPreset = data[20] & 0xFF;
+          rfButtonBPreset = data[21] & 0xFF;
+          rfButtonCPreset = data[22] & 0xFF;
+          rfButtonDPreset = data[23] & 0xFF;
+          heightSensorInvertBits = data[24] & 0xFF;
 
-          if (data.length >= 32) {
-            auxModeByte = data[28] & 0xFF;
-            var tu = data[29] & 0xFF;
-            if (tu > 3) tu = 0;
-            auxTimeUnit = tu;
-            auxPulseDuration = data[30] & 0xFF;
-            auxIntervalCycles = data[31] & 0xFF;
-          }
+          auxModeByte = data[28] & 0xFF;
+          final tu = data[29] & 0xFF;
+          auxTimeUnit = tu > 3 ? 0 : tu;
+          auxPulseDuration = data[30] & 0xFF;
+          auxIntervalCycles = data[31] & 0xFF;
 
-          if (data.length >= 104) {
-            _lastConfigArgs = List<int>.from(data.sublist(4, 104));
-            if (_lastConfigArgs!.length < 100) {
-              _lastConfigArgs!
-                  .addAll(List.filled(100 - _lastConfigArgs!.length, 0));
-            }
-          }
+          _lastConfigArgs = List<int>.from(data.sublist(4, btoasPacketSize));
 
           break;
         case BTOasIdentifier.PRESETREPORT:
@@ -886,13 +897,6 @@ class BLEManager extends ChangeNotifier {
     return data[offset] | (data[offset + 1] << 8);
   }
 
-  List<int> _encodeShort(int value) {
-    return [
-      value & 0xFF, // low byte
-      (value >> 8) & 0xFF, // high byte
-    ];
-  }
-
   int _decodeInt32(List<int> data, int offset) {
     return data[offset] |
         (data[offset + 1] << 8) |
@@ -930,15 +934,14 @@ class BLEManager extends ChangeNotifier {
   }
 
   void saveConfigToManifold() {
-    final args = List<int>.filled(100, 0);
-    if (_lastConfigArgs != null && _lastConfigArgs!.length >= 100) {
+    final args = List<int>.filled(btoasArgsSize, 0);
+    if (_lastConfigArgs != null && _lastConfigArgs!.length >= btoasArgsSize) {
       args.setAll(0, _lastConfigArgs!);
     }
-    // Overwrite with current state (ConfigValuesPacket layout)
-    args.setAll(0, _encodeInt32(systemShutoffTimeM)); // args32()[0]
-    args.setAll(4, _encodeInt32(_buildConfigFlagsBits())); // args32()[1]
-    args.setAll(8, _encodeShort(pressureSensorMax)); // args16()[4]
-    args.setAll(10, _encodeShort(bagVolumePercentage)); // args16()[5]
+    _writeInt32Le(args, 0, systemShutoffTimeM);
+    _writeInt32Le(args, 4, _buildConfigFlagsBits());
+    _writeUint16Le(args, 8, pressureSensorMax);
+    _writeUint16Le(args, 10, bagVolumePercentage);
     args[12] = bagMaxPressure;
     args[13] = compressorOnPSI;
     args[14] = compressorOffPSI;
@@ -948,21 +951,14 @@ class BLEManager extends ChangeNotifier {
     args[18] = rfButtonCPreset.clamp(0, 255);
     args[19] = rfButtonDPreset.clamp(0, 255);
     args[20] = heightSensorInvertBits.clamp(0, 255);
-
     args[24] = auxModeByte.clamp(0, 255);
     args[25] = auxTimeUnit.clamp(0, 3);
     args[26] = auxPulseDuration.clamp(0, 255);
     args[27] = auxIntervalCycles.clamp(0, 255);
 
-    final packet = [..._encodeInt32(BTOasIdentifier.GETCONFIGVALUES), ...args];
-    sendRestCommand(packet);
+    sendRestCommand(_buildGetConfigValuesPacket(args));
 
     sendRestCommandString(
         _encodeInt32(BTOasIdentifier.BROADCASTNAME), bleBroadcastName);
-    sendRestCommand([
-      ..._encodeInt32(BTOasIdentifier.AUTHPACKET),
-      ..._encodeInt32(passkey),
-      ..._encodeInt32(3)
-    ]);
   }
 }

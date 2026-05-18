@@ -282,8 +282,7 @@ class _ButtonsPageState extends State<ButtonsPage> {
     bleManager.sendRestCommand(bleManager.buildRestPacket(
         BTOasIdentifier.SAVECURRENTPRESSURESTOPROFILE,
         [BLEInt(_selectedPreset - 1)]));
-    bleManager.sendRestCommand(
-        bleManager.buildRestPacket(BTOasIdentifier.GETCONFIGVALUES, []));
+    bleManager.sendRestCommand(bleManager.buildConfigReadPacket());
     bleManager.requestPresetData(_selectedPreset - 1);
   }
 

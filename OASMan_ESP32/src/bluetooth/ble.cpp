@@ -233,19 +233,28 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
 
     if (att_handle == rest_characteristic_value_handle)
     {
+        if (buffer_size == 0)
+        {
+            return 0;
+        }
 
-        Serial.println("Received rest command");
-        BTOasPacket *packet = (BTOasPacket *)buffer;
-        packet->dump();
+        // Zero-fill before parsing: clients may write fewer than BTOAS_PACKET_SIZE
+        // bytes; unset args (especially setValues) must not read stack garbage.
+        static BTOasPacket rxRestPacket;
+        memset(&rxRestPacket, 0, sizeof(rxRestPacket));
+        const uint16_t copyLen =
+            buffer_size < BTOAS_PACKET_SIZE ? buffer_size : BTOAS_PACKET_SIZE;
+        memcpy(&rxRestPacket, buffer, copyLen);
+        rxRestPacket.dump();
         if (isAuthed(con_handle))
         {
-            runReceivedPacket(con_handle, packet);
+            runReceivedPacket(con_handle, &rxRestPacket);
         }
 
         // Authed thing on connect
-        if (packet->cmd == BTOasIdentifier::AUTHPACKET)
+        if (rxRestPacket.cmd == BTOasIdentifier::AUTHPACKET)
         {
-            AuthPacket *ap = ((AuthPacket *)packet);
+            AuthPacket *ap = ((AuthPacket *)&rxRestPacket);
             if (ap->getBleAuthResult() == AuthResult::AUTHRESULT_WAITING)
             {
                 // AUTH REQUEST
