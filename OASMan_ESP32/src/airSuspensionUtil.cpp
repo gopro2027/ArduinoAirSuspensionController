@@ -6,6 +6,7 @@
 InputType *pressureInputs[5];
 Manifold *manifold;
 Compressor *compressor;
+AuxillaryOutput *auxillaryOutput;
 RfReceiver *rfReceiver;
 Wheel *wheel[4];
 
@@ -23,6 +24,10 @@ Manifold *getManifold()
 Compressor *getCompressor()
 {
     return compressor;
+}
+AuxillaryOutput *getAuxillaryOutput()
+{
+    return auxillaryOutput;
 }
 RfReceiver *getRfReceiver()
 {
@@ -377,9 +382,13 @@ int vehicleOnCounter = 0;
 bool hasJustShutoff = true;
 void accessoryWireLoop()
 {
+    bool previousVehicleOn = vehicleOn;
     sampleReading(vehicleOn, accessoryWire->digitalRead() == HIGH, vehicleOnHistory, vehicleOnCounter, accessoryWireSampleSize);
     if (isVehicleOn())
     {
+        if (previousVehicleOn == false) {
+            getAuxillaryOutput()->setDoStartupEvent(true);
+        }
         // accessory wire is supplying 12v (car on)
         notifyKeepAlive();
         hasJustShutoff = false;
@@ -395,6 +404,7 @@ void accessoryWireLoop()
                 hasJustShutoff = true;
                 // actually check if air out code is enabled and do as asked
                 airOutWithSafetyCheck();
+                getAuxillaryOutput()->setDoShutdownEvent(true);
             }
         }
     }

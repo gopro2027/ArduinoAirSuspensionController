@@ -233,19 +233,28 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
 
     if (att_handle == rest_characteristic_value_handle)
     {
+        if (buffer_size == 0)
+        {
+            return 0;
+        }
 
-        Serial.println("Received rest command");
-        BTOasPacket *packet = (BTOasPacket *)buffer;
-        packet->dump();
+        // Zero-fill before parsing: clients may write fewer than BTOAS_PACKET_SIZE
+        // bytes; unset args (especially setValues) must not read stack garbage.
+        static BTOasPacket rxRestPacket;
+        memset(&rxRestPacket, 0, sizeof(rxRestPacket));
+        const uint16_t copyLen =
+            buffer_size < BTOAS_PACKET_SIZE ? buffer_size : BTOAS_PACKET_SIZE;
+        memcpy(&rxRestPacket, buffer, copyLen);
+        rxRestPacket.dump();
         if (isAuthed(con_handle))
         {
-            runReceivedPacket(con_handle, packet);
+            runReceivedPacket(con_handle, &rxRestPacket);
         }
 
         // Authed thing on connect
-        if (packet->cmd == BTOasIdentifier::AUTHPACKET)
+        if (rxRestPacket.cmd == BTOasIdentifier::AUTHPACKET)
         {
-            AuthPacket *ap = ((AuthPacket *)packet);
+            AuthPacket *ap = ((AuthPacket *)&rxRestPacket);
             if (ap->getBleAuthResult() == AuthResult::AUTHRESULT_WAITING)
             {
                 // AUTH REQUEST
@@ -696,6 +705,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             setheightSensorMode((flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0);
             setsafetyMode((flags & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0);
             setaiEnabled((flags & (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED)) != 0);
+            saveAuxillaryOutputPreference(*recpkt->_auxillaryOutputConfig());
         }
         uint32_t configFlagsBits = 0;
         if (getriseOnStart())
@@ -712,7 +722,13 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE);
         if (getaiEnabled())
             configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED);
-        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getheightSensorInvertBits(), configFlagsBits);
+        
+        AuxillaryOutputModePayload auxillaryOutputConfig;
+        auxillaryOutputConfig.mode = (AuxillaryOutputMode)getauxillaryOutputMode();
+        auxillaryOutputConfig.timeUnit = (AuxillaryOutputModeTimeUnit)getauxillaryOutputModeTimeUnit();
+        auxillaryOutputConfig.time = getauxillaryOutputTime();
+        auxillaryOutputConfig.interval = getauxillaryOutputInterval();
+        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getheightSensorInvertBits(), configFlagsBits, auxillaryOutputConfig);
         if (*recpkt->_setValues())
         {
             // if we changes values, update all the connected clients
@@ -849,6 +865,9 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         
     }
     break;
+    case BTOasIdentifier::AUXILLARYOUTPUTCONTROL:
+        getAuxillaryOutput()->onOffOverride(((AuxillaryOutputControlPacket *)packet)->getBoolean());
+        break;
     }
 }
 

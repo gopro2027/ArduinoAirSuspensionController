@@ -144,6 +144,7 @@ void beginSaveData()
     _SaveData.bagMaxPressure.load("bagMaxPressure", MAX_PRESSURE_SAFETY);
     _SaveData.blePasskey.load("blePasskey", BLE_PASSKEY);
     _SaveData.bleName.loadString("bleName", BT_NAME);
+    _SaveData.oledI2cAddr.load("oledI2cAddr", (uint64_t)SCREEN_ADDRESS);
 
     _SaveData.rfButtonAPreset.load("rfButtonAPreset", RIDE_HEIGHT_PRESET_NUMBER);
     _SaveData.rfButtonBPreset.load("rfButtonBPreset", RIDE_HEIGHT_PRESET_NUMBER);
@@ -156,6 +157,9 @@ void beginSaveData()
     _SaveData.compressorOffPSI.load("compressorOffPSI", COMPRESSOR_MAX_PSI);
     _SaveData.pressureSensorMax.load("pressureSensorMax", pressuretransducermaxPSI);
     _SaveData.bagVolumePercentage.load("bagVolumePercentage", 100);
+
+    _SaveData.auxillaryOutputPreference.load();
+
     for (int i = 0; i < MAX_PROFILE_COUNT; i++)
     {
         for (int j = 0; j < 4; j++)
@@ -375,6 +379,7 @@ createSaveFuncInt(pressureInputTank, byte);
 createSaveFuncInt(bagMaxPressure, uint8_t);
 createSaveFuncInt(blePasskey, uint32_t); // 6 digits base 10
 createSaveFuncString(bleName);
+createSaveFuncInt(oledI2cAddr, uint8_t);
 createSaveFuncInt(systemShutoffTimeM, uint32_t); // may have to change
 createSaveFuncInt(compressorOnPSI, uint8_t);
 createSaveFuncInt(compressorOffPSI, uint8_t);
@@ -386,6 +391,34 @@ createSaveFuncInt(rfButtonBPreset, uint8_t);
 createSaveFuncInt(rfButtonCPreset, uint8_t);
 createSaveFuncInt(rfButtonDPreset, uint8_t);
 createSaveFuncInt(heightSensorInvertBits, uint8_t);
+
+// auxillary output preference is in it's own class so we have custom functions defined
+AuxillaryOutputMode getauxillaryOutputMode() {
+    return (AuxillaryOutputMode)_SaveData.auxillaryOutputPreference.auxillaryOutputMode.get().i;
+}
+AuxillaryOutputModeTimeUnit getauxillaryOutputModeTimeUnit() {
+    return (AuxillaryOutputModeTimeUnit)_SaveData.auxillaryOutputPreference.auxillaryOutputModeTimeUnit.get().i;
+}
+uint8_t getauxillaryOutputTime() {
+    return _SaveData.auxillaryOutputPreference.auxillaryOutputTime.get().i;
+}
+uint8_t getauxillaryOutputInterval() {
+    return _SaveData.auxillaryOutputPreference.auxillaryOutputInterval.get().i;
+}
+
+// not part of the config, this is the counter value we store to decide when to trigger based on the interval
+uint8_t getauxillaryIntervalCounter() {
+    return _SaveData.auxillaryOutputPreference.auxillaryIntervalCounter.get().i;
+}
+void setauxillaryIntervalCounter(uint8_t value) {
+    _SaveData.auxillaryOutputPreference.auxillaryIntervalCounter.set(value);
+}
+
+
+void saveAuxillaryOutputPreference(AuxillaryOutputModePayload payload) {
+    _SaveData.auxillaryOutputPreference.save(payload);
+}
+
 
 float getHeightSensorMax()
 {

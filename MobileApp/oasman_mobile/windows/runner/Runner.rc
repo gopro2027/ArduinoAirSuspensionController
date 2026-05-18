@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "dev.oasman" "\0"
-            VALUE "FileDescription", "oasman_mobile" "\0"
+            VALUE "FileDescription", "OASMan" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "oasman_mobile" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2024 dev.oasman. All rights reserved." "\0"
             VALUE "OriginalFilename", "oasman_mobile.exe" "\0"
-            VALUE "ProductName", "oasman_mobile" "\0"
+            VALUE "ProductName", "OASMan" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

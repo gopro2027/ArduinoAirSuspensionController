@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.3+4
+version: 1.0.6+6
 
 environment:
   sdk: ^3.5.4
@@ -40,6 +40,8 @@ dependencies:
   flutter_svg: ^2.0.16
   provider: ^6.0.5
   image_picker: ^1.1.2
+  image_picker_android: ^0.8.13
+  image_picker_platform_interface: ^2.11.0
   path_provider: ^2.1.4
   shared_preferences: ^2.2.3
   font_awesome_flutter: ^10.10.0
@@ -55,6 +57,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -100,3 +103,15 @@ flutter:
     - family: Bebas Neue
       fonts:
         - asset: assets/fonts/BebasNeue-Regular.ttf
+
+flutter_launcher_icons:
+  image_path: assets/app_icon.png
+  android: true
+  ios: true
+  web:
+    generate: true
+    image_path: assets/app_icon.png
+    background_color: "#FFFFFF"
+    theme_color: "#000000"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/app_icon.png

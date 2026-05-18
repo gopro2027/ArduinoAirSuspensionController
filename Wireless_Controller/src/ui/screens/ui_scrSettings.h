@@ -23,8 +23,13 @@ class ScrSettings : public Scr
     using Scr::Scr;
 
 public:
+    static constexpr int kSettingsMaxPages = 16;
+
     void updateUpdateButtonVisbility();
-    lv_obj_t *pages[9];  // Array of page containers for each section
+    int settingsPageCount = 0;
+    lv_obj_t *pages[kSettingsMaxPages];
+
+    lv_obj_t *addSettingsPage(lv_obj_t *pages_container, bool hiddenInitially = true);
     lv_obj_t *ui_qrcode;
     Option *ui_s1;  // Compressor Frozen (text with value)
     Option *ui_s2;  // Compressor Status (switch)
@@ -62,6 +67,14 @@ public:
     Option *ui_rfbuttonB;
     Option *ui_rfbuttonC;
     Option *ui_rfbuttonD;
+
+    Option *ui_auxHoldButton;
+    Option *ui_auxOutputSwitch;
+    Option *ui_auxModeStartup;
+    Option *ui_auxModeShutdown;
+    Option *ui_auxTimeUnit;
+    Option *ui_auxPulseDuration;
+    Option *ui_auxIntervalCycles;
 
     // Track all Options/RadioOptions for cleanup
     std::vector<Option*> allOptions;

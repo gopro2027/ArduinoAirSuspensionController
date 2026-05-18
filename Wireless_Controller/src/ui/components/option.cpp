@@ -1,5 +1,7 @@
 #include "device_lib_exports.h"
 #include "option.h"
+#include <stdint.h>
+
 lv_style_t headerStyle;
 static bool styleCreated = false;
 
@@ -36,6 +38,98 @@ void Option::resetHeaderStyle()
     // Force style to be recreated on next Option creation
     styleCreated = false;
 }
+
+void Option::styleDropdownClosed(lv_obj_t *dd)
+{
+    lv_obj_set_style_bg_color(dd, lv_color_hex(0x161A1F), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(dd, LV_OPA_COVER, LV_PART_MAIN);
+
+    lv_obj_set_style_border_width(dd, 2, LV_PART_MAIN);
+    lv_obj_set_style_border_color(dd, lv_color_hex(0x2A313A), LV_PART_MAIN);
+
+    lv_obj_set_style_radius(dd, 12, LV_PART_MAIN);
+
+    lv_obj_set_style_text_color(dd, lv_color_hex(0xF2F4F7), LV_PART_MAIN);
+
+    lv_obj_set_style_text_color(dd, lv_color_hex(0xC9D0D8), LV_PART_INDICATOR);
+}
+
+void Option::styleDropdownList(lv_obj_t *dd)
+{
+    lv_obj_t *list = lv_dropdown_get_list(dd);
+    if (!list)
+        return;
+
+    lv_obj_set_style_bg_color(list, lv_color_hex(0x161A1F), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(list, LV_OPA_COVER, LV_PART_MAIN);
+
+    lv_obj_set_style_border_width(list, 2, LV_PART_MAIN);
+    lv_obj_set_style_border_color(list, lv_color_hex(0x2A313A), LV_PART_MAIN);
+    lv_obj_set_style_radius(list, 14, LV_PART_MAIN);
+    /* Clip drawing to rounded list bounds so the selected-row highlight does not bleed when scrolling. */
+    lv_obj_set_style_clip_corner(list, true, LV_PART_MAIN);
+
+    lv_obj_set_style_max_height(list, (int)(getScreenHeight() * 0.65f), LV_PART_MAIN);
+
+    lv_obj_set_style_text_color(list, lv_color_white(), LV_PART_MAIN);
+    lv_obj_set_style_text_color(list, lv_color_white(), LV_PART_SELECTED);
+
+    lv_obj_set_style_pad_left(list, 16, LV_PART_SELECTED);
+    lv_obj_set_style_pad_right(list, 16, LV_PART_SELECTED);
+    /* No vertical pad on LV_PART_SELECTED: dropdown draw_box uses font height only. */
+    lv_obj_set_style_pad_top(list, 0, LV_PART_SELECTED);
+    lv_obj_set_style_pad_bottom(list, 0, LV_PART_SELECTED);
+
+    lv_obj_set_style_border_width(list, 0, LV_PART_SELECTED);
+    lv_obj_set_style_shadow_opa(list, LV_OPA_TRANSP, LV_PART_SELECTED);
+    lv_obj_set_style_drop_shadow_opa(list, LV_OPA_TRANSP, LV_PART_SELECTED);
+
+    lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_LIGHT),
+        LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
+    lv_obj_set_style_bg_opa(list, LV_OPA_COVER,
+        LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
+    lv_obj_set_style_radius(list, 12, LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
+    lv_obj_set_style_text_color(list, lv_color_white(),
+        LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
+    lv_obj_set_style_shadow_opa(list, LV_OPA_TRANSP,
+        LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
+    lv_obj_set_style_drop_shadow_opa(list, LV_OPA_TRANSP,
+        LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_CHECKED);
+
+    lv_obj_set_style_bg_color(list, lv_color_hex(THEME_COLOR_LIGHT),
+        LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(list, LV_OPA_COVER,
+        LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
+    lv_obj_set_style_radius(list, 12, LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
+    lv_obj_set_style_text_color(list, lv_color_white(),
+        LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
+    lv_obj_set_style_shadow_opa(list, LV_OPA_TRANSP,
+        LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
+    lv_obj_set_style_drop_shadow_opa(list, LV_OPA_TRANSP,
+        LV_PART_SELECTED | (lv_style_selector_t)LV_STATE_PRESSED);
+
+    lv_obj_set_style_bg_opa(list, LV_OPA_20, LV_PART_SCROLLBAR);
+    lv_obj_set_style_radius(list, 8, LV_PART_SCROLLBAR);
+}
+
+static void option_dropdown_ready_cb(lv_event_t *e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_READY)
+        return;
+    Option::styleDropdownList(lv_event_get_target_obj(e));
+}
+
+static void option_dropdown_value_cb(lv_event_t *e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_VALUE_CHANGED)
+        return;
+    Option *option = (Option *)lv_event_get_user_data(e);
+    if (option == NULL || option->event_cb == NULL)
+        return;
+    uint32_t sel = lv_dropdown_get_selected(lv_event_get_target_obj(e));
+    option->event_cb((void *)(uintptr_t)sel);
+}
+
 void ui_switch_changed(lv_event_t *e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
@@ -58,8 +152,19 @@ void ui_clicked_button(lv_event_t *e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
     Option *option = (Option *)lv_event_get_user_data(e);
-    if (event_code == LV_EVENT_CLICKED)
-    {
+    if (option == NULL || option->event_cb == NULL)
+        return;
+
+    if (option->type == OptionType::BUTTON && option->buttonMomentary) {
+        if (event_code == LV_EVENT_PRESSED) {
+            option->event_cb((void *)(uintptr_t)1);
+        } else if (event_code == LV_EVENT_RELEASED || event_code == LV_EVENT_PRESS_LOST) {
+            option->event_cb((void *)(uintptr_t)0);
+        }
+        return;
+    }
+
+    if (event_code == LV_EVENT_CLICKED) {
         option->event_cb(option);
     }
 }
@@ -131,6 +236,8 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     }
     else if (type == OptionType::BUTTON)
     {
+        this->buttonMomentary = ((uintptr_t)_extraEventClickData == kButtonMomentaryExtraTag);
+
         this->text = lv_button_create(this->root);
 
         lv_obj_t *btntext = lv_label_create(this->text);
@@ -203,6 +310,33 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
 
         lv_obj_add_flag(this->rightHandObj, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
         lv_obj_add_event_cb(this->rightHandObj, ta_event_cb, LV_EVENT_ALL, this);
+    }
+    else if (type == OptionType::DROPDOWN_SELECT)
+    {
+        const char *ddOptions = (const char *)_extraEventClickData;
+        this->indentText(1);
+        const int ddLogicalW = (getScreenWidth() * 52) / 100;
+        const int textMaxWidth = getScreenWidth() - (MARGIN * 2 + MARGIN + ddLogicalW) - scaledX(6);
+        lv_obj_set_width(this->text, textMaxWidth);
+
+        this->rightHandObj = lv_dropdown_create(this->root);
+        lv_dropdown_set_options(this->rightHandObj, ddOptions != NULL ? ddOptions : "");
+        lv_obj_set_width(this->rightHandObj, LV_PCT(52));
+#ifdef SCREEN_MODE_CIRCLE
+        lv_obj_set_height(this->rightHandObj, scaledY(32));
+#else
+        lv_obj_set_height(this->rightHandObj, scaledY(36));
+#endif
+        lv_obj_set_align(this->rightHandObj, LV_ALIGN_RIGHT_MID);
+        lv_obj_set_x(this->rightHandObj, -MARGIN);
+        lv_obj_set_y(this->rightHandObj, 0);
+
+        styleDropdownClosed(this->rightHandObj);
+        lv_obj_add_event_cb(this->rightHandObj, option_dropdown_ready_cb, LV_EVENT_READY, this);
+        lv_obj_add_event_cb(this->rightHandObj, option_dropdown_value_cb, LV_EVENT_VALUE_CHANGED, this);
+
+        if (value.INT >= 0)
+            lv_dropdown_set_selected(this->rightHandObj, (uint32_t)value.INT);
     }
     else if (type == OptionType::SLIDER)
     {
@@ -313,6 +447,15 @@ void Option::setRightHandText(const char *text)
             }
         }
     }
+}
+
+void Option::setDropdownSelectedIndex(uint32_t index)
+{
+    if (this->type != OptionType::DROPDOWN_SELECT || this->rightHandObj == NULL)
+        return;
+    if (lv_dropdown_get_selected(this->rightHandObj) == index)
+        return;
+    lv_dropdown_set_selected(this->rightHandObj, index);
 }
 
 void Option::setBooleanValue(bool value, bool netSend)

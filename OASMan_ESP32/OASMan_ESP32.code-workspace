@@ -5,12 +5,18 @@
 		},
 		{
 			"path": "../ESP32_SHARED_LIBS"
+		},
+		{
+			"path": "../Wireless_Controller"
+		},
+		{
+			"path": "../MobileApp"
 		}
 	],
 	"settings": {
 		"files.associations": {
-			"*.dbclient-js": "javascript",
 			"jinja-html": "html",
+			"*.dbclient-js": "javascript",
 			"*.sqlbook": "sql",
 			"*.ndjson": "jsonl",
 			"new": "cpp",
@@ -85,7 +91,11 @@
 			"rope": "cpp",
 			"slist": "cpp",
 			"scoped_allocator": "cpp",
-			"shared_mutex": "cpp"
+			"shared_mutex": "cpp",
+			"expected": "cpp",
+			"format": "cpp",
+			"variant": "cpp",
+			"xlocmes": "cpp"
 		}
 	}
 }

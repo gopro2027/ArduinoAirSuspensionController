@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="dev.oasman.oasman_mobile">
 
     <!-- Bluetooth Hardware Feature -->
@@ -16,11 +17,12 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="30" />
 
-    <!-- Camera upload Permission (removed android.permission.CAMERA) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Gallery uses system photo picker; strip broad media permissions from merged manifests (e.g. plugins). -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove" />
 
-        <application
-        android:label="oasman_mobile"
+    <application
+        android:label="OASMan"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

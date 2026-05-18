@@ -148,14 +148,8 @@ class _ButtonsPageState extends State<ButtonsPage> {
       iconUp: Icons.keyboard_double_arrow_up,
       iconDown: Icons.keyboard_double_arrow_down,
       isLarge: true,
-      onUpPressed: () {
-        openValve(ctx, in1);
-        openValve(ctx, in2);
-      },
-      onDownPressed: () {
-        openValve(ctx, out1);
-        openValve(ctx, out2);
-      },
+      onUpPressed: () => openValvesMask(ctx, (1 << in1) | (1 << in2)),
+      onDownPressed: () => openValvesMask(ctx, (1 << out1) | (1 << out2)),
       onReleasedButton: () => closeValves(ctx),
     );
   }
@@ -288,8 +282,7 @@ class _ButtonsPageState extends State<ButtonsPage> {
     bleManager.sendRestCommand(bleManager.buildRestPacket(
         BTOasIdentifier.SAVECURRENTPRESSURESTOPROFILE,
         [BLEInt(_selectedPreset - 1)]));
-    bleManager.sendRestCommand(
-        bleManager.buildRestPacket(BTOasIdentifier.GETCONFIGVALUES, []));
+    bleManager.sendRestCommand(bleManager.buildConfigReadPacket());
     bleManager.requestPresetData(_selectedPreset - 1);
   }
 
@@ -328,6 +321,17 @@ class _ButtonsPageState extends State<ButtonsPage> {
   void openValve(BuildContext context, int bit) {
     if (bleManager.connectedDevice != null) {
       bleManager.setValveBit(bit);
+    } else {
+      showDialog(
+        context: context,
+        builder: (_) => const NoBluetoothPopup(),
+      );
+    }
+  }
+
+  void openValvesMask(BuildContext context, int mask) {
+    if (bleManager.connectedDevice != null) {
+      bleManager.setValveMask(mask);
     } else {
       showDialog(
         context: context,

@@ -41,6 +41,7 @@
 #define SCREEN_WIDTH 128    // OLED display width, in pixels
 #define SCREEN_HEIGHT 64    // OLED display height, in pixels
 #define OLED_RESET -1       // Reset pin # (or -1 if sharing Arduino reset pin)
+/* Manifold OLED I2C address: on first boot this value is copied into NVS and used from save data on every boot after that. Changing this define in a later firmware build (or update) does not change an already-saved address. Erase flash (or clear manifold savedata) to seed again from this define. */
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 
 /* By default the android app is set up for 4 profiles */
@@ -114,6 +115,9 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 
 /* Compressor/tank */
 #define compressorRelayPin new InputType(13, OUTPUT) // D13, solenoid
+
+/* Auxillary Output */
+#define auxillaryOutputPin new InputType(14, OUTPUT) // D14, auxillary output
 
 /* Accessory Wire */
 #define outputKeepAlivePin new InputType(12, OUTPUT) // D12, output high while accessory input is low to keep input on. Should always output high while accessory is on. Output low when accessory is low to turn off system.

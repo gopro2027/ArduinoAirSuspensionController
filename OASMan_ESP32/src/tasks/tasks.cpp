@@ -1,4 +1,5 @@
 #include "tasks.h"
+#include "manifoldSaveData.h"
 
 bool bp32ServiceStarted = false;
 
@@ -39,7 +40,7 @@ void easterEggFunc()
 void task_screen(void *parameters)
 {
     // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-    if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
+    if (!display.begin(SSD1306_SWITCHCAPVCC, static_cast<uint8_t>(getoledI2cAddr())))
     {
         for (;;)
         {
@@ -75,6 +76,7 @@ void task_compressor(void *parameters)
     for (;;)
     {
         getCompressor()->loop();
+        getAuxillaryOutput()->loop();
         delay(100);
     }
 }
