@@ -17,18 +17,58 @@ const CACHE_TTL_MS = 30 * 60 * 1000;
 /** Bump when binary cache/response format changes (v1 streamed bodies broke ESP32 HTTPClient). */
 const BINARY_CACHE_VERSION = 'v2-buffered';
 
+const FIRMWARE_BIN_SUFFIX = '_firmware.bin';
+
+function binaryCacheRequest(downloadUrl) {
+  return new Request(`${downloadUrl}#${BINARY_CACHE_VERSION}`, { method: 'GET' });
+}
+
+function listFirmwareBinAssets(release) {
+  return (release?.assets || []).filter(
+    (a) => a.name?.endsWith(FIRMWARE_BIN_SUFFIX) && a.browser_download_url
+  );
+}
+
+/** Remove cached firmware binaries for a release (URLs are tag-specific). */
+async function invalidateFirmwareBinaries(release) {
+  const cache = caches.default;
+  const assets = listFirmwareBinAssets(release);
+  await Promise.all(
+    assets.map((asset) => cache.delete(binaryCacheRequest(asset.browser_download_url)))
+  );
+  if (assets.length > 0) {
+    console.log(
+      `Invalidated ${assets.length} firmware binary cache entries for release ${release?.tag_name}`
+    );
+  }
+}
+
+async function parseCachedRelease(cachedResponse) {
+  if (!cachedResponse) return null;
+  try {
+    const buffer = await cachedResponse.arrayBuffer();
+    return JSON.parse(new TextDecoder().decode(buffer));
+  } catch {
+    return null;
+  }
+}
+
+function releaseTagFromCache(cachedResponse, release) {
+  return cachedResponse?.headers.get('X-Release-Tag') || release?.tag_name || null;
+}
+
 async function fetchCachedReleaseJson() {
   const cacheKey = new Request(RELEASES_LATEST_URL, { method: 'GET' });
   const cache = caches.default;
-  let cachedResponse = await cache.match(cacheKey);
-
+  const cachedResponse = await cache.match(cacheKey);
+  let cachedRelease = null;
   if (cachedResponse) {
+    cachedRelease = await parseCachedRelease(cachedResponse);
     const cacheExpiry = cachedResponse.headers.get('X-Cache-Expiry');
-    if (cacheExpiry && Date.now() < parseInt(cacheExpiry, 10)) {
-      const buffer = await cachedResponse.arrayBuffer();
+    if (cacheExpiry && Date.now() < parseInt(cacheExpiry, 10) && cachedRelease) {
       return {
         ok: true,
-        release: JSON.parse(new TextDecoder().decode(buffer)),
+        release: cachedRelease,
         fromCache: true,
       };
     }
@@ -47,11 +87,10 @@ async function fetchCachedReleaseJson() {
   const rateLimitReset = response.headers.get('x-ratelimit-reset');
 
   if (response.status === 403 || response.status === 429) {
-    if (cachedResponse) {
-      const cachedBuffer = await cachedResponse.arrayBuffer();
+    if (cachedRelease) {
       return {
         ok: true,
-        release: JSON.parse(new TextDecoder().decode(cachedBuffer)),
+        release: cachedRelease,
         fromCache: true,
         rateLimited: true,
       };
@@ -74,12 +113,22 @@ async function fetchCachedReleaseJson() {
     };
   }
 
+  const release = JSON.parse(new TextDecoder().decode(buffer));
+  const newTag = release.tag_name;
+  const previousTag = releaseTagFromCache(cachedResponse, cachedRelease);
+
+  if (previousTag && newTag && previousTag !== newTag && cachedRelease) {
+    console.log(`Release tag changed ${previousTag} -> ${newTag}, clearing firmware caches`);
+    await invalidateFirmwareBinaries(cachedRelease);
+  }
+
   const responseToCache = new Response(buffer, {
     status: response.status,
     headers: {
       'Content-Type': 'application/json',
       'X-Cache-Expiry': cacheExpiry.toString(),
       'X-Cache-Time': new Date(now).toISOString(),
+      'X-Release-Tag': newTag || '',
       'Cache-Control': 'public, max-age=1800',
     },
   });
@@ -87,7 +136,7 @@ async function fetchCachedReleaseJson() {
 
   return {
     ok: true,
-    release: JSON.parse(new TextDecoder().decode(buffer)),
+    release,
     fromCache: false,
   };
 }
@@ -123,7 +172,7 @@ async function proxyBinary(downloadUrl, ctx) {
     return new Response('Invalid download URL', { status: 400 });
   }
 
-  const cacheKey = new Request(`${downloadUrl}#${BINARY_CACHE_VERSION}`, { method: 'GET' });
+  const cacheKey = binaryCacheRequest(downloadUrl);
   const cache = caches.default;
   let cachedResponse = await cache.match(cacheKey);
 
