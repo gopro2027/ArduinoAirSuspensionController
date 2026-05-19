@@ -5,9 +5,7 @@
 #include "WiFi.h"
 #include "HTTPClient.h"
 #include <Update.h>
-#include <ArduinoJson.h>
 #include "user_defines.h"
-#include "WiFiClientSecure.h"
 
 #ifndef FIRMWARE_RELEASE_NAME
 #ifdef PROJECT_IS_MANIFOLD

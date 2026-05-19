@@ -1,18 +1,12 @@
 #include "directdownload.h"
 
 #ifndef RELEASE_TAG_NAME
-#define RELEASE_TAG_NAME "build-dev" 
+#define RELEASE_TAG_NAME build-dev
 #endif
 
 #define download_firmware_response_success 1
 #define download_firmware_response_retry 2
 #define download_firmware_response_fail -1
-
-/** ArduinoJson's as<const char*>() can return nullptr; printf %s must never get nullptr. */
-static const char *jsonStr(const char *p)
-{
-    return p != nullptr ? p : "(null)";
-}
 
 int connectToWifi(String SSID, String PASS)
 {
@@ -23,10 +17,6 @@ int connectToWifi(String SSID, String PASS)
 
     const int maxtimeout = 20; // 500ms * 20 = 10 seconds
     int timeoutCounter = 0;
-
-    // WiFi.setTxPower(WIFI_POWER_19_5dBm);
-
-    // WiFi.setSleep(false);
 
     while (WiFi.status() != WL_CONNECTED)
     {
@@ -43,7 +33,6 @@ int connectToWifi(String SSID, String PASS)
 }
 
 HTTPClient *https;
-WiFiClientSecure *wifiClientSecure = nullptr;
 
 bool check300Redirect(int httpCode, String &responseURLString)
 {
@@ -57,169 +46,6 @@ bool check300Redirect(int httpCode, String &responseURLString)
     return false;
 }
 
-int getDownloadFirmwareURL(String &responseURLString)
-{
-    static bool parseFromStream = true;
-    static bool rateLimited = false;
-    log_i("Downloading json from github api releases");
-
-    if (rateLimited) {
-        log_i("Using direct secure connection to github api due to prior rate limiting");
-        if (wifiClientSecure != nullptr) {
-            wifiClientSecure->stop();
-            delete wifiClientSecure;
-        }
-        wifiClientSecure = new WiFiClientSecure();
-        wifiClientSecure->setInsecure();
-        wifiClientSecure->setHandshakeTimeout(30);
-        wifiClientSecure->setTimeout(30000);
-        https->useHTTP10(true);
-        https->setReuse(false);
-        https->setUserAgent("OASMan-ESP32-FirmwareUpdate/1.0");
-        https->addHeader("Accept", "application/vnd.github+json");
-        if (!https->begin(*wifiClientSecure, "https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest"))
-        {
-            log_i("Connection failed");
-            https->end(); // new, hopefully this doesn't cause issues
-            return download_firmware_response_retry;
-        }
-    } else {
-        if (!https->begin("http://githubreleaselist-http-proxy.gopro2027.workers.dev/"))
-        {
-            log_i("Connection failed");
-            https->end(); // new, hopefully this doesn't cause issues
-            return download_firmware_response_retry;
-        }
-    }
-
-    https->setConnectTimeout(20000);
-    https->setTimeout(30000);
-    delay(50);
-    int httpResponseCode = https->GET();
-    if (check300Redirect(httpResponseCode, responseURLString)) /* any 300 code lets try to redirect */
-    {
-        return download_firmware_response_retry;
-    }
-
-    if (httpResponseCode == HTTP_CODE_FORBIDDEN || httpResponseCode == HTTP_CODE_TOO_MANY_REQUESTS)
-    {
-        rateLimited = true;
-        log_i("Rate limited by GitHub API, switching to direct secure connection for future requests");
-        log_i("HTTP Response code: %d", httpResponseCode);
-        log_i("Error Response: %s", https->getString().c_str());
-        https->end();
-        return download_firmware_response_retry;
-    }
-
-    if (httpResponseCode != HTTP_CODE_OK)
-    {
-        log_i("HTTP Response code: %d", httpResponseCode);
-        log_i("Error Response: %s", https->getString().c_str());
-        https->end();
-        return download_firmware_response_retry;
-    }
-
-    // now parse the information in the response. This could basically be a separate function, but don't want to make that clutter in the git change right now
-    JsonDocument doc;
-    log_i("Got 200 response about to deserialize json");
-    log_i("looking for %s in the json", FIRMWARE_RELEASE_NAME);
-
-    JsonDocument filter;
-    filter["tag_name"] = true;
-    filter["assets"][0]["name"] = true;
-    filter["assets"][0]["browser_download_url"] = true;
-
-
-    DeserializationError error;
-
-    if (parseFromStream) {
-        // Stream parse instead of loading entire string
-        WiFiClient *stream = https->getStreamPtr();
-        delay(50);
-
-        // Wait for data to be available (with timeout)
-        unsigned long timeout = millis();
-        while (stream->available() == 0)
-        {
-            if (millis() - timeout > 5000)
-            { // 5 second timeout
-                log_i("Timeout waiting for steam data");
-                https->end();
-                return download_firmware_response_retry;
-            }
-            delay(10);
-        }
-        delay(10);
-        error = deserializeJson(doc, *stream, DeserializationOption::Filter(filter));
-    } else {
-        // When reading direct from github (not the proxy) and on the controller, the json does not like to load from the stream, so we must switch to this version of loading the json.
-        // Possible explanation:
-        // Must not parse from getStreamPtr(): that is the raw socket. GitHub uses chunked
-        // transfer encoding, so the undecoded stream is not valid JSON (ArduinoJson → IncompleteInput).
-        // getString() reads the body via writeToStream(), which strips chunk framing.
-        delay(10);
-        String payload = https->getString();
-        if (payload.isEmpty())
-        {
-            log_i("Empty response body from releases API");
-            https->end();
-            return download_firmware_response_retry;
-        }
-        delay(10);
-        error = deserializeJson(doc, payload, DeserializationOption::Filter(filter));
-    }
-
-    if (error)
-    {
-        parseFromStream = !parseFromStream; // flip to other method of loading json
-        log_i("JSON parse error: %s", error.c_str());
-        https->end();
-        return download_firmware_response_retry;
-    }
-
-    delay(10);
-    if (doc["tag_name"] == String(EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME)))
-    {
-        log_i("Latest already installed. Found tag_name name %s matches installed %s.", jsonStr(doc["tag_name"].as<const char *>()), EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME));
-        https->end();
-        doc.clear();
-        setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE);
-        ESP.restart();
-        return download_firmware_response_fail;
-    }
-
-    log_i("Found update: %s. Current update: %s", jsonStr(doc["tag_name"].as<const char *>()), EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME));
-
-    for (int j = 0; j < doc["assets"].size(); j++)
-    {
-        log_i("Checking asset %d: %s", j, jsonStr(doc["assets"][j]["name"].as<const char *>()));
-        delay(10);
-
-        if (doc["assets"][j]["name"] == String(FIRMWARE_RELEASE_NAME) + String("_") + String("firmware.bin"))
-        {
-            const char *url = doc["assets"][j]["browser_download_url"].as<const char *>();
-            log_i("Found firmware download url: %s", jsonStr(url));
-            if (url == nullptr)
-            {
-                log_i("browser_download_url missing for matched asset, retrying...");
-                https->end();
-                doc.clear();
-                return download_firmware_response_retry;
-            }
-            https->end();
-            doc.clear();
-            responseURLString = String(url);
-            return download_firmware_response_success;
-        }
-    }
-
-    log_i("Could not find correct firmware download url in github api response, retrying...");
-    https->end();
-    doc.clear();
-
-    return download_firmware_response_retry;
-}
-
 int installFirmware(String &url)
 {
     if (!https->begin(url))
@@ -228,6 +54,11 @@ int installFirmware(String &url)
         return download_firmware_response_retry;
     }
 
+    https->useHTTP10(true); // not necessary, but tells the server we don't support chunked responses
+    https->setReuse(false); // helps with stability on flaky wifi connections
+    https->setTimeout(300000); // 5 minute timeout for firmware download
+    const char *headerKeys[] = {"Content-Length"};
+    https->collectHeaders(headerKeys, 1);// may help ensure content length is stored by the HTTPClient
     int httpCode = https->GET();
     log_i("HTTP GET code: %d", httpCode);
 
@@ -236,19 +67,34 @@ int installFirmware(String &url)
         return download_firmware_response_retry;
     }
 
+    if (httpCode == HTTP_CODE_NO_CONTENT)
+    {
+        log_i("Already up to date (204). Installed tag matches latest release.");
+        https->end();
+        setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE);
+        ESP.restart();
+        return download_firmware_response_fail;
+    }
+
     if (httpCode != HTTP_CODE_OK)
     {
-        Serial.printf("HTTPS GET failed, error: %d\n", httpCode);
+        Serial.printf("HTTP GET failed, error: %d\n", httpCode);
         https->end();
         return download_firmware_response_retry;
     }
 
     int fileSize = https->getSize(); // Total size in bytes
+    if (fileSize <= 0)
+    {
+        const String cl = https->header("Content-Length");
+        if (cl.length() > 0)
+            fileSize = cl.toInt();
+    }
     log_i("File size: %d bytes\n", fileSize);
 
     if (fileSize < 1000)
     {
-        log_i("Error with file size. Aborting update");
+        log_i("Missing Content-Length (chunked response?). Aborting update");
         https->end();
         return download_firmware_response_retry;
     }
@@ -265,30 +111,25 @@ int installFirmware(String &url)
         return download_firmware_response_retry;
     }
 
-    size_t written = Update.writeStream(https->getStream());
+    size_t written = Update.writeStream(*https->getStreamPtr());
 
-    if (written == fileSize)
-    {
-        log_i("Written : %d successfully", written);
-    }
-    else
+    if (written != (size_t)fileSize)
     {
         log_i("Written only : %d/%d. Retry?", written, fileSize);
         https->end();
         Update.abort();
         return download_firmware_response_retry;
     }
+    log_i("Written : %d successfully", written);
 
     https->end();
 
     if (Update.end())
     {
-        // Update successful
         log_i("Update was successful!");
     }
     else
     {
-        // Update failed
         log_i("Update download failed");
         setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_GENERIC);
         ESP.restart();
@@ -307,19 +148,17 @@ void downloadUpdate(String SSID, String PASS)
 {
 
     log_i("=== Initial Memory Status ===");
-    log_i("Free heap: %d", ESP.getFreeHeap());                                          // 119468
-    log_i("Largest free block: %d", heap_caps_get_largest_free_block(MALLOC_CAP_8BIT)); // 106484
-    log_i("Min free heap: %d", ESP.getMinFreeHeap());                                   // 119260
+    log_i("Free heap: %d", ESP.getFreeHeap());
+    log_i("Largest free block: %d", heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+    log_i("Min free heap: %d", ESP.getMinFreeHeap());
 
     btStop();
     log_i("Bluetooth stopped");
 
-    // Print detailed heap information
     log_i("=== After bluetooth stop Memory Status ===");
-    log_i("Free heap: %d", ESP.getFreeHeap());                                          // 134940
-    log_i("Largest free block: %d", heap_caps_get_largest_free_block(MALLOC_CAP_8BIT)); // 106484
-    log_i("Min free heap: %d", ESP.getMinFreeHeap());                                   // 119260
-    // heap_caps_print_heap_info(MALLOC_CAP_8BIT);
+    log_i("Free heap: %d", ESP.getFreeHeap());
+    log_i("Largest free block: %d", heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+    log_i("Min free heap: %d", ESP.getMinFreeHeap());
 
     int counter = 0;
 
@@ -344,37 +183,11 @@ void downloadUpdate(String SSID, String PASS)
 
     https = new HTTPClient();
 
-    String url;
-    int code = 0;
-    counter = 0;
-    while (getDownloadFirmwareURL(url) != download_firmware_response_success)
-    {
-        if (counter > 5)
-        {
-            log_i("Failed to get firmware download URL after multiple attempts.");
-            setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_VERSION_REQUEST);
-            ESP.restart();
-            return;
-        }
-
-        log_i("Retrying to get firmware download URL...");
-        delay(5000);
-
-        counter++;
-    }
+    String url = String("http://oasman-ota.gopro2027.workers.dev/?firmware=") +
+                 String(FIRMWARE_RELEASE_NAME) +
+                 "&tag=" + String(EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME));
 
     log_i("Downloading firmware from %s", url.c_str());
-
-    url = String("http://githubreleasebinary-http-proxy.gopro2027.workers.dev/?url=") + url;
-
-    // get a fresh httpclient since the last one may have used http or https, and this next function only uses https.
-    delete https;
-    https = new HTTPClient();
-
-    if (wifiClientSecure != nullptr) {
-        delete wifiClientSecure;
-        wifiClientSecure = nullptr;
-    }
 
     counter = 0;
     while (installFirmware(url) != download_firmware_response_success)
@@ -384,6 +197,7 @@ void downloadUpdate(String SSID, String PASS)
             log_i("Failed to download firmware after multiple attempts.");
             setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST);
             ESP.restart();
+            return;
         }
         log_i("Firmware install requested retry...");
         delay(5000);
@@ -396,30 +210,10 @@ void downloadUpdate(String SSID, String PASS)
 }
 
 /**
- * 
- * Cloudflare Worker code for the proxy:
- * http://githubreleasebinary-http-proxy.gopro2027.workers.dev/?url=
- *  See file: githubreleasebinary-http-proxy_worker.js
- * 
- *  http proxy for the list of releases:
- *  http://githubreleaselist-http-proxy.gopro2027.workers.dev/?url=https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest
- *  See file: githubreleaselist-http-proxy_worker.js
+ * Cloudflare Worker: oasman-ota
+ * http://oasman-ota.gopro2027.workers.dev/?firmware=<FIRMWARE_RELEASE_NAME>&tag=<RELEASE_TAG_NAME>
+ * See file: oasman-ota_worker.js
  *
- *  Memory difference notes:
- *  Before (using https, aka WiFiClientSecure on the .begin function): 
- *  Free heap: 32980
- *  Largest free block: 17396
- *  Min free heap: 12780
- *
- *  After (cloudflare proxy using http):
- *  Free heap: 78256
- *  Largest free block: 34804
- *  Min free heap: 13884
- * 
- *  After adding second proxy for the releases list:
- *  Free heap: 80348
- *  Largest free block: 65524
- *  Min free heap: 76444
- *
- *
+ * Returns 204 when tag matches latest release (already up to date).
+ * Returns 200 + firmware binary when an update is available.
  */

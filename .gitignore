@@ -7,3 +7,4 @@ OASMan_ESP32/a.exe
 OASMan_ESP32/compile_commands.json
 *.pyc
 /Wireless_Controller/ESP32-S3-Knob-Touch-LCD-1.8-Demo
+/ESP32_SHARED_LIBS/src/.wrangler
