@@ -55,8 +55,8 @@ int installFirmware(String &url)
     }
 
     https->useHTTP10(true); // not necessary, but tells the server we don't support chunked responses
-    https->setReuse(false); // helps with stability on flaky wifi connections
-    https->setTimeout(300000); // 5 minute timeout for firmware download
+    https->setReuse(false); // helps with stability on flaky wifi connections. This is automatically set to true if useHTTP10 is true, but added here for clarity.
+    https->setTimeout(65535); // 65535 milliseconds = 65.535 seconds = 1 minute and 5.535 seconds
     const char *headerKeys[] = {"Content-Length"};
     https->collectHeaders(headerKeys, 1);// may help ensure content length is stored by the HTTPClient
     int httpCode = https->GET();
