@@ -243,7 +243,7 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
         static BTOasPacket rxRestPacket;
         memset(&rxRestPacket, 0, sizeof(rxRestPacket));
         const uint16_t copyLen =
-            buffer_size < BTOAS_PACKET_SIZE ? buffer_size : BTOAS_PACKET_SIZE;
+            (buffer_size < (uint16_t)sizeof(rxRestPacket)) ? buffer_size : (uint16_t)sizeof(rxRestPacket);
         memcpy(&rxRestPacket, buffer, copyLen);
         rxRestPacket.dump();
         if (isAuthed(con_handle))
