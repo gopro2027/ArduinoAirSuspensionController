@@ -277,13 +277,12 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
 
     if (att_handle == valve_control_characteristic_value_handle)
     {
-
-        // for some reason some devices send less than the 4 bytes required for this (notably, only 1 byte gets sent from the mobile app). So this little trick gets us into a 4 byte buffer safely
-        uint8_t valveControlBittsetArr[4] = {0};
-        memcpy(valveControlBittsetArr, buffer, buffer_size > 3 ? 4 : buffer_size);
-
         if (isAuthed(con_handle))
         {
+            // for some reason some devices send less than the 4 bytes required for this (notably, only 1 byte gets sent from the mobile app). So this little trick gets us into a 4 byte buffer safely
+            uint8_t valveControlBittsetArr[4] = {0};
+            memcpy(valveControlBittsetArr, buffer, buffer_size > 3 ? 4 : buffer_size);
+
             unsigned int valveControlBittset = *(unsigned int *)&valveControlBittsetArr; // little_endian_read_32(buffer, 0);
             Serial.printf("Value received for valve: %i\n", valveControlBittset);
 
