@@ -85,7 +85,7 @@ jobs:
 
     - name: Create Release
        # && github.event_name == 'push'
-      if: success() && github.ref == 'refs/heads/main'
+      if: success() # && github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v3
       with:
         tag_name: build-${{ github.run_number }} # do not ever change this. It is used in the update process to decide if the current build is already installed
