@@ -49,6 +49,9 @@ void setup()
     ESP.restart();
 #endif
 
+    // Set solenoid frequency to 10Hz. This means that setting a 50% duty cycle would be 50ms on and 50ms off. 10% duty cycle would be 10ms on and 90ms off.
+    analogWriteFrequency(10);
+
     setupSpiffsLog();
 
     // clearPressureData();

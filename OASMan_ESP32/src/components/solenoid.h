@@ -16,7 +16,7 @@ public:
     Solenoid();
     Solenoid(InputType *pin, SOLENOID_AI_INDEX aiIndex = SOLENOID_AI_INDEX::AI_MODEL_UNDEFINED);
     Solenoid(InputType *pin, ChamberValve *chamber_valve, SOLENOID_AI_INDEX aiIndex = SOLENOID_AI_INDEX::AI_MODEL_UNDEFINED);
-    void open();
+    void open(int dutyCycle = 100);
     void close();
     bool isOpen();
     SOLENOID_AI_INDEX getAIIndex();

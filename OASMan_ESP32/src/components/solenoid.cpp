@@ -20,11 +20,15 @@ Solenoid::Solenoid(InputType *pin, SOLENOID_AI_INDEX aiIndex) : Solenoid(pin, NU
 {
 }
 
-void Solenoid::open()
+void Solenoid::open(int dutyCycle)
 {
     if (this->bopen == false)
     {
-        this->pin->digitalWrite(HIGH);
+        if (dutyCycle != 100) {
+            this->pin->analogWrite(dutyCycle * 255 / 100);
+        } else {
+            this->pin->digitalWrite(HIGH);
+        }
         if (this->chamber_valve != NULL) {
             this->chamber_valve->open(this);
         }
