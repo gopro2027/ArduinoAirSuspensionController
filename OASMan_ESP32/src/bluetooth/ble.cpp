@@ -296,7 +296,7 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
                     {
                         Serial.print("Opening ");
                         Serial.println(i);
-                        getManifold()->get(i)->open();
+                        getManifold()->get(i)->open(50); // TODO: REMOVE, DEBUG TEST CODE FOR 50% DUTY CYCLE
                     }
                     else
                     {
