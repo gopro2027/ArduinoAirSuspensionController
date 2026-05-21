@@ -22,6 +22,7 @@ Solenoid::Solenoid(InputType *pin, SOLENOID_AI_INDEX aiIndex) : Solenoid(pin, NU
 
 void Solenoid::open(int dutyCycle)
 {
+    dutyCycle = 50; // TODO: REMOVE, DEBUG TEST CODE FOR 50% DUTY CYCLE
     if (this->bopen == false)
     {
         if (dutyCycle != 100) {
