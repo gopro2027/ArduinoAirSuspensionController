@@ -1,33 +1,65 @@
-# CLAUDE.md — OAS-Man
+# CLAUDE.md
 
-Guidance for Claude Code when working in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What this project is
 
-**OAS-Man (Open Air Suspension Management)** — an open-source DIY ESP32 air suspension controller, a budget alternative to AirLift/AccuAir-class systems. The firmware **controls a real, possibly moving, occupied vehicle's suspension** and is **updated OTA in the field**. Treat changes accordingly: conservative by default, safety first, reversible steps.
+**OAS-Man (Open Air Suspension Management)** — an open-source DIY ESP32 air suspension controller, a budget (<$500) alternative to AirLift/AccuAir-class systems. The firmware **controls a real, possibly moving, occupied vehicle's suspension** and is **updated OTA in the field**. Treat changes accordingly: conservative by default, safety first, reversible steps.
 
-## Repository map
+Branches: **`main`** = current stable ESP32 firmware · **`dev`** = bleeding edge (active development) · **`nano-v1`** = legacy Arduino Nano (unmaintained).
 
-- `OASMan_ESP32/` — **manifold board** firmware. ESP32-WROOM, `espressif32@6.10.0` + Bluepad32 fork. Default env `manifold_v4_dev`. Drives 8 solenoids, 4 pressure sensors (ADS1115), compressor, 128×64 SSD1306 OLED.
-- `Wireless_Controller/` — **touchscreen controller** firmware. ESP32-S3 Waveshare LCDs, `pioarduino 55.03.37`, LVGL 9.4, NimBLE. Envs: `controller_ws2p8/ws2p8b/ws3p5/ws3p5b/ws1p8knob_dev`.
-- `ESP32_SHARED_LIBS/` — code shared by both firmwares: `user_defines.h` (config), `BTOas.*` (the BLE wire protocol), OTA (`directdownload.*`, workers).
-- `MobileApp/oasman_mobile/` — Flutter mobile app (BLE client, `flutter_blue_plus`).
-- `PCB/` — EasyEDA project, Gerbers, JLCPCB order packages (revisions V2.x→V3.x).
-- `3d Prints/` — enclosures. `tutorial/`, `docs/` — build instructions. `LCDImageCreatorTool/` — controller image assets.
+## Architecture (the big picture)
 
-## Build commands (always name the env)
+Three programs, one wire protocol:
+
+- **Manifold (`OASMan_ESP32/`)** is the **BLE peripheral/server** bolted to the air manifold. It owns all physical actuation and safety enforcement — 8 solenoids (IN+OUT per corner), 4 pressure sensors via ADS1115, compressor, 128×64 SSD1306 OLED. ESP32-WROOM, `espressif32@6.10.0` + a **forked Bluepad32 framework** (PS3/PS4/Xbox gamepad input).
+- **Wireless Controller (`Wireless_Controller/`)** and **Mobile App (`MobileApp/oasman_mobile/`)** are **BLE clients** of the manifold. The controller is an ESP32-S3 Waveshare touch LCD with an LVGL 9.x UI (`pioarduino 55.03.37`, NimBLE); the app is Flutter (`flutter_blue_plus`), feature-behind the controller and Android-only.
+- **The contract between them** is `BTOasPacket` (a fixed 104-byte command struct) exchanged over three GATT characteristics (STATUS / REST / VALVECONTROL). It is defined once in `ESP32_SHARED_LIBS/src/BTOas.h` and mirrored byte-for-byte in the Dart app. Changing it touches all three programs at once (see Hard rules).
+- **`ESP32_SHARED_LIBS/`** is compiled into *both* firmwares via `lib_extra_dirs = ../ESP32_SHARED_LIBS/`. It holds `user_defines.h` (config, pin maps, safety limits — board-version-conditional), the `BTOas.*` protocol, and the OTA client + Cloudflare worker sources. A change here rebuilds both firmwares.
+- **OTA** (`directdownload.*` + workers in `ESP32_SHARED_LIBS/src/`): the device GETs `oasman-ota.gopro2027.workers.dev` with its `FIRMWARE_RELEASE_NAME` + installed tag; the worker compares against the latest GitHub release and returns `204` (up-to-date) or `200` + firmware bytes streamed through `Update.writeStream()`. Flow: `ESP32_SHARED_LIBS/src/oasman-ota_flowchart.md`.
+
+Non-code dirs: `PCB/` (EasyEDA project + JLCPCB order packages, revs V2.x→V3.x), `3d Prints/` (enclosures), `tutorial/` + [oasman.dev](https://oasman.dev) (build docs), `LCDImageCreatorTool/` (manifold OLED image assets), `PS3_Controller_Tool/` (PS3 MAC pairing), `builds/` (committed app APKs).
+
+## Build & run
+
+PlatformIO (`pio` CLI or the VS Code extension). **Always name the env** — manifold and controller are different chips on different platform stacks, so a bare "it builds" is not evidence. Run `pio` from inside the relevant project dir (`OASMan_ESP32/` or `Wireless_Controller/`), each of which has its own `platformio.ini`.
 
 ```bash
-# Manifold
-pio run -e manifold_v4_dev
-pio run -e manifold_v4_dev -t upload
+# Manifold (ESP32-WROOM).   Dev envs: manifold_v2_dev / v3_dev / v4_dev
+pio run -e manifold_v4_dev                 # build
+pio run -e manifold_v4_dev -t upload       # build + flash
+pio device monitor                         # serial @ 115200 (esp32_exception_decoder is on)
 
-# Controller (pick the board)
+# Controller (ESP32-S3).    Dev envs: controller_{ws2p8,ws2p8b,ws3p5,ws3p5b,ws1p8knob}_dev
 pio run -e controller_ws2p8_dev
 pio run -e controller_ws2p8_dev -t upload
 ```
 
-Monitors run at 115200 with `esp32_exception_decoder` — always decode a full backtrace before guessing at a crash.
+Always decode a full backtrace before guessing at a crash.
+
+**Mobile app** (from `MobileApp/oasman_mobile/`):
+
+```bash
+flutter pub get
+flutter run            # needs a real Android device — BLE doesn't work on emulators
+flutter analyze        # lint (analysis_options.yaml)
+flutter build apk      # release APK
+```
+
+## Releases
+
+Official firmware is cut by the GitHub Actions workflow `.github/workflows/main.yml` — manual `workflow_dispatch` taking a `version_num` input. It builds every shipping variant's `*_release` env and publishes the `.bin`s as a GitHub release.
+
+- The release **tag is `build-<run_number>`** and is **load-bearing**: the OTA worker compares the device's installed tag against it to decide "already up to date." Do not repurpose the tag scheme.
+- `*_release` envs require the `version_num` and `release_tag_name` environment variables and set `OFFICIAL_RELEASE` (disables debug/mock paths; `ENABLE_AIR_OUT_ON_SHUTOFF` is always false in official releases). Reproduce a release build locally with, e.g.:
+  ```bash
+  version_num=test release_tag_name=build-local pio run -e manifold_v4_release
+  ```
+- Every in-field variant needs its asset in every release (manifold v2/v3/v4 + controller ws2p8/ws2p8b/ws3p5/ws3p5b/ws1p8knob). A missing asset strands those users on a fail-file-request.
+
+## Tests & verification
+
+There is **no firmware unit-test suite** — the `test/` dirs in both PlatformIO projects are empty placeholders. Firmware is verified on-device/bench: build the named env, flash, watch the serial log, observe the valves. The Flutter app has `flutter analyze` and scaffold tests under `test/` (`flutter test`) but no meaningful coverage. Treat a clean build of the affected env(s) + observed on-device behavior as the bar — not a green test run.
 
 ## The agent team
 
