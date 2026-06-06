@@ -115,6 +115,18 @@ void AIModel::train(double start_pressure, double end_pressure, double tank_pres
     calculateDescent(error, start_pressure, end_pressure, tank_pressure);
 }
 
+void AIModel::trainRepeated(int steps, double start_pressure, double end_pressure, double tank_pressure, double actual_time)
+{
+    if (steps < 1)
+    {
+        return;
+    }
+    for (int i = 0; i < steps; i++)
+    {
+        train(start_pressure, end_pressure, tank_pressure, actual_time);
+    }
+}
+
 // Optionally: add method to print weights for debugging
 void AIModel::print_weights()
 {

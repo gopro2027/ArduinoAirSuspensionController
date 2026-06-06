@@ -1,4 +1,5 @@
 #include "tasks.h"
+#include "airSuspensionUtil.h"
 #include "manifoldSaveData.h"
 
 bool bp32ServiceStarted = false;
@@ -103,7 +104,12 @@ void task_wheel(void *parameters)
 void task_trainAI(void *parameters)
 {
     trainAIModels();
-    vTaskDelete(NULL);
+
+    for (;;)
+    {
+        bool busy = processLearnSampleQueues();
+        vTaskDelay(pdMS_TO_TICKS(busy ? 5 : 50));
+    }
 }
 
 void setup_tasks()

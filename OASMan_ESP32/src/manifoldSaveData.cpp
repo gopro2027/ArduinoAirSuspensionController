@@ -6,7 +6,20 @@ bool sendProfileBT = false;
 
 int learnDataIndex[4];
 PressureLearnSaveStruct learnData[4][LEARN_SAVE_COUNT];// TODO: This data needs to be moved to be a malloc or new array, so that when we do OTA stuff it doesn't take up memory (currently it is statically allocated and uses 8kb even during OTA updates which is quite a lot )
+static LearnSampleQueue learnSampleQueues[4];
 static SemaphoreHandle_t learnDataMutex;
+
+extern void updateAIPercentage();
+void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
+
+static bool isLearnSampleDirectionValid(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure)
+{
+    if (aiIndex == SOLENOID_AI_INDEX::AI_MODEL_UP_FRONT || aiIndex == SOLENOID_AI_INDEX::AI_MODEL_UP_REAR)
+    {
+        return (int)goal_pressure - (int)start_pressure >= 0;
+    }
+    return (int)start_pressure - (int)goal_pressure >= 0;
+}
 
 PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX index)
 {
@@ -216,6 +229,7 @@ void beginSaveData()
     loadAILearnedDataPreferences();
 
     learnDataMutex = xSemaphoreCreateMutex();
+    clearLearnSampleQueues();
     // downDataMutex = xSemaphoreCreateMutex();
 
     // Reset ai models
@@ -239,22 +253,124 @@ void beginSaveData()
 
 extern uint8_t AIReadyBittset;
 extern uint8_t AIPercentage;
+void clearLearnSampleQueues()
+{
+    if (learnDataMutex != NULL)
+    {
+        xSemaphoreTake(learnDataMutex, portMAX_DELAY);
+    }
+    for (int i = 0; i < 4; i++)
+    {
+        learnSampleQueues[i].head = 0;
+        learnSampleQueues[i].tail = 0;
+        learnSampleQueues[i].count = 0;
+    }
+    if (learnDataMutex != NULL)
+    {
+        xSemaphoreGive(learnDataMutex);
+    }
+}
+
 void clearPressureData()
 {
     for (int i = 0; i < 4; i++)
     {
         // reset the file
         deleteFile(getLogFileName((SOLENOID_AI_INDEX)i));
+        learnDataIndex[i] = 0;
 
         // reset the models too
         _SaveData.aiModels[i].deletePreferences();
     }
+    clearLearnSampleQueues();
     AIReadyBittset = 0;
     AIPercentage = 0;
     loadAILearnedDataPreferences();
 }
 
-extern void updateAIPercentage();
+bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
+{
+    if (abs((int)start_pressure - (int)goal_pressure) < 1)
+    {
+        return false;
+    }
+    if (!isLearnSampleDirectionValid(aiIndex, start_pressure, goal_pressure))
+    {
+        return false;
+    }
+
+    if (learnDataMutex == NULL)
+    {
+        return false;
+    }
+    xSemaphoreTake(learnDataMutex, portMAX_DELAY);
+
+    LearnSampleQueue *q = &learnSampleQueues[(int)aiIndex];
+    if (q->count >= ML_IMMEDIATE_TRAIN_SAMPLE_QUE)
+    {
+        q->head = (q->head + 1) % ML_IMMEDIATE_TRAIN_SAMPLE_QUE;
+        q->count--;
+    }
+
+    PressureLearnSaveStruct *slot = &q->buf[q->tail];
+    slot->start_pressure = start_pressure;
+    slot->goal_pressure = goal_pressure;
+    slot->tank_pressure = tank_pressure;
+    slot->timeMS = timeMS;
+    q->tail = (q->tail + 1) % ML_IMMEDIATE_TRAIN_SAMPLE_QUE;
+    q->count++;
+
+    xSemaphoreGive(learnDataMutex);
+    return true;
+}
+
+bool dequeueLearnSample(SOLENOID_AI_INDEX aiIndex, PressureLearnSaveStruct *out)
+{
+    if (out == NULL || learnDataMutex == NULL)
+    {
+        return false;
+    }
+    xSemaphoreTake(learnDataMutex, portMAX_DELAY);
+
+    LearnSampleQueue *q = &learnSampleQueues[(int)aiIndex];
+    if (q->count == 0)
+    {
+        xSemaphoreGive(learnDataMutex);
+        return false;
+    }
+
+    *out = q->buf[q->head];
+    q->head = (q->head + 1) % ML_IMMEDIATE_TRAIN_SAMPLE_QUE;
+    q->count--;
+
+    xSemaphoreGive(learnDataMutex);
+    return true;
+}
+
+bool isLearnSampleQueueEmpty(SOLENOID_AI_INDEX aiIndex)
+{
+    if (learnDataMutex == NULL)
+    {
+        return true;
+    }
+    xSemaphoreTake(learnDataMutex, portMAX_DELAY);
+    bool empty = learnSampleQueues[(int)aiIndex].count == 0;
+    xSemaphoreGive(learnDataMutex);
+    return empty;
+}
+
+void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
+{
+    if (getAIModel(aiIndex)->isReadyToUse.get().i)
+    {
+        enqueueLearnSample(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS);
+    }
+    else
+    {
+        appendPressureDataToFile(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS);
+    }
+}
+
 void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
 {
     int *size = &learnDataIndex[aiIndex];
@@ -265,51 +381,25 @@ void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure,
         return;
     }
 
-    // first initial check for size before we open the semaphore, just to prevent constantly opening a semaphore every time this is called if it's full
-    if (*size < LEARN_SAVE_COUNT)
+    if (*size >= LEARN_SAVE_COUNT)
     {
-
-        // quick check to make sure it actually went in the right direction.... idk why it was messing up sometimes
-        if (aiIndex == SOLENOID_AI_INDEX::AI_MODEL_UP_FRONT || aiIndex == SOLENOID_AI_INDEX::AI_MODEL_UP_REAR)
-        {
-            if ((int)goal_pressure - (int)start_pressure < 0)
-            {
-                return;
-            }
-        }
-        else
-        {
-            if ((int)start_pressure - (int)goal_pressure < 0)
-            {
-                return;
-            }
-        }
-
-        // while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
-        // {
-        //     delay(1);
-        // }
-
-        PressureLearnSaveStruct *pls = getLearnData(aiIndex);
-
-        // This is the actual important size check since it is inside of the semaphore now and safe
-        if (*size < LEARN_SAVE_COUNT)
-        {
-            pls[*size].start_pressure = start_pressure;
-            pls[*size].goal_pressure = goal_pressure;
-            pls[*size].tank_pressure = tank_pressure;
-            pls[*size].timeMS = timeMS;
-
-            // This is full write. Do append instead
-            // writeBytes(getLogFileName(aiIndex),pls,(*size)*sizeof(PressureLearnSaveStruct));
-
-            writeBytes(getLogFileName(aiIndex), &pls[*size], sizeof(PressureLearnSaveStruct), "a");
-
-            *size = *size + 1; // moved to after append
-        }
-
-        // xSemaphoreGive(learnDataMutex);
+        return;
     }
+
+    if (!isLearnSampleDirectionValid(aiIndex, start_pressure, goal_pressure))
+    {
+        return;
+    }
+
+    PressureLearnSaveStruct *pls = getLearnData(aiIndex);
+    pls[*size].start_pressure = start_pressure;
+    pls[*size].goal_pressure = goal_pressure;
+    pls[*size].tank_pressure = tank_pressure;
+    pls[*size].timeMS = timeMS;
+
+    writeBytes(getLogFileName(aiIndex), &pls[*size], sizeof(PressureLearnSaveStruct), "a");
+
+    *size = *size + 1;
 
     updateAIPercentage();
 }

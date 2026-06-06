@@ -675,6 +675,41 @@ void trainAIModels()
     updateAIPercentage();
 }
 
+bool processLearnSampleQueues()
+{
+    bool didWork = false;
+
+    for (int i = 0; i < 4; i++)
+    {
+        SOLENOID_AI_INDEX index = (SOLENOID_AI_INDEX)i;
+        AIModelPreference *pref = getAIModel(index);
+
+        if (!pref->isReadyToUse.get().i)
+        {
+            continue;
+        }
+
+        PressureLearnSaveStruct sample;
+        while (dequeueLearnSample(index, &sample))
+        {
+            didWork = true;
+            pref->model.trainRepeated(
+                LEARN_STEPS_PER_SAMPLE_ONLINE,
+                sample.start_pressure,
+                sample.goal_pressure,
+                sample.tank_pressure,
+                sample.timeMS);
+        }
+
+        if (isLearnSampleQueueEmpty(index))
+        {
+            pref->saveWeights();
+        }
+    }
+
+    return didWork;
+}
+
 double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure)
 {
     return getAIModel(aiIndex)->model.predictDeNormalized(start_pressure, end_pressure, tank_pressure);

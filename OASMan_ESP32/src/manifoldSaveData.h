@@ -152,6 +152,22 @@ void clearPressureData();
 
 void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
 
+struct LearnSampleQueue
+{
+    PressureLearnSaveStruct buf[ML_IMMEDIATE_TRAIN_SAMPLE_QUE];
+    uint8_t head;
+    uint8_t tail;
+    uint8_t count;
+};
+
+void clearLearnSampleQueues();
+bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
+bool dequeueLearnSample(SOLENOID_AI_INDEX aiIndex, PressureLearnSaveStruct *out);
+bool isLearnSampleQueueEmpty(SOLENOID_AI_INDEX aiIndex);
+
+/** Bootstrap append or online enqueue based on isReadyToUse */
+void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
+
 AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex);
 
 headerDefineSaveFunc(riseOnStart, bool);

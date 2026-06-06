@@ -21,6 +21,7 @@ public:
     void loadWeights(double _w1, double _w2, double _b);
     double predictDeNormalized(double start_pressure, double end_pressure, double tank_pressure);
     void train(double start_pressure, double end_pressure, double tank_pressure, double actual_time);
+    void trainRepeated(int steps, double start_pressure, double end_pressure, double tank_pressure, double actual_time);
     void print_weights();
 };
 

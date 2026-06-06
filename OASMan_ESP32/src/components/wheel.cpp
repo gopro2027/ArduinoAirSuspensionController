@@ -373,7 +373,7 @@ void Wheel::loop()
                                 end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
                                 if (abs(start_pressure - end_pressure) > 3)
                                 {
-                                    appendPressureDataToFile(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime);
+                                    recordLearnSample(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime);
                                 }
                             }
                         }
