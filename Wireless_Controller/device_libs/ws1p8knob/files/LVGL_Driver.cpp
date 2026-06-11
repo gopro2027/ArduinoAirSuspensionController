@@ -5,13 +5,15 @@
 #include "esp_heap_caps.h"
 
 // Partial strips only: full-frame SPI TX needs huge spi_master internal DMA "priv" buffers and fails on this chip (setup_dma_priv_buffer).
-// Draw buffers live in PSRAM; flush path calls esp_cache_msync before SPI reads them.
+// Prefer internal DMA RAM (2x 17.3KB fits): rendering is faster than PSRAM and the flush path
+// skips the esp_cache_msync that PSRAM buffers need. PSRAM stays as fallback.
+// ; was: MALLOC_CAP_DMA|MALLOC_CAP_SPIRAM tried first
 static lv_color_t *alloc_draw_buf(void)
 {
     const size_t n = (size_t)LVGL_BUF_BYTES;
-    void *p = heap_caps_malloc(n, MALLOC_CAP_DMA | MALLOC_CAP_SPIRAM);
+    void *p = heap_caps_malloc(n, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
     if (!p)
-        p = heap_caps_malloc(n, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+        p = heap_caps_malloc(n, MALLOC_CAP_DMA | MALLOC_CAP_SPIRAM);
     if (!p)
         p = malloc(n);
     return (lv_color_t *)p;
