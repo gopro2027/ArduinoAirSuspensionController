@@ -14,7 +14,6 @@
 
 SET_LOOP_TASK_STACK_SIZE(12*1024); // the default 1024*8 how now reached it's limit with lvgl. Need to increase accordingly. lv_timer_handler() is the culprit.
 
-#define DIM_SCREEN_TIME 60 * 1000 * getscreenDimTimeM()
 unsigned long dimScreenTime = 0;
 bool dimmed = false;
 
@@ -68,7 +67,7 @@ void setup()
 
     setup_touchscreen_hook();
 
-    dimScreenTime = millis() + DIM_SCREEN_TIME;
+    dimScreenTime = millis() + getScreenDimTimeMs();
 
 #if defined(OTA_SUPPORTED)
     byte updateResult = getupdateResult();
@@ -123,6 +122,11 @@ bool bootButtonControllingAirUp = false;
 bool bootButtonLoadPresetStarted = false;
 int bootButtonPresetCount = 0;
 
+bool isScreenDimmed()
+{
+    return dimmed;
+}
+
 void wakeScreenFromDim() {
     auto const now = millis();
     if (dimmed)
@@ -130,7 +134,7 @@ void wakeScreenFromDim() {
         set_brightness(getBrightnessFloat());
         dimmed = false;
     }
-    dimScreenTime = now + DIM_SCREEN_TIME;
+    dimScreenTime = now + getScreenDimTimeMs();
 }
 
 int bootButtonCutoffTime = 500; // the cutoff time between a quick press and a long press
