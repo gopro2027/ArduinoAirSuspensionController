@@ -82,6 +82,12 @@ touch_and_screen Lvgl_Init(void)
   // re-transmitting the whole 153.6KB frame (>15ms of blocking wire time) on every refresh.
   // ; was: full-frame buffers + lv_display_set_render_mode(disp, LV_DISPLAY_RENDER_MODE_FULL)
   lv_display_set_buffers(disp, buf1, buf2, LVGL_BUF_BYTES, LV_DISPLAY_RENDER_MODE_PARTIAL);
+  // 60 FPS refresh: bench-verified with the perf overlay after the PARTIAL switch — idle CPU
+  // 2-4%, page-change peaks ~35% at 30 FPS, so doubling the refresh rate has ample headroom.
+  // ; was: LV_DEF_REFR_PERIOD default (33ms / 30 FPS)
+  lv_timer_t *refr = lv_display_get_refr_timer(disp);
+  if (refr)
+    lv_timer_set_period(refr, 16);
 
   /*Initialize the (dummy) input device driver*/
   static lv_indev_t *indev = lv_indev_create();
