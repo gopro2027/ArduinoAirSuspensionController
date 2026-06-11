@@ -10,11 +10,7 @@ lv_display_t *disp = NULL;
 
 void* buf1 = NULL;
 void* buf2 = NULL;
-// static lv_color_t buf1[ LVGL_BUF_LEN ];
-// static lv_color_t buf2[ LVGL_BUF_LEN ];
-// static lv_color_t* buf1 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN, MALLOC_CAP_SPIRAM);
-// static lv_color_t* buf2 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN, MALLOC_CAP_SPIRAM);
-    
+
 
 
 /* Serial debugging */
@@ -66,14 +62,9 @@ touch_and_screen Lvgl_Init(void)
   // esp_lcd_rgb_panel_get_frame_buffer(panel_handle, 2, &buf1, &buf2); // This gave some odd issues when using it with partial rendering. Not sure what's going on with that.
   // esp_lcd_rgb_panel_get_frame_buffer(panel_handle, 1, &buf1);                                          
   
-  // buf1 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN * sizeof(lv_color_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA); 
-  // buf2 = (lv_color_t*) heap_caps_malloc(LVGL_BUF_LEN * sizeof(lv_color_t), MALLOC_CAP_SPIRAM);
-
   // Use a smaller, DMA-capable partial draw buffer to avoid full-frame copies on large RGB panels.
   // (The RGB panel driver maintains its own frame buffer; we just blit updated areas via draw_bitmap.)
   if (!buf1) buf1 = (lv_color_t*)heap_caps_malloc(LVGL_BUF_BYTES, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA); // ; was: LVGL_BUF_LEN * sizeof(lv_color_t)
-  // On ws2p8b internal RAM can be tight; prefer single buffering to leave heap for other subsystems (e.g. ADC locks).
-  // buf2 = NULL;
   if (!buf2) buf2 = (lv_color_t*)heap_caps_malloc(LVGL_BUF_BYTES, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA); // ; was: LVGL_BUF_LEN * sizeof(lv_color_t)
 
   /*Initialize the display*/

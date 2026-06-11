@@ -71,7 +71,15 @@ touch_and_screen Lvgl_Init(void)
   if (!buf2)
     buf2 = alloc_draw_buf();
   if (!buf1 || !buf2)
-    Serial.println("[LVGL] FATAL: display buffer alloc failed");
+  {
+    // Halt with a readable serial message instead of letting LVGL render through a
+    // null buffer (which crashes with a far less useful backtrace).
+    while (true)
+    {
+      Serial.println("[LVGL] FATAL: display buffer alloc failed");
+      delay(1000);
+    }
+  }
 
   lv_init();
 
