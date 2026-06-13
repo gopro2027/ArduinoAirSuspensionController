@@ -383,6 +383,15 @@ extern "C" lv_display_t *lvgl_lcd_init_perf(void)
 
   lv_display_set_default(disp);
 
+  // 60 FPS cap: a period, not a forced rate — LVGL still only flushes dirty regions and can't
+  // outrun the blocking SPI draw, so 16ms is never worse than the 33ms default. It unlocks 60
+  // FPS for small updates (pressure digits, statusbar). Full-screen scrolls stay flush-bound:
+  // 320x480x2 = 307KB/frame over 80MHz SPI is ~2x ws2p8's frame, so they bottom out ~15-20 FPS
+  // until an async-DMA flush lands. ; was: LV_DEF_REFR_PERIOD default (33ms / 30 FPS)
+  lv_timer_t *refr = lv_display_get_refr_timer(disp);
+  if (refr)
+    lv_timer_set_period(refr, 16);
+
   Serial.println("[TOUCH] Initializing FT6336...");
   bsp_touch_init(&Wire, -1, 0, LCD_WIDTH, LCD_HEIGHT);
 
