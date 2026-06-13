@@ -9,10 +9,12 @@
 
 #define LVGL_WIDTH     ESP_PANEL_LCD_WIDTH
 #define LVGL_HEIGHT    ESP_PANEL_LCD_HEIGHT
-// #define LVGL_BUF_LEN  (LVGL_WIDTH * LVGL_HEIGHT * sizeof(lv_color_t))
-// #define LVGL_BUF_LEN (LVGL_WIDTH * 40)
-// #define LVGL_BUF_LEN (LVGL_WIDTH * LVGL_HEIGHT)
-#define LVGL_BUF_LEN (LVGL_WIDTH * 20)
+// Partial draw buffers: 30 lines each, sized in BYTES (RGB565 = 2 bytes/px).
+// ; was: #define LVGL_BUF_LEN (LVGL_WIDTH * 20) in pixels, multiplied by sizeof(lv_color_t)
+// (3 bytes in LVGL 9) at the call sites — the same 28.8KB of memory, which LVGL divided by
+// the real 2-byte stride into 30 usable rows. Same size now, with honest units.
+#define LVGL_BUF_LINES 30
+#define LVGL_BUF_BYTES ((uint32_t)LVGL_WIDTH * LVGL_BUF_LINES * 2)
 
 #define EXAMPLE_LVGL_TICK_PERIOD_MS  2
 

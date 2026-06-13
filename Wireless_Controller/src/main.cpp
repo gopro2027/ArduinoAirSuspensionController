@@ -277,6 +277,12 @@ void loop()
     // lv_tick_inc(now - lv_last_tick);
     // lv_last_tick = now;
     // Update the UI
-    lv_timer_handler();
-    vTaskDelay(pdMS_TO_TICKS(5));
+    // Sleep only until LVGL next needs to run, clamped to [1,5]ms so the BLE/Waveshare/IDLE
+    // tasks always get CPU time. The upper clamp also covers LV_NO_TIMER_READY (UINT32_MAX).
+    uint32_t lv_idle_ms = lv_timer_handler(); // ; was: lv_timer_handler() + fixed vTaskDelay(5)
+    if (lv_idle_ms > 5)
+        lv_idle_ms = 5;
+    else if (lv_idle_ms < 1)
+        lv_idle_ms = 1;
+    vTaskDelay(pdMS_TO_TICKS(lv_idle_ms));
 }
