@@ -137,6 +137,7 @@ void beginSaveData();
 headerDefineSaveFunc(unitsMode, int);
 headerDefineSaveFunc(blePasskey, uint32_t);
 headerDefineSaveFunc(screenDimTimeM, uint32_t);
+unsigned long getScreenDimTimeMs();
 headerDefineSaveFunc(updateMode, bool);
 headerDefineSaveFunc(wifiSSID, String);
 headerDefineSaveFunc(wifiPassword, String);

@@ -117,6 +117,12 @@ void Set_Backlight(uint8_t Light);        // from LVGL_Driver.cpp
 #endif
 
 // OPTIMIZED: Smart frame skipping
+// Default OFF; overridable per-build with '-D ENABLE_FRAME_SKIP=1' (FRAMECHECK_SAMPLE_STRIDE
+// likewise). Worth trying on this panel: it requires FULL render mode, so every flush pushes
+// the whole 307KB frame over 60MHz QSPI (~41ms, ~20 FPS ceiling) even when nothing changed —
+// frame skip would eliminate those idle pushes. NOT yet verified on ws3p5b hardware: before
+// enabling, bench-check for tearing, stale regions after dialogs close, and touch-wake
+// responsiveness.
 #ifndef ENABLE_FRAME_SKIP
   #define ENABLE_FRAME_SKIP 0
 #endif

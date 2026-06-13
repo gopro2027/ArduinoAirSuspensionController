@@ -53,13 +53,20 @@ public:
 } // namespace
 
 // Partial buffer size tuned for internal RAM on Arduino_GFX 1.5.5
-#define LVGL_BUFFER_LINES   480
+// 60 lines x 320 px x 2 bytes = 38.4KB per buffer, so the internal-DMA allocation below can
+// actually succeed. ; was: 480 (full height) which with the old `* sizeof(lv_color_t)` math
+// (3 bytes in LVGL 9) asked for 460.8KB per buffer — internal alloc always failed and both
+// buffers silently fell back to slower PSRAM, 1.5x oversized.
+#define LVGL_BUFFER_LINES   60
 #define LVGL_BUFFER_PIXELS (LCD_WIDTH * LVGL_BUFFER_LINES)
 
 // ---------- Tunable ST7796 color correction ----------
 // Set to 0 to disable all software correction quickly.
 
-#define ST_ENABLE_COLOR_CORRECTION 1
+// Disabled: the LUT parameters below are all identity (brightness/gamma/gains = 1.0), so the
+// per-pixel transform in the flush path changed nothing while costing CPU on every flush.
+// Re-enable only together with real (non-1.0) calibration values. ; was: 1
+#define ST_ENABLE_COLOR_CORRECTION 0
 
 // ----------------------------------------------------
 
@@ -266,11 +273,11 @@ void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 {
   const uint32_t w = (uint32_t)(area->x2 - area->x1 + 1);
   const uint32_t h = (uint32_t)(area->y2 - area->y1 + 1);
-  const uint32_t count = w * h;
 
   uint16_t *src = (uint16_t *)px_map;
 
 #if ST_ENABLE_COLOR_CORRECTION
+  const uint32_t count = w * h;
   st_build_cc_luts();
 
   // In-place color correction
@@ -335,7 +342,9 @@ extern "C" lv_display_t *lvgl_lcd_init_perf(void)
 
   lv_tick_set_cb(lvgl_tick_cb);
 
-  const size_t buf_size = LVGL_BUFFER_PIXELS * sizeof(lv_color_t);
+  // RGB565 = 2 bytes/px. ; was: * sizeof(lv_color_t), which is 3 bytes in LVGL 9 — that both
+  // oversized the buffers by 1.5x and overstated the usable size passed to LVGL.
+  const size_t buf_size = LVGL_BUFFER_PIXELS * 2;
 
   // 1) Best: internal DMA
   lv_color_t *buf1 = (lv_color_t *)heap_caps_malloc(buf_size, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
@@ -373,6 +382,15 @@ extern "C" lv_display_t *lvgl_lcd_init_perf(void)
   }
 
   lv_display_set_default(disp);
+
+  // 60 FPS cap: a period, not a forced rate — LVGL still only flushes dirty regions and can't
+  // outrun the blocking SPI draw, so 16ms is never worse than the 33ms default. It unlocks 60
+  // FPS for small updates (pressure digits, statusbar). Full-screen scrolls stay flush-bound:
+  // 320x480x2 = 307KB/frame over 80MHz SPI is ~2x ws2p8's frame, so they bottom out ~15-20 FPS
+  // until an async-DMA flush lands. ; was: LV_DEF_REFR_PERIOD default (33ms / 30 FPS)
+  lv_timer_t *refr = lv_display_get_refr_timer(disp);
+  if (refr)
+    lv_timer_set_period(refr, 16);
 
   Serial.println("[TOUCH] Initializing FT6336...");
   bsp_touch_init(&Wire, -1, 0, LCD_WIDTH, LCD_HEIGHT);

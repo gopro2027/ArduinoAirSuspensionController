@@ -211,6 +211,9 @@ enum SOLENOID_AI_INDEX
 #define STRINGIFY(x) #x
 #define EVALUATE_AND_STRINGIFY(x) STRINGIFY(x)
 
+/* Wireless controller: minimum screen-dim timeout (milliseconds) */
+#define MIN_SCREEN_DIM_TIME_MS 5000
+
 // platformio.ini toggleables
 
 #if defined(OFFICIAL_RELEASE)

@@ -1,10 +1,15 @@
 #include "touch_lib.h"
 #include "util.h"
 
+extern bool isScreenDimmed();
+extern void wakeScreenFromDim();
+
 int32_t touchX_ = 0;
 int32_t touchY_ = 0;
 boolean touchPressed = false;
 boolean lastTouched = false;
+// True while a dimmed-screen wake tap is in progress (until finger lifts).
+static bool suppressWakeTouch = false;
 
 lv_indev_read_cb_t driver_touch_read_cb__;
 void lvgl_touch_hook(lv_indev_t *indev, lv_indev_data_t *data)
@@ -12,7 +17,30 @@ void lvgl_touch_hook(lv_indev_t *indev, lv_indev_data_t *data)
     // Call low level read from the driver
     driver_touch_read_cb__(indev, data);
 
-    if (data->state == LV_INDEV_STATE_PRESSED)
+    const bool physicalPressed = data->state == LV_INDEV_STATE_PRESSED;
+
+    // Must suppress in this hook: the first press is read here during lv_timer_handler(),
+    // after main already ran with isTouched() still false for this gesture.
+    if (physicalPressed && isScreenDimmed())
+    {
+        if (!suppressWakeTouch)
+        {
+            lv_indev_reset(indev, NULL);
+        }
+        suppressWakeTouch = true;
+        wakeScreenFromDim();
+    }
+
+    if (suppressWakeTouch)
+    {
+        data->state = LV_INDEV_STATE_RELEASED;
+        if (!physicalPressed)
+        {
+            suppressWakeTouch = false;
+        }
+    }
+
+    if (physicalPressed && !suppressWakeTouch)
     {
         // Get raw touch coordinates (native portrait orientation)
         int32_t rawX = data->point.x;
@@ -49,7 +77,7 @@ void lvgl_touch_hook(lv_indev_t *indev, lv_indev_data_t *data)
         data->point.y = touchY_;
     }
     lastTouched = touchPressed;
-    touchPressed = data->state;
+    touchPressed = physicalPressed;
 }
 
 int32_t touchX()
@@ -68,6 +96,10 @@ boolean isTouched()
 
 boolean isJustPressed()
 {
+    if (suppressWakeTouch)
+    {
+        return false;
+    }
     if (touchPressed && lastTouched == false)
     {
         return true;
@@ -77,6 +109,10 @@ boolean isJustPressed()
 
 boolean isJustReleased()
 {
+    if (suppressWakeTouch)
+    {
+        return false;
+    }
     if (touchPressed == false && lastTouched)
     {
         return true;
