@@ -1,0 +1,14 @@
+{
+  "name": "oasman-web-installer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build tooling for the OAS-Man web firmware installer (compiles app.tsx into a standalone index.html).",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

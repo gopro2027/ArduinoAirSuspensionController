@@ -1,358 +1,378 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<title>OAS-Man installer</title>
-		<meta name="description" content="Easily allow users to install OAS-Man firmware on the web." />
-		<meta name="viewport" content="width=device-width" />
+		<title>OAS-Man Installer</title>
+		<meta name="description" content="Install OAS-Man firmware on your ESP32 device right from the web." />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="color-scheme" content="dark light" />
+		<link rel="icon" href="https://oasman.dev/docs/assets/images/oasman_logo.jpg" />
 		<style>
-			body {
-				font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif;
-				padding: 0;
+			:root {
+				--bg: #0e1116;
+				--bg-2: #161b22;
+				--card: #1c232d;
+				--card-hover: #232c38;
+				--border: #2b333d;
+				--border-strong: #3a4452;
+				--text: #e6edf3;
+				--text-dim: #9aa7b4;
+				--accent: #03a9f4;
+				--accent-2: #1e88e5;
+				--accent-soft: rgba(3, 169, 244, 0.14);
+				--good: #2ea043;
+				--danger: #f85149;
+				--radius: 14px;
+				--shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+			}
+			@media (prefers-color-scheme: light) {
+				:root {
+					--bg: #f3f5f8;
+					--bg-2: #ffffff;
+					--card: #ffffff;
+					--card-hover: #f0f6ff;
+					--border: #e2e8f0;
+					--border-strong: #cbd5e1;
+					--text: #0f172a;
+					--text-dim: #64748b;
+					--accent-soft: rgba(3, 169, 244, 0.12);
+					--shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+				}
+			}
+
+			* { box-sizing: border-box; }
+			html, body {
 				margin: 0;
-				line-height: 1.4;
+				padding: 0;
+				background: var(--bg);
+				color: var(--text);
+				font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif;
+				line-height: 1.45;
+				-webkit-font-smoothing: antialiased;
 			}
-			.content {
-				max-width: 800px;
-				margin: 0 auto;
-				padding: 12px;
+			a { color: var(--accent); text-decoration: none; }
+			a:hover { text-decoration: underline; }
+
+			#root { display: flex; justify-content: center; padding: 24px 14px 48px; }
+
+			.installer {
+				width: 100%;
+				max-width: 760px;
 			}
-			h2 {
-				margin-top: 2em;
+
+			/* ---------- Header + stepper ---------- */
+			.app-header { margin-bottom: 22px; }
+			.brand {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				margin-bottom: 22px;
 			}
-			h3 {
-				margin-top: 1.5em;
+			.brand-logo {
+				width: 42px;
+				height: 42px;
+				border-radius: 10px;
+				object-fit: cover;
+				background: #fff;
+				padding: 3px;
+				box-shadow: var(--shadow);
+				flex: 0 0 auto;
 			}
-			a {
-				color: #03a9f4;
+			.brand-name { font-size: 19px; font-weight: 700; }
+
+			.stepper {
+				display: flex;
+				align-items: center;
 			}
-			.invisible {
-				visibility: hidden;
+			.stepper-item {
+				display: flex;
+				align-items: center;
+				flex: 1;
+				min-width: 0;
 			}
-			.hidden {
-				display: none;
+			.stepper-item:last-child { flex: 0 0 auto; }
+			.stepper-dot {
+				flex: 0 0 auto;
+				display: grid;
+				place-items: center;
+				width: 30px;
+				height: 30px;
+				border-radius: 50%;
+				background: var(--bg-2);
+				border: 2px solid var(--border-strong);
+				color: var(--text-dim);
+				font-size: 13px;
+				font-weight: 700;
+				transition: all 0.3s ease;
 			}
-			esp-web-install-button[install-unsupported] {
-				visibility: inherit;
+			.stepper-dot.active {
+				border-color: var(--accent);
+				color: var(--accent);
+				box-shadow: 0 0 0 4px var(--accent-soft);
 			}
-			.content pre {
-				max-width: 100%;
-				overflow-y: scroll;
+			.stepper-dot.done {
+				background: var(--good);
+				border-color: var(--good);
+				color: #fff;
 			}
-			.footer {
-				margin-top: 24px;
-				border-top: 1px solid #ccc;
-				padding-top: 24px;
+			.stepper-label {
+				margin-left: 8px;
+				font-size: 13px;
+				color: var(--text-dim);
+				white-space: nowrap;
+			}
+			.stepper-label.active { color: var(--text); font-weight: 600; }
+			.stepper-line {
+				flex: 1 1 auto;
+				height: 2px;
+				margin: 0 10px;
+				background: var(--border-strong);
+				transition: background 0.3s ease;
+			}
+			.stepper-line.done { background: var(--good); }
+
+			/* ---------- Sliding viewport ---------- */
+			.viewport {
+				overflow: hidden;
+				border-radius: var(--radius);
+			}
+			.track {
+				display: flex;
+				width: 100%;
+				transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+			}
+			.slide {
+				flex: 0 0 100%;
+				width: 100%;
+				padding: 4px;
+			}
+
+			/* ---------- Steps ---------- */
+			.step {
+				background: var(--bg-2);
+				border: 1px solid var(--border);
+				border-radius: var(--radius);
+				padding: 24px;
+				box-shadow: var(--shadow);
+			}
+			.step-title { margin: 0 0 4px; font-size: 22px; }
+			.step-sub { margin: 0 0 20px; color: var(--text-dim); font-size: 14px; }
+
+			.back-btn {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				background: none;
+				border: none;
+				color: var(--text-dim);
+				font-size: 14px;
+				font-weight: 600;
+				cursor: pointer;
+				padding: 6px 4px;
+				margin-bottom: 8px;
+				border-radius: 8px;
+				transition: color 0.2s ease;
+			}
+			.back-btn:hover { color: var(--text); }
+			.back-btn-spacer { visibility: hidden; pointer-events: none; }
+
+			/* ---------- Device groups + cards ---------- */
+			.group { margin-bottom: 22px; }
+			.group:last-child { margin-bottom: 0; }
+			.group-head {
+				display: flex;
+				align-items: baseline;
+				gap: 10px;
+				margin-bottom: 10px;
+			}
+			.group-label {
+				font-size: 12px;
+				font-weight: 700;
+				letter-spacing: 0.6px;
+				text-transform: uppercase;
+				color: var(--text-dim);
+			}
+			.group-note { font-size: 12px; color: var(--text-dim); font-style: italic; }
+
+			.card-grid { display: grid; gap: 10px; }
+
+			.device-card {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 12px;
+				text-align: left;
+				width: 100%;
+				background: var(--card);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 14px 16px;
+				color: var(--text);
+				cursor: pointer;
+				transition: transform 0.12s ease, border-color 0.2s ease, background 0.2s ease;
+			}
+			.device-card:hover {
+				background: var(--card-hover);
+				border-color: var(--border-strong);
+				transform: translateY(-1px);
+			}
+			.device-card.selected {
+				border-color: var(--accent);
+				box-shadow: 0 0 0 3px var(--accent-soft);
+			}
+			.device-card-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+			.device-name { font-weight: 600; font-size: 15px; }
+			.device-desc { font-size: 12.5px; color: var(--text-dim); }
+			.device-link { font-size: 12.5px; margin-top: 2px; width: fit-content; }
+			.device-chevron { color: var(--text-dim); flex: 0 0 auto; display: grid; place-items: center; }
+
+			/* ---------- Version cards ---------- */
+			.version-list { display: grid; gap: 10px; }
+			.version-card {
+				display: flex;
+				align-items: center;
+				gap: 14px;
+				text-align: left;
+				width: 100%;
+				background: var(--card);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 14px 16px;
+				color: var(--text);
+				cursor: pointer;
+				transition: border-color 0.2s ease, background 0.2s ease;
+			}
+			.version-card:hover { background: var(--card-hover); border-color: var(--border-strong); }
+			.version-card.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+			.version-radio {
+				flex: 0 0 auto;
+				width: 20px;
+				height: 20px;
+				border-radius: 50%;
+				border: 2px solid var(--border-strong);
+				display: grid;
+				place-items: center;
+				transition: border-color 0.2s ease;
+			}
+			.version-card.selected .version-radio { border-color: var(--accent); }
+			.version-radio-dot {
+				width: 10px;
+				height: 10px;
+				border-radius: 50%;
+				background: var(--accent);
+				transform: scale(0);
+				transition: transform 0.2s ease;
+			}
+			.version-card.selected .version-radio-dot { transform: scale(1); }
+			.version-main { display: flex; flex-direction: column; gap: 2px; }
+			.version-name { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+			.version-date { font-size: 12.5px; color: var(--text-dim); }
+			.badge {
+				font-size: 10.5px;
+				font-weight: 700;
+				letter-spacing: 0.4px;
+				text-transform: uppercase;
+				color: var(--accent);
+				background: var(--accent-soft);
+				padding: 2px 8px;
+				border-radius: 999px;
+			}
+
+			.show-more { margin-top: 14px; }
+			.status { color: var(--text-dim); font-size: 14px; padding: 12px 0; }
+			.status.error { color: var(--danger); }
+
+			/* ---------- Install summary ---------- */
+			.summary {
+				background: var(--card);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 6px 16px;
+				margin-bottom: 22px;
+			}
+			.summary-row {
+				display: flex;
+				justify-content: space-between;
+				gap: 12px;
+				padding: 12px 0;
+				border-bottom: 1px solid var(--border);
+			}
+			.summary-row:last-child { border-bottom: none; }
+			.summary-key { color: var(--text-dim); font-size: 14px; }
+			.summary-val { font-weight: 600; font-size: 14px; text-align: right; }
+			.install-area { display: flex; justify-content: center; margin: 8px 0; }
+			.install-hint { text-align: center; color: var(--text-dim); font-size: 12.5px; margin-top: 16px; }
+			.install-note { display: block; color: var(--text-dim); font-size: 13px; text-align: center; }
+
+			/* ---------- Buttons ---------- */
+			.btn {
+				font: inherit;
+				cursor: pointer;
+				border-radius: 10px;
+				border: 1px solid transparent;
+				padding: 11px 20px;
+				font-weight: 600;
+				transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease;
+			}
+			.btn:active { transform: translateY(1px); }
+			.btn-primary {
+				background: linear-gradient(135deg, var(--accent), var(--accent-2));
+				color: #fff;
+				font-size: 15px;
+				box-shadow: 0 6px 18px rgba(3, 169, 244, 0.3);
+			}
+			.btn-primary:hover { filter: brightness(1.06); }
+			.btn-install { padding: 13px 28px; }
+			.btn-ghost {
+				background: transparent;
+				border-color: var(--border-strong);
+				color: var(--text);
+			}
+			.btn-ghost:hover { background: var(--card-hover); }
+
+			/* ---------- Footer ---------- */
+			.app-footer {
+				margin-top: 28px;
+				padding-top: 22px;
+				border-top: 1px solid var(--border);
 				text-align: center;
+				color: var(--text-dim);
+				font-size: 13px;
 			}
-			.footer .initiative {
-				font-style: italic;
-				margin-top: 16px;
-			}
-			table {
-				border-spacing: 0;
-			}
-			td {
-				padding: 8px;
-				border-bottom: 1px solid #ccc;
-			}
-			.radios li {
-				list-style: none;
-				line-height: 2em;
-			}
-			@media (prefers-color-scheme: dark) {
-				body {
-					background-color: #333;
-					color: #fff;
-				}
-				a {
-					color: #58a6ff;
-				}
-			}
-			.center {
-				text-align: center;
+			.app-footer p { margin: 6px 0; }
+			.footnote { font-size: 12px; }
+			.konami { opacity: 0.5; letter-spacing: 1px; }
+
+			.loading-screen {
+				display: grid;
+				place-items: center;
+				min-height: 40vh;
+				color: var(--text-dim);
 			}
 		</style>
-		<script type="module" src="https://unpkg.com/esp-web-tools@10.1.1/dist/web/install-button.js?module"></script> <!-- Can change version number to 'latest' if I have issues in the future -->
+
+		<!-- esp-web-tools registers the <esp-web-install-button> custom element -->
+		<script type="module" src="https://unpkg.com/esp-web-tools@10.1.1/dist/web/install-button.js?module"></script>
+
+		<!-- React + ReactDOM (UMD globals) -->
+		<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+		<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+		<!-- Manifest generator (provides the global generate_manifest used by app.tsx) -->
 		<script src="manifestgen.js"></script>
 	</head>
-
-
-	<script>
-		// function getResult(filterBy, objList) {
-		// 		return objList.filter(function (obj) {
-		// 			return obj.assets.filter(function (item) {
-		// 				console.log("Checking "+item.name+" for "+filterBy+"     "+ (item.name == filterBy));
-		// 				return item.name == filterBy;
-		// 			});
-		// 		});
-		// 	}
-
-		var firmwareList = [];
-
-		async function fetchFirmwareReleases() {
-
-			try {
-				const response = await fetch(`https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases`);
-				const releases = await response.json();
-
-				firmwareList = releases//getResult(binname+"_firmware.bin",releases)
-				.map(release => ({
-					name: release.name,
-					tag: release.tag_name,
-					date: new Date(release.created_at),
-					body: release.body,
-					assets: release.assets.map(asset => ({
-						name: asset.name,
-						size: asset.size,
-						downloadUrl: asset.browser_download_url // PUBLIC URL!
-					}))
-				}));
-
-				console.log(firmwareList);
-
-				// displayFirmware(firmwareList);
-
-				updateFirmwareRelatedDetails();
-			} catch (error) {
-				console.error('Error fetching releases:', error);
-			}
-		}
-
-	// 	function displayFirmware(releases) {
-	// 		const container = document.getElementById('firmware-list');
-	// 		container.innerHTML = releases.map(release => `
-	//     <div class="release">
-	//       <h3>${release.name}</h3>
-	//       <p><small>${release.date.toLocaleString()}</small></p>
-	//       <p>${release.body}</p>
-	//       <h4>Download:</h4>
-	//       <ul>
-	//         ${release.assets.map(asset => `
-	//           <li>
-	//             <a href="${asset.downloadUrl}" download>
-	//               ${asset.name}
-	//             </a>
-	//             (${(asset.size / 1024).toFixed(2)} KB)
-	//           </li>
-	//         `).join('')}
-	//       </ul>
-	//     </div>
-	//   `).join('');
-	// 	}
-
-		// Call on page load
-		fetchFirmwareReleases();
-
-
-		function getReleaseAsset(boardName, tag_name, subscript) {
-			// for (release of firmwareList) {
-			// 	for (asset of release.assets) {
-			// 		if (asset.name === (chosenBoard + subscript)) {
-			// 			return asset.downloadUrl;
-			// 		}
-			// 	}
-			// }
-			// updated to use this proxy URL because it has caching and it's the same one I use on the esp32's
-			// I'm not sure what the limitations are for caching on this github api but maybe this will help. Either way, CORS is blocked on github releases direct links so we need a reverse proxy of some sort.
-			return `https://githubreleasebinary-http-proxy.gopro2027.workers.dev/?url=https://github.com/gopro2027/ArduinoAirSuspensionController/releases/download/${tag_name}/${boardName}${subscript}`;
-			// unfortunately have to use this reverse proxy service I set up on cloudflare instead of using the downloadUrl. Github releases has blocked CORS
-			// This is the original proxy I used without caching
-			//return `https://githubreleasesproxy.gopro2027.workers.dev/?tag_name=${tag_name}&file_name=${boardName}${subscript}`;
-		}
-
-		//reverse proxy code:
-
-	// /**
-	//  * Reverse proxy for GitHub releases
-	//  * Usage: https://WORKERNAME.CLOUDFLAREUSERNAME.workers.dev/?user=${user}&repo=${repo}&tag_name=${tag_name}&file_name=${file_name}
-	//  */
-	// export default {
-	// 	async fetch(request, env, ctx) {
-	// 		const url = new URL(request.url);
-	// 		const user = url.searchParams.get('user');
-	// 		const repo = url.searchParams.get('repo');
-	// 		const tag_name = url.searchParams.get('tag_name');
-	// 		const file_name = url.searchParams.get('file_name');
-
-	// 		if (!user || !repo || !tag_name || !file_name) {
-	// 			return new Response('Missing required parameters: user or repo or tag_name or file_name', { status: 400, statusText: 'Bad Request' });
-	// 		}
-
-	// 		return new Response(
-	// 			await (await fetch(`https://github.com/${user}/${repo}/releases/download/${tag_name}/${file_name}`)).arrayBuffer(),
-	// 			{
-	// 				headers: {
-	// 					"Access-Control-Allow-Headers": request.headers.get("Access-Control-Request-Headers"),
-	// 					"Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
-	// 					"Access-Control-Allow-Origin": "*",
-	// 					"Access-Control-Max-Age": "300",
-	// 					"content-type": "application/octet-stream",
-	// 				}
-	// 			}
-	// 		);
-	// 	},
-	// };
-	</script>
-
-
 	<body>
-		<div id="firmware-list"></div>
-		<div class="content">
-			<h1>OAS-Man installer</h1>
-			<p>Select your product</p>
-
-			<ul class="radios" id="firmwareRadioOptions">
-				<h4>Manifold</h4>
-				<li>
-					<label><input type="radio" name="type" value="manifold_v4" /> Board V4 Manifold Firmwares</label>
-				</li>
-				<li>
-					<label><input type="radio" name="type" value="manifold_v3" /> Board V3 Manifold Firmwares</label>
-				</li>
-				<li>
-					<label><input type="radio" name="type" value="manifold_v2" /> Board V2 Manifold Firmwares (No acc wire functionality, will work for some v3 boards also)</label>
-				</li>
-				
-				<hr>
-				<h4>Controller</h4>
-				<li>
-					<label><input type="radio" name="type" value="controller_ws2p8" /> 2.8" Waveshare Controller Firmwares <a href="https://www.waveshare.com/esp32-s3-touch-lcd-2.8.htm?sku=27690" target="_blank">(link)</a></label>
-				</li>
-				<li>
-					<label><input type="radio" name="type" value="controller_ws2p8b" /> 2.8" B Model Waveshare Controller Firmwares <a href="https://www.waveshare.com/esp32-s3-touch-lcd-2.8b.htm?sku=30103" target="_blank">(link)</a></label>
-				</li>
-				<li>
-					<label><input type="radio" name="type" value="controller_ws3p5" /> 3.5" Waveshare Controller Firmwares <a href="https://www.waveshare.com/esp32-s3-touch-lcd-3.5.htm?sku=30733" target="_blank">(link)</a></label>
-				</li>
-				<li>
-					<label><input type="radio" name="type" value="controller_ws3p5b" /> 3.5" B Model Waveshare Controller Firmwares <a href="https://www.waveshare.com/esp32-s3-touch-lcd-3.5b.htm?sku=31137" target="_blank">(link)</a></label>
-				</li>
-				<li>
-					<label><input type="radio" name="type" value="controller_ws1p8knob" /> 1.8" Rotary Guage Model Waveshare Controller Firmwares <a href="https://www.waveshare.com/esp32-s3-knob-touch-lcd-1.8.htm?sku=31623" target="_blank">(link)</a></label>
-				</li>
-				<hr>
-				<h4>Legacy Devices (No longer updated)</h4>
-				<li>
-					<label><input type="radio" name="type" value="controller_cyd3p2" /> 3.2" CYD Capacitive Controller Firmwares</label>
-				</li>
-				<li>
-					<label><input type="radio" name="type" value="controller_cyd3p2_resistive" /> 3.2" CYD Resistive Controller Firmwares</label>
-				</li>
-			</ul>
-
-			
-
-
-			<div class="center">
-				<select id="firmwareFilesSelect" hidden>
-					<option value="NONE">NOTHING SELECTED</option>
-				</select>
-				<small id="versionnum" class="center">Version --</small>
-				<p class="button-row" class="center">
-					<esp-web-install-button class="invisible"></esp-web-install-button>
-				</p>
-			</div>
-
-			<div class="footer"><a href="https://github.com/gopro2027/ArduinoAirSuspensionController">OAS-Man</a> &mdash; Installer powered by <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a>.</div>
-
-			<div class="footer">
-				<p><small>* firmware_no_acc: intended to be used on boards that do not utilize constant battery + acc input. Mostly only applies to manifold boards v2 and below.</small></p>
-				<br>
-				<p><small>Click <a href="https://play.google.com/store/apps/details?id=dev.oasman.oasman_mobile" target="_blank">here to download the Android app</a></small></p>
-				<p><small>IOS App coming soon!</small></p>
-				<br>
-				<p><small>❤️ oasman.dev</small></p>
-				<br>
-				<p><small>U,U,D,D,L,R,L,R,A,B</small></p>
-			</div>
+		<div id="root">
+			<div class="loading-screen">Loading installer…</div>
 		</div>
+
+		<!--
+			app.tsx is compiled and inlined here at build time by build.mjs.
+			Edit app.tsx (the source), then run `npm run build` to regenerate index.html.
+		-->
 		<script>
-
-			
-			let versionnum = "";
-			let chosenBoard = "";
-			let selectedreleaseName = "";
-
-			function updateFirmwareRelatedDetails() {
-				versionnum = firmwareList.length > 0 ? firmwareList[0].name : "Unknown";
-				const element = document.getElementById("versionnum");
-				element.textContent = "Latest Version: " + versionnum;
-			}
-
-			
-
-
-			function setSelectedFile(tagName) {
-				console.log(`Selected value: ${selectedreleaseName}`);
-
-
-				const button = document.querySelector("esp-web-install-button");
-				if (selectedreleaseName.length > 0) {
-					var genurl = generate_manifest(chosenBoard, selectedreleaseName, getReleaseAsset(chosenBoard, tagName, "_bootloader.bin"), getReleaseAsset(chosenBoard, tagName, "_partitions.bin"), getReleaseAsset(chosenBoard, tagName, "_firmware.bin"));
-					console.log(genurl);
-					button.manifest = genurl;
-					button.classList.remove("invisible");
-				} else {
-					button.classList.add("invisible");
-				}
-			}
-
-			function loadFirmwareFiles(board_name) {
-				chosenBoard = board_name;
-
-				setSelectedFile("");
-				selectedreleaseName = "";
-
-				selectorObject = document.getElementById('firmwareFilesSelect');
-				selectorObject.hidden = false;
-				selectorObject.innerHTML = "";
-
-				var hasSelected = false;
-
-				for (release of firmwareList) {
-
-					// check if a firmware for this board is in this release
-					var found = false;
-					for (asset of release.assets) {
-						if (asset.name === (chosenBoard + "_firmware.bin")) {
-							found = true;
-						}
-					}
-
-					// append this release name if found
-					if (found) {
-						console.log(release.name);
-						var opt = document.createElement('option');
-						opt.value = release.tag;
-						opt.innerHTML = release.name;
-						selectorObject.appendChild(opt);
-
-						// if this is the latest version, set it as selected
-						if (release.name == versionnum || hasSelected == false) {
-							console.log("selecting " + release.name);
-							selectorObject.value = release.tag;
-							selectedreleaseName = release.name;
-							setSelectedFile(release.tag);
-							hasSelected = true;
-						}
-					}
-				}
-			}
-
-			document.getElementById('firmwareFilesSelect').addEventListener('change', (event) => {
-				selectedreleaseName = event.target.innerHTML;
-				setSelectedFile(event.target.value);
-			});
-
-			document.querySelectorAll('input[name="type"]').forEach((radio) =>
-				radio.addEventListener("change", () => {
-					loadFirmwareFiles(radio.value);
-				})
-			);
-
-			
+			// AUTO-GENERATED from app.tsx by build.mjs — do not edit directly.
+const{useState,useEffect,useRef,useMemo}=React,DEVICES=[{id:"manifold_v4",name:"Board V4 Manifold",group:"Manifold",desc:"Latest manifold board"},{id:"manifold_v3",name:"Board V3 Manifold",group:"Manifold"},{id:"manifold_v2",name:"Board V2 Manifold",group:"Manifold",desc:"No acc wire functionality, will work for some V3 boards also"},{id:"controller_ws2p8",name:'2.8" Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-touch-lcd-2.8.htm?sku=27690"},{id:"controller_ws2p8b",name:'2.8" B Model Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-touch-lcd-2.8b.htm?sku=30103"},{id:"controller_ws3p5",name:'3.5" Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-touch-lcd-3.5.htm?sku=30733"},{id:"controller_ws3p5b",name:'3.5" B Model Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-touch-lcd-3.5b.htm?sku=31137"},{id:"controller_ws1p8knob",name:'1.8" Rotary Gauge Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-knob-touch-lcd-1.8.htm?sku=31623"},{id:"controller_cyd3p2",name:'3.2" CYD Capacitive Controller',group:"Legacy"},{id:"controller_cyd3p2_resistive",name:'3.2" CYD Resistive Controller',group:"Legacy"}],GROUP_META={Manifold:{label:"Manifold"},Controller:{label:"Controller"},Legacy:{label:"Legacy Devices",note:"No longer updated"}};async function fetchFirmwareReleases(){return(await(await fetch("https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases")).json()).map(s=>({name:s.name,tag:s.tag_name,date:new Date(s.created_at),body:s.body,assets:(s.assets||[]).map(l=>({name:l.name,size:l.size,downloadUrl:l.browser_download_url}))}))}function getReleaseAsset(e,a,s){return`https://githubreleasebinary-http-proxy.gopro2027.workers.dev/?url=https://github.com/gopro2027/ArduinoAirSuspensionController/releases/download/${a}/${e}${s}`}function BackArrow(){return React.createElement("svg",{viewBox:"0 0 24 24",width:"20",height:"20",fill:"none",stroke:"currentColor",strokeWidth:"2"},React.createElement("path",{d:"M19 12H5M12 19l-7-7 7-7",strokeLinecap:"round",strokeLinejoin:"round"}))}function Chevron(){return React.createElement("svg",{viewBox:"0 0 24 24",width:"18",height:"18",fill:"none",stroke:"currentColor",strokeWidth:"2"},React.createElement("path",{d:"M9 18l6-6-6-6",strokeLinecap:"round",strokeLinejoin:"round"}))}function Check(){return React.createElement("svg",{viewBox:"0 0 24 24",width:"16",height:"16",fill:"none",stroke:"currentColor",strokeWidth:"3"},React.createElement("path",{d:"M20 6L9 17l-5-5",strokeLinecap:"round",strokeLinejoin:"round"}))}const STEP_LABELS=["Type","Device","Version","Install"];function Stepper({step:e}){return React.createElement("div",{className:"stepper"},STEP_LABELS.map((a,s)=>React.createElement("div",{className:"stepper-item",key:a},React.createElement("div",{className:"stepper-dot"+(s<e?" done":s===e?" active":"")},s<e?React.createElement(Check,null):s+1),React.createElement("span",{className:"stepper-label"+(s===e?" active":"")},a),s<STEP_LABELS.length-1&&React.createElement("div",{className:"stepper-line"+(s<e?" done":"")}))))}function InstallButton({manifest:e}){const a=useRef(null);return useEffect(()=>{a.current&&e&&(a.current.manifest=e)},[e]),e?React.createElement("esp-web-install-button",{ref:a,class:"oas-install-btn"},React.createElement("button",{slot:"activate",className:"btn btn-primary btn-install"},"Install firmware"),React.createElement("span",{slot:"unsupported",className:"install-note"},"Your browser does not support installing firmware. Try Chrome or Edge on desktop."),React.createElement("span",{slot:"not-allowed",className:"install-note"},"This page must be served over https to install firmware.")):null}const CATEGORIES=[{id:"Manifold",name:"Manifold",desc:"The board bolted to your air manifold \u2014 controls the valves, compressor and pressure sensors."},{id:"Controller",name:"Controller",desc:"The wireless touchscreen / knob display that remotely controls the manifold."}];function CategoryStep({selected:e,onSelect:a}){return React.createElement("div",{className:"step"},React.createElement("h2",{className:"step-title"},"What are you flashing?"),React.createElement("p",{className:"step-sub"},"Choose the type of device you want to install OAS-Man onto."),React.createElement("div",{className:"card-grid"},CATEGORIES.map(s=>React.createElement("button",{key:s.id,className:"device-card"+(e===s.id?" selected":""),onClick:()=>a(s.id)},React.createElement("div",{className:"device-card-main"},React.createElement("span",{className:"device-name"},s.name),React.createElement("span",{className:"device-desc"},s.desc)),React.createElement("span",{className:"device-chevron"},React.createElement(Chevron,null))))))}function DeviceStep({category:e,selected:a,onSelect:s}){return React.createElement("div",{className:"step"},React.createElement("h2",{className:"step-title"},"Select your device"),React.createElement("p",{className:"step-sub"},"Pick the board you want to flash OAS-Man onto."),(e==="Manifold"?["Manifold"]:["Controller","Legacy"]).map(o=>React.createElement("div",{className:"group",key:o},React.createElement("div",{className:"group-head"},React.createElement("span",{className:"group-label"},GROUP_META[o].label),GROUP_META[o].note&&React.createElement("span",{className:"group-note"},GROUP_META[o].note)),React.createElement("div",{className:"card-grid"},DEVICES.filter(n=>n.group===o).map(n=>React.createElement("button",{key:n.id,className:"device-card"+((a==null?void 0:a.id)===n.id?" selected":""),onClick:()=>s(n)},React.createElement("div",{className:"device-card-main"},React.createElement("span",{className:"device-name"},n.name),n.desc&&React.createElement("span",{className:"device-desc"},n.desc),n.link&&React.createElement("a",{className:"device-link",href:n.link,target:"_blank",rel:"noreferrer",onClick:d=>d.stopPropagation()},"Product page \u2197")),React.createElement("span",{className:"device-chevron"},React.createElement(Chevron,null))))))))}function VersionStep({device:e,releases:a,loading:s,error:l,selected:o,onSelect:n}){const[d,p]=useState(!1),i=useMemo(()=>e?a.filter(t=>t.assets.some(m=>m.name===`${e.id}_firmware.bin`)):[],[e,a]);useEffect(()=>{p(!1)},[e]);const u=d?i:i.slice(0,5);return React.createElement("div",{className:"step"},React.createElement("h2",{className:"step-title"},"Select a version"),React.createElement("p",{className:"step-sub"},"Firmware versions available for ",React.createElement("strong",null,e==null?void 0:e.name),"."),s&&React.createElement("div",{className:"status"},"Loading versions\u2026"),l&&React.createElement("div",{className:"status error"},l),!s&&!l&&i.length===0&&React.createElement("div",{className:"status"},"No firmware releases found for this device."),React.createElement("div",{className:"version-list"},u.map((t,m)=>React.createElement("button",{key:t.tag,className:"version-card"+((o==null?void 0:o.tag)===t.tag?" selected":""),onClick:()=>n(t)},React.createElement("div",{className:"version-radio"},React.createElement("span",{className:"version-radio-dot"})),React.createElement("div",{className:"version-main"},React.createElement("span",{className:"version-name"},t.name||t.tag,m===0&&React.createElement("span",{className:"badge"},"Latest")),React.createElement("span",{className:"version-date"},t.date.toLocaleDateString()))))),!d&&i.length>5&&React.createElement("button",{className:"btn btn-ghost show-more",onClick:()=>p(!0)},"Show ",i.length-5," more ",i.length-5===1?"version":"versions"))}function InstallStep({device:e,release:a,manifest:s}){return React.createElement("div",{className:"step"},React.createElement("h2",{className:"step-title"},"Ready to install"),React.createElement("p",{className:"step-sub"},"Connect your device via USB, then click install."),React.createElement("div",{className:"summary"},React.createElement("div",{className:"summary-row"},React.createElement("span",{className:"summary-key"},"Device"),React.createElement("span",{className:"summary-val"},e==null?void 0:e.name)),React.createElement("div",{className:"summary-row"},React.createElement("span",{className:"summary-key"},"Version"),React.createElement("span",{className:"summary-val"},(a==null?void 0:a.name)||(a==null?void 0:a.tag)))),React.createElement("div",{className:"install-area"},React.createElement(InstallButton,{manifest:s})),React.createElement("p",{className:"install-hint"},"Use Chrome or Edge on desktop. A USB cable that supports data is required."))}function App(){const[e,a]=useState(0),[s,l]=useState([]),[o,n]=useState(!0),[d,p]=useState(null),[i,u]=useState(null),[t,m]=useState(null),[c,v]=useState(null);useEffect(()=>{fetchFirmwareReleases().then(r=>{l(r),n(!1)}).catch(r=>{console.error("Error fetching releases:",r),p("Could not load firmware releases. Check your connection and try again."),n(!1)})},[]);const h=useMemo(()=>!t||!c?null:generate_manifest(t.id,c.name||c.tag,getReleaseAsset(t.id,c.tag,"_bootloader.bin"),getReleaseAsset(t.id,c.tag,"_partitions.bin"),getReleaseAsset(t.id,c.tag,"_firmware.bin")),[t,c]);function f(r){u(r),m(null),v(null),a(1)}function b(r){m(r),v(null),a(2)}function N(r){v(r),a(3)}function g(){a(r=>Math.max(0,r-1))}return React.createElement("div",{className:"installer"},React.createElement("header",{className:"app-header"},React.createElement("div",{className:"brand"},React.createElement("img",{className:"brand-logo",src:"https://oasman.dev/docs/assets/images/oasman_logo.jpg",alt:"OAS-Man logo"}),React.createElement("span",{className:"brand-name"},"OAS-Man Installer")),React.createElement(Stepper,{step:e})),React.createElement("div",{className:"viewport"},React.createElement("div",{className:"track",style:{transform:`translateX(-${e*100}%)`}},React.createElement("section",{className:"slide"},React.createElement("button",{className:"back-btn back-btn-spacer",tabIndex:-1,"aria-hidden":"true"}),React.createElement(CategoryStep,{selected:i,onSelect:f})),React.createElement("section",{className:"slide"},React.createElement("button",{className:"back-btn",onClick:g},React.createElement(BackArrow,null),React.createElement("span",null,"Back")),React.createElement(DeviceStep,{category:i,selected:t,onSelect:b})),React.createElement("section",{className:"slide"},React.createElement("button",{className:"back-btn",onClick:g},React.createElement(BackArrow,null),React.createElement("span",null,"Back")),React.createElement(VersionStep,{device:t,releases:s,loading:o,error:d,selected:c,onSelect:N})),React.createElement("section",{className:"slide"},React.createElement("button",{className:"back-btn",onClick:g},React.createElement(BackArrow,null),React.createElement("span",null,"Back")),React.createElement(InstallStep,{device:t,release:c,manifest:h})))),React.createElement("footer",{className:"app-footer"},React.createElement("p",null,React.createElement("a",{href:"https://github.com/gopro2027/ArduinoAirSuspensionController"},"OAS-Man")," ","\u2014 powered by"," ",React.createElement("a",{href:"https://esphome.github.io/esp-web-tools/"},"ESP Web Tools"),"."),React.createElement("p",{className:"footnote"},"* firmware_no_acc: for boards without constant battery + acc input (mostly manifold V2 and below)."),React.createElement("p",{className:"footnote"},React.createElement("a",{href:"https://play.google.com/store/apps/details?id=dev.oasman.oasman_mobile",target:"_blank",rel:"noreferrer"},"Download the Android app")," ","\xB7 iOS coming soon"),React.createElement("p",{className:"footnote"},"\u2764\uFE0F oasman.dev"),React.createElement("p",{className:"footnote konami"},"U,U,D,D,L,R,L,R,A,B")))}const root=ReactDOM.createRoot(document.getElementById("root"));root.render(React.createElement(App,null));
 		</script>
 	</body>
 </html>

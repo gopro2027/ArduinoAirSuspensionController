@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>OAS-Man Installer</title>
+		<meta name="description" content="Install OAS-Man firmware on your ESP32 device right from the web." />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="color-scheme" content="dark light" />
+		<link rel="icon" href="https://oasman.dev/docs/assets/images/oasman_logo.jpg" />
+		<style>
+			:root {
+				--bg: #0e1116;
+				--bg-2: #161b22;
+				--card: #1c232d;
+				--card-hover: #232c38;
+				--border: #2b333d;
+				--border-strong: #3a4452;
+				--text: #e6edf3;
+				--text-dim: #9aa7b4;
+				--accent: #03a9f4;
+				--accent-2: #1e88e5;
+				--accent-soft: rgba(3, 169, 244, 0.14);
+				--good: #2ea043;
+				--danger: #f85149;
+				--radius: 14px;
+				--shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+			}
+			@media (prefers-color-scheme: light) {
+				:root {
+					--bg: #f3f5f8;
+					--bg-2: #ffffff;
+					--card: #ffffff;
+					--card-hover: #f0f6ff;
+					--border: #e2e8f0;
+					--border-strong: #cbd5e1;
+					--text: #0f172a;
+					--text-dim: #64748b;
+					--accent-soft: rgba(3, 169, 244, 0.12);
+					--shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+				}
+			}
+
+			* { box-sizing: border-box; }
+			html, body {
+				margin: 0;
+				padding: 0;
+				background: var(--bg);
+				color: var(--text);
+				font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif;
+				line-height: 1.45;
+				-webkit-font-smoothing: antialiased;
+			}
+			a { color: var(--accent); text-decoration: none; }
+			a:hover { text-decoration: underline; }
+
+			#root { display: flex; justify-content: center; padding: 24px 14px 48px; }
+
+			.installer {
+				width: 100%;
+				max-width: 760px;
+			}
+
+			/* ---------- Header + stepper ---------- */
+			.app-header { margin-bottom: 22px; }
+			.brand {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				margin-bottom: 22px;
+			}
+			.brand-logo {
+				width: 42px;
+				height: 42px;
+				border-radius: 10px;
+				object-fit: cover;
+				background: #fff;
+				padding: 3px;
+				box-shadow: var(--shadow);
+				flex: 0 0 auto;
+			}
+			.brand-name { font-size: 19px; font-weight: 700; }
+
+			.stepper {
+				display: flex;
+				align-items: center;
+			}
+			.stepper-item {
+				display: flex;
+				align-items: center;
+				flex: 1;
+				min-width: 0;
+			}
+			.stepper-item:last-child { flex: 0 0 auto; }
+			.stepper-dot {
+				flex: 0 0 auto;
+				display: grid;
+				place-items: center;
+				width: 30px;
+				height: 30px;
+				border-radius: 50%;
+				background: var(--bg-2);
+				border: 2px solid var(--border-strong);
+				color: var(--text-dim);
+				font-size: 13px;
+				font-weight: 700;
+				transition: all 0.3s ease;
+			}
+			.stepper-dot.active {
+				border-color: var(--accent);
+				color: var(--accent);
+				box-shadow: 0 0 0 4px var(--accent-soft);
+			}
+			.stepper-dot.done {
+				background: var(--good);
+				border-color: var(--good);
+				color: #fff;
+			}
+			.stepper-label {
+				margin-left: 8px;
+				font-size: 13px;
+				color: var(--text-dim);
+				white-space: nowrap;
+			}
+			.stepper-label.active { color: var(--text); font-weight: 600; }
+			.stepper-line {
+				flex: 1 1 auto;
+				height: 2px;
+				margin: 0 10px;
+				background: var(--border-strong);
+				transition: background 0.3s ease;
+			}
+			.stepper-line.done { background: var(--good); }
+
+			/* ---------- Sliding viewport ---------- */
+			.viewport {
+				overflow: hidden;
+				border-radius: var(--radius);
+			}
+			.track {
+				display: flex;
+				width: 100%;
+				transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+			}
+			.slide {
+				flex: 0 0 100%;
+				width: 100%;
+				padding: 4px;
+			}
+
+			/* ---------- Steps ---------- */
+			.step {
+				background: var(--bg-2);
+				border: 1px solid var(--border);
+				border-radius: var(--radius);
+				padding: 24px;
+				box-shadow: var(--shadow);
+			}
+			.step-title { margin: 0 0 4px; font-size: 22px; }
+			.step-sub { margin: 0 0 20px; color: var(--text-dim); font-size: 14px; }
+
+			.back-btn {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				background: none;
+				border: none;
+				color: var(--text-dim);
+				font-size: 14px;
+				font-weight: 600;
+				cursor: pointer;
+				padding: 6px 4px;
+				margin-bottom: 8px;
+				border-radius: 8px;
+				transition: color 0.2s ease;
+			}
+			.back-btn:hover { color: var(--text); }
+			.back-btn-spacer { visibility: hidden; pointer-events: none; }
+
+			/* ---------- Device groups + cards ---------- */
+			.group { margin-bottom: 22px; }
+			.group:last-child { margin-bottom: 0; }
+			.group-head {
+				display: flex;
+				align-items: baseline;
+				gap: 10px;
+				margin-bottom: 10px;
+			}
+			.group-label {
+				font-size: 12px;
+				font-weight: 700;
+				letter-spacing: 0.6px;
+				text-transform: uppercase;
+				color: var(--text-dim);
+			}
+			.group-note { font-size: 12px; color: var(--text-dim); font-style: italic; }
+
+			.card-grid { display: grid; gap: 10px; }
+
+			.device-card {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 12px;
+				text-align: left;
+				width: 100%;
+				background: var(--card);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 14px 16px;
+				color: var(--text);
+				cursor: pointer;
+				transition: transform 0.12s ease, border-color 0.2s ease, background 0.2s ease;
+			}
+			.device-card:hover {
+				background: var(--card-hover);
+				border-color: var(--border-strong);
+				transform: translateY(-1px);
+			}
+			.device-card.selected {
+				border-color: var(--accent);
+				box-shadow: 0 0 0 3px var(--accent-soft);
+			}
+			.device-card-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+			.device-name { font-weight: 600; font-size: 15px; }
+			.device-desc { font-size: 12.5px; color: var(--text-dim); }
+			.device-link { font-size: 12.5px; margin-top: 2px; width: fit-content; }
+			.device-chevron { color: var(--text-dim); flex: 0 0 auto; display: grid; place-items: center; }
+
+			/* ---------- Version cards ---------- */
+			.version-list { display: grid; gap: 10px; }
+			.version-card {
+				display: flex;
+				align-items: center;
+				gap: 14px;
+				text-align: left;
+				width: 100%;
+				background: var(--card);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 14px 16px;
+				color: var(--text);
+				cursor: pointer;
+				transition: border-color 0.2s ease, background 0.2s ease;
+			}
+			.version-card:hover { background: var(--card-hover); border-color: var(--border-strong); }
+			.version-card.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+			.version-radio {
+				flex: 0 0 auto;
+				width: 20px;
+				height: 20px;
+				border-radius: 50%;
+				border: 2px solid var(--border-strong);
+				display: grid;
+				place-items: center;
+				transition: border-color 0.2s ease;
+			}
+			.version-card.selected .version-radio { border-color: var(--accent); }
+			.version-radio-dot {
+				width: 10px;
+				height: 10px;
+				border-radius: 50%;
+				background: var(--accent);
+				transform: scale(0);
+				transition: transform 0.2s ease;
+			}
+			.version-card.selected .version-radio-dot { transform: scale(1); }
+			.version-main { display: flex; flex-direction: column; gap: 2px; }
+			.version-name { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+			.version-date { font-size: 12.5px; color: var(--text-dim); }
+			.badge {
+				font-size: 10.5px;
+				font-weight: 700;
+				letter-spacing: 0.4px;
+				text-transform: uppercase;
+				color: var(--accent);
+				background: var(--accent-soft);
+				padding: 2px 8px;
+				border-radius: 999px;
+			}
+
+			.show-more { margin-top: 14px; }
+			.status { color: var(--text-dim); font-size: 14px; padding: 12px 0; }
+			.status.error { color: var(--danger); }
+
+			/* ---------- Install summary ---------- */
+			.summary {
+				background: var(--card);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 6px 16px;
+				margin-bottom: 22px;
+			}
+			.summary-row {
+				display: flex;
+				justify-content: space-between;
+				gap: 12px;
+				padding: 12px 0;
+				border-bottom: 1px solid var(--border);
+			}
+			.summary-row:last-child { border-bottom: none; }
+			.summary-key { color: var(--text-dim); font-size: 14px; }
+			.summary-val { font-weight: 600; font-size: 14px; text-align: right; }
+			.install-area { display: flex; justify-content: center; margin: 8px 0; }
+			.install-hint { text-align: center; color: var(--text-dim); font-size: 12.5px; margin-top: 16px; }
+			.install-note { display: block; color: var(--text-dim); font-size: 13px; text-align: center; }
+
+			/* ---------- Buttons ---------- */
+			.btn {
+				font: inherit;
+				cursor: pointer;
+				border-radius: 10px;
+				border: 1px solid transparent;
+				padding: 11px 20px;
+				font-weight: 600;
+				transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease;
+			}
+			.btn:active { transform: translateY(1px); }
+			.btn-primary {
+				background: linear-gradient(135deg, var(--accent), var(--accent-2));
+				color: #fff;
+				font-size: 15px;
+				box-shadow: 0 6px 18px rgba(3, 169, 244, 0.3);
+			}
+			.btn-primary:hover { filter: brightness(1.06); }
+			.btn-install { padding: 13px 28px; }
+			.btn-ghost {
+				background: transparent;
+				border-color: var(--border-strong);
+				color: var(--text);
+			}
+			.btn-ghost:hover { background: var(--card-hover); }
+
+			/* ---------- Footer ---------- */
+			.app-footer {
+				margin-top: 28px;
+				padding-top: 22px;
+				border-top: 1px solid var(--border);
+				text-align: center;
+				color: var(--text-dim);
+				font-size: 13px;
+			}
+			.app-footer p { margin: 6px 0; }
+			.footnote { font-size: 12px; }
+			.konami { opacity: 0.5; letter-spacing: 1px; }
+
+			.loading-screen {
+				display: grid;
+				place-items: center;
+				min-height: 40vh;
+				color: var(--text-dim);
+			}
+		</style>
+
+		<!-- esp-web-tools registers the <esp-web-install-button> custom element -->
+		<script type="module" src="https://unpkg.com/esp-web-tools@10.1.1/dist/web/install-button.js?module"></script>
+
+		<!-- React + ReactDOM (UMD globals) -->
+		<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+		<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+		<!-- Manifest generator (provides the global generate_manifest used by app.tsx) -->
+		<script src="manifestgen.js"></script>
+	</head>
+	<body>
+		<div id="root">
+			<div class="loading-screen">Loading installer…</div>
+		</div>
+
+		<!--
+			app.tsx is compiled and inlined here at build time by build.mjs.
+			Edit app.tsx (the source), then run `npm run build` to regenerate index.html.
+		-->
+		<script>
+			/* __APP_JS__ */
+		</script>
+	</body>
+</html>
