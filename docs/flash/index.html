@@ -349,6 +349,138 @@
 				min-height: 40vh;
 				color: var(--text-dim);
 			}
+
+			/* ---------- Release notes ---------- */
+			.notes {
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				margin-bottom: 22px;
+				overflow: hidden;
+			}
+			.notes-toggle {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				width: 100%;
+				background: var(--card);
+				border: none;
+				color: var(--text);
+				font: inherit;
+				font-weight: 600;
+				padding: 12px 16px;
+				cursor: pointer;
+				text-align: left;
+			}
+			.notes-toggle:hover { background: var(--card-hover); }
+			.notes-caret, .console-caret {
+				display: inline-grid;
+				place-items: center;
+				transition: transform 0.2s ease;
+				color: var(--text-dim);
+			}
+			.notes-caret.open, .console-caret.open { transform: rotate(90deg); }
+			.notes-body {
+				padding: 4px 18px 14px;
+				border-top: 1px solid var(--border);
+				font-size: 14px;
+				color: var(--text-dim);
+				max-height: 320px;
+				overflow-y: auto;
+			}
+
+			/* Minimal markdown styling */
+			.markdown h1, .markdown h2, .markdown h3 { color: var(--text); margin: 14px 0 6px; font-size: 15px; }
+			.markdown a { color: var(--accent); }
+			.markdown code {
+				background: var(--bg);
+				border: 1px solid var(--border);
+				border-radius: 5px;
+				padding: 1px 5px;
+				font-size: 12.5px;
+			}
+			.markdown pre {
+				background: var(--bg);
+				border: 1px solid var(--border);
+				border-radius: 8px;
+				padding: 10px;
+				overflow-x: auto;
+			}
+			.markdown ul, .markdown ol { padding-left: 20px; }
+			.markdown img { max-width: 100%; }
+
+			/* ---------- Device console ---------- */
+			.console-panel {
+				margin-top: 18px;
+				border: 1px solid var(--border);
+				border-radius: var(--radius);
+				background: var(--bg-2);
+				overflow: hidden;
+			}
+			.console-head {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				width: 100%;
+				background: none;
+				border: none;
+				color: var(--text);
+				font: inherit;
+				padding: 14px 18px;
+				cursor: pointer;
+				text-align: left;
+			}
+			.console-head:hover { background: var(--card-hover); }
+			.console-title { font-weight: 700; flex: 1; }
+			.console-status {
+				font-size: 11.5px;
+				font-weight: 700;
+				letter-spacing: 0.4px;
+				text-transform: uppercase;
+				color: var(--text-dim);
+				background: var(--card);
+				border: 1px solid var(--border);
+				padding: 3px 10px;
+				border-radius: 999px;
+			}
+			.console-status.on { color: var(--good); border-color: var(--good); }
+			.console-body { padding: 4px 18px 18px; border-top: 1px solid var(--border); }
+			.console-toolbar {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 8px;
+				margin: 14px 0;
+			}
+			.console-toolbar .btn { padding: 8px 14px; font-size: 13px; }
+			.console-info { font-size: 12.5px; color: var(--text-dim); margin-left: auto; }
+			.console-log {
+				background: #0b0e13;
+				color: #c9d4e0;
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 12px;
+				height: 280px;
+				overflow-y: auto;
+				white-space: pre-wrap;
+				word-break: break-word;
+				font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+				font-size: 12.5px;
+				line-height: 1.5;
+			}
+			.console-input { display: flex; gap: 8px; margin-top: 10px; }
+			.console-input input {
+				flex: 1;
+				background: var(--card);
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 10px 12px;
+				color: var(--text);
+				font: inherit;
+				font-size: 13px;
+			}
+			.console-input input:focus { outline: none; border-color: var(--accent); }
+			.console-note { font-size: 12px; color: var(--text-dim); margin: 10px 0 0; }
+			.btn:disabled { opacity: 0.45; cursor: not-allowed; }
 		</style>
 
 		<!-- esp-web-tools registers the <esp-web-install-button> custom element -->
@@ -360,6 +492,10 @@
 
 		<!-- Manifest generator (provides the global generate_manifest used by app.tsx) -->
 		<script src="manifestgen.js"></script>
+
+		<!-- Markdown rendering for release notes (marked) + sanitizer (DOMPurify) -->
+		<script src="https://unpkg.com/marked@12/marked.min.js"></script>
+		<script src="https://unpkg.com/dompurify@3/dist/purify.min.js"></script>
 	</head>
 	<body>
 		<div id="root">
@@ -372,7 +508,17 @@
 		-->
 		<script>
 			// AUTO-GENERATED from app.tsx by build.mjs — do not edit directly.
-const{useState,useEffect,useRef,useMemo}=React,DEVICES=[{id:"manifold_v4",name:"Board V4 Manifold",group:"Manifold",desc:"Latest manifold board"},{id:"manifold_v3",name:"Board V3 Manifold",group:"Manifold"},{id:"manifold_v2",name:"Board V2 Manifold",group:"Manifold",desc:"No acc wire functionality, will work for some V3 boards also"},{id:"controller_ws2p8",name:'2.8" Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-touch-lcd-2.8.htm?sku=27690"},{id:"controller_ws2p8b",name:'2.8" B Model Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-touch-lcd-2.8b.htm?sku=30103"},{id:"controller_ws3p5",name:'3.5" Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-touch-lcd-3.5.htm?sku=30733"},{id:"controller_ws3p5b",name:'3.5" B Model Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-touch-lcd-3.5b.htm?sku=31137"},{id:"controller_ws1p8knob",name:'1.8" Rotary Gauge Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-knob-touch-lcd-1.8.htm?sku=31623"},{id:"controller_cyd3p2",name:'3.2" CYD Capacitive Controller',group:"Legacy"},{id:"controller_cyd3p2_resistive",name:'3.2" CYD Resistive Controller',group:"Legacy"}],GROUP_META={Manifold:{label:"Manifold"},Controller:{label:"Controller"},Legacy:{label:"Legacy Devices",note:"No longer updated"}};async function fetchFirmwareReleases(){return(await(await fetch("https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases")).json()).map(s=>({name:s.name,tag:s.tag_name,date:new Date(s.created_at),body:s.body,assets:(s.assets||[]).map(l=>({name:l.name,size:l.size,downloadUrl:l.browser_download_url}))}))}function getReleaseAsset(e,a,s){return`https://githubreleasebinary-http-proxy.gopro2027.workers.dev/?url=https://github.com/gopro2027/ArduinoAirSuspensionController/releases/download/${a}/${e}${s}`}function BackArrow(){return React.createElement("svg",{viewBox:"0 0 24 24",width:"20",height:"20",fill:"none",stroke:"currentColor",strokeWidth:"2"},React.createElement("path",{d:"M19 12H5M12 19l-7-7 7-7",strokeLinecap:"round",strokeLinejoin:"round"}))}function Chevron(){return React.createElement("svg",{viewBox:"0 0 24 24",width:"18",height:"18",fill:"none",stroke:"currentColor",strokeWidth:"2"},React.createElement("path",{d:"M9 18l6-6-6-6",strokeLinecap:"round",strokeLinejoin:"round"}))}function Check(){return React.createElement("svg",{viewBox:"0 0 24 24",width:"16",height:"16",fill:"none",stroke:"currentColor",strokeWidth:"3"},React.createElement("path",{d:"M20 6L9 17l-5-5",strokeLinecap:"round",strokeLinejoin:"round"}))}const STEP_LABELS=["Type","Device","Version","Install"];function Stepper({step:e}){return React.createElement("div",{className:"stepper"},STEP_LABELS.map((a,s)=>React.createElement("div",{className:"stepper-item",key:a},React.createElement("div",{className:"stepper-dot"+(s<e?" done":s===e?" active":"")},s<e?React.createElement(Check,null):s+1),React.createElement("span",{className:"stepper-label"+(s===e?" active":"")},a),s<STEP_LABELS.length-1&&React.createElement("div",{className:"stepper-line"+(s<e?" done":"")}))))}function InstallButton({manifest:e}){const a=useRef(null);return useEffect(()=>{a.current&&e&&(a.current.manifest=e)},[e]),e?React.createElement("esp-web-install-button",{ref:a,class:"oas-install-btn"},React.createElement("button",{slot:"activate",className:"btn btn-primary btn-install"},"Install firmware"),React.createElement("span",{slot:"unsupported",className:"install-note"},"Your browser does not support installing firmware. Try Chrome or Edge on desktop."),React.createElement("span",{slot:"not-allowed",className:"install-note"},"This page must be served over https to install firmware.")):null}const CATEGORIES=[{id:"Manifold",name:"Manifold",desc:"The board bolted to your air manifold \u2014 controls the valves, compressor and pressure sensors."},{id:"Controller",name:"Controller",desc:"The wireless touchscreen / knob display that remotely controls the manifold."}];function CategoryStep({selected:e,onSelect:a}){return React.createElement("div",{className:"step"},React.createElement("h2",{className:"step-title"},"What are you flashing?"),React.createElement("p",{className:"step-sub"},"Choose the type of device you want to install OAS-Man onto."),React.createElement("div",{className:"card-grid"},CATEGORIES.map(s=>React.createElement("button",{key:s.id,className:"device-card"+(e===s.id?" selected":""),onClick:()=>a(s.id)},React.createElement("div",{className:"device-card-main"},React.createElement("span",{className:"device-name"},s.name),React.createElement("span",{className:"device-desc"},s.desc)),React.createElement("span",{className:"device-chevron"},React.createElement(Chevron,null))))))}function DeviceStep({category:e,selected:a,onSelect:s}){return React.createElement("div",{className:"step"},React.createElement("h2",{className:"step-title"},"Select your device"),React.createElement("p",{className:"step-sub"},"Pick the board you want to flash OAS-Man onto."),(e==="Manifold"?["Manifold"]:["Controller","Legacy"]).map(o=>React.createElement("div",{className:"group",key:o},React.createElement("div",{className:"group-head"},React.createElement("span",{className:"group-label"},GROUP_META[o].label),GROUP_META[o].note&&React.createElement("span",{className:"group-note"},GROUP_META[o].note)),React.createElement("div",{className:"card-grid"},DEVICES.filter(n=>n.group===o).map(n=>React.createElement("button",{key:n.id,className:"device-card"+((a==null?void 0:a.id)===n.id?" selected":""),onClick:()=>s(n)},React.createElement("div",{className:"device-card-main"},React.createElement("span",{className:"device-name"},n.name),n.desc&&React.createElement("span",{className:"device-desc"},n.desc),n.link&&React.createElement("a",{className:"device-link",href:n.link,target:"_blank",rel:"noreferrer",onClick:d=>d.stopPropagation()},"Product page \u2197")),React.createElement("span",{className:"device-chevron"},React.createElement(Chevron,null))))))))}function VersionStep({device:e,releases:a,loading:s,error:l,selected:o,onSelect:n}){const[d,p]=useState(!1),i=useMemo(()=>e?a.filter(t=>t.assets.some(m=>m.name===`${e.id}_firmware.bin`)):[],[e,a]);useEffect(()=>{p(!1)},[e]);const u=d?i:i.slice(0,5);return React.createElement("div",{className:"step"},React.createElement("h2",{className:"step-title"},"Select a version"),React.createElement("p",{className:"step-sub"},"Firmware versions available for ",React.createElement("strong",null,e==null?void 0:e.name),"."),s&&React.createElement("div",{className:"status"},"Loading versions\u2026"),l&&React.createElement("div",{className:"status error"},l),!s&&!l&&i.length===0&&React.createElement("div",{className:"status"},"No firmware releases found for this device."),React.createElement("div",{className:"version-list"},u.map((t,m)=>React.createElement("button",{key:t.tag,className:"version-card"+((o==null?void 0:o.tag)===t.tag?" selected":""),onClick:()=>n(t)},React.createElement("div",{className:"version-radio"},React.createElement("span",{className:"version-radio-dot"})),React.createElement("div",{className:"version-main"},React.createElement("span",{className:"version-name"},t.name||t.tag,m===0&&React.createElement("span",{className:"badge"},"Latest")),React.createElement("span",{className:"version-date"},t.date.toLocaleDateString()))))),!d&&i.length>5&&React.createElement("button",{className:"btn btn-ghost show-more",onClick:()=>p(!0)},"Show ",i.length-5," more ",i.length-5===1?"version":"versions"))}function InstallStep({device:e,release:a,manifest:s}){return React.createElement("div",{className:"step"},React.createElement("h2",{className:"step-title"},"Ready to install"),React.createElement("p",{className:"step-sub"},"Connect your device via USB, then click install."),React.createElement("div",{className:"summary"},React.createElement("div",{className:"summary-row"},React.createElement("span",{className:"summary-key"},"Device"),React.createElement("span",{className:"summary-val"},e==null?void 0:e.name)),React.createElement("div",{className:"summary-row"},React.createElement("span",{className:"summary-key"},"Version"),React.createElement("span",{className:"summary-val"},(a==null?void 0:a.name)||(a==null?void 0:a.tag)))),React.createElement("div",{className:"install-area"},React.createElement(InstallButton,{manifest:s})),React.createElement("p",{className:"install-hint"},"Use Chrome or Edge on desktop. A USB cable that supports data is required."))}function App(){const[e,a]=useState(0),[s,l]=useState([]),[o,n]=useState(!0),[d,p]=useState(null),[i,u]=useState(null),[t,m]=useState(null),[c,v]=useState(null);useEffect(()=>{fetchFirmwareReleases().then(r=>{l(r),n(!1)}).catch(r=>{console.error("Error fetching releases:",r),p("Could not load firmware releases. Check your connection and try again."),n(!1)})},[]);const h=useMemo(()=>!t||!c?null:generate_manifest(t.id,c.name||c.tag,getReleaseAsset(t.id,c.tag,"_bootloader.bin"),getReleaseAsset(t.id,c.tag,"_partitions.bin"),getReleaseAsset(t.id,c.tag,"_firmware.bin")),[t,c]);function f(r){u(r),m(null),v(null),a(1)}function b(r){m(r),v(null),a(2)}function N(r){v(r),a(3)}function g(){a(r=>Math.max(0,r-1))}return React.createElement("div",{className:"installer"},React.createElement("header",{className:"app-header"},React.createElement("div",{className:"brand"},React.createElement("img",{className:"brand-logo",src:"https://oasman.dev/docs/assets/images/oasman_logo.jpg",alt:"OAS-Man logo"}),React.createElement("span",{className:"brand-name"},"OAS-Man Installer")),React.createElement(Stepper,{step:e})),React.createElement("div",{className:"viewport"},React.createElement("div",{className:"track",style:{transform:`translateX(-${e*100}%)`}},React.createElement("section",{className:"slide"},React.createElement("button",{className:"back-btn back-btn-spacer",tabIndex:-1,"aria-hidden":"true"}),React.createElement(CategoryStep,{selected:i,onSelect:f})),React.createElement("section",{className:"slide"},React.createElement("button",{className:"back-btn",onClick:g},React.createElement(BackArrow,null),React.createElement("span",null,"Back")),React.createElement(DeviceStep,{category:i,selected:t,onSelect:b})),React.createElement("section",{className:"slide"},React.createElement("button",{className:"back-btn",onClick:g},React.createElement(BackArrow,null),React.createElement("span",null,"Back")),React.createElement(VersionStep,{device:t,releases:s,loading:o,error:d,selected:c,onSelect:N})),React.createElement("section",{className:"slide"},React.createElement("button",{className:"back-btn",onClick:g},React.createElement(BackArrow,null),React.createElement("span",null,"Back")),React.createElement(InstallStep,{device:t,release:c,manifest:h})))),React.createElement("footer",{className:"app-footer"},React.createElement("p",null,React.createElement("a",{href:"https://github.com/gopro2027/ArduinoAirSuspensionController"},"OAS-Man")," ","\u2014 powered by"," ",React.createElement("a",{href:"https://esphome.github.io/esp-web-tools/"},"ESP Web Tools"),"."),React.createElement("p",{className:"footnote"},"* firmware_no_acc: for boards without constant battery + acc input (mostly manifold V2 and below)."),React.createElement("p",{className:"footnote"},React.createElement("a",{href:"https://play.google.com/store/apps/details?id=dev.oasman.oasman_mobile",target:"_blank",rel:"noreferrer"},"Download the Android app")," ","\xB7 iOS coming soon"),React.createElement("p",{className:"footnote"},"\u2764\uFE0F oasman.dev"),React.createElement("p",{className:"footnote konami"},"U,U,D,D,L,R,L,R,A,B")))}const root=ReactDOM.createRoot(document.getElementById("root"));root.render(React.createElement(App,null));
+const{useState,useEffect,useRef,useMemo}=React,DEVICES=[{id:"manifold_v4",name:"Board V4 Manifold",group:"Manifold",desc:"Latest manifold board"},{id:"manifold_v3",name:"Board V3 Manifold",group:"Manifold"},{id:"manifold_v2",name:"Board V2 Manifold",group:"Manifold",desc:"No acc wire functionality, will work for some V3 boards also"},{id:"controller_ws2p8",name:'2.8" Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-touch-lcd-2.8.htm?sku=27690"},{id:"controller_ws2p8b",name:'2.8" B Model Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-touch-lcd-2.8b.htm?sku=30103"},{id:"controller_ws3p5",name:'3.5" Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-touch-lcd-3.5.htm?sku=30733"},{id:"controller_ws3p5b",name:'3.5" B Model Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-touch-lcd-3.5b.htm?sku=31137"},{id:"controller_ws1p8knob",name:'1.8" Rotary Gauge Waveshare Controller',group:"Controller",link:"https://www.waveshare.com/esp32-s3-knob-touch-lcd-1.8.htm?sku=31623"},{id:"controller_cyd3p2",name:'3.2" CYD Capacitive Controller',group:"Legacy"},{id:"controller_cyd3p2_resistive",name:'3.2" CYD Resistive Controller',group:"Legacy"}],GROUP_META={Manifold:{label:"Manifold"},Controller:{label:"Controller"},Legacy:{label:"Legacy Devices",note:"No longer updated"}};async function fetchFirmwareReleases(){return(await(await fetch("https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases")).json()).map(e=>({name:e.name,tag:e.tag_name,date:new Date(e.created_at),body:e.body,assets:(e.assets||[]).map(c=>({name:c.name,size:c.size,downloadUrl:c.browser_download_url}))}))}function getReleaseAsset(a,n,e){return`https://githubreleasebinary-http-proxy.gopro2027.workers.dev/?url=https://github.com/gopro2027/ArduinoAirSuspensionController/releases/download/${n}/${a}${e}`}function chipFamilyForCategory(a){return a==="Manifold"?"ESP32":a==="Controller"?"ESP32-S3":"ESP32"}function renderMarkdown(a){try{return{__html:DOMPurify.sanitize(marked.parse(a||""))}}catch{return{__html:""}}}const USB_VENDORS={4292:"Silicon Labs CP210x",6790:"WCH CH34x",1027:"FTDI",12346:"Espressif (native USB)"};function BackArrow(){return React.createElement("svg",{viewBox:"0 0 24 24",width:"20",height:"20",fill:"none",stroke:"currentColor",strokeWidth:"2"},React.createElement("path",{d:"M19 12H5M12 19l-7-7 7-7",strokeLinecap:"round",strokeLinejoin:"round"}))}function Chevron(){return React.createElement("svg",{viewBox:"0 0 24 24",width:"18",height:"18",fill:"none",stroke:"currentColor",strokeWidth:"2"},React.createElement("path",{d:"M9 18l6-6-6-6",strokeLinecap:"round",strokeLinejoin:"round"}))}function Check(){return React.createElement("svg",{viewBox:"0 0 24 24",width:"16",height:"16",fill:"none",stroke:"currentColor",strokeWidth:"3"},React.createElement("path",{d:"M20 6L9 17l-5-5",strokeLinecap:"round",strokeLinejoin:"round"}))}const STEP_LABELS=["Type","Device","Version","Install"];function Stepper({step:a}){return React.createElement("div",{className:"stepper"},STEP_LABELS.map((n,e)=>React.createElement("div",{className:"stepper-item",key:n},React.createElement("div",{className:"stepper-dot"+(e<a?" done":e===a?" active":"")},e<a?React.createElement(Check,null):e+1),React.createElement("span",{className:"stepper-label"+(e===a?" active":"")},n),e<STEP_LABELS.length-1&&React.createElement("div",{className:"stepper-line"+(e<a?" done":"")}))))}function InstallButton({manifest:a}){const n=useRef(null);return useEffect(()=>{n.current&&a&&(n.current.manifest=a)},[a]),a?React.createElement("esp-web-install-button",{ref:n,class:"oas-install-btn"},React.createElement("button",{slot:"activate",className:"btn btn-primary btn-install"},"Install firmware"),React.createElement("span",{slot:"unsupported",className:"install-note"},"Your browser does not support installing firmware. Try Chrome or Edge on desktop."),React.createElement("span",{slot:"not-allowed",className:"install-note"},"This page must be served over https to install firmware.")):null}const CATEGORIES=[{id:"Manifold",name:"Manifold",desc:"The board bolted to your air manifold \u2014 controls the valves, compressor and pressure sensors."},{id:"Controller",name:"Controller",desc:"The wireless touchscreen / knob display that remotely controls the manifold."}];function CategoryStep({selected:a,onSelect:n}){return React.createElement("div",{className:"step"},React.createElement("h2",{className:"step-title"},"What are you flashing?"),React.createElement("p",{className:"step-sub"},"Choose the type of device you want to install OAS-Man onto."),React.createElement("div",{className:"card-grid"},CATEGORIES.map(e=>React.createElement("button",{key:e.id,className:"device-card"+(a===e.id?" selected":""),onClick:()=>n(e.id)},React.createElement("div",{className:"device-card-main"},React.createElement("span",{className:"device-name"},e.name),React.createElement("span",{className:"device-desc"},e.desc)),React.createElement("span",{className:"device-chevron"},React.createElement(Chevron,null))))))}function DeviceStep({category:a,selected:n,onSelect:e}){return React.createElement("div",{className:"step"},React.createElement("h2",{className:"step-title"},"Select your device"),React.createElement("p",{className:"step-sub"},"Pick the board you want to flash OAS-Man onto."),(a==="Manifold"?["Manifold"]:["Controller","Legacy"]).map(r=>React.createElement("div",{className:"group",key:r},React.createElement("div",{className:"group-head"},React.createElement("span",{className:"group-label"},GROUP_META[r].label),GROUP_META[r].note&&React.createElement("span",{className:"group-note"},GROUP_META[r].note)),React.createElement("div",{className:"card-grid"},DEVICES.filter(s=>s.group===r).map(s=>React.createElement("button",{key:s.id,className:"device-card"+((n==null?void 0:n.id)===s.id?" selected":""),onClick:()=>e(s)},React.createElement("div",{className:"device-card-main"},React.createElement("span",{className:"device-name"},s.name),s.desc&&React.createElement("span",{className:"device-desc"},s.desc),s.link&&React.createElement("a",{className:"device-link",href:s.link,target:"_blank",rel:"noreferrer",onClick:d=>d.stopPropagation()},"Product page \u2197")),React.createElement("span",{className:"device-chevron"},React.createElement(Chevron,null))))))))}function VersionStep({device:a,releases:n,loading:e,error:c,selected:r,onSelect:s}){const[d,g]=useState(!1),u=useMemo(()=>a?n.filter(o=>o.assets.some(v=>v.name===`${a.id}_firmware.bin`)):[],[a,n]);useEffect(()=>{g(!1)},[a]);const b=d?u:u.slice(0,5);return React.createElement("div",{className:"step"},React.createElement("h2",{className:"step-title"},"Select a version"),React.createElement("p",{className:"step-sub"},"Firmware versions available for ",React.createElement("strong",null,a==null?void 0:a.name),"."),e&&React.createElement("div",{className:"status"},"Loading versions\u2026"),c&&React.createElement("div",{className:"status error"},c),!e&&!c&&u.length===0&&React.createElement("div",{className:"status"},"No firmware releases found for this device."),React.createElement("div",{className:"version-list"},b.map((o,v)=>React.createElement("button",{key:o.tag,className:"version-card"+((r==null?void 0:r.tag)===o.tag?" selected":""),onClick:()=>s(o)},React.createElement("div",{className:"version-radio"},React.createElement("span",{className:"version-radio-dot"})),React.createElement("div",{className:"version-main"},React.createElement("span",{className:"version-name"},o.name||o.tag,v===0&&React.createElement("span",{className:"badge"},"Latest")),React.createElement("span",{className:"version-date"},o.date.toLocaleDateString()))))),!d&&u.length>5&&React.createElement("button",{className:"btn btn-ghost show-more",onClick:()=>g(!0)},"Show ",u.length-5," more ",u.length-5===1?"version":"versions"))}function InstallStep({category:a,device:n,release:e,manifest:c}){var g;const[r,s]=useState(!1),d=(g=e==null?void 0:e.body)==null?void 0:g.trim();return React.createElement("div",{className:"step"},React.createElement("h2",{className:"step-title"},"Ready to install"),React.createElement("p",{className:"step-sub"},"Connect your device via USB, then click install."),React.createElement("div",{className:"summary"},React.createElement("div",{className:"summary-row"},React.createElement("span",{className:"summary-key"},"Device"),React.createElement("span",{className:"summary-val"},n==null?void 0:n.name)),React.createElement("div",{className:"summary-row"},React.createElement("span",{className:"summary-key"},"Chip"),React.createElement("span",{className:"summary-val"},chipFamilyForCategory(a))),React.createElement("div",{className:"summary-row"},React.createElement("span",{className:"summary-key"},"Version"),React.createElement("span",{className:"summary-val"},(e==null?void 0:e.name)||(e==null?void 0:e.tag)))),d&&React.createElement("div",{className:"notes"},React.createElement("button",{className:"notes-toggle",onClick:()=>s(u=>!u),"aria-expanded":r},React.createElement("span",{className:"notes-caret"+(r?" open":"")},React.createElement(Chevron,null)),"What's new in this version"),r&&React.createElement("div",{className:"notes-body markdown",dangerouslySetInnerHTML:renderMarkdown(d)})),React.createElement("div",{className:"install-area"},React.createElement(InstallButton,{manifest:c})),React.createElement("p",{className:"install-hint"},"Use Chrome or Edge on desktop. A USB cable that supports data is required."))}const SERIAL_SUPPORTED=typeof navigator!="undefined"&&"serial"in navigator,MAX_LOG_CHARS=6e4;function SerialConsole(){const[a,n]=useState(!1),[e,c]=useState(!1),[r,s]=useState(!1),[d,g]=useState(""),[u,b]=useState(null),[o,v]=useState(""),l=useRef(null),f=useRef(null),N=useRef(!1),y=useRef(null);useEffect(()=>{y.current&&(y.current.scrollTop=y.current.scrollHeight)},[d]);function h(t){g(i=>{const m=i+t;return m.length>MAX_LOG_CHARS?m.slice(m.length-MAX_LOG_CHARS):m})}async function k(){const t=l.current,i=new TextDecoder;for(;t&&t.readable&&N.current;){const m=t.readable.getReader();f.current=m;try{for(;;){const{value:C,done:M}=await m.read();if(M)break;C&&h(i.decode(C))}}catch(C){h(`
+[read error: ${C}]
+`)}finally{m.releaseLock(),f.current=null}}}async function w(){s(!0);try{const t=await navigator.serial.requestPort();await t.open({baudRate:115200}),l.current=t;const i=t.getInfo?t.getInfo():{},m=i.usbVendorId?USB_VENDORS[i.usbVendorId]||`USB ${i.usbVendorId.toString(16)}`:null;b(m?`${m} @ 115200 baud`:"Connected @ 115200 baud"),c(!0),N.current=!0,k()}catch(t){t&&t.name!=="NotFoundError"&&h(`
+[connect error: ${t.message||t}]
+`)}finally{s(!1)}}async function p(){s(!0),N.current=!1;try{f.current&&await f.current.cancel().catch(()=>{}),l.current&&await l.current.close().catch(()=>{})}finally{l.current=null,c(!1),b(null),s(!1)}}async function S(t){const i=l.current;if(!i||!i.writable)return;const m=i.writable.getWriter();try{await m.write(t)}finally{m.releaseLock()}}async function R(t){t.preventDefault(),!(!e||!o)&&(h(`> ${o}
+`),await S(new TextEncoder().encode(o+`
+`)),v(""))}async function D(){const t=l.current;if(!(!t||!t.setSignals)){s(!0),h(`
+[restarting device\u2026]
+`);try{await t.setSignals({dataTerminalReady:!1,requestToSend:!0}),await new Promise(i=>setTimeout(i,120)),await t.setSignals({dataTerminalReady:!1,requestToSend:!1})}catch(i){h(`
+[restart error: ${i.message||i}]
+`)}finally{s(!1)}}}async function _(){try{await navigator.clipboard.writeText(d)}catch{}}return React.createElement("div",{className:"console-panel"},React.createElement("button",{className:"console-head",onClick:()=>n(t=>!t),"aria-expanded":a},React.createElement("span",{className:"console-caret"+(a?" open":"")},React.createElement(Chevron,null)),React.createElement("span",{className:"console-title"},"Device Console"),React.createElement("span",{className:"console-status"+(e?" on":"")},e?"Connected":"Disconnected")),a&&React.createElement("div",{className:"console-body"},SERIAL_SUPPORTED?React.createElement(React.Fragment,null,React.createElement("div",{className:"console-toolbar"},e?React.createElement("button",{className:"btn btn-ghost",onClick:p,disabled:r},"Disconnect"):React.createElement("button",{className:"btn btn-primary",onClick:w,disabled:r},"Connect"),React.createElement("button",{className:"btn btn-ghost",onClick:D,disabled:!e||r},"Restart device"),React.createElement("button",{className:"btn btn-ghost",onClick:()=>g(""),disabled:!d},"Clear"),React.createElement("button",{className:"btn btn-ghost",onClick:_,disabled:!d},"Copy"),u&&React.createElement("span",{className:"console-info"},u)),React.createElement("div",{className:"console-log",ref:y},d||"Logs will appear here once connected. Serial runs at 115200 baud."),React.createElement("form",{className:"console-input",onSubmit:R},React.createElement("input",{type:"text",placeholder:e?"Type a command and press Enter\u2026":"Connect to send commands",value:o,disabled:!e,onChange:t=>v(t.target.value)}),React.createElement("button",{className:"btn btn-ghost",type:"submit",disabled:!e||!o},"Send")),React.createElement("p",{className:"console-note"},"Note: the console and the installer can't use the serial port at the same time \u2014 disconnect here before flashing.")):React.createElement("p",{className:"status"},"Web Serial isn't available in this browser. Use Chrome or Edge on desktop to view device logs.")))}function App(){const[a,n]=useState(0),[e,c]=useState([]),[r,s]=useState(!0),[d,g]=useState(null),[u,b]=useState(null),[o,v]=useState(null),[l,f]=useState(null);useEffect(()=>{fetchFirmwareReleases().then(p=>{c(p),s(!1)}).catch(p=>{console.error("Error fetching releases:",p),g("Could not load firmware releases. Check your connection and try again."),s(!1)})},[]);const N=useMemo(()=>!o||!l?null:generate_manifest(o.id,l.name||l.tag,getReleaseAsset(o.id,l.tag,"_bootloader.bin"),getReleaseAsset(o.id,l.tag,"_partitions.bin"),getReleaseAsset(o.id,l.tag,"_firmware.bin")),[o,l]);function y(p){b(p),v(null),f(null),n(1)}function h(p){v(p),f(null),n(2)}function k(p){f(p),n(3)}function w(){n(p=>Math.max(0,p-1))}return React.createElement("div",{className:"installer"},React.createElement("header",{className:"app-header"},React.createElement("div",{className:"brand"},React.createElement("img",{className:"brand-logo",src:"https://oasman.dev/docs/assets/images/oasman_logo.jpg",alt:"OAS-Man logo"}),React.createElement("span",{className:"brand-name"},"OAS-Man Installer")),React.createElement(Stepper,{step:a})),React.createElement("div",{className:"viewport"},React.createElement("div",{className:"track",style:{transform:`translateX(-${a*100}%)`}},React.createElement("section",{className:"slide"},React.createElement("button",{className:"back-btn back-btn-spacer",tabIndex:-1,"aria-hidden":"true"}),React.createElement(CategoryStep,{selected:u,onSelect:y})),React.createElement("section",{className:"slide"},React.createElement("button",{className:"back-btn",onClick:w},React.createElement(BackArrow,null),React.createElement("span",null,"Back")),React.createElement(DeviceStep,{category:u,selected:o,onSelect:h})),React.createElement("section",{className:"slide"},React.createElement("button",{className:"back-btn",onClick:w},React.createElement(BackArrow,null),React.createElement("span",null,"Back")),React.createElement(VersionStep,{device:o,releases:e,loading:r,error:d,selected:l,onSelect:k})),React.createElement("section",{className:"slide"},React.createElement("button",{className:"back-btn",onClick:w},React.createElement(BackArrow,null),React.createElement("span",null,"Back")),React.createElement(InstallStep,{category:u,device:o,release:l,manifest:N})))),React.createElement(SerialConsole,null),React.createElement("footer",{className:"app-footer"},React.createElement("p",null,React.createElement("a",{href:"https://github.com/gopro2027/ArduinoAirSuspensionController"},"OAS-Man")," ","\u2014 powered by"," ",React.createElement("a",{href:"https://esphome.github.io/esp-web-tools/"},"ESP Web Tools"),"."),React.createElement("p",{className:"footnote"},"* firmware_no_acc: for boards without constant battery + acc input (mostly manifold V2 and below)."),React.createElement("p",{className:"footnote"},React.createElement("a",{href:"https://play.google.com/store/apps/details?id=dev.oasman.oasman_mobile",target:"_blank",rel:"noreferrer"},"Download the Android app")," ","\xB7 iOS coming soon"),React.createElement("p",{className:"footnote"},"\u2764\uFE0F oasman.dev"),React.createElement("p",{className:"footnote konami"},"U,U,D,D,L,R,L,R,A,B")))}const root=ReactDOM.createRoot(document.getElementById("root"));root.render(React.createElement(App,null));
 		</script>
 	</body>
 </html>
