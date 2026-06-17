@@ -132,6 +132,33 @@ declare function generate_manifest(
 	firmware: string
 ): string;
 
+// Markdown rendering for release notes (loaded from CDN in template.html).
+declare const marked: { parse(md: string): string };
+declare const DOMPurify: { sanitize(html: string): string };
+
+// The manifold runs an ESP32-WROOM; the controllers are ESP32-S3.
+function chipFamilyForCategory(category: Category | null): string {
+	if (category === "Manifold") return "ESP32";
+	if (category === "Controller") return "ESP32-S3";
+	return "ESP32";
+}
+
+function renderMarkdown(md: string): { __html: string } {
+	try {
+		return { __html: DOMPurify.sanitize(marked.parse(md || "")) };
+	} catch {
+		return { __html: "" };
+	}
+}
+
+// Friendly names for the common USB-serial bridge chips on ESP32 boards.
+const USB_VENDORS: Record<number, string> = {
+	0x10c4: "Silicon Labs CP210x",
+	0x1a86: "WCH CH34x",
+	0x0403: "FTDI",
+	0x303a: "Espressif (native USB)",
+};
+
 // ---------------------------------------------------------------------------
 // Icons
 // ---------------------------------------------------------------------------
@@ -400,14 +427,19 @@ function VersionStep({
 // Step 3 — install
 // ---------------------------------------------------------------------------
 function InstallStep({
+	category,
 	device,
 	release,
 	manifest,
 }: {
+	category: Category | null;
 	device: Device | null;
 	release: Release | null;
 	manifest: string | null;
 }) {
+	const [showNotes, setShowNotes] = useState(false);
+	const notes = release?.body?.trim();
+
 	return (
 		<div className="step">
 			<h2 className="step-title">Ready to install</h2>
@@ -419,10 +451,32 @@ function InstallStep({
 					<span className="summary-val">{device?.name}</span>
 				</div>
 				<div className="summary-row">
+					<span className="summary-key">Chip</span>
+					<span className="summary-val">{chipFamilyForCategory(category)}</span>
+				</div>
+				<div className="summary-row">
 					<span className="summary-key">Version</span>
 					<span className="summary-val">{release?.name || release?.tag}</span>
 				</div>
 			</div>
+
+			{notes && (
+				<div className="notes">
+					<button
+						className="notes-toggle"
+						onClick={() => setShowNotes((s) => !s)}
+						aria-expanded={showNotes}
+					>
+						<span className={"notes-caret" + (showNotes ? " open" : "")}>
+							<Chevron />
+						</span>
+						What's new in this version
+					</button>
+					{showNotes && (
+						<div className="notes-body markdown" dangerouslySetInnerHTML={renderMarkdown(notes)} />
+					)}
+				</div>
+			)}
 
 			<div className="install-area">
 				<InstallButton manifest={manifest} />
@@ -431,6 +485,206 @@ function InstallStep({
 			<p className="install-hint">
 				Use Chrome or Edge on desktop. A USB cable that supports data is required.
 			</p>
+			
+		</div>
+	);
+}
+
+// ---------------------------------------------------------------------------
+// Device Console — a Web Serial debug/management panel (read logs, send
+// commands, restart the device). Independent of the install flow.
+// ---------------------------------------------------------------------------
+const SERIAL_SUPPORTED = typeof navigator !== "undefined" && "serial" in navigator;
+const MAX_LOG_CHARS = 60000;
+
+function SerialConsole() {
+	const [open, setOpen] = useState(false);
+	const [connected, setConnected] = useState(false);
+	const [busy, setBusy] = useState(false);
+	const [log, setLog] = useState("");
+	const [info, setInfo] = useState<string | null>(null);
+	const [cmd, setCmd] = useState("");
+
+	const portRef = useRef<any>(null);
+	const readerRef = useRef<any>(null);
+	const keepReadingRef = useRef(false);
+	const logEndRef = useRef<any>(null);
+
+	useEffect(() => {
+		if (logEndRef.current) logEndRef.current.scrollTop = logEndRef.current.scrollHeight;
+	}, [log]);
+
+	function append(text: string) {
+		setLog((prev) => {
+			const next = prev + text;
+			return next.length > MAX_LOG_CHARS ? next.slice(next.length - MAX_LOG_CHARS) : next;
+		});
+	}
+
+	async function readLoop() {
+		const port = portRef.current;
+		const decoder = new TextDecoder();
+		while (port && port.readable && keepReadingRef.current) {
+			const reader = port.readable.getReader();
+			readerRef.current = reader;
+			try {
+				while (true) {
+					const { value, done } = await reader.read();
+					if (done) break;
+					if (value) append(decoder.decode(value));
+				}
+			} catch (e) {
+				append(`\n[read error: ${e}]\n`);
+			} finally {
+				reader.releaseLock();
+				readerRef.current = null;
+			}
+		}
+	}
+
+	async function connect() {
+		setBusy(true);
+		try {
+			const port = await (navigator as any).serial.requestPort();
+			await port.open({ baudRate: 115200 });
+			portRef.current = port;
+			const i = port.getInfo ? port.getInfo() : {};
+			const vendor = i.usbVendorId ? USB_VENDORS[i.usbVendorId] || `USB ${i.usbVendorId.toString(16)}` : null;
+			setInfo(vendor ? `${vendor} @ 115200 baud` : "Connected @ 115200 baud");
+			setConnected(true);
+			keepReadingRef.current = true;
+			readLoop();
+		} catch (e: any) {
+			if (e && e.name !== "NotFoundError") append(`\n[connect error: ${e.message || e}]\n`);
+		} finally {
+			setBusy(false);
+		}
+	}
+
+	async function disconnect() {
+		setBusy(true);
+		keepReadingRef.current = false;
+		try {
+			if (readerRef.current) await readerRef.current.cancel().catch(() => {});
+			if (portRef.current) await portRef.current.close().catch(() => {});
+		} finally {
+			portRef.current = null;
+			setConnected(false);
+			setInfo(null);
+			setBusy(false);
+		}
+	}
+
+	async function writeBytes(data: Uint8Array) {
+		const port = portRef.current;
+		if (!port || !port.writable) return;
+		const writer = port.writable.getWriter();
+		try {
+			await writer.write(data);
+		} finally {
+			writer.releaseLock();
+		}
+	}
+
+	async function sendCommand(e: any) {
+		e.preventDefault();
+		if (!connected || !cmd) return;
+		append(`> ${cmd}\n`);
+		await writeBytes(new TextEncoder().encode(cmd + "\n"));
+		setCmd("");
+	}
+
+	// Pulse EN low (RTS) to reset the ESP32 into a normal boot.
+	async function restart() {
+		const port = portRef.current;
+		if (!port || !port.setSignals) return;
+		setBusy(true);
+		append("\n[restarting device…]\n");
+		try {
+			await port.setSignals({ dataTerminalReady: false, requestToSend: true });
+			await new Promise((r) => setTimeout(r, 120));
+			await port.setSignals({ dataTerminalReady: false, requestToSend: false });
+		} catch (e: any) {
+			append(`\n[restart error: ${e.message || e}]\n`);
+		} finally {
+			setBusy(false);
+		}
+	}
+
+	async function copyLog() {
+		try {
+			await navigator.clipboard.writeText(log);
+		} catch {}
+	}
+
+	return (
+		<div className="console-panel">
+			<button className="console-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+				<span className={"console-caret" + (open ? " open" : "")}>
+					<Chevron />
+				</span>
+				<span className="console-title">Device Console</span>
+				<span className={"console-status" + (connected ? " on" : "")}>
+					{connected ? "Connected" : "Disconnected"}
+				</span>
+			</button>
+
+			{open && (
+				<div className="console-body">
+					{!SERIAL_SUPPORTED ? (
+						<p className="status">
+							Web Serial isn't available in this browser. Use Chrome or Edge on desktop to view
+							device logs.
+						</p>
+					) : (
+						<>
+							<div className="console-toolbar">
+								{!connected ? (
+									<button className="btn btn-primary" onClick={connect} disabled={busy}>
+										Connect
+									</button>
+								) : (
+									<button className="btn btn-ghost" onClick={disconnect} disabled={busy}>
+										Disconnect
+									</button>
+								)}
+								<button className="btn btn-ghost" onClick={restart} disabled={!connected || busy}>
+									Restart device
+								</button>
+								<button className="btn btn-ghost" onClick={() => setLog("")} disabled={!log}>
+									Clear
+								</button>
+								<button className="btn btn-ghost" onClick={copyLog} disabled={!log}>
+									Copy
+								</button>
+								{info && <span className="console-info">{info}</span>}
+							</div>
+
+							<div className="console-log" ref={logEndRef}>
+								{log || "Logs will appear here once connected. Serial runs at 115200 baud."}
+							</div>
+
+							<form className="console-input" onSubmit={sendCommand}>
+								<input
+									type="text"
+									placeholder={connected ? "Type a command and press Enter…" : "Connect to send commands"}
+									value={cmd}
+									disabled={!connected}
+									onChange={(e: any) => setCmd(e.target.value)}
+								/>
+								<button className="btn btn-ghost" type="submit" disabled={!connected || !cmd}>
+									Send
+								</button>
+							</form>
+
+							<p className="console-note">
+								Note: the console and the installer can't use the serial port at the same time —
+								disconnect here before flashing.
+							</p>
+						</>
+					)}
+				</div>
+			)}
 		</div>
 	);
 }
@@ -543,10 +797,12 @@ function App() {
 							<BackArrow />
 							<span>Back</span>
 						</button>
-						<InstallStep device={device} release={release} manifest={manifest} />
+						<InstallStep category={category} device={device} release={release} manifest={manifest} />
 					</section>
 				</div>
 			</div>
+
+			<SerialConsole />
 
 			<footer className="app-footer">
 				<p>
