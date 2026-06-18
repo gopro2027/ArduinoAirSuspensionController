@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>OAS-Man Car Editor</title>
+		<meta name="description" content="Align a custom car image for the OAS-Man wireless controller presets screen." />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="color-scheme" content="dark light" />
+		<link rel="icon" href="https://oasman.dev/docs/assets/images/oasman_logo.jpg" />
+		<style>
+			:root {
+				--bg: #0e1116;
+				--bg-2: #161b22;
+				--card: #1c232d;
+				--card-hover: #232c38;
+				--border: #2b333d;
+				--border-strong: #3a4452;
+				--text: #e6edf3;
+				--text-dim: #9aa7b4;
+				--accent: #03a9f4;
+				--accent-2: #1e88e5;
+				--accent-soft: rgba(3, 169, 244, 0.14);
+				--good: #2ea043;
+				--danger: #f85149;
+				--radius: 14px;
+				--shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+				--canvas-bg: #2d2d2d;
+			}
+			@media (prefers-color-scheme: light) {
+				:root {
+					--bg: #f3f5f8;
+					--bg-2: #ffffff;
+					--card: #ffffff;
+					--card-hover: #f0f6ff;
+					--border: #e2e8f0;
+					--border-strong: #cbd5e1;
+					--text: #0f172a;
+					--text-dim: #64748b;
+					--accent-soft: rgba(3, 169, 244, 0.12);
+					--shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+					--canvas-bg: #e8e8e8;
+				}
+			}
+
+			* { box-sizing: border-box; }
+			html, body {
+				margin: 0;
+				padding: 0;
+				background: var(--bg);
+				color: var(--text);
+				font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif;
+				line-height: 1.45;
+				-webkit-font-smoothing: antialiased;
+			}
+
+			#root { display: flex; justify-content: center; padding: 24px 14px 48px; min-height: 100vh; }
+
+			.editor {
+				width: 100%;
+				max-width: 1400px;
+			}
+
+			.app-header { margin-bottom: 20px; }
+			.brand {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				margin-bottom: 16px;
+			}
+			.brand-logo {
+				width: 42px;
+				height: 42px;
+				border-radius: 10px;
+				object-fit: cover;
+				background: #fff;
+				padding: 3px;
+				box-shadow: var(--shadow);
+			}
+			.brand-name { font-size: 19px; font-weight: 700; }
+			.brand-sub { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+
+			.panel {
+				background: var(--bg-2);
+				border: 1px solid var(--border);
+				border-radius: var(--radius);
+				padding: 16px 20px;
+				box-shadow: var(--shadow);
+				margin-bottom: 16px;
+			}
+			.panel-title {
+				font-size: 13px;
+				font-weight: 700;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+				color: var(--text-dim);
+				margin: 0 0 10px;
+			}
+
+			.field-row {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 12px;
+				margin-bottom: 12px;
+			}
+			.field-row:last-child { margin-bottom: 0; }
+			.field-label { font-size: 14px; font-weight: 600; min-width: 80px; }
+
+			select {
+				flex: 1;
+				min-width: 200px;
+				background: var(--card);
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 10px 12px;
+				color: var(--text);
+				font: inherit;
+				font-size: 14px;
+			}
+			select:focus { outline: none; border-color: var(--accent); }
+			select:disabled { opacity: 0.6; cursor: not-allowed; }
+
+			.stepper {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px;
+				margin-bottom: 16px;
+			}
+			.step-badge {
+				font-size: 12px;
+				font-weight: 600;
+				padding: 6px 12px;
+				border-radius: 999px;
+				background: var(--card);
+				border: 1px solid var(--border);
+				color: var(--text-dim);
+			}
+			.step-badge.active {
+				border-color: var(--accent);
+				color: var(--accent);
+				background: var(--accent-soft);
+			}
+			.step-badge.done {
+				border-color: var(--good);
+				color: var(--good);
+			}
+
+			.instruction {
+				font-size: 14px;
+				color: var(--text-dim);
+				margin: 0 0 12px;
+			}
+
+			.canvas-wrap {
+				position: relative;
+				border: 1px solid var(--border-strong);
+				border-radius: 10px;
+				overflow: hidden;
+				background: var(--canvas-bg);
+				min-height: 300px;
+			}
+			.canvas-wrap.align-mode { min-height: 540px; }
+			.canvas-wrap canvas {
+				display: block;
+				width: 100%;
+				height: auto;
+				cursor: crosshair;
+			}
+
+			.drop-zone {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				min-height: 300px;
+				padding: 32px;
+				border: 2px dashed var(--border-strong);
+				border-radius: 10px;
+				background: var(--canvas-bg);
+				color: var(--text-dim);
+				text-align: center;
+				cursor: pointer;
+				transition: border-color 0.2s, background 0.2s;
+			}
+			.drop-zone:hover, .drop-zone.drag-over {
+				border-color: var(--accent);
+				background: var(--accent-soft);
+			}
+			.drop-zone p { margin: 6px 0; font-size: 14px; }
+
+			.controls-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+				gap: 12px;
+				margin-top: 12px;
+			}
+			.control-group {
+				background: var(--card);
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 12px;
+			}
+			.control-group-title {
+				font-size: 12px;
+				font-weight: 700;
+				text-transform: uppercase;
+				letter-spacing: 0.4px;
+				color: var(--text-dim);
+				margin: 0 0 10px;
+			}
+			.slider-row {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				margin-bottom: 8px;
+			}
+			.slider-row:last-child { margin-bottom: 0; }
+			.slider-label {
+				font-size: 13px;
+				font-weight: 600;
+				width: 48px;
+				flex-shrink: 0;
+			}
+			.slider-row input[type="range"] {
+				flex: 1;
+				accent-color: var(--accent);
+			}
+			.slider-val {
+				font-size: 12px;
+				color: var(--text-dim);
+				width: 40px;
+				text-align: right;
+				flex-shrink: 0;
+			}
+
+			.btn-row {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 10px;
+				margin-top: 14px;
+			}
+			.btn {
+				font: inherit;
+				cursor: pointer;
+				border-radius: 10px;
+				border: 1px solid transparent;
+				padding: 11px 20px;
+				font-weight: 600;
+				font-size: 14px;
+				transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease;
+			}
+			.btn:active { transform: translateY(1px); }
+			.btn-primary {
+				background: linear-gradient(135deg, var(--accent), var(--accent-2));
+				color: #fff;
+				box-shadow: 0 6px 18px rgba(3, 169, 244, 0.3);
+			}
+			.btn-primary:hover { filter: brightness(1.06); }
+			.btn-ghost {
+				background: transparent;
+				border-color: var(--border-strong);
+				color: var(--text);
+			}
+			.btn-ghost:hover { background: var(--card-hover); }
+			.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+			.next-steps {
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				overflow: hidden;
+				margin-top: 16px;
+			}
+			.next-steps-toggle {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				width: 100%;
+				background: var(--card);
+				border: none;
+				color: var(--text);
+				font: inherit;
+				font-weight: 600;
+				padding: 12px 16px;
+				cursor: pointer;
+				text-align: left;
+			}
+			.next-steps-toggle:hover { background: var(--card-hover); }
+			.next-steps-caret {
+				display: inline-grid;
+				place-items: center;
+				transition: transform 0.2s ease;
+				color: var(--text-dim);
+			}
+			.next-steps-caret.open { transform: rotate(90deg); }
+			.next-steps-body {
+				padding: 4px 18px 16px;
+				border-top: 1px solid var(--border);
+				font-size: 14px;
+				color: var(--text-dim);
+			}
+			.next-steps-body ol { padding-left: 20px; margin: 8px 0; }
+			.next-steps-body li { margin-bottom: 6px; }
+			.next-steps-body a { color: var(--accent); }
+			.next-steps-body code {
+				background: var(--bg);
+				border: 1px solid var(--border);
+				border-radius: 5px;
+				padding: 1px 5px;
+				font-size: 12.5px;
+			}
+
+			.toast {
+				position: fixed;
+				bottom: 24px;
+				right: 24px;
+				background: var(--good);
+				color: #fff;
+				padding: 12px 18px;
+				border-radius: 10px;
+				font-size: 14px;
+				font-weight: 600;
+				box-shadow: var(--shadow);
+				z-index: 1000;
+				animation: slideIn 0.3s ease;
+			}
+			@keyframes slideIn {
+				from { transform: translateY(20px); opacity: 0; }
+				to { transform: translateY(0); opacity: 1; }
+			}
+
+			.loading-screen {
+				display: grid;
+				place-items: center;
+				min-height: 40vh;
+				color: var(--text-dim);
+			}
+
+			.hidden-input { display: none; }
+		</style>
+
+		<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+		<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+	</head>
+	<body>
+		<div id="root">
+			<div class="loading-screen">Loading car editor…</div>
+		</div>
+
+		<script>
+			/* __PRESETS__ */
+		</script>
+
+		<script>
+			/* __APP_JS__ */
+		</script>
+	</body>
+</html>
