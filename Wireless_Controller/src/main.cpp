@@ -14,7 +14,6 @@
 
 #ifndef SCREEN_MODE_CIRCLE
 #include "custom_car_storage.h"
-#include "serial_image_upload.h"
 #endif
 
 SET_LOOP_TASK_STACK_SIZE(12*1024); // the default 1024*8 how now reached it's limit with lvgl. Need to increase accordingly. lv_timer_handler() is the culprit.
