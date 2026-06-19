@@ -6,15 +6,11 @@
 
 ScrPresets scrPresets(true);
 
-#ifdef CUSTOM_CAR_IMAGE
-LV_IMG_DECLARE(img_car_custom);
-LV_IMG_DECLARE(img_wheels_custom);
-const lv_image_dsc_t img_car = img_car_custom;
-const lv_image_dsc_t img_wheels = img_wheels_custom;
-#else
+#include "custom_car_storage.h"
+
+// Default device-lib images (used via getPresetCarImage when no runtime custom images).
 LV_IMG_DECLARE(img_car);
 LV_IMG_DECLARE(img_wheels);
-#endif
 
 // ============================================
 // RESPONSIVE LAYOUT CALCULATIONS
@@ -27,8 +23,8 @@ static int getContentBottom() { return getScreenHeight() - getNavbarHeight() - g
 
 // Car/wheel display dimensions - images are device-specific and already at native resolution
 // (scale_img is a no-op), so use raw dimensions for layout calculations
-static int getScaledCarWidth() { return img_car.header.w; }
-static int getScaledWheelsWidth() { return img_wheels.header.w; }
+static int getScaledCarWidth() { return getPresetCarImage()->header.w; }
+static int getScaledWheelsWidth() { return getPresetWheelsImage()->header.w; }
 
 // Car center X - offset in landscape for sidebar
 static int getCarCenterX() {
@@ -223,15 +219,15 @@ void ScrPresets::init(lv_obj_t *parent)
 
     // wheels
     this->wheels = lv_image_create(this->scr);
-    lv_image_set_src(this->wheels, &img_wheels);
-    scale_img(this->wheels, img_wheels);
+    lv_image_set_src(this->wheels, getPresetWheelsImage());
+    scale_img(this->wheels, *getPresetWheelsImage());
     lv_obj_set_x(this->wheels, wheels_x);
     lv_obj_set_y(this->wheels, wheels_y);
 
     // car
     this->car = lv_image_create(this->scr);
-    lv_image_set_src(this->car, &img_car);
-    scale_img(this->car, img_car);
+    lv_image_set_src(this->car, getPresetCarImage());
+    scale_img(this->car, *getPresetCarImage());
     lv_obj_set_x(this->car, car_x);
     lv_obj_set_y(this->car, car_y_1);
 

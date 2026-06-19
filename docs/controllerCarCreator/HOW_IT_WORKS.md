@@ -16,12 +16,65 @@ The original workflow used a Python Tkinter desktop tool:
 
 That tool let you outline wheels and body from a photo, align them over device-specific reference images, and export PNGs. You then had to run those PNGs through [lvgl.io/tools/imageconverter](https://lvgl.io/tools/imageconverter) to get `.c` files for the firmware.
 
-The web editor replaces that two-step export with a **single browser workflow** that downloads ready-to-compile LVGL sources:
+The web editor replaces that two-step export with a browser workflow that can either:
 
-- `img_car_custom.c`
-- `img_wheels_custom.c`
+- **Upload RGB565A8 bytes over USB serial** directly to the controller (recommended), or
+- Download ready-to-compile LVGL sources (`img_car_custom.c`, `img_wheels_custom.c`) for compile-time use
 
-Those files match the format of the preset assets under `Wireless_Controller/device_libs/<device>/images/presets/` (for example `img_car.c`, `img_wheels.c`).
+Those formats match the preset assets under `Wireless_Controller/device_libs/<device>/images/presets/` (for example `img_car.c`, `img_wheels.c`).
+
+---
+
+## USB serial upload (primary workflow)
+
+The editor uses the **Web Serial API** (same browser capability as the Device Console on [oasman.dev/flash](https://oasman.dev/flash)) — not ESP Web Tools / esptool, which only flash full firmware images.
+
+```mermaid
+sequenceDiagram
+    participant Browser as CarEditor
+    participant FW as ControllerFirmware
+    participant FS as LittleFS
+
+    Browser->>FW: CAR_BEGIN w h size
+    Browser->>FW: RGB565A8 bytes
+    FW->>FS: /custom/car.bin
+    FW-->>Browser: CAR_OK
+    Browser->>FW: WHEELS_BEGIN w h size
+    Browser->>FW: RGB565A8 bytes
+    FW->>FS: /custom/wheels.bin
+    FW-->>Browser: WHEELS_OK
+    Browser->>FW: DONE
+    FW-->>Browser: DONE
+    FW->>FW: ESP.restart
+```
+
+### Controller-side storage
+
+Firmware modules:
+
+- `Wireless_Controller/src/custom_car_storage.cpp` — mounts LittleFS, loads/saves `/custom/car.bin` and `/custom/wheels.bin` with a 16-byte `OASC` header + RGB565A8 payload into PSRAM-backed `lv_image_dsc_t` structs.
+- `Wireless_Controller/src/serial_image_upload.cpp` — upload-mode serial protocol handler.
+
+On normal boot, `customCarStorageInit()` runs after `beginSaveData()`. If valid custom files exist, `getPresetCarImage()` / `getPresetWheelsImage()` in `ui_scrPresets.cpp` return the runtime images instead of device-lib defaults.
+
+Upload mode is entered via **Settings → Upload custom car (USB)**, which sets an NVS flag (`carUploadMode`) and reboots. On that boot, normal UI/BLE is skipped; the device prints `OASMAN_IMG_READY` and waits up to 10 minutes for the web tool.
+
+### Serial protocol
+
+| Line (host → device) | Meaning |
+| -------------------- | ------- |
+| `CAR_BEGIN {w} {h} {size}` | Start car binary transfer (`size = w×h×3`) |
+| *(raw bytes)* | RGB565A8 payload |
+| `WHEELS_BEGIN {w} {h} {size}` | Start wheels binary transfer |
+| *(raw bytes)* | RGB565A8 payload |
+| `DONE` | Commit and reboot |
+
+| Line (device → host) | Meaning |
+| -------------------- | ------- |
+| `OASMAN_IMG_READY` | Upload mode active |
+| `CAR_OK` / `WHEELS_OK` | Image saved to LittleFS |
+| `DONE` | Success; device reboots |
+| `ERR {message}` | Failure; retry allowed |
 
 ---
 
@@ -290,33 +343,32 @@ const lv_image_dsc_t img_car_custom = {
 
 ### Where custom images are used
 
-When `-D CUSTOM_CAR_IMAGE` is enabled in `Wireless_Controller/platformio.ini`, the presets screen aliases the custom symbols:
+`ui_scrPresets.cpp` resolves images through accessors:
 
 ```cpp
-#ifdef CUSTOM_CAR_IMAGE
-LV_IMG_DECLARE(img_car_custom);
-LV_IMG_DECLARE(img_wheels_custom);
-const lv_image_dsc_t img_car = img_car_custom;
-const lv_image_dsc_t img_wheels = img_wheels_custom;
-#else
-LV_IMG_DECLARE(img_car);
-LV_IMG_DECLARE(img_wheels);
-#endif
+const lv_image_dsc_t *getPresetCarImage();
+const lv_image_dsc_t *getPresetWheelsImage();
 ```
 
-(`ui_scrPresets.cpp`)
+Priority order:
 
-Layout code reads `img_car.header.w/h` and `img_wheels.header.w/h` directly, so exported dimensions **must** match the selected device's preset sizes. That is why the editor locks the device after upload and exports at exact `carW/carH` and `wheelsW/wheelsH`.
+1. **LittleFS runtime images** (USB upload) — loaded into PSRAM at boot by `customCarStorageInit()`
+2. **Compile-time custom** (`-D CUSTOM_CAR_IMAGE` + `img_car_custom.c` in `src/`) — developer fallback
+3. **Device-lib defaults** (`img_car` / `img_wheels` from `device_libs`)
 
-### Builder steps after export
+Layout code reads `.header.w/h` from whichever source is active, so exported dimensions **must** match the selected device's preset sizes.
+
+### Builder steps
+
+**USB upload (recommended):** flash firmware with upload support once, then use Settings → Upload custom car + the editor's Connect serial / Upload to device panel. No rebuild required for new images.
+
+**Compile-time fallback:**
 
 1. Copy `img_car_custom.c` and `img_wheels_custom.c` into `Wireless_Controller/src/`.
-2. Uncomment `-D CUSTOM_CAR_IMAGE` in `platformio.ini` for your controller env.
-3. Build and flash, for example:
-   ```bash
-   pio run -e controller_ws2p8_dev -t upload
-   ```
-4. If wheels sit slightly off on the display, tweak alignment in the editor and re-export, or adjust layout offsets in `ui_scrPresets.cpp`.
+2. Uncomment `-D CUSTOM_CAR_IMAGE` in `platformio.ini`.
+3. Build and flash: `pio run -e controller_ws2p8_dev -t upload`
+
+If wheels sit slightly off, re-align in the editor and re-upload, or adjust `fender1Offset` / `fender2Offset` in `ui_scrPresets.cpp`.
 
 ---
 
@@ -360,8 +412,8 @@ Do **not** hand-edit `index.html`; it is regenerated and marked with `AUTO-GENER
 1. Rebuild `index.html`.
 2. Open it locally in Chrome or Edge (double-click or `file://` URL).
 3. Walk through the full workflow with a test photo.
-4. Inspect downloaded `.c` files: check `header.w/h`, `data_size`, and that symbols are `img_car_custom` / `img_wheels_custom`.
-5. Drop the `.c` files into `Wireless_Controller/src/`, enable `CUSTOM_CAR_IMAGE`, build the matching controller env, and verify on hardware.
+4. Connect serial and upload to a controller in upload mode, or inspect downloaded `.c` files for developer builds.
+5. Verify custom car on the presets screen after reboot.
 
 ---
 
@@ -372,7 +424,8 @@ Do **not** hand-edit `index.html`; it is regenerated and marked with `AUTO-GENER
 | Standalone `index.html` | Same deploy model as `docs/flash/`; easy to host on oasman.dev |
 | Embed presets at build time | Preset PNGs are not in git; bundling avoids CORS/`file://` fetch issues |
 | CDN React | Keeps generated HTML smaller; acceptable for a dev/builder tool |
-| Direct LVGL C export | Removes manual lvgl.io step; guarantees format match with firmware |
+| Direct LVGL C export | Developer fallback without re-flashing for each image tweak |
+| Web Serial USB upload | Primary path — stores images on LittleFS, survives OTA |
 | Canvas instead of WebGL | Sufficient for static image ops; mirrors Pillow pipeline closely |
 | Device lock after upload | Prevents accidental dimension mismatch on export |
 
@@ -385,7 +438,8 @@ Do **not** hand-edit `index.html`; it is regenerated and marked with `AUTO-GENER
 - **Local preset files required to build:** CI or fresh clones need `device_libs/.../presets/*.png` on disk.
 - **ws1p8knob:** No car/wheels presets in the usual layout; not offered in the editor.
 - **Color accuracy:** RGB565 quantization loses subtle gradients compared to full PNG; same limitation as the official LVGL converter.
-- **File size:** `index.html` grows with embedded preset PNGs (multiple devices × two images each).
+- **Web Serial:** Chrome/Edge desktop only; HTTPS or localhost required.
+- **One firmware flash first:** USB upload requires controller firmware with LittleFS support.
 
 ---
 

@@ -377,6 +377,284 @@ function downloadLvglC(canvas: HTMLCanvasElement, varName: string, filename: str
 	downloadText(generateLvglCFile(varName, canvas), filename);
 }
 
+const SERIAL_SUPPORTED = typeof navigator !== "undefined" && "serial" in navigator;
+const MAX_SERIAL_LOG = 60000;
+
+function escapeRegExp(text: string) {
+	return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Match a full protocol line (not a substring inside ESP log or binary noise). */
+function containsWholeLine(text: string, line: string) {
+	const re = new RegExp(`(?:^|\\n)${escapeRegExp(line)}(?:\\r?\\n|$)`);
+	return re.test(text);
+}
+
+function findErrLine(text: string) {
+	return text.split("\n").find((l) => l.startsWith("ERR "));
+}
+
+/** Wait for okLine in serial log after the most recent sent `> beginMarker` line. */
+async function waitForResponseAfter(beginMarker: string, okLine: string, timeoutMs: number, logRef: { current: string }) {
+	const start = Date.now();
+	while (Date.now() - start < timeoutMs) {
+		const log = logRef.current;
+		const beginIdx = log.lastIndexOf(beginMarker);
+		if (beginIdx >= 0) {
+			const tail = log.slice(beginIdx);
+			if (containsWholeLine(tail, okLine)) return;
+			const errLine = findErrLine(tail);
+			if (errLine) throw new Error(errLine);
+		}
+		await new Promise((r) => setTimeout(r, 100));
+	}
+	throw new Error(`Timed out waiting for ${okLine}`);
+}
+
+function appendPrintableSerialChunk(decoder: TextDecoder, chunk: Uint8Array, appendLog: (text: string) => void) {
+	const text = decoder.decode(chunk);
+	let out = "";
+	for (let i = 0; i < text.length; i++) {
+		const code = text.charCodeAt(i);
+		// Drop raw binary runs; keep newlines and printable ASCII (protocol + ESP logs).
+		if (code === 10 || code === 13 || (code >= 32 && code <= 126)) {
+			out += text[i];
+		}
+	}
+	if (out) appendLog(out);
+}
+
+function SerialUploadPanel({
+	carCanvas,
+	wheelsW,
+	wheelsH,
+	wheelCrops,
+	w1x,
+	w1y,
+	w2x,
+	w2y,
+	wheelScale,
+	carW,
+	carH,
+}: {
+	carCanvas: HTMLCanvasElement;
+	wheelsW: number;
+	wheelsH: number;
+	wheelCrops: (HTMLCanvasElement | null)[];
+	w1x: number;
+	w1y: number;
+	w2x: number;
+	w2y: number;
+	wheelScale: number;
+	carW: number;
+	carH: number;
+}) {
+	const [connected, setConnected] = useState(false);
+	const [busy, setBusy] = useState(false);
+	const [log, setLog] = useState("");
+	const [status, setStatus] = useState<string | null>(null);
+	const portRef = useRef<any>(null);
+	const readerRef = useRef<any>(null);
+	const keepReadingRef = useRef(false);
+	const logRef = useRef("");
+	const logEndRef = useRef<HTMLDivElement>(null);
+
+	const appendLog = (text: string) => {
+		logRef.current += text;
+		if (logRef.current.length > MAX_SERIAL_LOG) {
+			logRef.current = logRef.current.slice(logRef.current.length - MAX_SERIAL_LOG);
+		}
+		setLog(logRef.current);
+	};
+
+	useEffect(() => {
+		if (logEndRef.current) logEndRef.current.scrollTop = logEndRef.current.scrollHeight;
+	}, [log]);
+
+	async function readLoop() {
+		const port = portRef.current;
+		const decoder = new TextDecoder();
+		while (port && port.readable && keepReadingRef.current) {
+			const reader = port.readable.getReader();
+			readerRef.current = reader;
+			try {
+				while (true) {
+					const { value, done } = await reader.read();
+					if (done) break;
+					if (value) appendPrintableSerialChunk(decoder, value, appendLog);
+				}
+			} catch (e: any) {
+				appendLog(`\n[read error: ${e?.message || e}]\n`);
+			} finally {
+				reader.releaseLock();
+				readerRef.current = null;
+			}
+		}
+	}
+
+	async function writeBytes(data: Uint8Array) {
+		const port = portRef.current;
+		if (!port?.writable) throw new Error("Serial port not open");
+		const writer = port.writable.getWriter();
+		try {
+			await writer.write(data);
+		} finally {
+			writer.releaseLock();
+		}
+	}
+
+	async function writeLine(line: string) {
+		appendLog(`> ${line}\n`);
+		await writeBytes(new TextEncoder().encode(line + "\n"));
+	}
+
+	async function writeBinary(data: Uint8Array) {
+		const chunkSize = 4096;
+		for (let i = 0; i < data.length; i += chunkSize) {
+			await writeBytes(data.subarray(i, i + chunkSize));
+		}
+	}
+
+	async function waitForReady(timeoutMs: number) {
+		const start = Date.now();
+		while (Date.now() - start < timeoutMs) {
+			if (containsWholeLine(logRef.current, "OASMAN_IMG_READY")) return;
+			const errLine = findErrLine(logRef.current);
+			if (errLine) throw new Error(errLine);
+			await new Promise((r) => setTimeout(r, 100));
+		}
+		throw new Error("Timed out waiting for OASMAN_IMG_READY");
+	}
+
+	async function connect() {
+		setBusy(true);
+		setStatus(null);
+		try {
+			const port = await (navigator as any).serial.requestPort();
+			await port.open({ baudRate: 115200 });
+			portRef.current = port;
+			keepReadingRef.current = true;
+			readLoop();
+			setConnected(true);
+			setStatus("Connected @ 115200 baud — waiting for OASMAN_IMG_READY…");
+			await waitForReady(60000);
+			setStatus("Device ready for upload.");
+		} catch (e: any) {
+			if (e?.name !== "NotFoundError") {
+				setStatus(e?.message || String(e));
+			}
+		} finally {
+			setBusy(false);
+		}
+	}
+
+	async function disconnect() {
+		setBusy(true);
+		keepReadingRef.current = false;
+		try {
+			if (readerRef.current) await readerRef.current.cancel().catch(() => {});
+			if (portRef.current) await portRef.current.close().catch(() => {});
+		} finally {
+			portRef.current = null;
+			setConnected(false);
+			setBusy(false);
+		}
+	}
+
+	async function uploadImage(
+		beginPrefix: "CAR_BEGIN" | "WHEELS_BEGIN",
+		okLine: string,
+		canvas: HTMLCanvasElement,
+		expectedW: number,
+		expectedH: number,
+	) {
+		if (canvas.width !== expectedW || canvas.height !== expectedH) {
+			throw new Error(`Export size ${canvas.width}×${canvas.height} does not match device ${expectedW}×${expectedH}`);
+		}
+		const bytes = canvasToRgb565A8(canvas);
+		const beginMarker = `> ${beginPrefix}`;
+		await writeLine(`${beginPrefix} ${expectedW} ${expectedH} ${bytes.length}`);
+		await writeBinary(bytes);
+		await waitForResponseAfter(beginMarker, okLine, 180000, logRef);
+	}
+
+	async function uploadToDevice() {
+		if (!connected) return;
+		setBusy(true);
+		setStatus("Uploading car image…");
+		try {
+			const wheelsCanvas = buildWheelsExportImage(
+				wheelsW,
+				wheelsH,
+				wheelCrops,
+				w1x,
+				w1y,
+				wheelScale,
+				w2x,
+				w2y,
+				wheelScale,
+			);
+			await uploadImage("CAR_BEGIN", "CAR_OK", carCanvas, carW, carH);
+			setStatus("Uploading wheels image…");
+			await uploadImage("WHEELS_BEGIN", "WHEELS_OK", wheelsCanvas, wheelsW, wheelsH);
+			await writeLine("DONE");
+			await waitForResponseAfter("> DONE", "DONE", 30000, logRef);
+			setStatus("Upload complete — the controller is rebooting with your custom car.");
+		} catch (e: any) {
+			setStatus(e?.message || String(e));
+		} finally {
+			setBusy(false);
+		}
+	}
+
+	if (!SERIAL_SUPPORTED) {
+		return (
+			<div className="serial-panel">
+				<p className="instruction">
+					Web Serial is not available in this browser. Use Chrome or Edge on desktop over HTTPS or
+					localhost.
+				</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className="serial-panel">
+			<p className="instruction">
+				1. Plug in your controller and click 'Connect serial'
+				<br />
+				2. On the controller: Screen Settings → Upload custom car (USB)
+				<br />
+				3. Click 'Start' on the dialog that has just popped up.
+				<br />
+				4. Click 'Upload to device' below.
+			</p>
+			<div className="btn-row">
+				{!connected ? (
+					<button type="button" className="btn btn-secondary" disabled={busy} onClick={connect}>
+						Connect serial
+					</button>
+				) : (
+					<>
+						<button type="button" className="btn btn-primary" disabled={busy} onClick={uploadToDevice}>
+							Upload to device
+						</button>
+						<button type="button" className="btn btn-secondary" disabled={busy} onClick={disconnect}>
+							Disconnect
+						</button>
+					</>
+				)}
+			</div>
+			{status && <p className="serial-status">{status}</p>}
+			{log && (
+				<div className="serial-log" ref={logEndRef}>
+					<pre>{log}</pre>
+				</div>
+			)}
+		</div>
+	);
+}
+
 function NextStepsPanel({ defaultOpen = false }: { defaultOpen?: boolean }) {
 	const [open, setOpen] = useState(defaultOpen);
 	return (
@@ -389,14 +667,15 @@ function NextStepsPanel({ defaultOpen = false }: { defaultOpen?: boolean }) {
 				<div className="next-steps-body">
 					<ol>
 						<li>
-							Copy the downloaded <code>img_car_custom.c</code> and{" "}
-							<code>img_wheels_custom.c</code> into <code>Wireless_Controller/src/</code>.
+							<strong>Recommended:</strong> use <em>Upload to device</em> below (Settings → Upload custom
+							car on the controller first).
 						</li>
 						<li>
-							Uncomment <code>-D CUSTOM_CAR_IMAGE</code> in{" "}
-							<code>Wireless_Controller/platformio.ini</code>.
+							Or download <code>img_car_custom.c</code> / <code>img_wheels_custom.c</code>, copy into{" "}
+							<code>Wireless_Controller/src/</code>, uncomment <code>-D CUSTOM_CAR_IMAGE</code>, and
+							rebuild.
 						</li>
-						<li>Build and flash your controller env to test. Adjust wheel X/Y if needed.</li>
+						<li>Adjust wheel X/Y in the editor if needed, then re-upload.</li>
 						<li>
 							Optional: tweak <code>fender1Offset</code> / <code>fender2Offset</code> in{" "}
 							<code>ui_scrPresets.cpp</code> for wheel-well black boxes.
@@ -1103,6 +1382,25 @@ function App() {
 						onOverlayY={setOverlayY}
 						onOverlayScale={setOverlayScale}
 						onExport={handleExportCar}
+					/>
+				</div>
+			)}
+
+			{step === "align_wheels" && wheelsCanvas && wheelCrops.length >= 2 && carExportCanvas && (
+				<div className="panel">
+					<div className="panel-title">Upload to controller (USB)</div>
+					<SerialUploadPanel
+						carCanvas={carExportCanvas}
+						carW={origW}
+						carH={origH}
+						wheelsW={wheelsW}
+						wheelsH={wheelsH}
+						wheelCrops={wheelCrops}
+						w1x={w1x}
+						w1y={w1y}
+						w2x={w2x}
+						w2y={w2y}
+						wheelScale={overlayScale}
 					/>
 				</div>
 			)}
