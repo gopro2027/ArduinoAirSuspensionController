@@ -165,6 +165,10 @@ bool customCarStorageInit()
     g_fsMounted = SPIFFS.begin(true);
     if (!g_fsMounted)
     {
+        g_fsMounted = SPIFFS.begin(true, "/spiffs", 10, "littlefs"); // old filesystem name
+    }
+    if (!g_fsMounted)
+    {
         log_e("SPIFFS mount failed");
         return false;
     }
