@@ -1,5 +1,6 @@
 /**
  * DISCLAIMER: This file was fully AI generated
+ * We only expose one function which is used to receive the images from the OAS-Man Car Creator web tool over serial.
  */
 
 #include "serial_image_upload.h"

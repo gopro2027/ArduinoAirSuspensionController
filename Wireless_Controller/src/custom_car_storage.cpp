@@ -1,5 +1,6 @@
 /**
  * DISCLAIMER: This file was fully AI generated
+ * This file is used to store the custom car and wheel images in SPIFFS.
  */
 
 #include "custom_car_storage.h"
