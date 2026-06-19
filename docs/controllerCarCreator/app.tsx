@@ -51,7 +51,7 @@ const STEP_LABELS: { key: WorkflowStep; label: string }[] = [
 	{ key: "outline_wheel2", label: "Wheel 2" },
 	{ key: "outline_car", label: "Car outline" },
 	{ key: "align_car", label: "Align car" },
-	{ key: "align_wheels", label: "Align wheels" },
+	{ key: "align_wheels", label: "Wheels & upload" },
 ];
 
 function stepIndex(step: WorkflowStep): number {
@@ -275,19 +275,6 @@ function buildWheelsExportImage(
 	return out;
 }
 
-function downloadBlob(blob: Blob, filename: string) {
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = filename;
-	a.click();
-	URL.revokeObjectURL(url);
-}
-
-function downloadText(content: string, filename: string) {
-	downloadBlob(new Blob([content], { type: "text/plain" }), filename);
-}
-
 /** LVGL v9 RGB565A8: RGB565 plane (LE uint16 per pixel) then alpha plane. */
 function canvasToRgb565A8(canvas: HTMLCanvasElement): Uint8Array {
 	const w = canvas.width;
@@ -316,65 +303,6 @@ function canvasToRgb565A8(canvas: HTMLCanvasElement): Uint8Array {
 		}
 	}
 	return out;
-}
-
-function formatCArrayBytes(bytes: Uint8Array): string {
-	let out = "";
-	for (let i = 0; i < bytes.length; i++) {
-		if (i % 16 === 0) out += "\n  ";
-		out += `0x${bytes[i].toString(16).padStart(2, "0")}, `;
-	}
-	return out.trimEnd();
-}
-
-/** Generate img_*.c matching the LVGL online converter / device_lib preset format. */
-function generateLvglCFile(varName: string, canvas: HTMLCanvasElement): string {
-	const w = canvas.width;
-	const h = canvas.height;
-	const pixelCount = w * h;
-	const bytes = canvasToRgb565A8(canvas);
-	const attrMacro = `LV_ATTRIBUTE_IMAGE_${varName.toUpperCase()}`;
-	const mapName = `${varName}_map`;
-
-	return `#ifdef __has_include
-    #if __has_include("lvgl.h")
-        #ifndef LV_LVGL_H_INCLUDE_SIMPLE
-            #define LV_LVGL_H_INCLUDE_SIMPLE
-        #endif
-    #endif
-#endif
-
-#if defined(LV_LVGL_H_INCLUDE_SIMPLE)
-    #include "lvgl.h"
-#else
-    #include "lvgl/lvgl.h"
-#endif
-
-
-#ifndef LV_ATTRIBUTE_MEM_ALIGN
-#define LV_ATTRIBUTE_MEM_ALIGN
-#endif
-
-#ifndef ${attrMacro}
-#define ${attrMacro}
-#endif
-
-const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST ${attrMacro} uint8_t ${mapName}[] = {${formatCArrayBytes(bytes)}
-};
-
-const lv_image_dsc_t ${varName} = {
-  .header.cf = LV_COLOR_FORMAT_RGB565A8,
-  .header.magic = LV_IMAGE_HEADER_MAGIC,
-  .header.w = ${w},
-  .header.h = ${h},
-  .data_size = ${pixelCount} * 3,
-  .data = ${mapName},
-};
-`;
-}
-
-function downloadLvglC(canvas: HTMLCanvasElement, varName: string, filename: string) {
-	downloadText(generateLvglCFile(varName, canvas), filename);
 }
 
 const SERIAL_SUPPORTED = typeof navigator !== "undefined" && "serial" in navigator;
@@ -458,6 +386,7 @@ function SerialUploadPanel({
 	const keepReadingRef = useRef(false);
 	const logRef = useRef("");
 	const logEndRef = useRef<HTMLDivElement>(null);
+	const uploadInProgressRef = useRef(false);
 
 	const appendLog = (text: string) => {
 		logRef.current += text;
@@ -538,7 +467,8 @@ function SerialUploadPanel({
 			setConnected(true);
 			setStatus("Connected @ 115200 baud — waiting for OASMAN_IMG_READY…");
 			await waitForReady(60000);
-			setStatus("Device ready for upload.");
+			setStatus("Device ready — uploading automatically…");
+			await uploadToDevice();
 		} catch (e: any) {
 			if (e?.name !== "NotFoundError") {
 				setStatus(e?.message || String(e));
@@ -579,7 +509,8 @@ function SerialUploadPanel({
 	}
 
 	async function uploadToDevice() {
-		if (!connected) return;
+		if (!portRef.current || uploadInProgressRef.current) return;
+		uploadInProgressRef.current = true;
 		setBusy(true);
 		setStatus("Uploading car image…");
 		try {
@@ -603,6 +534,7 @@ function SerialUploadPanel({
 		} catch (e: any) {
 			setStatus(e?.message || String(e));
 		} finally {
+			uploadInProgressRef.current = false;
 			setBusy(false);
 		}
 	}
@@ -623,11 +555,9 @@ function SerialUploadPanel({
 			<p className="instruction">
 				1. Plug in your controller and click 'Connect serial'
 				<br />
-				2. On the controller: Screen Settings → Upload custom car (USB)
-				<br />
-				3. Click 'Start' on the dialog that has just popped up.
-				<br />
-				4. Click 'Upload to device' below.
+				2. On the controller: Screen Settings → Upload custom car (USB) → Click 'Start'
+				<br /><br />
+				Upload starts automatically when the device is ready (use 'Upload to device' to retry if failed).
 			</p>
 			<div className="btn-row">
 				{!connected ? (
@@ -649,38 +579,6 @@ function SerialUploadPanel({
 			{log && (
 				<div className="serial-log" ref={logEndRef}>
 					<pre>{log}</pre>
-				</div>
-			)}
-		</div>
-	);
-}
-
-function NextStepsPanel({ defaultOpen = false }: { defaultOpen?: boolean }) {
-	const [open, setOpen] = useState(defaultOpen);
-	return (
-		<div className="next-steps">
-			<button type="button" className="next-steps-toggle" onClick={() => setOpen(!open)}>
-				<span className={"next-steps-caret" + (open ? " open" : "")}>▶</span>
-				After exporting — next steps
-			</button>
-			{open && (
-				<div className="next-steps-body">
-					<ol>
-						<li>
-							<strong>Recommended:</strong> use <em>Upload to device</em> below (Settings → Upload custom
-							car on the controller first).
-						</li>
-						<li>
-							Or download <code>img_car_custom.c</code> / <code>img_wheels_custom.c</code>, copy into{" "}
-							<code>Wireless_Controller/src/</code>, uncomment <code>-D CUSTOM_CAR_IMAGE</code>, and
-							rebuild.
-						</li>
-						<li>Adjust wheel X/Y in the editor if needed, then re-upload.</li>
-						<li>
-							Optional: tweak <code>fender1Offset</code> / <code>fender2Offset</code> in{" "}
-							<code>ui_scrPresets.cpp</code> for wheel-well black boxes.
-						</li>
-					</ol>
 				</div>
 			)}
 		</div>
@@ -937,7 +835,7 @@ function AlignCarView({
 	onOverlayX,
 	onOverlayY,
 	onOverlayScale,
-	onExport,
+	onContinue,
 }: {
 	origCanvas: HTMLCanvasElement;
 	origW: number;
@@ -949,7 +847,7 @@ function AlignCarView({
 	onOverlayX: (v: number) => void;
 	onOverlayY: (v: number) => void;
 	onOverlayScale: (v: number) => void;
-	onExport: () => void;
+	onContinue: () => void;
 }) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const wrapRef = useRef<HTMLDivElement>(null);
@@ -1008,11 +906,10 @@ function AlignCarView({
 				</div>
 			</div>
 			<div className="btn-row">
-				<button type="button" className="btn btn-primary" onClick={onExport}>
-					Download img_car_custom.c
+				<button type="button" className="btn btn-primary" onClick={onContinue}>
+					Continue to wheel alignment
 				</button>
 			</div>
-			<NextStepsPanel />
 		</div>
 	);
 }
@@ -1032,7 +929,6 @@ function AlignWheelsView({
 	onW1y,
 	onW2x,
 	onW2y,
-	onExport,
 }: {
 	wheelsCanvas: HTMLCanvasElement;
 	wheelsW: number;
@@ -1048,7 +944,6 @@ function AlignWheelsView({
 	onW1y: (v: number) => void;
 	onW2x: (v: number) => void;
 	onW2y: (v: number) => void;
-	onExport: () => void;
 }) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const wrapRef = useRef<HTMLDivElement>(null);
@@ -1117,12 +1012,6 @@ function AlignWheelsView({
 					<SliderControl label="Y:" min={-wheelsH} max={wheelsH} value={w2y} onChange={onW2y} />
 				</div>
 			</div>
-			<div className="btn-row">
-				<button type="button" className="btn btn-primary" onClick={onExport}>
-					Download img_wheels_custom.c
-				</button>
-			</div>
-			<NextStepsPanel defaultOpen />
 		</div>
 	);
 }
@@ -1231,10 +1120,9 @@ function App() {
 		}
 	};
 
-	const handleExportCar = async () => {
+	const handleContinueFromCarAlign = async () => {
 		if (!newCanvas || !preset) return;
 		const exp = buildExportImage(origW, origH, newCanvas, overlayX, overlayY, overlayScale);
-		downloadLvglC(exp, "img_car_custom", "img_car_custom.c");
 		setCarExportCanvas(exp);
 
 		try {
@@ -1256,18 +1144,10 @@ function App() {
 				setW2y(Math.floor((wh - newH) / 2));
 			}
 			setStep("align_wheels");
-			showToast("Car C file downloaded — now align the wheels.");
+			showToast("Align the wheels, then upload to your controller below.");
 		} catch {
 			alert("img_wheels.png reference could not be loaded.");
 		}
-	};
-
-	const handleExportWheels = () => {
-		if (!wheelCrops.length) return;
-		const s = overlayScale;
-		const exp = buildWheelsExportImage(wheelsW, wheelsH, wheelCrops, w1x, w1y, s, w2x, w2y, s);
-		downloadLvglC(exp, "img_wheels_custom", "img_wheels_custom.c");
-		showToast("Wheels C file downloaded.");
 	};
 
 	const outlineInstruction =
@@ -1296,7 +1176,7 @@ function App() {
 					/>
 					<div>
 						<div className="brand-name">Car Creator</div>
-						<div className="brand-sub">Align &amp; export custom car images for your controller</div>
+						<div className="brand-sub">Align &amp; upload custom car images to your controller</div>
 					</div>
 				</div>
 				<Stepper current={step} />
@@ -1381,26 +1261,7 @@ function App() {
 						onOverlayX={setOverlayX}
 						onOverlayY={setOverlayY}
 						onOverlayScale={setOverlayScale}
-						onExport={handleExportCar}
-					/>
-				</div>
-			)}
-
-			{step === "align_wheels" && wheelsCanvas && wheelCrops.length >= 2 && carExportCanvas && (
-				<div className="panel">
-					<div className="panel-title">Upload to controller (USB)</div>
-					<SerialUploadPanel
-						carCanvas={carExportCanvas}
-						carW={origW}
-						carH={origH}
-						wheelsW={wheelsW}
-						wheelsH={wheelsH}
-						wheelCrops={wheelCrops}
-						w1x={w1x}
-						w1y={w1y}
-						w2x={w2x}
-						w2y={w2y}
-						wheelScale={overlayScale}
+						onContinue={handleContinueFromCarAlign}
 					/>
 				</div>
 			)}
@@ -1423,7 +1284,25 @@ function App() {
 						onW1y={setW1y}
 						onW2x={setW2x}
 						onW2y={setW2y}
-						onExport={handleExportWheels}
+					/>
+				</div>
+			)}
+
+			{step === "align_wheels" && wheelsCanvas && wheelCrops.length >= 2 && carExportCanvas && (
+				<div className="panel">
+					<div className="panel-title">Upload to controller (USB)</div>
+					<SerialUploadPanel
+						carCanvas={carExportCanvas}
+						carW={origW}
+						carH={origH}
+						wheelsW={wheelsW}
+						wheelsH={wheelsH}
+						wheelCrops={wheelCrops}
+						w1x={w1x}
+						w1y={w1y}
+						w2x={w2x}
+						w2y={w2y}
+						wheelScale={overlayScale}
 					/>
 				</div>
 			)}
