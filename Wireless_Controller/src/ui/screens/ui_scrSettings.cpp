@@ -4,6 +4,8 @@
 
 #ifndef SCREEN_MODE_CIRCLE
 #include "ui/components/navbar.h"
+#include "custom_car_storage.h"
+#include "serial_image_upload.h"
 #endif
 
 ScrSettings scrSettings(false);
@@ -651,6 +653,40 @@ void ScrSettings::init(lv_obj_t *parent)
         scrSettings.showColorPickerModal();
     }));
 
+    #ifndef SCREEN_MODE_CIRCLE
+    new Option(screen_settings_page, OptionType::BUTTON, "Upload custom car (USB)", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Upload custom car images?",
+            "Wait on this screen and open the OAS-Man Car Creator web tool in your browser and follow the instructions on the final step there. Click 'Start' when it says to.",
+            "Start", "Cancel",
+            []() -> void
+            {
+                log_i("Car image upload mode — waiting for Web Serial");
+                serialImageUploadRun();
+                delay(250);
+                ESP.restart();
+            },
+            []() -> void {}, false);
+    });
+
+    new Option(screen_settings_page, OptionType::BUTTON, "Clear custom car images", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Clear custom car?",
+            "This removes USB-uploaded car and wheel images from flash. Default preset graphics will be used after reboot.",
+            "Clear", "Cancel",
+            []() -> void
+            {
+                customCarClear();
+                runNextFrame([]() -> void
+                {
+                    delay(250);
+                    ESP.restart();
+                });
+            },
+            []() -> void {}, false);
+    });
+#endif
+
     // --- Config page ---
     lv_obj_t *config_page = this->addSettingsPage(pages_container, true);
 
@@ -770,7 +806,7 @@ void ScrSettings::init(lv_obj_t *parent)
                         setupdateMode(true);
                         runNextFrame([]() -> void { ESP.restart(); });
                     });
-                    Serial.println("Attempted to download update");
+                    log_i("Attempted to download update");
                 });
 #else
                 currentScr->showMsgBox("Updating in progress...",

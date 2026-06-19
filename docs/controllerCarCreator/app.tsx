@@ -51,7 +51,7 @@ const STEP_LABELS: { key: WorkflowStep; label: string }[] = [
 	{ key: "outline_wheel2", label: "Wheel 2" },
 	{ key: "outline_car", label: "Car outline" },
 	{ key: "align_car", label: "Align car" },
-	{ key: "align_wheels", label: "Align wheels" },
+	{ key: "align_wheels", label: "Wheels & upload" },
 ];
 
 function stepIndex(step: WorkflowStep): number {
@@ -275,19 +275,6 @@ function buildWheelsExportImage(
 	return out;
 }
 
-function downloadBlob(blob: Blob, filename: string) {
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = filename;
-	a.click();
-	URL.revokeObjectURL(url);
-}
-
-function downloadText(content: string, filename: string) {
-	downloadBlob(new Blob([content], { type: "text/plain" }), filename);
-}
-
 /** LVGL v9 RGB565A8: RGB565 plane (LE uint16 per pixel) then alpha plane. */
 function canvasToRgb565A8(canvas: HTMLCanvasElement): Uint8Array {
 	const w = canvas.width;
@@ -318,90 +305,280 @@ function canvasToRgb565A8(canvas: HTMLCanvasElement): Uint8Array {
 	return out;
 }
 
-function formatCArrayBytes(bytes: Uint8Array): string {
-	let out = "";
-	for (let i = 0; i < bytes.length; i++) {
-		if (i % 16 === 0) out += "\n  ";
-		out += `0x${bytes[i].toString(16).padStart(2, "0")}, `;
+const SERIAL_SUPPORTED = typeof navigator !== "undefined" && "serial" in navigator;
+const MAX_SERIAL_LOG = 60000;
+
+function escapeRegExp(text: string) {
+	return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Match a full protocol line (not a substring inside ESP log or binary noise). */
+function containsWholeLine(text: string, line: string) {
+	const re = new RegExp(`(?:^|\\n)${escapeRegExp(line)}(?:\\r?\\n|$)`);
+	return re.test(text);
+}
+
+function findErrLine(text: string) {
+	return text.split("\n").find((l) => l.startsWith("ERR "));
+}
+
+/** Wait for okLine in serial log after the most recent sent `> beginMarker` line. */
+async function waitForResponseAfter(beginMarker: string, okLine: string, timeoutMs: number, logRef: { current: string }) {
+	const start = Date.now();
+	while (Date.now() - start < timeoutMs) {
+		const log = logRef.current;
+		const beginIdx = log.lastIndexOf(beginMarker);
+		if (beginIdx >= 0) {
+			const tail = log.slice(beginIdx);
+			if (containsWholeLine(tail, okLine)) return;
+			const errLine = findErrLine(tail);
+			if (errLine) throw new Error(errLine);
+		}
+		await new Promise((r) => setTimeout(r, 100));
 	}
-	return out.trimEnd();
+	throw new Error(`Timed out waiting for ${okLine}`);
 }
 
-/** Generate img_*.c matching the LVGL online converter / device_lib preset format. */
-function generateLvglCFile(varName: string, canvas: HTMLCanvasElement): string {
-	const w = canvas.width;
-	const h = canvas.height;
-	const pixelCount = w * h;
-	const bytes = canvasToRgb565A8(canvas);
-	const attrMacro = `LV_ATTRIBUTE_IMAGE_${varName.toUpperCase()}`;
-	const mapName = `${varName}_map`;
-
-	return `#ifdef __has_include
-    #if __has_include("lvgl.h")
-        #ifndef LV_LVGL_H_INCLUDE_SIMPLE
-            #define LV_LVGL_H_INCLUDE_SIMPLE
-        #endif
-    #endif
-#endif
-
-#if defined(LV_LVGL_H_INCLUDE_SIMPLE)
-    #include "lvgl.h"
-#else
-    #include "lvgl/lvgl.h"
-#endif
-
-
-#ifndef LV_ATTRIBUTE_MEM_ALIGN
-#define LV_ATTRIBUTE_MEM_ALIGN
-#endif
-
-#ifndef ${attrMacro}
-#define ${attrMacro}
-#endif
-
-const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST ${attrMacro} uint8_t ${mapName}[] = {${formatCArrayBytes(bytes)}
-};
-
-const lv_image_dsc_t ${varName} = {
-  .header.cf = LV_COLOR_FORMAT_RGB565A8,
-  .header.magic = LV_IMAGE_HEADER_MAGIC,
-  .header.w = ${w},
-  .header.h = ${h},
-  .data_size = ${pixelCount} * 3,
-  .data = ${mapName},
-};
-`;
+function appendPrintableSerialChunk(decoder: TextDecoder, chunk: Uint8Array, appendLog: (text: string) => void) {
+	const text = decoder.decode(chunk);
+	let out = "";
+	for (let i = 0; i < text.length; i++) {
+		const code = text.charCodeAt(i);
+		// Drop raw binary runs; keep newlines and printable ASCII (protocol + ESP logs).
+		if (code === 10 || code === 13 || (code >= 32 && code <= 126)) {
+			out += text[i];
+		}
+	}
+	if (out) appendLog(out);
 }
 
-function downloadLvglC(canvas: HTMLCanvasElement, varName: string, filename: string) {
-	downloadText(generateLvglCFile(varName, canvas), filename);
-}
+function SerialUploadPanel({
+	carCanvas,
+	wheelsW,
+	wheelsH,
+	wheelCrops,
+	w1x,
+	w1y,
+	w2x,
+	w2y,
+	wheelScale,
+	carW,
+	carH,
+}: {
+	carCanvas: HTMLCanvasElement;
+	wheelsW: number;
+	wheelsH: number;
+	wheelCrops: (HTMLCanvasElement | null)[];
+	w1x: number;
+	w1y: number;
+	w2x: number;
+	w2y: number;
+	wheelScale: number;
+	carW: number;
+	carH: number;
+}) {
+	const [connected, setConnected] = useState(false);
+	const [busy, setBusy] = useState(false);
+	const [log, setLog] = useState("");
+	const [status, setStatus] = useState<string | null>(null);
+	const portRef = useRef<any>(null);
+	const readerRef = useRef<any>(null);
+	const keepReadingRef = useRef(false);
+	const logRef = useRef("");
+	const logEndRef = useRef<HTMLDivElement>(null);
+	const uploadInProgressRef = useRef(false);
 
-function NextStepsPanel({ defaultOpen = false }: { defaultOpen?: boolean }) {
-	const [open, setOpen] = useState(defaultOpen);
+	const appendLog = (text: string) => {
+		logRef.current += text;
+		if (logRef.current.length > MAX_SERIAL_LOG) {
+			logRef.current = logRef.current.slice(logRef.current.length - MAX_SERIAL_LOG);
+		}
+		setLog(logRef.current);
+	};
+
+	useEffect(() => {
+		if (logEndRef.current) logEndRef.current.scrollTop = logEndRef.current.scrollHeight;
+	}, [log]);
+
+	async function readLoop() {
+		const port = portRef.current;
+		const decoder = new TextDecoder();
+		while (port && port.readable && keepReadingRef.current) {
+			const reader = port.readable.getReader();
+			readerRef.current = reader;
+			try {
+				while (true) {
+					const { value, done } = await reader.read();
+					if (done) break;
+					if (value) appendPrintableSerialChunk(decoder, value, appendLog);
+				}
+			} catch (e: any) {
+				appendLog(`\n[read error: ${e?.message || e}]\n`);
+			} finally {
+				reader.releaseLock();
+				readerRef.current = null;
+			}
+		}
+	}
+
+	async function writeBytes(data: Uint8Array) {
+		const port = portRef.current;
+		if (!port?.writable) throw new Error("Serial port not open");
+		const writer = port.writable.getWriter();
+		try {
+			await writer.write(data);
+		} finally {
+			writer.releaseLock();
+		}
+	}
+
+	async function writeLine(line: string) {
+		appendLog(`> ${line}\n`);
+		await writeBytes(new TextEncoder().encode(line + "\n"));
+	}
+
+	async function writeBinary(data: Uint8Array) {
+		const chunkSize = 4096;
+		for (let i = 0; i < data.length; i += chunkSize) {
+			await writeBytes(data.subarray(i, i + chunkSize));
+		}
+	}
+
+	async function waitForReady(timeoutMs: number) {
+		const start = Date.now();
+		while (Date.now() - start < timeoutMs) {
+			if (containsWholeLine(logRef.current, "OASMAN_IMG_READY")) return;
+			const errLine = findErrLine(logRef.current);
+			if (errLine) throw new Error(errLine);
+			await new Promise((r) => setTimeout(r, 100));
+		}
+		throw new Error("Timed out waiting for OASMAN_IMG_READY");
+	}
+
+	async function connect() {
+		setBusy(true);
+		setStatus(null);
+		try {
+			const port = await (navigator as any).serial.requestPort();
+			await port.open({ baudRate: 115200 });
+			portRef.current = port;
+			keepReadingRef.current = true;
+			readLoop();
+			setConnected(true);
+			setStatus("Connected @ 115200 baud — waiting for OASMAN_IMG_READY…");
+			await waitForReady(60000);
+			setStatus("Device ready — uploading automatically…");
+			await uploadToDevice();
+		} catch (e: any) {
+			if (e?.name !== "NotFoundError") {
+				setStatus(e?.message || String(e));
+			}
+		} finally {
+			setBusy(false);
+		}
+	}
+
+	async function disconnect() {
+		setBusy(true);
+		keepReadingRef.current = false;
+		try {
+			if (readerRef.current) await readerRef.current.cancel().catch(() => {});
+			if (portRef.current) await portRef.current.close().catch(() => {});
+		} finally {
+			portRef.current = null;
+			setConnected(false);
+			setBusy(false);
+		}
+	}
+
+	async function uploadImage(
+		beginPrefix: "CAR_BEGIN" | "WHEELS_BEGIN",
+		okLine: string,
+		canvas: HTMLCanvasElement,
+		expectedW: number,
+		expectedH: number,
+	) {
+		if (canvas.width !== expectedW || canvas.height !== expectedH) {
+			throw new Error(`Export size ${canvas.width}×${canvas.height} does not match device ${expectedW}×${expectedH}`);
+		}
+		const bytes = canvasToRgb565A8(canvas);
+		const beginMarker = `> ${beginPrefix}`;
+		await writeLine(`${beginPrefix} ${expectedW} ${expectedH} ${bytes.length}`);
+		await writeBinary(bytes);
+		await waitForResponseAfter(beginMarker, okLine, 180000, logRef);
+	}
+
+	async function uploadToDevice() {
+		if (!portRef.current || uploadInProgressRef.current) return;
+		uploadInProgressRef.current = true;
+		setBusy(true);
+		setStatus("Uploading car image…");
+		try {
+			const wheelsCanvas = buildWheelsExportImage(
+				wheelsW,
+				wheelsH,
+				wheelCrops,
+				w1x,
+				w1y,
+				wheelScale,
+				w2x,
+				w2y,
+				wheelScale,
+			);
+			await uploadImage("CAR_BEGIN", "CAR_OK", carCanvas, carW, carH);
+			setStatus("Uploading wheels image…");
+			await uploadImage("WHEELS_BEGIN", "WHEELS_OK", wheelsCanvas, wheelsW, wheelsH);
+			await writeLine("DONE");
+			await waitForResponseAfter("> DONE", "DONE", 30000, logRef);
+			setStatus("Upload complete — the controller is rebooting with your custom car.");
+		} catch (e: any) {
+			setStatus(e?.message || String(e));
+		} finally {
+			uploadInProgressRef.current = false;
+			setBusy(false);
+		}
+	}
+
+	if (!SERIAL_SUPPORTED) {
+		return (
+			<div className="serial-panel">
+				<p className="instruction">
+					Web Serial is not available in this browser. Use Chrome or Edge on desktop over HTTPS or
+					localhost.
+				</p>
+			</div>
+		);
+	}
+
 	return (
-		<div className="next-steps">
-			<button type="button" className="next-steps-toggle" onClick={() => setOpen(!open)}>
-				<span className={"next-steps-caret" + (open ? " open" : "")}>▶</span>
-				After exporting — next steps
-			</button>
-			{open && (
-				<div className="next-steps-body">
-					<ol>
-						<li>
-							Copy the downloaded <code>img_car_custom.c</code> and{" "}
-							<code>img_wheels_custom.c</code> into <code>Wireless_Controller/src/</code>.
-						</li>
-						<li>
-							Uncomment <code>-D CUSTOM_CAR_IMAGE</code> in{" "}
-							<code>Wireless_Controller/platformio.ini</code>.
-						</li>
-						<li>Build and flash your controller env to test. Adjust wheel X/Y if needed.</li>
-						<li>
-							Optional: tweak <code>fender1Offset</code> / <code>fender2Offset</code> in{" "}
-							<code>ui_scrPresets.cpp</code> for wheel-well black boxes.
-						</li>
-					</ol>
+		<div className="serial-panel">
+			<p className="instruction">
+				1. Plug in your controller and click 'Connect serial'
+				<br />
+				2. On the controller: Screen Settings → Upload custom car (USB) → Click 'Start'
+				<br /><br />
+				Upload starts automatically when the device is ready (use 'Upload to device' to retry if failed).
+			</p>
+			<div className="btn-row">
+				{!connected ? (
+					<button type="button" className="btn btn-secondary" disabled={busy} onClick={connect}>
+						Connect serial
+					</button>
+				) : (
+					<>
+						<button type="button" className="btn btn-primary" disabled={busy} onClick={uploadToDevice}>
+							Upload to device
+						</button>
+						<button type="button" className="btn btn-secondary" disabled={busy} onClick={disconnect}>
+							Disconnect
+						</button>
+					</>
+				)}
+			</div>
+			{status && <p className="serial-status">{status}</p>}
+			{log && (
+				<div className="serial-log" ref={logEndRef}>
+					<pre>{log}</pre>
 				</div>
 			)}
 		</div>
@@ -658,7 +835,7 @@ function AlignCarView({
 	onOverlayX,
 	onOverlayY,
 	onOverlayScale,
-	onExport,
+	onContinue,
 }: {
 	origCanvas: HTMLCanvasElement;
 	origW: number;
@@ -670,7 +847,7 @@ function AlignCarView({
 	onOverlayX: (v: number) => void;
 	onOverlayY: (v: number) => void;
 	onOverlayScale: (v: number) => void;
-	onExport: () => void;
+	onContinue: () => void;
 }) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const wrapRef = useRef<HTMLDivElement>(null);
@@ -729,11 +906,10 @@ function AlignCarView({
 				</div>
 			</div>
 			<div className="btn-row">
-				<button type="button" className="btn btn-primary" onClick={onExport}>
-					Download img_car_custom.c
+				<button type="button" className="btn btn-primary" onClick={onContinue}>
+					Continue to wheel alignment
 				</button>
 			</div>
-			<NextStepsPanel />
 		</div>
 	);
 }
@@ -753,7 +929,6 @@ function AlignWheelsView({
 	onW1y,
 	onW2x,
 	onW2y,
-	onExport,
 }: {
 	wheelsCanvas: HTMLCanvasElement;
 	wheelsW: number;
@@ -769,7 +944,6 @@ function AlignWheelsView({
 	onW1y: (v: number) => void;
 	onW2x: (v: number) => void;
 	onW2y: (v: number) => void;
-	onExport: () => void;
 }) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const wrapRef = useRef<HTMLDivElement>(null);
@@ -838,12 +1012,6 @@ function AlignWheelsView({
 					<SliderControl label="Y:" min={-wheelsH} max={wheelsH} value={w2y} onChange={onW2y} />
 				</div>
 			</div>
-			<div className="btn-row">
-				<button type="button" className="btn btn-primary" onClick={onExport}>
-					Download img_wheels_custom.c
-				</button>
-			</div>
-			<NextStepsPanel defaultOpen />
 		</div>
 	);
 }
@@ -952,10 +1120,9 @@ function App() {
 		}
 	};
 
-	const handleExportCar = async () => {
+	const handleContinueFromCarAlign = async () => {
 		if (!newCanvas || !preset) return;
 		const exp = buildExportImage(origW, origH, newCanvas, overlayX, overlayY, overlayScale);
-		downloadLvglC(exp, "img_car_custom", "img_car_custom.c");
 		setCarExportCanvas(exp);
 
 		try {
@@ -977,18 +1144,10 @@ function App() {
 				setW2y(Math.floor((wh - newH) / 2));
 			}
 			setStep("align_wheels");
-			showToast("Car C file downloaded — now align the wheels.");
+			showToast("Align the wheels, then upload to your controller below.");
 		} catch {
 			alert("img_wheels.png reference could not be loaded.");
 		}
-	};
-
-	const handleExportWheels = () => {
-		if (!wheelCrops.length) return;
-		const s = overlayScale;
-		const exp = buildWheelsExportImage(wheelsW, wheelsH, wheelCrops, w1x, w1y, s, w2x, w2y, s);
-		downloadLvglC(exp, "img_wheels_custom", "img_wheels_custom.c");
-		showToast("Wheels C file downloaded.");
 	};
 
 	const outlineInstruction =
@@ -1017,7 +1176,7 @@ function App() {
 					/>
 					<div>
 						<div className="brand-name">Car Creator</div>
-						<div className="brand-sub">Align &amp; export custom car images for your controller</div>
+						<div className="brand-sub">Align &amp; upload custom car images to your controller</div>
 					</div>
 				</div>
 				<Stepper current={step} />
@@ -1102,7 +1261,7 @@ function App() {
 						onOverlayX={setOverlayX}
 						onOverlayY={setOverlayY}
 						onOverlayScale={setOverlayScale}
-						onExport={handleExportCar}
+						onContinue={handleContinueFromCarAlign}
 					/>
 				</div>
 			)}
@@ -1125,7 +1284,25 @@ function App() {
 						onW1y={setW1y}
 						onW2x={setW2x}
 						onW2y={setW2y}
-						onExport={handleExportWheels}
+					/>
+				</div>
+			)}
+
+			{step === "align_wheels" && wheelsCanvas && wheelCrops.length >= 2 && carExportCanvas && (
+				<div className="panel">
+					<div className="panel-title">Upload to controller (USB)</div>
+					<SerialUploadPanel
+						carCanvas={carExportCanvas}
+						carW={origW}
+						carH={origH}
+						wheelsW={wheelsW}
+						wheelsH={wheelsH}
+						wheelCrops={wheelCrops}
+						w1x={w1x}
+						w1y={w1y}
+						w2x={w2x}
+						w2y={w2y}
+						wheelScale={overlayScale}
 					/>
 				</div>
 			)}
