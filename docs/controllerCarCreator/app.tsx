@@ -275,16 +275,106 @@ function buildWheelsExportImage(
 	return out;
 }
 
-function downloadCanvas(canvas: HTMLCanvasElement, filename: string) {
-	canvas.toBlob((blob) => {
-		if (!blob) return;
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = filename;
-		a.click();
-		URL.revokeObjectURL(url);
-	}, "image/png");
+function downloadBlob(blob: Blob, filename: string) {
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = filename;
+	a.click();
+	URL.revokeObjectURL(url);
+}
+
+function downloadText(content: string, filename: string) {
+	downloadBlob(new Blob([content], { type: "text/plain" }), filename);
+}
+
+/** LVGL v9 RGB565A8: RGB565 plane (LE uint16 per pixel) then alpha plane. */
+function canvasToRgb565A8(canvas: HTMLCanvasElement): Uint8Array {
+	const w = canvas.width;
+	const h = canvas.height;
+	const { data } = canvas.getContext("2d")!.getImageData(0, 0, w, h);
+	const pixelCount = w * h;
+	const out = new Uint8Array(pixelCount * 3);
+
+	for (let y = 0; y < h; y++) {
+		for (let x = 0; x < w; x++) {
+			const src = (y * w + x) * 4;
+			const r = data[src];
+			const g = data[src + 1];
+			const b = data[src + 2];
+			const color = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+			const dst = (y * w + x) * 2;
+			out[dst] = color & 0xff;
+			out[dst + 1] = (color >> 8) & 0xff;
+		}
+	}
+
+	const alphaOffset = pixelCount * 2;
+	for (let y = 0; y < h; y++) {
+		for (let x = 0; x < w; x++) {
+			out[alphaOffset + y * w + x] = data[(y * w + x) * 4 + 3];
+		}
+	}
+	return out;
+}
+
+function formatCArrayBytes(bytes: Uint8Array): string {
+	let out = "";
+	for (let i = 0; i < bytes.length; i++) {
+		if (i % 16 === 0) out += "\n  ";
+		out += `0x${bytes[i].toString(16).padStart(2, "0")}, `;
+	}
+	return out.trimEnd();
+}
+
+/** Generate img_*.c matching the LVGL online converter / device_lib preset format. */
+function generateLvglCFile(varName: string, canvas: HTMLCanvasElement): string {
+	const w = canvas.width;
+	const h = canvas.height;
+	const pixelCount = w * h;
+	const bytes = canvasToRgb565A8(canvas);
+	const attrMacro = `LV_ATTRIBUTE_IMAGE_${varName.toUpperCase()}`;
+	const mapName = `${varName}_map`;
+
+	return `#ifdef __has_include
+    #if __has_include("lvgl.h")
+        #ifndef LV_LVGL_H_INCLUDE_SIMPLE
+            #define LV_LVGL_H_INCLUDE_SIMPLE
+        #endif
+    #endif
+#endif
+
+#if defined(LV_LVGL_H_INCLUDE_SIMPLE)
+    #include "lvgl.h"
+#else
+    #include "lvgl/lvgl.h"
+#endif
+
+
+#ifndef LV_ATTRIBUTE_MEM_ALIGN
+#define LV_ATTRIBUTE_MEM_ALIGN
+#endif
+
+#ifndef ${attrMacro}
+#define ${attrMacro}
+#endif
+
+const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST ${attrMacro} uint8_t ${mapName}[] = {${formatCArrayBytes(bytes)}
+};
+
+const lv_image_dsc_t ${varName} = {
+  .header.cf = LV_COLOR_FORMAT_RGB565A8,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
+  .header.w = ${w},
+  .header.h = ${h},
+  .data_size = ${pixelCount} * 3,
+  .data = ${mapName},
+};
+`;
+}
+
+function downloadLvglC(canvas: HTMLCanvasElement, varName: string, filename: string) {
+	downloadText(generateLvglCFile(varName, canvas), filename);
 }
 
 function NextStepsPanel({ defaultOpen = false }: { defaultOpen?: boolean }) {
@@ -299,15 +389,8 @@ function NextStepsPanel({ defaultOpen = false }: { defaultOpen?: boolean }) {
 				<div className="next-steps-body">
 					<ol>
 						<li>
-							Convert both PNGs at{" "}
-							<a href="https://lvgl.io/tools/imageconverter" target="_blank" rel="noopener noreferrer">
-								lvgl.io/tools/imageconverter
-							</a>{" "}
-							as <strong>RGB565A8</strong>.
-						</li>
-						<li>
-							Copy the resulting <code>.c</code> files into{" "}
-							<code>Wireless_Controller/src/</code>.
+							Copy the downloaded <code>img_car_custom.c</code> and{" "}
+							<code>img_wheels_custom.c</code> into <code>Wireless_Controller/src/</code>.
 						</li>
 						<li>
 							Uncomment <code>-D CUSTOM_CAR_IMAGE</code> in{" "}
@@ -647,7 +730,7 @@ function AlignCarView({
 			</div>
 			<div className="btn-row">
 				<button type="button" className="btn btn-primary" onClick={onExport}>
-					Export img_car_custom.png
+					Download img_car_custom.c
 				</button>
 			</div>
 			<NextStepsPanel />
@@ -757,7 +840,7 @@ function AlignWheelsView({
 			</div>
 			<div className="btn-row">
 				<button type="button" className="btn btn-primary" onClick={onExport}>
-					Export img_wheels_custom.png
+					Download img_wheels_custom.c
 				</button>
 			</div>
 			<NextStepsPanel defaultOpen />
@@ -872,7 +955,7 @@ function App() {
 	const handleExportCar = async () => {
 		if (!newCanvas || !preset) return;
 		const exp = buildExportImage(origW, origH, newCanvas, overlayX, overlayY, overlayScale);
-		downloadCanvas(exp, "img_car_custom.png");
+		downloadLvglC(exp, "img_car_custom", "img_car_custom.c");
 		setCarExportCanvas(exp);
 
 		try {
@@ -894,7 +977,7 @@ function App() {
 				setW2y(Math.floor((wh - newH) / 2));
 			}
 			setStep("align_wheels");
-			showToast("Car exported — now align the wheels.");
+			showToast("Car C file downloaded — now align the wheels.");
 		} catch {
 			alert("img_wheels.png reference could not be loaded.");
 		}
@@ -904,8 +987,8 @@ function App() {
 		if (!wheelCrops.length) return;
 		const s = overlayScale;
 		const exp = buildWheelsExportImage(wheelsW, wheelsH, wheelCrops, w1x, w1y, s, w2x, w2y, s);
-		downloadCanvas(exp, "img_wheels_custom.png");
-		showToast("Wheels exported successfully.");
+		downloadLvglC(exp, "img_wheels_custom", "img_wheels_custom.c");
+		showToast("Wheels C file downloaded.");
 	};
 
 	const outlineInstruction =

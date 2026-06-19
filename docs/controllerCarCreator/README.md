@@ -1,8 +1,8 @@
 # OAS-Man Car Editor
 
 Web tool for aligning a custom car photo over the controller preset images and exporting
-`img_car_custom.png` and `img_wheels_custom.png` for use with the `-D CUSTOM_CAR_IMAGE`
-build flag. Replaces the Python Tkinter tool at
+ready-to-compile LVGL C sources (`img_car_custom.c` and `img_wheels_custom.c`) for use
+with the `-D CUSTOM_CAR_IMAGE` build flag. Replaces the Python Tkinter tool at
 `Wireless_Controller/tools/imageCreator/car_creator.py`.
 
 The shipped page, `index.html`, is **generated** — don't edit it by hand. Edit the
@@ -45,12 +45,12 @@ device_libs presets ────┘
 
 ## After exporting
 
-1. Download both PNGs from the editor.
-2. Convert them at [lvgl.io/tools/imageconverter](https://lvgl.io/tools/imageconverter)
-   as **RGB565A8**.
-3. Copy the resulting `.c` files into `Wireless_Controller/src/`.
-4. Uncomment `-D CUSTOM_CAR_IMAGE` in `Wireless_Controller/platformio.ini`.
-5. Build and flash your controller env to test.
+1. Copy the downloaded `img_car_custom.c` and `img_wheels_custom.c` into `Wireless_Controller/src/`.
+2. Uncomment `-D CUSTOM_CAR_IMAGE` in `Wireless_Controller/platformio.ini`.
+3. Build and flash your controller env to test. Adjust wheel X/Y if needed.
+
+The editor converts images to **LVGL RGB565A8** in the browser (same format as
+[lvgl.io/tools/imageconverter](https://lvgl.io/tools/imageconverter)) — no manual conversion step.
 
 ## Files
 
