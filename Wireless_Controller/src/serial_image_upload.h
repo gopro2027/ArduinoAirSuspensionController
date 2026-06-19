@@ -1,3 +1,7 @@
+/**
+ * DISCLAIMER: This file was fully AI generated
+ */
+
 #ifndef serial_image_upload_h
 #define serial_image_upload_h
 

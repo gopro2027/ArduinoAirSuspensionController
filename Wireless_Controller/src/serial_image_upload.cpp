@@ -1,3 +1,7 @@
+/**
+ * DISCLAIMER: This file was fully AI generated
+ */
+
 #include "serial_image_upload.h"
 
 #ifndef SCREEN_MODE_CIRCLE

@@ -1,3 +1,7 @@
+/**
+ * DISCLAIMER: This file was fully AI generated
+ */
+
 #include "custom_car_storage.h"
 
 #ifndef SCREEN_MODE_CIRCLE
