@@ -12,6 +12,10 @@
 
 #include "utils/util.h"
 
+#ifndef SCREEN_MODE_CIRCLE
+#include "custom_car_storage.h"
+#endif
+
 SET_LOOP_TASK_STACK_SIZE(12*1024); // the default 1024*8 how now reached it's limit with lvgl. Need to increase accordingly. lv_timer_handler() is the culprit.
 
 unsigned long dimScreenTime = 0;
@@ -37,6 +41,10 @@ void setup()
     setupRestSemaphore();
 
     beginSaveData();
+
+#ifndef SCREEN_MODE_CIRCLE
+    customCarStorageInit();
+#endif
 
     // Check if in update mode and ignore everything else and just start the web server.
     if (getupdateMode())
