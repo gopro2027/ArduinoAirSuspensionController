@@ -8,6 +8,8 @@ ScrPresets scrPresets(true);
 
 #include "custom_car_storage.h"
 
+extern bool isScreenDimmed();
+
 // Default device-lib images (used via getPresetCarImage when no runtime custom images).
 LV_IMG_DECLARE(img_car);
 LV_IMG_DECLARE(img_wheels);
@@ -122,10 +124,6 @@ static lv_obj_t* createPresetButton(lv_obj_t *parent, const char *text, int pres
     lv_obj_set_style_shadow_opa(btn, LV_OPA_30, LV_PART_MAIN);
     lv_obj_set_style_shadow_offset_x(btn, 0, LV_PART_MAIN);
     lv_obj_set_style_shadow_offset_y(btn, 0, LV_PART_MAIN);
-
-    // Focus state styling
-    lv_obj_set_style_bg_color(btn, lv_color_hex(PRESET_BTN_ACTIVE_COLOR), LV_PART_MAIN | (lv_style_selector_t)LV_STATE_FOCUSED);
-    lv_obj_set_style_border_color(btn, lv_color_hex(PRESET_BTN_ACTIVE_COLOR), LV_PART_MAIN | (lv_style_selector_t)LV_STATE_FOCUSED);
 
     lv_obj_set_style_pad_all(btn, 0, LV_PART_MAIN);
 
@@ -373,6 +371,7 @@ void ScrPresets::updateButtonStyles()
     // Update button styles based on current preset
     lv_obj_t* btns[] = {btnPreset1, btnPreset2, btnPreset3, btnPreset4, btnPreset5};
     for (int i = 0; i < 5; i++) {
+        lv_obj_remove_state(btns[i], LV_STATE_FOCUSED);
         if (i + 1 == currentPreset) {
             // Active button - purple with glow (same shadow width to prevent shifting)
             lv_obj_set_style_bg_color(btns[i], lv_color_hex(PRESET_BTN_ACTIVE_COLOR), LV_PART_MAIN);
@@ -450,6 +449,12 @@ void loadSelectedPreset()
 
 void ScrPresets::loop()
 {
+    static bool wasDimmed = false;
+    const bool dimmed = isScreenDimmed();
+    if (wasDimmed && !dimmed) {
+        updateButtonStyles();
+    }
+    wasDimmed = dimmed;
     Scr::loop();
 }
 
