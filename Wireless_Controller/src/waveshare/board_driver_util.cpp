@@ -1,6 +1,10 @@
 #include "board_driver_util.h"
 #include "../utils/util.h"
 
+#ifndef SCREEN_MODE_CIRCLE
+#include "../custom_car_storage.h"
+#endif
+
 
 void set_brightness(float level)
 {
@@ -98,6 +102,25 @@ lv_obj_t *applyRotationAndShowSplashScreen() {
 }
 
 
+static lv_obj_t *showBootStatusText(const char *text)
+{
+#if SUPPORTS_ROTATION == 1
+    extern byte getscreenRotation();
+    applyScreenRotation(getscreenRotation());
+#endif
+    lv_obj_t *scr = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(scr, lv_color_black(), LV_PART_MAIN);
+    lv_obj_t *label = lv_label_create(scr);
+    lv_label_set_text(label, text);
+    lv_obj_set_style_text_color(label, lv_color_white(), LV_PART_MAIN);
+    lv_obj_set_align(label, LV_ALIGN_CENTER);
+    lv_screen_load(scr);
+    lv_timer_handler(); // render once before the blocking format
+    delay(50);
+    set_brightness(1);
+    return scr;
+}
+
 void board_drivers_init()
 {
     log_i("Setting up board drivers");
@@ -118,6 +141,30 @@ void board_drivers_init()
 
     // Register callback for hardware rotation
     lv_display_add_event_cb(display, lvgl_display_resolution_changed_callback, LV_EVENT_RESOLUTION_CHANGED, NULL);
+
+    delay(1000);
+    if (!SPIFFS.begin(false))
+    {
+        log_i("SPIFFS needs formatting");
+        showBootStatusText("Formatting partitions in 3...");
+        delay(1000);
+        showBootStatusText("Formatting partitions in 2...");
+        delay(1000);
+        showBootStatusText("Formatting partitions in 1...");
+        delay(1000);
+        showBootStatusText("Formatting partitions\n\nScreen may go blank\n\nDo not unpower!\n\nDevice will reboot when complete, please wait...");
+        delay(5000);
+        if (SPIFFS.begin(true))
+        {
+            log_i("SPIFFS formatted successfully, rebooting");
+            ESP.restart();
+        }
+        
+        log_i("SPIFFS formatting failed!");
+        showBootStatusText("Partition formatting failed!");
+        delay(10000);
+        ESP.restart();
+    }
 
     lv_obj_t *splashScr = applyRotationAndShowSplashScreen();
 

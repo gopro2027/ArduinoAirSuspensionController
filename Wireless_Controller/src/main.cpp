@@ -42,10 +42,6 @@ void setup()
 
     beginSaveData();
 
-#ifndef SCREEN_MODE_CIRCLE
-    customCarStorageInit();
-#endif
-
     // Check if in update mode and ignore everything else and just start the web server.
     if (getupdateMode())
     {
@@ -60,6 +56,10 @@ void setup()
     setup_tasks();
 
     board_drivers_init();
+
+#ifndef SCREEN_MODE_CIRCLE
+    loadCustomImagesFromSpiffs();
+#endif
 
 #ifdef HAS_ROTARY_ENCODER
     knob_config_t knob_cfg = {

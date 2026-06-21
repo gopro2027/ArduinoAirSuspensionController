@@ -9,12 +9,11 @@
 
 #include "custom_car_storage.h"
 
-#include <SPIFFS.h>
+#include <Arduino.h>
 #include <esp_heap_caps.h>
+#include <driver/usb_serial_jtag.h>
 
 #pragma region generic serial functions
-#include <Arduino.h>
-#include <driver/usb_serial_jtag.h>
 
 static bool s_ready = false;
 
@@ -222,12 +221,6 @@ bool serialImageUploadRun()
 
             if (lineBuf == "DONE")
             {
-                if (!SPIFFS.exists("/custom/car.bin") || !SPIFFS.exists("/custom/wheels.bin"))
-                {
-                    sendErr("missing image files");
-                    lineBuf = "";
-                    continue;
-                }
                 sendLine("DONE");
                 return true;
             }
