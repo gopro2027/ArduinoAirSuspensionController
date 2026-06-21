@@ -32,7 +32,6 @@ static lv_image_dsc_t g_runtimeWheels = {};
 static uint8_t *g_runtimeCarData = nullptr;
 static uint8_t *g_runtimeWheelsData = nullptr;
 static bool g_runtimeLoaded = false;
-static bool g_fsMounted = false;
 
 LV_IMG_DECLARE(img_car);
 LV_IMG_DECLARE(img_wheels);
@@ -124,6 +123,30 @@ static bool loadOneImage(const char *path, lv_image_dsc_t &dsc, uint8_t *&dataOu
     return true;
 }
 
+void loadCustomImagesFromSpiffs()
+{
+    freeRuntimeBuffers();
+
+    if (!(SPIFFS.exists(kCarPath) && SPIFFS.exists(kWheelsPath)))
+        return;
+
+    if (!loadOneImage(kCarPath, g_runtimeCar, g_runtimeCarData))
+    {
+        freeRuntimeBuffers();
+        return;
+    }
+    if (!loadOneImage(kWheelsPath, g_runtimeWheels, g_runtimeWheelsData))
+    {
+        freeRuntimeBuffers();
+        return;
+    }
+
+    g_runtimeLoaded = true;
+    log_i("Custom car images loaded from SPIFFS (%ux%u car, %ux%u wheels)",
+          g_runtimeCar.header.w, g_runtimeCar.header.h,
+          g_runtimeWheels.header.w, g_runtimeWheels.header.h);
+}
+
 static bool saveImageFile(const char *finalPath, const char *tmpPath, const uint8_t *data, size_t len, uint16_t w, uint16_t h)
 {
     if (!validatePayload(w, h, len))
@@ -160,38 +183,7 @@ static bool saveImageFile(const char *finalPath, const char *tmpPath, const uint
     return true;
 }
 
-bool customCarStorageInit()
-{
-    g_fsMounted = SPIFFS.begin(true);
-    if (!g_fsMounted)
-    {
-        log_e("SPIFFS mount failed");
-        return false;
-    }
-
-    freeRuntimeBuffers();
-
-    if (!SPIFFS.exists(kCarPath) || !SPIFFS.exists(kWheelsPath))
-        return true;
-
-    if (!loadOneImage(kCarPath, g_runtimeCar, g_runtimeCarData))
-    {
-        freeRuntimeBuffers();
-        return true;
-    }
-    if (!loadOneImage(kWheelsPath, g_runtimeWheels, g_runtimeWheelsData))
-    {
-        freeRuntimeBuffers();
-        return true;
-    }
-
-    g_runtimeLoaded = true;
-    log_i("Custom car images loaded from SPIFFS (%ux%u car, %ux%u wheels)",
-          g_runtimeCar.header.w, g_runtimeCar.header.h,
-          g_runtimeWheels.header.w, g_runtimeWheels.header.h);
-    return true;
-}
-
+// essentially used to determine if wheel wells should be rendered
 bool customCarHasImages()
 {
     return g_runtimeLoaded;
@@ -213,27 +205,20 @@ const lv_image_dsc_t *getPresetWheelsImage()
 
 bool customCarSaveCar(const uint8_t *data, size_t len, uint16_t w, uint16_t h)
 {
-    if (!g_fsMounted)
-        return false;
     return saveImageFile(kCarPath, kCarTmpPath, data, len, w, h);
 }
 
 bool customCarSaveWheels(const uint8_t *data, size_t len, uint16_t w, uint16_t h)
 {
-    if (!g_fsMounted)
-        return false;
     return saveImageFile(kWheelsPath, kWheelsTmpPath, data, len, w, h);
 }
 
 void customCarClear()
 {
-    if (g_fsMounted)
-    {
-        deleteFile(kCarPath);
-        deleteFile(kWheelsPath);
-        deleteFile(kCarTmpPath);
-        deleteFile(kWheelsTmpPath);
-    }
+    deleteFile(kCarPath);
+    deleteFile(kWheelsPath);
+    deleteFile(kCarTmpPath);
+    deleteFile(kWheelsTmpPath);
     freeRuntimeBuffers();
 }
 

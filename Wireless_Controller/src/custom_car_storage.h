@@ -9,10 +9,8 @@
 
 #ifndef SCREEN_MODE_CIRCLE
 
-/** Mount SPIFFS and load custom car/wheel images from flash if present. Call once at boot. */
-bool customCarStorageInit();
+void loadCustomImagesFromSpiffs();
 
-/** True when both /custom/car.bin and /custom/wheels.bin are valid. */
 bool customCarHasImages();
 
 /** Pointers for presets screen — runtime SPIFFS, compile-time custom, or device defaults. */
