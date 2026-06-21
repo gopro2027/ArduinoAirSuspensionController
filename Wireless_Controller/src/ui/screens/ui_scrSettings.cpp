@@ -657,7 +657,7 @@ void ScrSettings::init(lv_obj_t *parent)
     new Option(screen_settings_page, OptionType::BUTTON, "Upload custom car (USB)", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Upload custom car images?",
-            "Wait on this screen and open the OAS-Man Car Creator web tool in your browser and follow the instructions on the final step there. Click 'Start' when it says to.",
+            "Wait on this screen and open the OAS-Man Car Creator web tool (oasman.dev/controllerCarCreator) in your browser and follow the instructions on the final step there. Click 'Start' when it says to.",
             "Start", "Cancel",
             []() -> void
             {
