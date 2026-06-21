@@ -152,7 +152,7 @@ void board_drivers_init()
         delay(1000);
         showBootStatusText("Formatting partitions in 1...");
         delay(1000);
-        showBootStatusText("Formatting partitions\n\nScreen may go blank\n\nDo not unpower!\n\nDevice will reboot when complete, please wait...");
+        showBootStatusText("Formatting partitions\n\nScreen may go blank\n\nDo not unpower!\n\nDevice will reboot when\ncomplete, please wait...");
         delay(5000);
         if (SPIFFS.begin(true))
         {
