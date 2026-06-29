@@ -113,6 +113,13 @@ static void maintain_pressure_handler(void *data)
     log_i("Pressed maintain pressure %i", value);
 }
 
+static void sensorless_leveling_handler(void *data)
+{
+    bool value = (bool)data;
+    setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING, value);
+    log_i("Pressed sensorless leveling %i", value);
+}
+
 static void rise_on_start_handler(void *data)
 {
     bool value = (bool)data;
@@ -444,6 +451,7 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_t *basic_settings_page = this->addSettingsPage(pages_container, true);
 
     this->ui_maintainprssure = new Option(basic_settings_page, OptionType::ON_OFF, "Maintain Preset", {.INT = 0}, maintain_pressure_handler);
+    this->ui_sensorlessleveling = new Option(basic_settings_page, OptionType::ON_OFF, "Pressure sensor height levelling", {.INT = 0}, sensorless_leveling_handler);
     this->ui_riseonstart = new Option(basic_settings_page, OptionType::ON_OFF, "Rise on start", {.INT = 0}, rise_on_start_handler);
 
 #if ENABLE_AIR_OUT_ON_SHUTOFF
@@ -937,6 +945,7 @@ void ScrSettings::loop()
         uint8_t flags = *util_configValues._configFlagsBits();
         this->ui_riseonstart->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_RISE_ON_START)) != 0, false);
         this->ui_maintainprssure->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE)) != 0, false);
+        this->ui_sensorlessleveling->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING)) != 0, false);
 #if ENABLE_AIR_OUT_ON_SHUTOFF
         this->ui_airoutonshutoff->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF)) != 0, false);
 #endif
@@ -975,6 +984,7 @@ void ScrSettings::cleanup()
     delete ui_aiPercentage;
     delete ui_aiEnabled;
     delete ui_maintainprssure;
+    delete ui_sensorlessleveling;
     delete ui_riseonstart;
 #if ENABLE_AIR_OUT_ON_SHUTOFF
     delete ui_airoutonshutoff;

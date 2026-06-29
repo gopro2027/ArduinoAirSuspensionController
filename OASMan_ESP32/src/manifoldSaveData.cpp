@@ -2,7 +2,18 @@
 
 SaveData _SaveData;
 byte currentProfile[4];
-bool sendProfileBT = false;
+// Sensorless levelling baseline: the last user/preset-commanded pressure per corner ("ride
+// height pressure at start weight"). NOT persisted on purpose - a stale, 2x-amplified baseline
+// must never survive a reboot. Captured only at user/preset command sites that actually move the
+// vehicle (airUp, setRideHeight*, airUpRelativeToAverage, airOut); the sensorless feature re-baselines it itself.
+byte startWeightPressure[4];
+// Set by background tasks (e.g. sensorless levelling auto-disable) to ask the BLE task to
+// re-broadcast the current config values to all authed clients so their UIs stay in sync.
+bool sendConfigBT = false;
+void requestSendConfigBT()
+{
+    sendConfigBT = true;
+}
 
 int learnDataIndex[4];
 PressureLearnSaveStruct learnData[4][LEARN_SAVE_COUNT];// TODO: This data needs to be moved to be a malloc or new array, so that when we do OTA stuff it doesn't take up memory (currently it is statically allocated and uses 8kb even during OTA updates which is quite a lot )
@@ -124,6 +135,7 @@ void beginSaveData()
 
     _SaveData.riseOnStart.load("riseOnStart", false);
     _SaveData.maintainPressure.load("maintainPressure", false);
+    _SaveData.sensorlessLeveling.load("sensorlessLevel", false);
     _SaveData.airOutOnShutoff.load("airOutOnShutoff", false);
     _SaveData.heightSensorMode.load("heightSensorMode", false);
     _SaveData.baseProfile.load("baseProfile", 2);
@@ -325,7 +337,9 @@ void readProfile(byte profileIndex)
     currentProfile[WHEEL_REAR_PASSENGER] = _SaveData.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER].get().i;
     currentProfile[WHEEL_FRONT_DRIVER] = _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER].get().i;
     currentProfile[WHEEL_REAR_DRIVER] = _SaveData.profile[profileIndex].pressure[WHEEL_REAR_DRIVER].get().i;
-    sendProfileBT = true;
+    // NOTE: do NOT re-baseline sensorless levelling here - readProfile only loads values into
+    // currentProfile and is also used by read-only/preview paths (READPROFILE, PRESETREPORT) that
+    // do not move the vehicle. The baseline is captured in airUp(), which actually commands them.
 }
 
 void writeProfile(byte profileIndex)
@@ -354,6 +368,7 @@ void savePressuresToProfile(byte profileIndex, float _WHEEL_FRONT_PASSENGER, flo
 
 createSaveFuncInt(riseOnStart, bool);
 createSaveFuncInt(maintainPressure, bool);
+createSaveFuncInt(sensorlessLeveling, bool);
 createSaveFuncInt(airOutOnShutoff, bool);
 createSaveFuncInt(heightSensorMode, bool);
 createSaveFuncInt(baseProfile, byte);

@@ -63,6 +63,7 @@ class ConfigFlagsBit {
   static const int CONFIG_HEIGHT_SENSOR_MODE = 3;
   static const int CONFIG_SAFETY_MODE = 4;
   static const int CONFIG_AI_STATUS_ENABLED = 5;
+  static const int CONFIG_SENSORLESS_LEVELING = 6;
 }
 
 class BLEByte {
@@ -181,6 +182,7 @@ class BLEManager extends ChangeNotifier {
   bool ebrakeOn = false;
   bool riseOnStart = false;
   bool maintainPressure = false;
+  bool sensorlessLeveling = false;
   bool airOutOnShutoff = false;
   bool safetyMode = true;
   bool aiStatusEnabled = false;
@@ -740,6 +742,9 @@ class BLEManager extends ChangeNotifier {
           maintainPressure = (configFlagsBits &
                   (1 << ConfigFlagsBit.CONFIG_MAINTAIN_PRESSURE)) !=
               0;
+          sensorlessLeveling = (configFlagsBits &
+                  (1 << ConfigFlagsBit.CONFIG_SENSORLESS_LEVELING)) !=
+              0;
           airOutOnShutoff = (configFlagsBits &
                   (1 << ConfigFlagsBit.CONFIG_AIR_OUT_ON_SHUTOFF)) !=
               0;
@@ -922,6 +927,8 @@ class BLEManager extends ChangeNotifier {
     int bits = 0;
     if (maintainPressure)
       bits |= (1 << ConfigFlagsBit.CONFIG_MAINTAIN_PRESSURE);
+    if (sensorlessLeveling)
+      bits |= (1 << ConfigFlagsBit.CONFIG_SENSORLESS_LEVELING);
     if (riseOnStart) bits |= (1 << ConfigFlagsBit.CONFIG_RISE_ON_START);
     if (airOutOnShutoff)
       bits |= (1 << ConfigFlagsBit.CONFIG_AIR_OUT_ON_SHUTOFF);

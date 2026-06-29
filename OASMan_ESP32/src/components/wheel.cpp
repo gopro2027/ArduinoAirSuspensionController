@@ -4,6 +4,8 @@
 #define NUM_WHEEL_THREADS 4
 std::atomic<bool> flagStartPressureGoalRoutine[NUM_WHEEL_THREADS];
 
+extern bool isVehicleParked(bool strict); // defined in airSuspensionUtil.cpp
+
 struct PressureGoalValveTiming
 {
     int pressureDelta;          // the pressure percision that we are trying to achieve
@@ -252,11 +254,7 @@ void custom_barrier_wait(int num_participants)
     }
 }
 
-// logic https://www.figma.com/board/YOKnd1caeojOlEjpdfY5NF/Untitled?node-id=0-1&node-type=canvas&t=p1SyY3R7azjm1PKs-0
-void Wheel::loop()
-{
-    // Serial.println("WheelP: ");
-    this->readInputs();
+void Wheel::goalRoutine() {
     if (flagStartPressureGoalRoutine[thisWheelNum].load())
     {
         delay(100); // wait for all threads to sync on first call. 6-19-2025: I actually have no clue if this is required. The 100 is the same as the delay in the task.
@@ -407,7 +405,9 @@ void Wheel::loop()
         getInSolenoid()->close();
         getOutSolenoid()->close();
     }
+}
 
+void Wheel::maintainPressure() {
     // Maintain Pressure code
     if (getmaintainPressure())
     {
@@ -421,4 +421,98 @@ void Wheel::loop()
             }
         }
     }
+}
+
+void Wheel::heightsensorlessLevelling() {
+    // Sensorless levelling code
+    // Holds ride HEIGHT without height sensors by inferring weight change from a sustained, stable
+    // per-corner pressure change while parked. When a corner's settled pressure deviates from its
+    // user-commanded baseline (startWeightPressure) by more than a threshold, command a correction
+    // newTarget = 2*current - start (adding air also raises pressure, hence the 2x). Only height
+    // is restored; we then re-baseline to the new commanded target. Tunables in user_defines.h.
+    // NOTE: height-sensor mode already levels directly, so this only applies in pressure mode.
+    if (getsensorlessLeveling() && !getheightSensorMode())
+    {
+        float current = this->getSelectedInputValue();
+
+        // Two independent gates must BOTH be satisfied before acting:
+        //  1. Non-moving: strictly parked (e-brake/GPS - false on accessory-only boards so it won't
+        //     engage) continuously for SENSORLESS_LEVEL_PARKED_DWELL_MS.
+        //  2. Pressure stable: the reading has stayed within the band for SENSORLESS_LEVEL_PRESSURE_STABLE_MS.
+        // Pressure is only readable with valves closed and no fill routine running.
+        bool parked = isVehicleParked(true);
+        if (!parked)
+        {
+            this->slParkedSince = 0; // not parked -> reset both dwell timers
+            this->slStableSince = 0;
+        }
+        else
+        {
+            if (this->slParkedSince == 0)
+                this->slParkedSince = millis(); // parked just began
+
+            bool readable = !flagStartPressureGoalRoutine[thisWheelNum].load() && !this->isActive();
+            if (!readable)
+            {
+                this->slStableSince = 0; // can't read pressure while a valve is open / routine runs
+            }
+            // (Re)start the pressure-stability window whenever the reading wanders outside the band.
+            else if (this->slStableSince == 0 || fabs(current - this->slLastSample) > SENSORLESS_LEVEL_STABILITY_BAND_PSI)
+            {
+                this->slStableSince = millis();
+                this->slLastSample = current;
+            }
+        }
+
+        bool parkedLongEnough = this->slParkedSince != 0 && (millis() - this->slParkedSince >= SENSORLESS_LEVEL_PARKED_DWELL_MS);
+        bool pressureStableLongEnough = this->slStableSince != 0 && (millis() - this->slStableSince >= SENSORLESS_LEVEL_PRESSURE_STABLE_MS);
+        bool cooldownPassed = (millis() - this->slLastCorrection >= SENSORLESS_LEVEL_COOLDOWN_MS);
+
+        // Non-moving long enough AND pressure settled long enough AND past cooldown -> evaluate.
+        if (parkedLongEnough && pressureStableLongEnough && cooldownPassed)
+        {
+            int start = startWeightPressure[this->thisWheelNum]; // global variable
+            int delta = (int)current - start;
+            // start > 10 mirrors the maintainPressure guard and blocks action before a baseline exists (0)
+            if (start > 10 && abs(delta) >= SENSORLESS_LEVEL_THRESHOLD_PSI)
+            {
+                // newTarget = 2*current - start, with the step clamped to bound 2x noise amplification
+                int step = constrain(2 * delta, -SENSORLESS_LEVEL_MAX_STEP_PSI, SENSORLESS_LEVEL_MAX_STEP_PSI);
+                int hardMax = min((int)MAX_PRESSURE_SAFETY, (int)getbagMaxPressure());
+                int newTarget = constrain(start + step, 0, hardMax);
+
+                // Fault-latch: repeated same-direction corrections look like a slow leak or thermal
+                // drift (not real weight changes). Auto-disable to prevent ratcheting to the ceiling.
+                int dir = (delta > 0) ? 1 : -1;
+                if (this->slSameDirCount != 0 && ((this->slSameDirCount > 0) == (dir > 0)))
+                    this->slSameDirCount += dir;
+                else
+                    this->slSameDirCount = dir;
+
+                if (abs(this->slSameDirCount) >= SENSORLESS_LEVEL_FAULT_LIMIT)
+                {
+                    setsensorlessLeveling(false);
+                    requestSendConfigBT(); // because we setsensorlessLeveling, ask BLE task to re-broadcast config so UIs reflect OFF
+                    this->slSameDirCount = 0; // reset this corner; feature is now globally off (other corners keep their own run-length)
+                    Serial.println("Sensorless levelling auto-disabled: repeated same-direction corrections (leak/drift suspected)");
+                }
+                else
+                {
+                    startWeightPressure[this->thisWheelNum] = (byte)newTarget; // feature re-baseline (NOT via capture hooks)
+                    this->slLastCorrection = millis();
+                    this->slStableSince = 0;           // force a fresh stability window after actuating
+                    this->initPressureGoal(newTarget); // raises OR lowers (air-out) per sign of delta
+                }
+            }
+        }
+    }
+}
+
+// logic https://www.figma.com/board/YOKnd1caeojOlEjpdfY5NF/Untitled?node-id=0-1&node-type=canvas&t=p1SyY3R7azjm1PKs-0
+void Wheel::loop()
+{
+    this->readInputs();
+    this->goalRoutine();
+    this->maintainPressure();
+    this->heightsensorlessLevelling();
 }

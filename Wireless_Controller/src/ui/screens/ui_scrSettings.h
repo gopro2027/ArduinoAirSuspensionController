@@ -40,6 +40,7 @@ public:
     Option *ui_aiPercentage;  // AI Percentage (text with value)
     Option *ui_aiEnabled;  // AI Enabled (switch)
     Option *ui_maintainprssure;  // Maintain Pressure (switch)
+    Option *ui_sensorlessleveling;  // Sensorless Leveling (switch)
     Option *ui_riseonstart;  // Rise on start (switch)
 #if ENABLE_AIR_OUT_ON_SHUTOFF
     Option *ui_airoutonshutoff;  // Fall on shutdown (switch)

@@ -91,6 +91,7 @@ public:
     Preferencable pressureInputTank;
 
     Preferencable maintainPressure;
+    Preferencable sensorlessLeveling;
     Preferencable airOutOnShutoff;
     Preferencable heightSensorMode;
     Preferencable bagMaxPressure;
@@ -138,7 +139,9 @@ struct PressureLearnSaveStruct
 
 extern SaveData _SaveData;
 extern byte currentProfile[4];
-extern bool sendProfileBT;
+extern byte startWeightPressure[4];
+extern bool sendConfigBT;
+void requestSendConfigBT();
 
 void beginSaveData();
 void readProfile(byte profileIndex);
@@ -156,6 +159,7 @@ AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex);
 
 headerDefineSaveFunc(riseOnStart, bool);
 headerDefineSaveFunc(maintainPressure, bool);
+headerDefineSaveFunc(sensorlessLeveling, bool);
 headerDefineSaveFunc(airOutOnShutoff, bool);
 headerDefineSaveFunc(heightSensorMode, bool);
 headerDefineSaveFunc(baseProfile, byte);

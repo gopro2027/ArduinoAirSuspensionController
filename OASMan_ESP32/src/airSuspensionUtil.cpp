@@ -46,6 +46,7 @@ Wheel *getWheel(int i)
 void setRideHeightFrontPassenger(byte value)
 {
     currentProfile[WHEEL_FRONT_PASSENGER] = value;
+    startWeightPressure[WHEEL_FRONT_PASSENGER] = value; // re-baseline sensorless levelling
     if (getraiseOnPressure())
     {
         getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(value);
@@ -54,6 +55,7 @@ void setRideHeightFrontPassenger(byte value)
 void setRideHeightRearPassenger(byte value)
 {
     currentProfile[WHEEL_REAR_PASSENGER] = value;
+    startWeightPressure[WHEEL_REAR_PASSENGER] = value; // re-baseline sensorless levelling
     if (getraiseOnPressure())
     {
         getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(value);
@@ -62,6 +64,7 @@ void setRideHeightRearPassenger(byte value)
 void setRideHeightFrontDriver(byte value)
 {
     currentProfile[WHEEL_FRONT_DRIVER] = value;
+    startWeightPressure[WHEEL_FRONT_DRIVER] = value; // re-baseline sensorless levelling
     if (getraiseOnPressure())
     {
         getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(value);
@@ -70,6 +73,7 @@ void setRideHeightFrontDriver(byte value)
 void setRideHeightRearDriver(byte value)
 {
     currentProfile[WHEEL_REAR_DRIVER] = value;
+    startWeightPressure[WHEEL_REAR_DRIVER] = value; // re-baseline sensorless levelling
     if (getraiseOnPressure())
     {
         getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(value);
@@ -290,6 +294,12 @@ void airUp(bool quick)
     getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(currentProfile[WHEEL_REAR_PASSENGER], quick);
     getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(currentProfile[WHEEL_FRONT_DRIVER], quick);
     getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(currentProfile[WHEEL_REAR_DRIVER], quick);
+    // Re-baseline sensorless levelling: airUp commands all 4 corners to currentProfile, so this is
+    // the user/preset-commanded ride height ("pressure at start weight"). Capturing here (rather than
+    // in readProfile) covers every air-up path - presets, RF, BLE AIRUP, rise-on-start - and skips
+    // the read-only readProfile/PRESETREPORT paths that never move the vehicle.
+    for (int i = 0; i < 4; i++)
+        startWeightPressure[i] = currentProfile[i];
 }
 
 void loadProfileAirUpQuick(int profileIndex)
@@ -309,14 +319,20 @@ void airOut()
     getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
     getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
     getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
+    // Re-baseline so sensorless levelling does not try to re-inflate an intentionally aired-out
+    // (or aired-out-on-shutoff) vehicle.
+    for (int i = 0; i < 4; i++)
+        startWeightPressure[i] = AIR_OUT_PRESSURE_PSI;
 }
 
 void airUpRelativeToAverage(int value)
 {
-    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue() + value, true);
-    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue() + value, true);
-    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue() + value, true);
-    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue() + value, true);
+    for (int i = 0; i < 4; i++)
+    {
+        int goal = (int)getWheel(i)->getSelectedInputValue() + value;
+        getWheel(i)->initPressureGoal(goal, true);
+        startWeightPressure[i] = (byte)constrain(goal, 0, (int)MAX_PRESSURE_SAFETY); // re-baseline
+    }
 }
 
 void airOutWithSafetyCheck()

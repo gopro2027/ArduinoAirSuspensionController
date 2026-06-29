@@ -673,6 +673,7 @@ class SettingsPageState extends State<SettingsPage> {
           bool,
           bool,
           bool,
+          bool,
           int,
           int,
           int,
@@ -681,6 +682,7 @@ class SettingsPageState extends State<SettingsPage> {
         )>(
       selector: (_, m) => (
         m.maintainPressure,
+        m.sensorlessLeveling,
         m.riseOnStart,
         m.airOutOnShutoff,
         m.safetyMode,
@@ -1171,6 +1173,15 @@ class SettingsPageState extends State<SettingsPage> {
                   bm.maintainPressure,
                   (value) {
                     bm.maintainPressure = value;
+                    bm.refreshFromUi();
+                    _saveManifoldConfigNow();
+                  },
+                ),
+                _buildSwitch(
+                  'Sensorless Level',
+                  bm.sensorlessLeveling,
+                  (value) {
+                    bm.sensorlessLeveling = value;
                     bm.refreshFromUi();
                     _saveManifoldConfigNow();
                   },

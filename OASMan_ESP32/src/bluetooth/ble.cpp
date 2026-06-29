@@ -512,6 +512,36 @@ uint8_t att_server_notify_SAFE(hci_con_handle_t con_handle, uint16_t attribute_h
 extern uint8_t AIReadyBittset; // 4
 extern uint8_t AIPercentage;   // 7
 
+// Build a ConfigValuesPacket reflecting the device's current config (setValues=false, i.e. a
+// report). Shared by the GETCONFIGVALUES handler and the deferred broadcast below.
+ConfigValuesPacket buildCurrentConfigValuesPacket()
+{
+    uint32_t configFlagsBits = 0;
+    if (getriseOnStart())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_RISE_ON_START);
+    if (getmaintainPressure())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE);
+#if ENABLE_AIR_OUT_ON_SHUTOFF
+    if (getairOutOnShutoff())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF);
+#endif
+    if (getheightSensorMode())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE);
+    if (getsafetyMode())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE);
+    if (getaiEnabled())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED);
+    if (getsensorlessLeveling())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING);
+
+    AuxillaryOutputModePayload auxillaryOutputConfig;
+    auxillaryOutputConfig.mode = (AuxillaryOutputMode)getauxillaryOutputMode();
+    auxillaryOutputConfig.timeUnit = (AuxillaryOutputModeTimeUnit)getauxillaryOutputModeTimeUnit();
+    auxillaryOutputConfig.time = getauxillaryOutputTime();
+    auxillaryOutputConfig.interval = getauxillaryOutputInterval();
+    return ConfigValuesPacket(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getheightSensorInvertBits(), configFlagsBits, auxillaryOutputConfig);
+}
+
 void ble_notify()
 {
 
@@ -526,6 +556,20 @@ void ble_notify()
         att_server_notify_SAFE(rest_con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
         Serial.println("Sent rest packet!");
         delay(40);
+    }
+
+    // A background task (e.g. sensorless levelling auto-disable) asked us to re-broadcast config.
+    if (sendConfigBT)
+    {
+        sendConfigBT = false;
+        if (authedClients.size() > 0)
+        {
+            ConfigValuesPacket cfgPkt = buildCurrentConfigValuesPacket();
+            for (hci_con_handle_t handle : authedClients)
+            {
+                packetMover::sendRestPacket(&cfgPkt, handle);
+            }
+        }
     }
 
     //  calculate whether or not to do stuff at a specific interval, in this case, every 1 second we want to send out a notify.
@@ -704,30 +748,10 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             setheightSensorMode((flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0);
             setsafetyMode((flags & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0);
             setaiEnabled((flags & (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED)) != 0);
+            setsensorlessLeveling((flags & (1 << ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING)) != 0);
             saveAuxillaryOutputPreference(*recpkt->_auxillaryOutputConfig());
         }
-        uint32_t configFlagsBits = 0;
-        if (getriseOnStart())
-            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_RISE_ON_START);
-        if (getmaintainPressure())
-            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE);
-#if ENABLE_AIR_OUT_ON_SHUTOFF
-        if (getairOutOnShutoff())
-            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF);
-#endif
-        if (getheightSensorMode())
-            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE);
-        if (getsafetyMode())
-            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE);
-        if (getaiEnabled())
-            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED);
-        
-        AuxillaryOutputModePayload auxillaryOutputConfig;
-        auxillaryOutputConfig.mode = (AuxillaryOutputMode)getauxillaryOutputMode();
-        auxillaryOutputConfig.timeUnit = (AuxillaryOutputModeTimeUnit)getauxillaryOutputModeTimeUnit();
-        auxillaryOutputConfig.time = getauxillaryOutputTime();
-        auxillaryOutputConfig.interval = getauxillaryOutputInterval();
-        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getheightSensorInvertBits(), configFlagsBits, auxillaryOutputConfig);
+        ConfigValuesPacket pkt = buildCurrentConfigValuesPacket();
         if (*recpkt->_setValues())
         {
             // if we changes values, update all the connected clients
