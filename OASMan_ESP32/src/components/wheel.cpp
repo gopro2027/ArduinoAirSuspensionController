@@ -7,53 +7,26 @@ std::atomic<bool> flagStartPressureGoalRoutine[NUM_WHEEL_THREADS];
 extern bool isVehicleParked(bool strict); // defined in airSuspensionUtil.cpp
 extern bool isAnyWheelActive();            // defined in airSuspensionUtil.cpp
 
-struct PressureGoalValveTiming
-{
-    int pressureDelta;          // the pressure percision that we are trying to achieve
-    int valveTimingUntilWithin; // the amount of time we will leave the valve open until we get within the range of goalPressure +- pressureDelta
-    bool isPerciseMeasurement;  // when using air up quick type functions, will not take into account ones that are set to true here
-};
-
-// Must put in sorted order of largest to smallest
-// So I added *2 because at least in the corvette which i imagine is a fairly standard car, 200% worked great in testing so i may as well make it the default
-PressureGoalValveTiming valveTiming[] = {
-    {100, 500 * 2, false},
-    {50, 250 * 2, false},
-    {25, 125 * 2, false},
-    {10, 50 * 2, false}, // if current psi outside range of goalPressure +- 10psi, open valves for 75ms until +- 10psi achieved
-    {5, 20 * 2, false},  // if current psi outside range of goalPressure +- 5psi, open valves for 20ms until +- 6psi achieved
-    {0, 5 * 2, true},    // if current psi outside range of goalPressure +- 0psi (aka psi is not yet exactly goalPressure), open valves for 5ms until exact goal pressure is achieved. Will not be used in quick mode
-};
-#define VALVE_TIMING_LIST_COUNT (sizeof(valveTiming) / sizeof(PressureGoalValveTiming))
-
 // This function can be updated in the future to use some better algorithm to decide how long to open the valves for to reach the desigred pressure
-PressureGoalValveTiming *getValveTiming(int pressureDifferenceAbsolute)
+int getValveTimingSimpleFit(int pressureDifferenceAbsolute)
 {
-    PressureGoalValveTiming *lastTime = &valveTiming[0];
-    for (int i = 0; i < VALVE_TIMING_LIST_COUNT; i++)
-    {
-        // if (quickMode && valveTiming[i].isPerciseMeasurement)
-        // {
-        //     return lastTime;
-        // }
-        if (pressureDifferenceAbsolute > valveTiming[i].pressureDelta)
-        {
-            return &valveTiming[i];
-        }
-        lastTime = &valveTiming[i];
+    float valveTimingUntilWithin = 9.993f*pressureDifferenceAbsolute + 0.2189f; // very close to y = 10x, but our lookup table was just ever so slightly diverging from it
+    if (valveTimingUntilWithin < 10) {
+        return 10; // minimum time to open the valves for
     }
-    return lastTime; // should never get to this case but if it does it returns the smallest time
+    return valveTimingUntilWithin;
 }
 
 int getMinValveOpenPSI()
 {
-    return getheightSensorMode() ? 0 : getValveTiming(0)->pressureDelta;
+    //return getheightSensorMode() ? 0 : getValveTimingSimpleFit(0)->pressureDelta; // old forumla, would always return 0 (yes, always)
+    return 0;
 }
 
 // TODO: Turn this into a function based on the values above so that it is smooth, and add a multiplier to change in the settings for people with larger volume bags where it's too slow by default
 int calculateValveOpenTimeMS(int pressureDifferenceAbsolute)
 {
-    return getheightSensorMode() ? 0 : (getValveTiming(pressureDifferenceAbsolute)->valveTimingUntilWithin * ((float)getbagVolumePercentage() / 100.0f)); // Note: Added 0 for height sensor mode but it is unused
+    return getheightSensorMode() ? 0 : (getValveTimingSimpleFit(pressureDifferenceAbsolute) * ((float)getbagVolumePercentage() / 100.0f)); // Note: Added 0 for height sensor mode but it is unused
 }
 
 Wheel::Wheel() {}
