@@ -144,12 +144,6 @@ BaseProfilePacket::BaseProfilePacket(int profileIndex)
     this->cmd = BASEPROFILE;
     this->args32()[0].i = profileIndex;
 }
-SetAirheightPacket::SetAirheightPacket(int wheelIndex, int pressure)
-{
-    this->cmd = SETAIRHEIGHT;
-    this->args32()[0].i = wheelIndex;
-    this->args32()[1].i = pressure;
-}
 RaiseOnPressureSetPacket::RaiseOnPressureSetPacket(bool enable)
 {
     this->cmd = RAISEONPRESSURESET;
@@ -201,14 +195,6 @@ bool BooleanPacket::getBoolean()
     return this->args32()[0].i != 0;
 }
 
-int SetAirheightPacket::getWheelIndex()
-{
-    return this->args32()[0].i;
-}
-int SetAirheightPacket::getPressure()
-{
-    return this->args32()[1].i;
-}
 ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t heightSensorInvertBits, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig)
 {
     this->cmd = GETCONFIGVALUES;

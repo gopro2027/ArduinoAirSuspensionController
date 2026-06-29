@@ -218,9 +218,6 @@ Commands are sent via the packet queue system (see [Packet Queue System](#packet
 
 **Wheel Pressure:**
 
-- `SetAirheightPacket` - Set target pressure for a specific wheel
-- Takes wheel index (0-3) and pressure value
-
 See [Packet Types](#packet-types) section for complete list and parameter details.
 
 ### Direct Valve Control
@@ -436,28 +433,6 @@ AirsmPacket packet(5); // Adjust +5 PSI relative to average
 **Structure**:
 
 - `args32()[0]`: `int profileIndex` - Profile to set as base
-
----
-
-#### SETAIRHEIGHT
-
-**Command ID**: `9`  
-**Purpose**: Set target pressure for a specific wheel
-
-**Structure**:
-
-- `args32()[0]`: `int wheelIndex` - Wheel index:
-  - `0` = Front Passenger (WHEEL_FRONT_PASSENGER)
-  - `1` = Rear Passenger (WHEEL_REAR_PASSENGER)
-  - `2` = Front Driver (WHEEL_FRONT_DRIVER)
-  - `3` = Rear Driver (WHEEL_REAR_DRIVER)
-- `args32()[1]`: `int pressure` - Target pressure in PSI
-
-**Example**:
-
-```cpp
-SetAirheightPacket packet(0, 35); // Set front passenger to 35 PSI
-```
 
 ---
 

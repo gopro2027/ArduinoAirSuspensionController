@@ -5,6 +5,7 @@
 std::atomic<bool> flagStartPressureGoalRoutine[NUM_WHEEL_THREADS];
 
 extern bool isVehicleParked(bool strict); // defined in airSuspensionUtil.cpp
+extern bool isAnyWheelActive();            // defined in airSuspensionUtil.cpp
 
 struct PressureGoalValveTiming
 {
@@ -26,15 +27,15 @@ PressureGoalValveTiming valveTiming[] = {
 #define VALVE_TIMING_LIST_COUNT (sizeof(valveTiming) / sizeof(PressureGoalValveTiming))
 
 // This function can be updated in the future to use some better algorithm to decide how long to open the valves for to reach the desigred pressure
-PressureGoalValveTiming *getValveTiming(int pressureDifferenceAbsolute, bool quickMode)
+PressureGoalValveTiming *getValveTiming(int pressureDifferenceAbsolute)
 {
     PressureGoalValveTiming *lastTime = &valveTiming[0];
     for (int i = 0; i < VALVE_TIMING_LIST_COUNT; i++)
     {
-        if (quickMode && valveTiming[i].isPerciseMeasurement)
-        {
-            return lastTime;
-        }
+        // if (quickMode && valveTiming[i].isPerciseMeasurement)
+        // {
+        //     return lastTime;
+        // }
         if (pressureDifferenceAbsolute > valveTiming[i].pressureDelta)
         {
             return &valveTiming[i];
@@ -44,15 +45,15 @@ PressureGoalValveTiming *getValveTiming(int pressureDifferenceAbsolute, bool qui
     return lastTime; // should never get to this case but if it does it returns the smallest time
 }
 
-int getMinValveOpenPSI(bool quickMode)
+int getMinValveOpenPSI()
 {
-    return getheightSensorMode() ? 0 : getValveTiming(0, quickMode)->pressureDelta;
+    return getheightSensorMode() ? 0 : getValveTiming(0)->pressureDelta;
 }
 
 // TODO: Turn this into a function based on the values above so that it is smooth, and add a multiplier to change in the settings for people with larger volume bags where it's too slow by default
-int calculateValveOpenTimeMS(int pressureDifferenceAbsolute, bool quickMode)
+int calculateValveOpenTimeMS(int pressureDifferenceAbsolute)
 {
-    return getheightSensorMode() ? 0 : (getValveTiming(pressureDifferenceAbsolute, quickMode)->valveTimingUntilWithin * ((float)getbagVolumePercentage() / 100.0f)); // Note: Added 0 for height sensor mode but it is unused
+    return getheightSensorMode() ? 0 : (getValveTiming(pressureDifferenceAbsolute)->valveTimingUntilWithin * ((float)getbagVolumePercentage() / 100.0f)); // Note: Added 0 for height sensor mode but it is unused
 }
 
 Wheel::Wheel() {}
@@ -69,7 +70,6 @@ Wheel::Wheel(int solenoidInPin, int solenoidOutPin, InputType *pressurePin, Inpu
     this->routineStartTime = 0;
     // this->flagStartPressureGoalRoutine = false;
     flagStartPressureGoalRoutine[thisWheelNum] = false;
-    this->quickMode = false;
 }
 
 Solenoid *Wheel::getInSolenoid()
@@ -155,10 +155,8 @@ bool Wheel::isActive()
     return getInSolenoid()->isOpen() || getOutSolenoid()->isOpen();
 }
 
-void Wheel::initPressureGoal(int newPressure, bool quick)
+void Wheel::initPressureGoal(int newPressure)
 {
-    // 1/4/2026 override to false, we no longer want to use quick mode ever
-    quick = false;
 
     if (newPressure > (getheightSensorMode() ? getHeightSensorMax() * 1.03f : getbagMaxPressure()))
     {
@@ -166,7 +164,7 @@ void Wheel::initPressureGoal(int newPressure, bool quick)
         return;
     }
     int pressureDif = newPressure - this->getSelectedInputValue(); // negative if airing out, positive if airing up
-    if (abs(pressureDif) > getMinValveOpenPSI(quick))
+    if (abs(pressureDif) > getMinValveOpenPSI())
     {
         // okay we need to set the values, but only if we are airing out or if the tank has more pressure than what is currently in the bags
         bool tankIsCapable = true;
@@ -182,7 +180,6 @@ void Wheel::initPressureGoal(int newPressure, bool quick)
         if (pressureDif < 0 || tankIsCapable)
         {
             this->pressureGoal = newPressure;
-            this->quickMode = quick;
             this->routineStartTime = millis();
             flagStartPressureGoalRoutine[thisWheelNum] = true;
         }
@@ -279,7 +276,7 @@ void Wheel::goalRoutine() {
             int pressureDif = this->pressureGoal - this->getSelectedInputValue();
             int pressureDifABS = abs(pressureDif);
 
-            if (pressureDifABS > getMinValveOpenPSI(this->quickMode))
+            if (pressureDifABS > getMinValveOpenPSI())
             {
                 // Decide which valve to use
                 Solenoid *valve;
@@ -300,7 +297,7 @@ void Wheel::goalRoutine() {
                     // Pressure sensor logic. You can't read the pressure accurately with the valve open. Essentially must open the valve for a guesstimate amount of time, then close it, then you are able to read the pressure.
 
                     // Choose time to open for
-                    int valveTime = calculateValveOpenTimeMS(pressureDifABS, this->quickMode);
+                    int valveTime = calculateValveOpenTimeMS(pressureDifABS);
 
                     // right now not going to use this because it doesn't seem to work super well up air up. Results in super low values. Need to do more testing
                     // int valveTime = this->calculatePressureTimingReal(valve);
@@ -509,10 +506,44 @@ void Wheel::heightsensorlessLevelling() {
 }
 
 // logic https://www.figma.com/board/YOKnd1caeojOlEjpdfY5NF/Untitled?node-id=0-1&node-type=canvas&t=p1SyY3R7azjm1PKs-0
+void Wheel::sensorlessCaptureBaseline()
+{
+    // Whenever all valves close and stay closed long enough for pressure to settle, snapshot the
+    // actual settled pressure as this corner's sensorless baseline ("pressure at start weight").
+    // This is the canonical baseline - it reflects what the vehicle truly settled at after ANY valve
+    // activity (preset, manual, or a sensorless correction), not just a commanded target. A passive
+    // weight change opens no valves, so it never re-baselines here, which is exactly what lets
+    // heightsensorlessLevelling() detect the resulting pressure delta. Pressure mode only.
+    if (getheightSensorMode())
+    {
+        return;
+    }
+
+    if (isAnyWheelActive())
+    {
+        // a valve is open somewhere -> pressure is in flux, arm a fresh settle window
+        this->slValvesClosedSince = 0;
+        this->slBaselineCaptured = false;
+    }
+    else
+    {
+        if (this->slValvesClosedSince == 0)
+        {
+            this->slValvesClosedSince = millis(); // all valves just became closed
+        }
+        else if (!this->slBaselineCaptured && (millis() - this->slValvesClosedSince >= SENSORLESS_LEVEL_BASELINE_SETTLE_MS))
+        {
+            startWeightPressure[this->thisWheelNum] = (byte)this->getSelectedInputValue();
+            this->slBaselineCaptured = true; // capture once per valve-close event
+        }
+    }
+}
+
 void Wheel::loop()
 {
     this->readInputs();
     this->goalRoutine();
     this->maintainPressure();
+    this->sensorlessCaptureBaseline();
     this->heightsensorlessLevelling();
 }

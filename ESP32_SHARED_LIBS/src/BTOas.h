@@ -20,7 +20,6 @@ enum BTOasIdentifier
     READPROFILE = 6,
     AIRUPQUICK = 7,
     BASEPROFILE = 8,
-    SETAIRHEIGHT = 9,
     RAISEONPRESSURESET = 11,
     REBOOT = 12,
     CALIBRATE = 13,
@@ -240,12 +239,6 @@ struct AirupQuickPacket : ProfilePacket
 struct BaseProfilePacket : ProfilePacket
 {
     BaseProfilePacket(int profileIndex);
-};
-struct SetAirheightPacket : BTOasPacket
-{
-    SetAirheightPacket(int wheelIndex, int pressure);
-    int getWheelIndex();
-    int getPressure();
 };
 // TODO: This is just straight up not used by the controller currently. It's related to the og pressure preset code, where you manually set the values when we only had rest based communication on the original bluetooth (not ble). We really need to remove all of the unused functionality from that.
 struct RaiseOnPressureSetPacket : BooleanPacket

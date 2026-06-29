@@ -664,26 +664,6 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
     case BTOasIdentifier::BASEPROFILE:
         setbaseProfile(((BaseProfilePacket *)packet)->getProfileIndex());
         break;
-    case BTOasIdentifier::SETAIRHEIGHT:
-    {
-        SetAirheightPacket *ahp = (SetAirheightPacket *)packet;
-        switch (ahp->getWheelIndex())
-        {
-        case WHEEL_FRONT_PASSENGER:
-            setRideHeightFrontPassenger(ahp->getPressure());
-            break;
-        case WHEEL_REAR_PASSENGER:
-            setRideHeightRearPassenger(ahp->getPressure());
-            break;
-        case WHEEL_FRONT_DRIVER:
-            setRideHeightFrontDriver(ahp->getPressure());
-            break;
-        case WHEEL_REAR_DRIVER:
-            setRideHeightRearDriver(ahp->getPressure());
-            break;
-        }
-    }
-    break;
     case BTOasIdentifier::DETECTPRESSURESENSORS:
         setlearnPressureSensors(true);
         setinternalReboot(true);

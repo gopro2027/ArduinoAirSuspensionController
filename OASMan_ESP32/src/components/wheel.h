@@ -22,7 +22,6 @@ private:
 
     byte pressureGoal;
     unsigned long routineStartTime;
-    bool quickMode; // flag to skip extra percise measurements
 
     float pressureValue;
     float levelValue;
@@ -36,15 +35,19 @@ private:
     unsigned long slStableSince = 0;    // when current pressure-stable window began (0 = none)
     unsigned long slLastCorrection = 0; // last correction time (for cooldown)
     int8_t slSameDirCount = 0;          // signed run-length of same-direction corrections
+    // Baseline capture (see Wheel::sensorlessCaptureBaseline())
+    unsigned long slValvesClosedSince = 0; // when all valves last became closed (0 = a valve is open)
+    bool slBaselineCaptured = false;       // captured the baseline once for the current valve-close event
 
     void goalRoutine();
     void maintainPressure();
     void heightsensorlessLevelling();
+    void sensorlessCaptureBaseline();
 
 public:
     Wheel();
     Wheel(int solenoidInPin, int solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum);
-    void initPressureGoal(int newPressure, bool quick = false);
+    void initPressureGoal(int newPressure);
     void loop();
     void readInputs();
     float getSelectedInputValue();
