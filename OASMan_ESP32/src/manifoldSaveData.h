@@ -137,15 +137,18 @@ struct PressureLearnSaveStruct
     }
 };
 
+struct ProfileRaw {
+    int profileNum;
+    byte pressure[4];
+};
+
 extern SaveData _SaveData;
-extern byte currentProfile[4];
 extern byte startWeightPressure[4];
 extern bool sendConfigBT;
 void requestSendConfigBT();
 
 void beginSaveData();
-void readProfile(byte profileIndex);
-void writeProfile(byte profileIndex);
+ProfileRaw readProfile(byte profileIndex);
 void savePressuresToProfile(byte profileIndex, float _WHEEL_FRONT_PASSENGER, float _WHEEL_REAR_PASSENGER, float _WHEEL_FRONT_DRIVER, float _WHEEL_REAR_DRIVER);
 
 PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX aiIndex);

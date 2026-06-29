@@ -194,9 +194,6 @@ Commands are sent via the packet queue system (see [Packet Queue System](#packet
 
 **Air Control:**
 
-- `AirupPacket` - Add air to all bags
-- `AiroutPacket` - Release air from all bags
-- `AirsmPacket` - Adjust air relative to average pressure
 - `AirupQuickPacket` - Load profile then air up (main method)
 
 **Preset Management:**
@@ -349,44 +346,6 @@ All multi-byte values are **little-endian**.
 ```cpp
 AuthPacket packet(passkey, AUTHRESULT_WAITING);
 // Write packet.tx() (104 bytes) to REST characteristic
-```
-
----
-
-#### AIRUP
-
-**Command ID**: `2`  
-**Purpose**: Add air to all bags
-
-**Structure**: No parameters required
-
-**Usage**: Write empty packet with `cmd = 2` to REST characteristic
-
----
-
-#### AIROUT
-
-**Command ID**: `3`  
-**Purpose**: Release air from all bags
-
-**Structure**: No parameters required
-
----
-
-#### AIRSM
-
-**Command ID**: `4`  
-**Purpose**: Adjust air relative to average pressure
-
-**Structure**:
-
-- `args32()[0]`: `int relativeValue` - Pressure adjustment value (relative to average)
-
-**Example**:
-
-```cpp
-AirsmPacket packet(5); // Adjust +5 PSI relative to average
-```
 
 ---
 

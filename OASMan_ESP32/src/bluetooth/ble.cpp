@@ -636,30 +636,14 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         break;
     case BTOasIdentifier::MESSAGE: // ignore from server
         break;
-    case BTOasIdentifier::AIRUP:
-        Serial.println("Calling air up!");
-        airUp();
-        break;
-    case BTOasIdentifier::AIROUT:
-        airOut();
-        break;
-    case BTOasIdentifier::AIRSM:
-        airUpRelativeToAverage(((AirsmPacket *)packet)->getRelativeValue());
-        break;
-    case BTOasIdentifier::SAVETOPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
-        writeProfile(((SaveToProfilePacket *)packet)->getProfileIndex());
-        break;
     case BTOasIdentifier::SAVECURRENTPRESSURESTOPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
         Serial.println("Calling Save Current Pressures To Profile!");
         savePressuresToProfile(((SaveCurrentPressuresToProfilePacket *)packet)->getProfileIndex(), getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue());
         break;
-    case BTOasIdentifier::READPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
-        readProfile(((ReadProfilePacket *)packet)->getProfileIndex());
-        break;
     case BTOasIdentifier::AIRUPQUICK:
         // load profile then air up. This is the main method for air up on the controller
         Serial.println("Calling air up quick!");
-        loadProfileAirUpQuick(((AirupQuickPacket *)packet)->getProfileIndex());
+        loadProfileAirUp(((AirupQuickPacket *)packet)->getProfileIndex());
         break;
     case BTOasIdentifier::BASEPROFILE:
         setbaseProfile(((BaseProfilePacket *)packet)->getProfileIndex());
@@ -694,8 +678,8 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         break;
     case BTOasIdentifier::PRESETREPORT:
     {
-        readProfile(((PresetPacket *)packet)->getProfile());
-        PresetPacket presetPacket(((PresetPacket *)packet)->getProfile(), currentProfile[WHEEL_FRONT_PASSENGER], currentProfile[WHEEL_REAR_PASSENGER], currentProfile[WHEEL_FRONT_DRIVER], currentProfile[WHEEL_REAR_DRIVER]);
+        ProfileRaw p = readProfile(((PresetPacket *)packet)->getProfile());
+        PresetPacket presetPacket(((PresetPacket *)packet)->getProfile(), p.pressure[WHEEL_FRONT_PASSENGER], p.pressure[WHEEL_REAR_PASSENGER], p.pressure[WHEEL_FRONT_DRIVER], p.pressure[WHEEL_REAR_DRIVER]);
         packetMover::sendRestPacket(&presetPacket, con_handle);
         presetPacket.dump();
 

@@ -98,14 +98,6 @@ MessagePacket::MessagePacket(short recipient, std::string message)
 }
 
 // Incoming packets
-AirupPacket::AirupPacket()
-{
-    this->cmd = AIRUP;
-}
-AiroutPacket::AiroutPacket()
-{
-    this->cmd = AIROUT;
-}
 DetectPressureSensorsPacket::DetectPressureSensorsPacket()
 {
     this->cmd = DETECTPRESSURESENSORS;
@@ -114,24 +106,9 @@ CalibratePacket::CalibratePacket()
 {
     this->cmd = CALIBRATE;
 }
-AirsmPacket::AirsmPacket(int relativeValue)
-{
-    this->cmd = AIRSM;
-    this->args32()[0].i = relativeValue;
-}
-SaveToProfilePacket::SaveToProfilePacket(int profileIndex)
-{
-    this->cmd = SAVETOPROFILE;
-    this->args32()[0].i = profileIndex;
-}
 SaveCurrentPressuresToProfilePacket::SaveCurrentPressuresToProfilePacket(int profileIndex)
 {
     this->cmd = SAVECURRENTPRESSURESTOPROFILE;
-    this->args32()[0].i = profileIndex;
-}
-ReadProfilePacket::ReadProfilePacket(int profileIndex)
-{
-    this->cmd = READPROFILE;
     this->args32()[0].i = profileIndex;
 }
 AirupQuickPacket::AirupQuickPacket(int profileIndex)
@@ -179,10 +156,6 @@ String StartwebPacket::getSSID()
 String StartwebPacket::getPassword()
 {
     return String((char *)&this->args[50]);
-}
-int AirsmPacket::getRelativeValue()
-{
-    return this->args32()[0].i;
 }
 
 int ProfilePacket::getProfileIndex()

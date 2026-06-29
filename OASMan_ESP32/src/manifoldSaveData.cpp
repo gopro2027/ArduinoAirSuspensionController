@@ -1,7 +1,6 @@
 #include "manifoldSaveData.h"
 
 SaveData _SaveData;
-byte currentProfile[4];
 // Sensorless levelling baseline: the per-corner pressure "at start weight" ("ride height pressure").
 // NOT persisted on purpose - a stale, 2x-amplified baseline must never survive a reboot. Captured
 // in one place, Wheel::sensorlessCaptureBaseline(): once all valves close and pressure settles, the
@@ -332,31 +331,15 @@ AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex)
     return &_SaveData.aiModels[aiIndex];
 }
 
-void readProfile(byte profileIndex)
+ProfileRaw readProfile(byte profileIndex)
 {
-    currentProfile[WHEEL_FRONT_PASSENGER] = _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER].get().i;
-    currentProfile[WHEEL_REAR_PASSENGER] = _SaveData.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER].get().i;
-    currentProfile[WHEEL_FRONT_DRIVER] = _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER].get().i;
-    currentProfile[WHEEL_REAR_DRIVER] = _SaveData.profile[profileIndex].pressure[WHEEL_REAR_DRIVER].get().i;
-    // NOTE: do NOT re-baseline sensorless levelling here - readProfile only loads values into
-    // currentProfile and is also used by read-only/preview paths (READPROFILE, PRESETREPORT) that
-    // do not move the vehicle. The baseline is captured in airUp(), which actually commands them.
-}
-
-void writeProfile(byte profileIndex)
-{
-
-    if (currentProfile[WHEEL_FRONT_PASSENGER] != _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER].get().i ||
-        currentProfile[WHEEL_REAR_PASSENGER] != _SaveData.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER].get().i ||
-        currentProfile[WHEEL_FRONT_DRIVER] != _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER].get().i ||
-        currentProfile[WHEEL_REAR_DRIVER] != _SaveData.profile[profileIndex].pressure[WHEEL_REAR_DRIVER].get().i)
-    {
-
-        _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER].set(currentProfile[WHEEL_FRONT_PASSENGER]);
-        _SaveData.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER].set(currentProfile[WHEEL_REAR_PASSENGER]);
-        _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER].set(currentProfile[WHEEL_FRONT_DRIVER]);
-        _SaveData.profile[profileIndex].pressure[WHEEL_REAR_DRIVER].set(currentProfile[WHEEL_REAR_DRIVER]);
-    }
+    static ProfileRaw profile;
+    profile.profileNum = profileIndex;
+    profile.pressure[WHEEL_FRONT_PASSENGER] = _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER].get().i;
+    profile.pressure[WHEEL_REAR_PASSENGER] = _SaveData.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER].get().i;
+    profile.pressure[WHEEL_FRONT_DRIVER] = _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER].get().i;
+    profile.pressure[WHEEL_REAR_DRIVER] = _SaveData.profile[profileIndex].pressure[WHEEL_REAR_DRIVER].get().i;
+    return profile;
 }
 
 void savePressuresToProfile(byte profileIndex, float _WHEEL_FRONT_PASSENGER, float _WHEEL_REAR_PASSENGER, float _WHEEL_FRONT_DRIVER, float _WHEEL_REAR_DRIVER)

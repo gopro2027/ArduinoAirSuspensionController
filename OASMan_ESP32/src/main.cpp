@@ -92,10 +92,6 @@ void setup()
     accessoryWireSetup();
     ebrakeWireSetup();
 
-    // TODO: make base profile work (look in other spots in app for this)
-    // readProfile(getbaseProfile());// TODO: add functionality for this in the controller
-    readProfile(RIDE_HEIGHT_PRESET_NUMBER);
-
     setup_tasks();
 
 #if TEST_MODE == false
@@ -104,7 +100,9 @@ void setup()
     {
         if (getriseOnStart() == true)
         {
-            airUp();
+            // TODO: make base profile work (look in other spots in app for this)
+            // readProfile(getbaseProfile());// TODO: add functionality for this in the controller
+            loadProfileAirUp(RIDE_HEIGHT_PRESET_NUMBER);
         }
     }
 #endif

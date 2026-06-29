@@ -149,8 +149,7 @@ void ebrakeWireLoop()
                     // check air out on shutoff enabled
                     if (getairOutOnShutoff())
                     {
-                        readProfile(0); // packet 0 should be the lowest setting!
-                        airUp();
+                        loadProfileAirUp(0); // packet 0 should be the lowest setting!
                     }
                 }
             }
@@ -248,40 +247,18 @@ bool isAnyWheelActive()
     return false;
 }
 
-void airUp()
-{
-    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(currentProfile[WHEEL_FRONT_PASSENGER]);
-    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(currentProfile[WHEEL_REAR_PASSENGER]);
-    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(currentProfile[WHEEL_FRONT_DRIVER]);
-    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(currentProfile[WHEEL_REAR_DRIVER]);
-    // sensorless levelling baseline is captured automatically once the valves settle (Wheel::sensorlessCaptureBaseline)
-}
-
-void loadProfileAirUpQuick(int profileIndex)
+void loadProfileAirUp(int profileIndex)
 {
     if (profileIndex > MAX_PROFILE_COUNT)
     {
         return;
     }
     // load profile then air up
-    readProfile(profileIndex);
-    airUp();
-}
-
-void airOut()
-{
-    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
-    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
-    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
-    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
-}
-
-void airUpRelativeToAverage(int value)
-{
-    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue() + value);
-    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue() + value);
-    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue() + value);
-    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue() + value);
+    ProfileRaw p = readProfile(profileIndex);
+    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(p.pressure[WHEEL_FRONT_PASSENGER]);
+    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(p.pressure[WHEEL_REAR_PASSENGER]);
+    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(p.pressure[WHEEL_FRONT_DRIVER]);
+    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(p.pressure[WHEEL_REAR_DRIVER]);
 }
 
 void airOutWithSafetyCheck()
@@ -293,8 +270,7 @@ void airOutWithSafetyCheck()
     {
         if (getairOutOnShutoff())
         {
-            readProfile(0); // packet 0 should be the lowest setting!
-            airUp();
+            loadProfileAirUp(0); // packet 0 should be the lowest setting!
         }
     }
 #endif

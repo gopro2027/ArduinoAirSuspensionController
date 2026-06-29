@@ -13,11 +13,7 @@ enum BTOasIdentifier
 {
     IDLE = 0,
     STATUSREPORT = 1,
-    AIRUP = 2,
-    AIROUT = 3,
     AIRSM = 4,
-    SAVETOPROFILE = 5,
-    READPROFILE = 6,
     AIRUPQUICK = 7,
     BASEPROFILE = 8,
     RAISEONPRESSURESET = 11,
@@ -191,14 +187,6 @@ struct MessagePacket : BTOasPacket
 };
 
 // Incoming packets
-struct AirupPacket : BTOasPacket
-{
-    AirupPacket();
-};
-struct AiroutPacket : BTOasPacket
-{
-    AiroutPacket();
-};
 struct DetectPressureSensorsPacket : BTOasPacket
 {
     DetectPressureSensorsPacket();
@@ -206,11 +194,6 @@ struct DetectPressureSensorsPacket : BTOasPacket
 struct CalibratePacket : BTOasPacket
 {
     CalibratePacket();
-};
-struct AirsmPacket : BTOasPacket
-{
-    AirsmPacket(int relativeValue);
-    int getRelativeValue();
 };
 struct ProfilePacket : BTOasPacket
 {
@@ -220,17 +203,9 @@ struct BooleanPacket : BTOasPacket
 {
     bool getBoolean();
 };
-struct SaveToProfilePacket : ProfilePacket
-{
-    SaveToProfilePacket(int profileIndex);
-};
 struct SaveCurrentPressuresToProfilePacket : ProfilePacket
 {
     SaveCurrentPressuresToProfilePacket(int profileIndex);
-};
-struct ReadProfilePacket : ProfilePacket
-{
-    ReadProfilePacket(int profileIndex);
 };
 struct AirupQuickPacket : ProfilePacket
 {
