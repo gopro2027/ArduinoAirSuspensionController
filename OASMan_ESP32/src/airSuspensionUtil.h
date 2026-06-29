@@ -39,7 +39,7 @@ void ebrakeWireLoop();
 bool isEBrakeOn();
 void notifyKeepAlive();
 bool isVehicleOn();
-bool isVehicleParked(bool strict = false);
+bool isVehicleParked(bool dontTrustEBrakeAlone = false, bool requireBothAccAndEbrake_or_GPS = false);
 bool isKeepAliveTimerExpired();
 namespace PressureSensorCalibration
 {
