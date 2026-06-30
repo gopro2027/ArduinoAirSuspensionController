@@ -385,14 +385,15 @@ void Wheel::maintainPressure() {
     // Maintain Pressure code
     if (getmaintainPressure())
     {
-        // only run if pressure is higher than 10psi... also prevents it when a preset is not yet loaded (0)
-        if (this->pressureGoal > 10)
+        if (this->slBaselineCaptured) 
         {
-            int pressureDif = this->pressureGoal - this->getSelectedInputValue();
-            if (pressureDif >= 10)
-            {                                         // 10 psi difference
-                initPressureGoal(this->pressureGoal); // try to go back to the desired pressure
-                // TODO: make an initPressureGoal that only goes up
+            if (this->directlySetPressure > MAINTAIN_PRESSURE_MIN_ACTIVATION_PSI)
+            {
+                if (this->directlySetPressure - this->getSelectedInputValue() >= MAINTAIN_PRESSURE_THRESHOLD_PSI)
+                {
+                    initPressureGoal(this->directlySetPressure); // try to go back to the desired pressure
+                    // TODO: make an initPressureGoal that only goes up
+                }
             }
         }
     }
@@ -402,7 +403,7 @@ void Wheel::heightsensorlessLevelling() {
     // Sensorless levelling code
     // Holds ride HEIGHT without height sensors by inferring weight change from a sustained, stable
     // per-corner pressure change while parked. When a corner's settled pressure deviates from its
-    // user-commanded baseline (startWeightPressure) by more than a threshold, command a correction
+    // user-commanded baseline (directlySetPressure) by more than a threshold, command a correction
     // newTarget = 2*current - start (adding air also raises pressure, hence the 2x). Only height
     // is restored; we then re-baseline to the new commanded target. Tunables in user_defines.h.
     // NOTE: height-sensor mode already levels directly, so this only applies in pressure mode.
@@ -449,7 +450,7 @@ void Wheel::heightsensorlessLevelling() {
         // Non-moving long enough AND pressure settled long enough AND past cooldown -> evaluate.
         if (parkedLongEnough && pressureStableLongEnough && cooldownPassed && this->slBaselineCaptured) // 4. make sure we have captured a baseline that we like
         {
-            int start = this->startWeightPressure;
+            int start = this->directlySetPressure;
             int delta = (int)current - start;
             // don't run if out pressure is below 10psi. 
             if (start > 10 && abs(delta) >= SENSORLESS_LEVEL_THRESHOLD_PSI)
@@ -518,7 +519,7 @@ void Wheel::sensorlessCaptureBaseline()
         }
         else if (!this->slBaselineCaptured && ((millis() - this->slValvesClosedSince) >= SENSORLESS_LEVEL_BASELINE_SETTLE_MS))
         {
-            this->startWeightPressure = (byte)this->getSelectedInputValue();
+            this->directlySetPressure = (byte)this->getSelectedInputValue();
             this->slBaselineCaptured = true; // capture once per valve-close event
         }
     }

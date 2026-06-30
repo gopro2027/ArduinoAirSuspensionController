@@ -451,7 +451,7 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_t *basic_settings_page = this->addSettingsPage(pages_container, true);
 
     this->ui_maintainprssure = new Option(basic_settings_page, OptionType::ON_OFF, "Maintain Preset", {.INT = 0}, maintain_pressure_handler);
-    this->ui_sensorlessleveling = new Option(basic_settings_page, OptionType::ON_OFF, "Pressure sensor height levelling", {.INT = 0}, sensorless_leveling_handler);
+    this->ui_sensorlessleveling = new Option(basic_settings_page, OptionType::ON_OFF, "Height levelling", {.INT = 0}, sensorless_leveling_handler);
     this->ui_riseonstart = new Option(basic_settings_page, OptionType::ON_OFF, "Rise on start", {.INT = 0}, rise_on_start_handler);
 
 #if ENABLE_AIR_OUT_ON_SHUTOFF

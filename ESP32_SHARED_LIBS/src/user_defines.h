@@ -20,6 +20,11 @@
 #define SENSORLESS_LEVEL_FAULT_LIMIT 3        // consecutive same-direction corrections -> auto-disable (leak/thermal)
 #define SENSORLESS_LEVEL_BASELINE_SETTLE_MS 2000 // after all valves close, wait this long for pressure to settle, then snapshot it as the baseline
 
+// maintain pressure tunables
+#define MAINTAIN_PRESSURE_MIN_ACTIVATION_PSI 10 // the minimum pressure that maintain pressure will ever even try to go to 
+#define MAINTAIN_PRESSURE_THRESHOLD_PSI 10 // how divergent the current pressure has to be (lower than the selected pressure) before it will try to air up
+
+
 // Set this to true if you want to enable this feature. Requires compiling both the board and manifold.
 // Will always be set to false in any official oasman release. Use at your own risk. OASMan is not responsible for damage caused by using this feature
 #define ENABLE_AIR_OUT_ON_SHUTOFF false

@@ -38,6 +38,7 @@ private:
     // Baseline capture (see Wheel::sensorlessCaptureBaseline())
     unsigned long slValvesClosedSince = 0; // when all valves last became closed (0 = a valve is open)
     bool slBaselineCaptured = false;       // captured the baseline once for the current valve-close event
+    byte directlySetPressure = 0; // This is the 'real' pressure that is read after any valve movement. This is our 'expected' pressure in a sense. This is tracked by the sensorlessCaptureBaseline and is only usable when slBaselineCaptured is true.
 
     void goalRoutine();
     void maintainPressure();
@@ -45,12 +46,6 @@ private:
     void sensorlessCaptureBaseline();
     void nullifySensorlessBaseline();
 
-    // Sensorless levelling baseline: the per-corner pressure "at start weight" ("ride height pressure").
-    // NOT persisted on purpose - a stale, 2x-amplified baseline must never survive a reboot. Captured
-    // in one place, Wheel::sensorlessCaptureBaseline(): once all valves close and pressure settles, the
-    // actual settled pressure is snapshotted here. A passive weight change opens no valves, so it is not
-    // re-captured - which is what lets heightsensorlessLevelling() detect the resulting pressure delta.
-    byte startWeightPressure;
 
 public:
     Wheel();
