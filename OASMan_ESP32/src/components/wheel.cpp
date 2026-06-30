@@ -125,7 +125,7 @@ float Wheel::getSelectedInputValue()
 
 bool Wheel::isActive()
 {
-    return getInSolenoid()->isOpen() || getOutSolenoid()->isOpen();
+    return getInSolenoid()->isOpen() || getOutSolenoid()->isOpen() || flagStartPressureGoalRoutine[thisWheelNum].load();
 }
 
 void Wheel::initPressureGoal(int newPressure)
@@ -224,10 +224,14 @@ void custom_barrier_wait(int num_participants)
     }
 }
 
+// logic https://www.figma.com/board/YOKnd1caeojOlEjpdfY5NF/Untitled?node-id=0-1&node-type=canvas&t=p1SyY3R7azjm1PKs-0
 void Wheel::goalRoutine() {
     if (flagStartPressureGoalRoutine[thisWheelNum].load())
     {
         delay(100); // wait for all threads to sync on first call. 6-19-2025: I actually have no clue if this is required. The 100 is the same as the delay in the task.
+
+        nullifySensorlessBaseline(); // lets pre-emtively nullify the sensorless baseline since this this function is blocking (same thread) and the sensorlessCaptureBaseline function watch might not see that the goalRoutine ever happened!
+
         // const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
         // const double oscillation = 1.75;
         const double oscillation = 1.2;
@@ -388,6 +392,7 @@ void Wheel::maintainPressure() {
             if (pressureDif >= 10)
             {                                         // 10 psi difference
                 initPressureGoal(this->pressureGoal); // try to go back to the desired pressure
+                // TODO: make an initPressureGoal that only goes up
             }
         }
     }
@@ -415,35 +420,38 @@ void Wheel::heightsensorlessLevelling() {
         {
             this->slParkedSince = 0; // not parked -> reset both dwell timers
             this->slStableSince = 0;
+            return;
         }
         else
         {
             if (this->slParkedSince == 0)
                 this->slParkedSince = millis(); // parked just began
 
-            bool readable = !flagStartPressureGoalRoutine[thisWheelNum].load() && !this->isActive();
-            if (!readable)
+            // this check is not technically necessary because it's already covered by sensorlessCaptureBaseline but it's a good sanity check
+            if (isAnyWheelActive())
             {
                 this->slStableSince = 0; // can't read pressure while a valve is open / routine runs
             }
+
             // (Re)start the pressure-stability window whenever the reading wanders outside the band.
-            else if (this->slStableSince == 0 || fabs(current - this->slLastSample) > SENSORLESS_LEVEL_STABILITY_BAND_PSI)
+            // this is tracking if they continually add objects to the vehicle, or just generally if the vehicles pressure is changing without valves opening this will trigger in here
+            else if (fabs(current - this->slLastSample) > SENSORLESS_LEVEL_STABILITY_BAND_PSI)
             {
                 this->slStableSince = millis();
                 this->slLastSample = current;
             }
         }
 
-        bool parkedLongEnough = this->slParkedSince != 0 && (millis() - this->slParkedSince >= SENSORLESS_LEVEL_PARKED_DWELL_MS);
-        bool pressureStableLongEnough = this->slStableSince != 0 && (millis() - this->slStableSince >= SENSORLESS_LEVEL_PRESSURE_STABLE_MS);
-        bool cooldownPassed = (millis() - this->slLastCorrection >= SENSORLESS_LEVEL_COOLDOWN_MS);
+        bool parkedLongEnough = this->slParkedSince != 0 && ((millis() - this->slParkedSince) >= SENSORLESS_LEVEL_PARKED_DWELL_MS); // 1. make sure we are parked for 10 seconds
+        bool pressureStableLongEnough = this->slStableSince != 0 && ((millis() - this->slStableSince) >= SENSORLESS_LEVEL_PRESSURE_STABLE_MS); // 2. make sure the pressure has been stable for 5 seconds (unrelated to any saved values, just a wobble rating on it's own to make sure someone isn't pushing on the car or it's actively changing pressures)
+        bool cooldownPassed = (millis() - this->slLastCorrection >= SENSORLESS_LEVEL_COOLDOWN_MS); // 3. make sure we have waited 15 seconds since the last correction for this wheel
 
         // Non-moving long enough AND pressure settled long enough AND past cooldown -> evaluate.
-        if (parkedLongEnough && pressureStableLongEnough && cooldownPassed)
+        if (parkedLongEnough && pressureStableLongEnough && cooldownPassed && this->slBaselineCaptured) // 4. make sure we have captured a baseline that we like
         {
-            int start = startWeightPressure[this->thisWheelNum]; // global variable
+            int start = this->startWeightPressure;
             int delta = (int)current - start;
-            // start > 10 mirrors the maintainPressure guard and blocks action before a baseline exists (0)
+            // don't run if out pressure is below 10psi. 
             if (start > 10 && abs(delta) >= SENSORLESS_LEVEL_THRESHOLD_PSI)
             {
                 // newTarget = 2*current - start, with the step clamped to bound 2x noise amplification
@@ -468,17 +476,21 @@ void Wheel::heightsensorlessLevelling() {
                 }
                 else
                 {
-                    startWeightPressure[this->thisWheelNum] = (byte)newTarget; // feature re-baseline (NOT via capture hooks)
+                    nullifySensorlessBaseline(); // shouldn't technically be needed because the result of a valid initPressureGoal should call this, but we'll be safe and call it here just in case something odd happens
                     this->slLastCorrection = millis();
                     this->slStableSince = 0;           // force a fresh stability window after actuating
-                    this->initPressureGoal(newTarget); // raises OR lowers (air-out) per sign of delta
+                    this->initPressureGoal(newTarget); // raises OR lowers (air-out) per sign of delta.
                 }
             }
         }
     }
 }
 
-// logic https://www.figma.com/board/YOKnd1caeojOlEjpdfY5NF/Untitled?node-id=0-1&node-type=canvas&t=p1SyY3R7azjm1PKs-0
+void Wheel::nullifySensorlessBaseline() {
+    this->slValvesClosedSince = 0;
+    this->slBaselineCaptured = false;
+}
+
 void Wheel::sensorlessCaptureBaseline()
 {
     // Whenever all valves close and stay closed long enough for pressure to settle, snapshot the
@@ -487,6 +499,7 @@ void Wheel::sensorlessCaptureBaseline()
     // activity (preset, manual, or a sensorless correction), not just a commanded target. A passive
     // weight change opens no valves, so it never re-baselines here, which is exactly what lets
     // heightsensorlessLevelling() detect the resulting pressure delta. Pressure mode only.
+    // Tested and verified working for both preset and manual on 6-30-2026 by Tyler
     if (getheightSensorMode())
     {
         return;
@@ -495,8 +508,7 @@ void Wheel::sensorlessCaptureBaseline()
     if (isAnyWheelActive())
     {
         // a valve is open somewhere -> pressure is in flux, arm a fresh settle window
-        this->slValvesClosedSince = 0;
-        this->slBaselineCaptured = false;
+        nullifySensorlessBaseline();
     }
     else
     {
@@ -504,9 +516,9 @@ void Wheel::sensorlessCaptureBaseline()
         {
             this->slValvesClosedSince = millis(); // all valves just became closed
         }
-        else if (!this->slBaselineCaptured && (millis() - this->slValvesClosedSince >= SENSORLESS_LEVEL_BASELINE_SETTLE_MS))
+        else if (!this->slBaselineCaptured && ((millis() - this->slValvesClosedSince) >= SENSORLESS_LEVEL_BASELINE_SETTLE_MS))
         {
-            startWeightPressure[this->thisWheelNum] = (byte)this->getSelectedInputValue();
+            this->startWeightPressure = (byte)this->getSelectedInputValue();
             this->slBaselineCaptured = true; // capture once per valve-close event
         }
     }

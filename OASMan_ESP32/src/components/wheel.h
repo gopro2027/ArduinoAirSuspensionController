@@ -43,6 +43,14 @@ private:
     void maintainPressure();
     void heightsensorlessLevelling();
     void sensorlessCaptureBaseline();
+    void nullifySensorlessBaseline();
+
+    // Sensorless levelling baseline: the per-corner pressure "at start weight" ("ride height pressure").
+    // NOT persisted on purpose - a stale, 2x-amplified baseline must never survive a reboot. Captured
+    // in one place, Wheel::sensorlessCaptureBaseline(): once all valves close and pressure settles, the
+    // actual settled pressure is snapshotted here. A passive weight change opens no valves, so it is not
+    // re-captured - which is what lets heightsensorlessLevelling() detect the resulting pressure delta.
+    byte startWeightPressure;
 
 public:
     Wheel();

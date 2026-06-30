@@ -143,7 +143,6 @@ struct ProfileRaw {
 };
 
 extern SaveData _SaveData;
-extern byte startWeightPressure[4];
 extern bool sendConfigBT;
 void requestSendConfigBT();
 
