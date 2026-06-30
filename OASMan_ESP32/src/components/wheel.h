@@ -43,8 +43,11 @@ private:
     void goalRoutine();
     void maintainPressure();
     void heightsensorlessLevelling();
-    void sensorlessCaptureBaseline();
+    void pressureCaptureBaseline();
     void nullifySensorlessBaseline();
+
+    bool onlyAirUp = false;
+    void initPressureGoal(int newPressure, bool onlyAirUp);
 
 
 public:

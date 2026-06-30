@@ -128,7 +128,7 @@ bool Wheel::isActive()
     return getInSolenoid()->isOpen() || getOutSolenoid()->isOpen() || flagStartPressureGoalRoutine[thisWheelNum].load();
 }
 
-void Wheel::initPressureGoal(int newPressure)
+void Wheel::initPressureGoal(int newPressure, bool onlyAirUp)
 {
 
     if (newPressure > (getheightSensorMode() ? getHeightSensorMax() * 1.03f : getbagMaxPressure()))
@@ -154,9 +154,15 @@ void Wheel::initPressureGoal(int newPressure)
         {
             this->pressureGoal = newPressure;
             this->routineStartTime = millis();
+            this->onlyAirUp = onlyAirUp;
             flagStartPressureGoalRoutine[thisWheelNum] = true;
         }
     }
+}
+
+void Wheel::initPressureGoal(int newPressure)
+{
+    this->initPressureGoal(newPressure, false);
 }
 
 // height sensor: AA-ROT-120 https://www.aliexpress.us/item/3256807527882480.html https://www.amazon.com/Height-Sensor-Suspension-Leveling-AA-ROT-120/dp/B08DJ3HX1B https://www.aliexpress.us/item/3256806751644782.html
@@ -265,6 +271,10 @@ void Wheel::goalRoutine() {
                 }
                 else
                 {
+                    if (this->onlyAirUp) {
+                        // we are done, we don't want to air out
+                        break;
+                    }
                     valve = getOutSolenoid();
                     getInSolenoid()->close();
                 }
@@ -391,8 +401,7 @@ void Wheel::maintainPressure() {
             {
                 if (this->directlySetPressure - this->getSelectedInputValue() >= MAINTAIN_PRESSURE_THRESHOLD_PSI)
                 {
-                    initPressureGoal(this->directlySetPressure); // try to go back to the desired pressure
-                    // TODO: make an initPressureGoal that only goes up
+                    this->initPressureGoal(this->directlySetPressure, true); // try to go back to the desired pressure
                 }
             }
         }
@@ -492,7 +501,7 @@ void Wheel::nullifySensorlessBaseline() {
     this->slBaselineCaptured = false;
 }
 
-void Wheel::sensorlessCaptureBaseline()
+void Wheel::pressureCaptureBaseline()
 {
     // Whenever all valves close and stay closed long enough for pressure to settle, snapshot the
     // actual settled pressure as this corner's sensorless baseline ("pressure at start weight").
@@ -529,7 +538,7 @@ void Wheel::loop()
 {
     this->readInputs();
     this->goalRoutine();
+    this->pressureCaptureBaseline();
     this->maintainPressure();
-    this->sensorlessCaptureBaseline();
     this->heightsensorlessLevelling();
 }
