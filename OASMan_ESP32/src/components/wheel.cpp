@@ -128,41 +128,43 @@ bool Wheel::isActive()
     return getInSolenoid()->isOpen() || getOutSolenoid()->isOpen() || flagStartPressureGoalRoutine[thisWheelNum].load();
 }
 
-void Wheel::initPressureGoal(int newPressure, bool onlyAirUp)
+bool Wheel::initPressureGoal(int newPressure, bool onlyAirUp)
 {
 
     if (newPressure > (getheightSensorMode() ? getHeightSensorMax() * 1.03f : getbagMaxPressure()))
     {
         // hardcode not to go above set psi
-        return;
+        return false;
     }
     int pressureDif = newPressure - this->getSelectedInputValue(); // negative if airing out, positive if airing up
     if (abs(pressureDif) > getMinValveOpenPSI())
     {
         // okay we need to set the values, but only if we are airing out or if the tank has more pressure than what is currently in the bags
-        bool tankIsCapable = true;
+        bool tankIsLowerThanBag = false;
         if (getheightSensorMode() == false)
         {
-            // it's in pressure mode, check if tank is less than whats currently in the bag and if it is then tankIsCapable is false.
+            // it's in pressure mode, check if tank is less than whats currently in the bag and if it is then tankIsLowerThanBag is true.
             // we don't care about the goal because we still want to try to reach the goal even if the tank isn't capable. We do care if tank is more than the bag though because if it's less than the bag then it will actually air out.
             if (getCompressor()->getTankPressure() < this->getSelectedInputValue())
             {
-                tankIsCapable = false;
+                tankIsLowerThanBag = true;
             }
         }
-        if (pressureDif < 0 || tankIsCapable)
+        if (pressureDif < 0 || !tankIsLowerThanBag)
         {
             this->pressureGoal = newPressure;
             this->routineStartTime = millis();
             this->onlyAirUp = onlyAirUp;
             flagStartPressureGoalRoutine[thisWheelNum] = true;
+            return true;
         }
     }
+    return false;
 }
 
-void Wheel::initPressureGoal(int newPressure)
+bool Wheel::initPressureGoal(int newPressure)
 {
-    this->initPressureGoal(newPressure, false);
+    return this->initPressureGoal(newPressure, false);
 }
 
 // height sensor: AA-ROT-120 https://www.aliexpress.us/item/3256807527882480.html https://www.amazon.com/Height-Sensor-Suspension-Leveling-AA-ROT-120/dp/B08DJ3HX1B https://www.aliexpress.us/item/3256806751644782.html
@@ -235,8 +237,6 @@ void Wheel::goalRoutine() {
     if (flagStartPressureGoalRoutine[thisWheelNum].load())
     {
         delay(100); // wait for all threads to sync on first call. 6-19-2025: I actually have no clue if this is required. The 100 is the same as the delay in the task.
-
-        nullifySensorlessBaseline(); // lets pre-emtively nullify the sensorless baseline since this this function is blocking (same thread) and the sensorlessCaptureBaseline function watch might not see that the goalRoutine ever happened!
 
         // const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
         // const double oscillation = 1.75;
@@ -382,6 +382,11 @@ void Wheel::goalRoutine() {
 
             custom_barrier_wait(count_participants());
         }
+
+        // since this function (goalRoutine) is blocking the same thread, we must manually reset sensorless baseline and mark instability. If we had trackPressureStability() and pressureCaptureBaseline() in a different thread, we wouldn't need to do this.
+        nullifySensorlessBaseline();
+        markInstability(this->getSelectedInputValue());
+
         custom_barrier_wait(count_participants()); // needed here because when it breaks out of the loop it needs to hit it one last time.
 
         flagStartPressureGoalRoutine[thisWheelNum] = false;
@@ -401,14 +406,20 @@ void Wheel::maintainPressure() {
             {
                 if (this->directlySetPressure - this->getSelectedInputValue() >= MAINTAIN_PRESSURE_THRESHOLD_PSI)
                 {
-                    this->initPressureGoal(this->directlySetPressure, true); // try to go back to the desired pressure
+                    bool success = this->initPressureGoal(this->directlySetPressure, true); // try to go back to the desired pressure
+                    if (!success) {
+                        Serial.println("Maintain pressure auto-disabled: failed to init pressure goal");
+                        setmaintainPressure(false);
+                        requestSendConfigBT(); // because we setsensorlessLeveling, ask BLE task to re-broadcast config so UIs reflect OFF
+                    }
+
                 }
             }
         }
     }
 }
 
-void Wheel::updateLastInstabilityDetectedTimeMS(float current) {
+void Wheel::markInstability(float current) {
     this->slLastInstabilityDetectedTimeMS = millis();
     this->slLastSample = current;
 }
@@ -470,9 +481,13 @@ void Wheel::heightsensorlessLevelling() {
                 }
                 else
                 {
-                    nullifySensorlessBaseline(); // shouldn't technically be needed because the result of a valid initPressureGoal should call this, but we'll be safe and call it here just in case something odd happens
                     this->slLastCorrection = millis();
-                    this->initPressureGoal(newTarget); // raises OR lowers (air-out) per sign of delta.
+                    bool success = this->initPressureGoal(newTarget); // raises OR lowers (air-out) per sign of delta.
+                    if (!success) {
+                        setsensorlessLeveling(false);
+                        requestSendConfigBT(); // because we setsensorlessLeveling, ask BLE task to re-broadcast config so UIs reflect OFF
+                        Serial.println("Sensorless levelling auto-disabled: failed to init pressure goal");
+                    }
                 }
             }
         }
@@ -492,7 +507,7 @@ void Wheel::trackPressureStability() {
     float current = this->getSelectedInputValue();
     if (fabs(current - this->slLastSample) > SENSORLESS_LEVEL_STABILITY_BAND_PSI)
     {
-        updateLastInstabilityDetectedTimeMS(current);
+        markInstability(current);
     }
 }
 
@@ -505,10 +520,11 @@ void Wheel::pressureCaptureBaseline()
     }
 
     // then, grab the baseline value 2 seconds after all valves have closed. We gate on stability because we don't want to accidentally store a baseline from an unstable reading.
+    // we specifically use isAnyWheelActive() because we want to be extra strict about pressures changing in any wheel.
     if (isAnyWheelActive())
     {
         nullifySensorlessBaseline(); // a valve is open somewhere -> pressure is in flux, arm a fresh settle window
-        updateLastInstabilityDetectedTimeMS(this->getSelectedInputValue()); // immediately update instability too to nullify it
+        markInstability(this->getSelectedInputValue()); // immediately update instability too to nullify it... this should technically be in trackPressureStability BUUUT it saves us 1 call to isAnyWheelActive so i will keep it in here
     }
     else
     {

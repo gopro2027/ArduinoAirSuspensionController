@@ -45,10 +45,10 @@ private:
     void heightsensorlessLevelling();
     void pressureCaptureBaseline();
     void nullifySensorlessBaseline();
-    void updateLastInstabilityDetectedTimeMS(float current);
+    void markInstability(float current);
 
     bool onlyAirUp = false;
-    void initPressureGoal(int newPressure, bool onlyAirUp);
+    bool initPressureGoal(int newPressure, bool onlyAirUp);
     void trackPressureStability();
     bool isPressureStable();
 
@@ -56,7 +56,7 @@ private:
 public:
     Wheel();
     Wheel(int solenoidInPin, int solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum);
-    void initPressureGoal(int newPressure);
+    bool initPressureGoal(int newPressure);
     void loop();
     void readInputs();
     float getSelectedInputValue();
