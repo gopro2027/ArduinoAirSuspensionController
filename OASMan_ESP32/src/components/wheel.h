@@ -32,7 +32,7 @@ private:
     // Sensorless levelling per-corner runtime state (see Wheel::heightsensorlessLevelling())
     float slLastSample = 0;             // pressure-stability window reference reading
     unsigned long slParkedSince = 0;    // when continuous parked state began (0 = not parked)
-    unsigned long slStableSince = 0;    // when current pressure-stable window began (0 = none)
+    unsigned long slLastInstabilityDetectedTimeMS = 0;    // when current pressure-stable window began (0 = none)
     unsigned long slLastCorrection = 0; // last correction time (for cooldown)
     int8_t slSameDirCount = 0;          // signed run-length of same-direction corrections
     // Baseline capture (see Wheel::sensorlessCaptureBaseline())
@@ -45,9 +45,12 @@ private:
     void heightsensorlessLevelling();
     void pressureCaptureBaseline();
     void nullifySensorlessBaseline();
+    void updateLastInstabilityDetectedTimeMS(float current);
 
     bool onlyAirUp = false;
     void initPressureGoal(int newPressure, bool onlyAirUp);
+    void trackPressureStability();
+    bool isPressureStable();
 
 
 public:
