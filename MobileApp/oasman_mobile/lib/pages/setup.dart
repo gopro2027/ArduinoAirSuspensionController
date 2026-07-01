@@ -1431,6 +1431,47 @@ class SettingsPageState extends State<SettingsPage> {
                       _saveManifoldConfigNow();
                     },
                   ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => _showConfirm(
+                      title: 'Calibrate Min Height?',
+                      message:
+                          'Please air out your car to the lowest it goes before you click ok',
+                      confirmLabel: 'OK',
+                      onConfirm: () {
+                        bm.sendCalibrateHeightSensors(false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Calibrated min height'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    child: const Text('Calibrate Min Height'),
+                  ),
+                  TextButton(
+                    onPressed: () => _showConfirm(
+                      title: 'Calibrate Max Height?',
+                      message:
+                          'Raise your vehicle as high as it can go before you click ok',
+                      confirmLabel: 'OK',
+                      onConfirm: () {
+                        bm.sendCalibrateHeightSensors(true);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Calibrated max height'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    child: const Text('Calibrate Max Height'),
+                  ),
                 ],
               ],
             ),

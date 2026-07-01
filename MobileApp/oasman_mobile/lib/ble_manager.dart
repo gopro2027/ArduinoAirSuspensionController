@@ -48,6 +48,7 @@ class BTOasIdentifier {
   static const int UPDATESTATUSREQUEST = 36;
   static const int RFCOMMAND = 37;
   static const int AUXILLARYOUTPUTCONTROL = 38;
+  static const int CALIBRATEHEIGHTSENSORS = 39;
 }
 
 /// GETCONFIGVALUES read request (cmd only, args zeroed). Reused on every connect.
@@ -505,6 +506,13 @@ class BLEManager extends ChangeNotifier {
   void sendAuxillaryOutputControl(bool on) {
     sendRestCommand(buildRestPacket(
         BTOasIdentifier.AUXILLARYOUTPUTCONTROL, [BLEInt(on ? 1 : 0)]));
+  }
+
+  /// Capture the current raw height sensor reading on all 4 wheels as the
+  /// per-wheel calibration point. isMax == false -> store as min, true -> max.
+  void sendCalibrateHeightSensors(bool isMax) {
+    sendRestCommand(buildRestPacket(
+        BTOasIdentifier.CALIBRATEHEIGHTSENSORS, [BLEInt(isMax ? 1 : 0)]));
   }
 
   /// RfCommandType / chip / button numbers match [BTOas.h].
