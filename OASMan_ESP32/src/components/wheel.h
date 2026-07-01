@@ -59,6 +59,7 @@ public:
     bool initPressureGoal(int newPressure);
     void loop();
     void readInputs();
+    float readLevelSensorRaw();
     float getSelectedInputValue();
     bool isActive();
     Solenoid *getInSolenoid();

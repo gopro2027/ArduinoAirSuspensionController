@@ -109,6 +109,8 @@ public:
     Preferencable rfButtonCPreset;
     Preferencable rfButtonDPreset;
     Preferencable heightSensorInvertBits;
+    Preferencable heightSensorCalMin[4]; // double, raw height % at calibrated lowest point
+    Preferencable heightSensorCalMax[4]; // double, raw height % at calibrated highest point
 
     AuxillaryOutputPreference auxillaryOutputPreference;
 
@@ -208,5 +210,10 @@ headerDefineSaveFunc(auxillaryIntervalCounter, uint8_t);
 void saveAuxillaryOutputPreference(AuxillaryOutputModePayload payload);
 
 float getHeightSensorMax();
+
+float getheightCalMin(byte wheelNum);
+float getheightCalMax(byte wheelNum);
+void setheightCalMin(byte wheelNum, float value);
+void setheightCalMax(byte wheelNum, float value);
 
 #endif

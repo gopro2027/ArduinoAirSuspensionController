@@ -34,7 +34,8 @@ enum BTOasIdentifier
     BROADCASTNAME = 35,
     UPDATESTATUSREQUEST = 36,
     RFCOMMAND = 37,
-    AUXILLARYOUTPUTCONTROL = 38
+    AUXILLARYOUTPUTCONTROL = 38,
+    CALIBRATEHEIGHTSENSORS = 39
 };
 
 enum StatusPacketBittset
@@ -302,6 +303,14 @@ struct RfCommandPacket : BTOasPacket
 struct AuxillaryOutputControlPacket : BooleanPacket
 {
     AuxillaryOutputControlPacket(bool on);
+};
+
+// One-way packet: manifold samples the raw (pre-invert, pre-normalization) height
+// sensor value on all 4 wheels and stores it as the per-wheel calibration point.
+// getBoolean() == false -> store as min, true -> store as max.
+struct CalibrateHeightSensorsPacket : BooleanPacket
+{
+    CalibrateHeightSensorsPacket(bool isMax);
 };
 
 #endif

@@ -220,11 +220,15 @@ void ScrSettings::updateHeightInvertOptionsVisibility(bool isLevelMode)
         lv_obj_remove_flag(this->ui_heightInvertRP->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(this->ui_heightInvertFD->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(this->ui_heightInvertRD->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_calibrateMinHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
     } else {
         lv_obj_add_flag(this->ui_heightInvertFP->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(this->ui_heightInvertRP->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(this->ui_heightInvertFD->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(this->ui_heightInvertRD->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_calibrateMinHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
     }
 }
 
@@ -547,6 +551,36 @@ void ScrSettings::init(lv_obj_t *parent)
     this->ui_heightInvertFP = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Right", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_FRONT_PASSENGER, data); });
     this->ui_heightInvertRD = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Left", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_REAR_DRIVER, data); });
     this->ui_heightInvertRP = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Right", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_REAR_PASSENGER, data); });
+
+    this->ui_calibrateMinHeight = new Option(levelling_page, OptionType::BUTTON, "Calibrate Min Height", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Calibrate Min Height?",
+            "Please air out your car to the lowest it goes before you click ok",
+            "OK", "Cancel",
+            []() -> void
+            {
+                CalibrateHeightSensorsPacket pkt(false);
+                sendRestPacket(&pkt);
+                log_i("Pressed calibrate min height");
+                showDialog("Calibrated min height", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
+
+    this->ui_calibrateMaxHeight = new Option(levelling_page, OptionType::BUTTON, "Calibrate Max Height", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Calibrate Max Height?",
+            "Raise your vehicle as high as it can go before you click ok",
+            "OK", "Cancel",
+            []() -> void
+            {
+                CalibrateHeightSensorsPacket pkt(true);
+                sendRestPacket(&pkt);
+                log_i("Pressed calibrate max height");
+                showDialog("Calibrated max height", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
 
     this->updateHeightInvertOptionsVisibility(false);
 
@@ -995,6 +1029,8 @@ void ScrSettings::cleanup()
     delete ui_heightInvertRP;
     delete ui_heightInvertFD;
     delete ui_heightInvertRD;
+    delete ui_calibrateMinHeight;
+    delete ui_calibrateMaxHeight;
     delete ui_config1;
     delete ui_config2;
     delete ui_config3;

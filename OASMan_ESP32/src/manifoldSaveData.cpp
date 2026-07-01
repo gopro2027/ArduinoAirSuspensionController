@@ -177,6 +177,15 @@ void beginSaveData()
         }
     }
 
+    for (int j = 0; j < 4; j++)
+    {
+        char buf[15];
+        snprintf(buf, sizeof(buf), "hsCalMin%i", j);
+        _SaveData.heightSensorCalMin[j].loadDouble(buf, 0.0);
+        snprintf(buf, sizeof(buf), "hsCalMax%i", j);
+        _SaveData.heightSensorCalMax[j].loadDouble(buf, 100.0);
+    }
+
     // _SaveData.upModel.weights[0].loadDouble("upmod0", 0.1);
     // _SaveData.upModel.weights[1].loadDouble("upmod1", 0.1);
     // _SaveData.upModel.weights[2].loadDouble("upmod2", -0.1);
@@ -416,4 +425,21 @@ void saveAuxillaryOutputPreference(AuxillaryOutputModePayload payload) {
 float getHeightSensorMax()
 {
     return 100.0f;
+}
+
+float getheightCalMin(byte wheelNum)
+{
+    return _SaveData.heightSensorCalMin[wheelNum].get().d;
+}
+float getheightCalMax(byte wheelNum)
+{
+    return _SaveData.heightSensorCalMax[wheelNum].get().d;
+}
+void setheightCalMin(byte wheelNum, float value)
+{
+    _SaveData.heightSensorCalMin[wheelNum].setDouble(value);
+}
+void setheightCalMax(byte wheelNum, float value)
+{
+    _SaveData.heightSensorCalMax[wheelNum].setDouble(value);
 }

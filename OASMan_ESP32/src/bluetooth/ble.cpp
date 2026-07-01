@@ -874,6 +874,23 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
     case BTOasIdentifier::AUXILLARYOUTPUTCONTROL:
         getAuxillaryOutput()->onOffOverride(((AuxillaryOutputControlPacket *)packet)->getBoolean());
         break;
+    case BTOasIdentifier::CALIBRATEHEIGHTSENSORS:
+    {
+        bool isMax = ((CalibrateHeightSensorsPacket *)packet)->getBoolean();
+        for (int i = 0; i < 4; i++)
+        {
+            float raw = getWheel(i)->readLevelSensorRaw();
+            if (isMax)
+            {
+                setheightCalMax(i, raw);
+            }
+            else
+            {
+                setheightCalMin(i, raw);
+            }
+        }
+        break;
+    }
     }
 }
 

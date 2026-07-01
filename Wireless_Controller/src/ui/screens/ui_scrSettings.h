@@ -51,6 +51,8 @@ public:
     Option *ui_heightInvertRP;  // Invert Rear Passenger height sensor
     Option *ui_heightInvertFD;  // Invert Front Driver height sensor
     Option *ui_heightInvertRD;  // Invert Rear Driver height sensor
+    Option *ui_calibrateMinHeight;  // Calibrate Min Height button (level mode only)
+    Option *ui_calibrateMaxHeight;  // Calibrate Max Height button (level mode only)
     Option *ui_config1;  // Bag Max PSI (slider)
     Option *ui_config2;  // Shutoff Time (textarea)
     Option *ui_config3;  // Compressor On PSI (textarea)

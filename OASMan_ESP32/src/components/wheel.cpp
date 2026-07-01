@@ -97,12 +97,41 @@ float readPinPressure(InputType *pin, bool heightMode)
     }
 }
 
+// Normalize a raw 0-100 height reading into 0-100 between the per-wheel calibrated
+// min/max points. Defaults (min=0, max=100) make this an identity mapping.
+static float normalizeHeightValue(float reading, byte wheelNum)
+{
+    float calMin = getheightCalMin(wheelNum);
+    float calMax = getheightCalMax(wheelNum);
+    float range = calMax - calMin;
+    if (fabsf(range) < 0.001f)
+    {
+        return reading; // degenerate calibration, skip normalization
+    }
+    float normalized = ((reading - calMin) / range) * getHeightSensorMax();
+    if (normalized < 0.0f)
+    {
+        normalized = 0.0f;
+    }
+    if (normalized > getHeightSensorMax())
+    {
+        normalized = getHeightSensorMax();
+    }
+    return normalized;
+}
+
+// Raw (pre-normalization, pre-invert) height sensor reading, used to capture calibration points
+float Wheel::readLevelSensorRaw()
+{
+    return readPinPressure(this->levelSensorPin, true);
+}
+
 void Wheel::readInputs()
 {
     this->pressureValue = readPinPressure(this->pressurePin, false);
     if (getheightSensorMode())
     {
-        this->levelValue = readPinPressure(this->levelSensorPin, true);
+        this->levelValue = normalizeHeightValue(this->readLevelSensorRaw(), this->thisWheelNum);
         if (getheightSensorInvertBits() & (1 << this->thisWheelNum))
         {
             this->levelValue = 100.0f - this->levelValue;
