@@ -52,6 +52,8 @@ private:
     void trackPressureStability();
     bool isPressureStable();
 
+    float readLevelSensorNormalized();
+
 
 public:
     Wheel();
