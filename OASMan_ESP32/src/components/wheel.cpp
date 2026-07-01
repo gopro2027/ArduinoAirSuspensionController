@@ -109,9 +109,19 @@ float Wheel::readLevelSensorNormalized()
 {
     float calMin = getheightCalMin(this->thisWheelNum);
     float calMax = getheightCalMax(this->thisWheelNum);
-    float range = calMax - calMin;
 
     float reading = this->readLevelSensorRaw();
+
+    if (calMin > calMax) {
+        // we are flipped, so we need to invert the reading
+        reading = getHeightSensorMax() - reading;
+        float tmp = calMin;
+        calMin = calMax;
+        calMax = tmp;
+    }
+
+    float range = calMax - calMin;
+    
     if (fabsf(range) < 0.001f)
     {
         return reading; // degenerate calibration, skip normalization
@@ -134,10 +144,6 @@ void Wheel::readInputs()
     if (getheightSensorMode())
     {
         this->levelValue = readLevelSensorNormalized();
-        if (getheightSensorInvertBits() & (1 << this->thisWheelNum))
-        {
-            this->levelValue = 100.0f - this->levelValue;
-        }
     }
 }
 
