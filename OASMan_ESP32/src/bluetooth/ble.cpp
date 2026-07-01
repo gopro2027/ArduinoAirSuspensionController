@@ -705,15 +705,34 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             setheightSensorInvertBits(*recpkt->_heightSensorInvertBits());
             uint32_t flags = *recpkt->_configFlagsBits();
             setriseOnStart((flags & (1 << ConfigFlagsBit::CONFIG_RISE_ON_START)) != 0);
-            setmaintainPressure((flags & (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE)) != 0);
 #if ENABLE_AIR_OUT_ON_SHUTOFF
             setairOutOnShutoff((flags & (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF)) != 0);
 #endif
             setheightSensorMode((flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0);
             setsafetyMode((flags & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0);
             setaiEnabled((flags & (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED)) != 0);
-            setsensorlessLeveling((flags & (1 << ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING)) != 0);
             saveAuxillaryOutputPreference(*recpkt->_auxillaryOutputConfig());
+
+
+
+            // sensorlessLevelling and maintain pressure are mutually exclusive, so if one is enabled, the other must be disabled
+            bool sensorlessLeveling = (flags & (1 << ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING)) != 0;
+            bool maintainPressure = (flags & (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE)) != 0;
+            if (maintainPressure == true && getmaintainPressure() == false) {
+                // maintain pressure was just switched to enable, so we disable sensorless leveling
+                sensorlessLeveling = false;
+            }
+            if (sensorlessLeveling == true && getsensorlessLeveling() == false) {
+                // sensorless leveling was just switched to enable, so we disable maintain pressure
+                maintainPressure = false;
+            }
+            setmaintainPressure(maintainPressure);
+            setsensorlessLeveling(sensorlessLeveling);
+
+            // if height sensor mode is enabled, we disable sensorless leveling
+            if (getheightSensorMode()) {
+                setsensorlessLeveling(false);
+            }
         }
         ConfigValuesPacket pkt = buildCurrentConfigValuesPacket();
         if (*recpkt->_setValues())
