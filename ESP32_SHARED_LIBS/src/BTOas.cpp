@@ -168,7 +168,7 @@ bool BooleanPacket::getBoolean()
     return this->args32()[0].i != 0;
 }
 
-ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t heightSensorInvertBits, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig)
+ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig)
 {
     this->cmd = GETCONFIGVALUES;
     *this->_systemShutoffTimeM() = systemShutoffTimeM;
@@ -182,7 +182,6 @@ ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, u
     *this->_rfButtonB() = rfButtonB;
     *this->_rfButtonC() = rfButtonC;
     *this->_rfButtonD() = rfButtonD;
-    *this->_heightSensorInvertBits() = heightSensorInvertBits;
     *this->_configFlagsBits() = configFlagsBits;
     this->_auxillaryOutputConfig()->mode = auxillaryOutputConfig.mode;
     this->_auxillaryOutputConfig()->timeUnit = auxillaryOutputConfig.timeUnit;
@@ -238,10 +237,10 @@ uint8_t *ConfigValuesPacket::_rfButtonD()
 {
     return (uint8_t *)&(this->args8()[12 + 7].i);
 }
-uint8_t *ConfigValuesPacket::_heightSensorInvertBits()
-{
-    return (uint8_t *)&(this->args8()[12 + 8].i);
-}
+// uint8_t *ConfigValuesPacket::unused0() // formerly _heightSensorInvertBits
+// {
+//     return (uint8_t *)&(this->args8()[12 + 8].i);
+// }
 // uint8_t *ConfigValuesPacket::unused1()
 // {
 //     return (uint8_t *)&(this->args8()[12 + 9].i);

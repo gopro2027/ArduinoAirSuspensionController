@@ -678,7 +678,6 @@ class SettingsPageState extends State<SettingsPage> {
           int,
           int,
           int,
-          int,
         )>(
       selector: (_, m) => (
         m.maintainPressure,
@@ -687,7 +686,6 @@ class SettingsPageState extends State<SettingsPage> {
         m.airOutOnShutoff,
         m.safetyMode,
         m.heightSensorMode,
-        m.heightSensorInvertBits,
         m.rfButtonAPreset,
         m.rfButtonBPreset,
         m.rfButtonCPreset,
@@ -1394,43 +1392,6 @@ class SettingsPageState extends State<SettingsPage> {
                   activeColor: const Color(0xFFBB86FC),
                 ),
                 if (bm.heightSensorMode) ...[
-                  const SizedBox(height: 8),
-                  _buildSwitch(
-                    'Invert Front Right',
-                    (bm.heightSensorInvertBits & (1 << 0)) != 0,
-                    (value) {
-                      bm.setHeightInvertWheel(0, value);
-                      bm.refreshFromUi();
-                      _saveManifoldConfigNow();
-                    },
-                  ),
-                  _buildSwitch(
-                    'Invert Rear Right',
-                    (bm.heightSensorInvertBits & (1 << 1)) != 0,
-                    (value) {
-                      bm.setHeightInvertWheel(1, value);
-                      bm.refreshFromUi();
-                      _saveManifoldConfigNow();
-                    },
-                  ),
-                  _buildSwitch(
-                    'Invert Front Left',
-                    (bm.heightSensorInvertBits & (1 << 2)) != 0,
-                    (value) {
-                      bm.setHeightInvertWheel(2, value);
-                      bm.refreshFromUi();
-                      _saveManifoldConfigNow();
-                    },
-                  ),
-                  _buildSwitch(
-                    'Invert Rear Left',
-                    (bm.heightSensorInvertBits & (1 << 3)) != 0,
-                    (value) {
-                      bm.setHeightInvertWheel(3, value);
-                      bm.refreshFromUi();
-                      _saveManifoldConfigNow();
-                    },
-                  ),
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: () => _showConfirm(

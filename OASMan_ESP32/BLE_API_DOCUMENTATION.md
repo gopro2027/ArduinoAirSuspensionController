@@ -485,7 +485,7 @@ StartwebPacket packet("MyWiFi", "password123");
 - `args8()[12+5]`: `uint8_t rfButtonB` - RF button B preset assignment (read-only)
 - `args8()[12+6]`: `uint8_t rfButtonC` - RF button C preset assignment (read-only)
 - `args8()[12+7]`: `uint8_t rfButtonD` - RF button D preset assignment (read-only)
-- `args8()[12+8]`: `uint8_t heightSensorInvertBits` - Per-wheel height sensor invert bits
+- `args8()[12+8]`: reserved (formerly `heightSensorInvertBits`) - unused; height sensor inversion is now auto-detected on the manifold. Byte kept reserved for compatibility with older firmware/app versions.
 
 **ConfigFlagsBit** (bits in `configFlagsBits`): Bit 0 = CONFIG_MAINTAIN_PRESSURE, 1 = CONFIG_RISE_ON_START, 2 = CONFIG_AIR_OUT_ON_SHUTOFF, 3 = CONFIG_HEIGHT_SENSOR_MODE, 4 = CONFIG_SAFETY_MODE, 5 = CONFIG_AI_STATUS_ENABLED.
 

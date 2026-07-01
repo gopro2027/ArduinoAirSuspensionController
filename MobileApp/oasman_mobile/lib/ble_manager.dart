@@ -204,8 +204,6 @@ class BLEManager extends ChangeNotifier {
   int aiLearnPercent = 0;
   int aiReadyBittset = 0;
 
-  /// Height sensor invert flags (ConfigValuesPacket byte 20 / args offset 16+8).
-  int heightSensorInvertBits = 0;
 
   /// RF key fob button preset indices on manifold (0–4 = presets 1–5).
   int rfButtonAPreset = 0;
@@ -591,16 +589,6 @@ class BLEManager extends ChangeNotifier {
         [..._encodeInt32(BTOasIdentifier.STARTWEB), ...args]);
   }
 
-  /// Toggle one wheel bit in [heightSensorInvertBits] (0..3 = FP, RP, FD, RD order matches wireless labels).
-  void setHeightInvertWheel(int wheelBitIndex, bool inverted) {
-    if (wheelBitIndex < 0 || wheelBitIndex > 3) return;
-    if (inverted) {
-      heightSensorInvertBits |= (1 << wheelBitIndex);
-    } else {
-      heightSensorInvertBits &= ~(1 << wheelBitIndex);
-    }
-  }
-
   /// Mirrors Wireless_Controller's onBLEConnectionCompleted():
   ///   sendConfigValuesPacket(false) + requestPreset() + sendUpdateStatusRequestPacket()
   Future<void> _onConnectionCompleted() async {
@@ -771,7 +759,7 @@ class BLEManager extends ChangeNotifier {
           rfButtonBPreset = data[21] & 0xFF;
           rfButtonCPreset = data[22] & 0xFF;
           rfButtonDPreset = data[23] & 0xFF;
-          heightSensorInvertBits = data[24] & 0xFF;
+          // data[24] reserved (formerly heightSensorInvertBits); ignored
 
           auxModeByte = data[28] & 0xFF;
           final tu = data[29] & 0xFF;
@@ -965,7 +953,7 @@ class BLEManager extends ChangeNotifier {
     args[17] = rfButtonBPreset.clamp(0, 255);
     args[18] = rfButtonCPreset.clamp(0, 255);
     args[19] = rfButtonDPreset.clamp(0, 255);
-    args[20] = heightSensorInvertBits.clamp(0, 255);
+    args[20] = 0; // reserved (formerly heightSensorInvertBits); kept for byte-layout compat
     args[24] = auxModeByte.clamp(0, 255);
     args[25] = auxTimeUnit.clamp(0, 3);
     args[26] = auxPulseDuration.clamp(0, 255);

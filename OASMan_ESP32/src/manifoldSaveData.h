@@ -108,7 +108,6 @@ public:
     Preferencable rfButtonBPreset;
     Preferencable rfButtonCPreset;
     Preferencable rfButtonDPreset;
-    Preferencable heightSensorInvertBits;
     Preferencable heightSensorCalMin[4]; // double, raw height % at calibrated lowest point
     Preferencable heightSensorCalMax[4]; // double, raw height % at calibrated highest point
 
@@ -199,7 +198,6 @@ headerDefineSaveFunc(rfButtonAPreset, uint8_t);
 headerDefineSaveFunc(rfButtonBPreset, uint8_t);
 headerDefineSaveFunc(rfButtonCPreset, uint8_t);
 headerDefineSaveFunc(rfButtonDPreset, uint8_t);
-headerDefineSaveFunc(heightSensorInvertBits, uint8_t);
 
 headerDefineSaveFunc(auxillaryOutputMode, AuxillaryOutputMode);
 headerDefineSaveFunc(auxillaryOutputModeTimeUnit, AuxillaryOutputModeTimeUnit);
