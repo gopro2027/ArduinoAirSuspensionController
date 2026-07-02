@@ -439,11 +439,15 @@ void Wheel::maintainPressure() {
     {
         if (this->slBaselineCaptured) 
         {
-            if (this->directlySetPressure > MAINTAIN_PRESSURE_MIN_ACTIVATION_PSI)
+            if (this->directlySetPressure > (getheightSensorMode() ? MAINTAIN_PRESSURE_MIN_ACTIVATION_LEVEL : MAINTAIN_PRESSURE_MIN_ACTIVATION_PSI))
             {
-                if (this->directlySetPressure - this->getSelectedInputValue() >= MAINTAIN_PRESSURE_THRESHOLD_PSI)
+                float dif = this->directlySetPressure - this->getSelectedInputValue();
+                if (getheightSensorMode()) {
+                    dif = fabs(dif);
+                }
+                if (dif >= (getheightSensorMode() ? MAINTAIN_PRESSURE_THRESHOLD_LEVEL : MAINTAIN_PRESSURE_THRESHOLD_PSI))
                 {
-                    bool success = this->initPressureGoal(this->directlySetPressure, true); // try to go back to the desired pressure
+                    bool success = this->initPressureGoal(this->directlySetPressure, !getheightSensorMode()); // try to go back to the desired pressure
                     if (!success) {
                         Serial.println("Maintain pressure auto-disabled: failed to init pressure goal");
                         setmaintainPressure(false);
@@ -542,7 +546,7 @@ void Wheel::nullifySensorlessBaseline() {
 
 void Wheel::trackPressureStability() {
     float current = this->getSelectedInputValue();
-    if (fabs(current - this->slLastSample) > SENSORLESS_LEVEL_STABILITY_BAND_PSI)
+    if (fabs(current - this->slLastSample) > (getheightSensorMode() ? SENSORLESS_LEVEL_STABILITY_BAND_LEVEL : SENSORLESS_LEVEL_STABILITY_BAND_PSI))
     {
         markInstability(current);
     }
@@ -550,13 +554,7 @@ void Wheel::trackPressureStability() {
 
 void Wheel::pressureCaptureBaseline()
 {
-    // first, simply ignore if we are in height sensor mode
-    if (getheightSensorMode())
-    {
-        return;
-    }
-
-    // then, grab the baseline value 2 seconds after all valves have closed. We gate on stability because we don't want to accidentally store a baseline from an unstable reading.
+    // grab the baseline value 2 seconds after all valves have closed. We gate on stability because we don't want to accidentally store a baseline from an unstable reading.
     // we specifically use isAnyWheelActive() because we want to be extra strict about pressures changing in any wheel.
     if (isAnyWheelActive())
     {

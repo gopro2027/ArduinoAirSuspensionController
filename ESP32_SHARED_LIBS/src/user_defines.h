@@ -15,6 +15,7 @@
 #define SENSORLESS_LEVEL_PARKED_DWELL_MS 10000 // must be non-moving (parked) at least this long before acting
 #define SENSORLESS_LEVEL_PRESSURE_STABLE_MS 5000 // pressure must also be stable at least this long before acting
 #define SENSORLESS_LEVEL_STABILITY_BAND_PSI 1  // sample-to-sample wobble allowed while "stable"
+#define SENSORLESS_LEVEL_STABILITY_BAND_LEVEL 2 // sample-to-sample wobble allowed while "stable" for height sensor mode
 #define SENSORLESS_LEVEL_MAX_STEP_PSI 30      // clamp on a single correction step (caps 2x noise)
 #define SENSORLESS_LEVEL_FAULT_LIMIT 3        // consecutive same-direction corrections -> auto-disable (leak/thermal)
 #define SENSORLESS_LEVEL_BASELINE_SETTLE_MS 2000 // after all valves close, wait this long for pressure to settle, then snapshot it as the baseline
@@ -22,6 +23,8 @@
 // maintain pressure tunables
 #define MAINTAIN_PRESSURE_MIN_ACTIVATION_PSI 10 // the minimum pressure that maintain pressure will ever even try to go to 
 #define MAINTAIN_PRESSURE_THRESHOLD_PSI 10 // how divergent the current pressure has to be (lower than the selected pressure) before it will try to air up
+#define MAINTAIN_PRESSURE_MIN_ACTIVATION_LEVEL 1 // the minimum height that maintain level will ever even try to go to
+#define MAINTAIN_PRESSURE_THRESHOLD_LEVEL 5 // how divergent the current height has to be (lower than the selected height) before it will try to air up
 
 
 // Set this to true if you want to enable this feature. Requires compiling both the board and manifold.
