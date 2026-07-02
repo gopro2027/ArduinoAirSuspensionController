@@ -1167,7 +1167,7 @@ class SettingsPageState extends State<SettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildSwitch(
-                  'Maintain Preset',
+                  bm.heightSensorMode ? 'Maintain Height' : 'Auto Leak Detect Refill',
                   bm.maintainPressure,
                   (value) {
                     bm.maintainPressure = value;
@@ -1175,15 +1175,16 @@ class SettingsPageState extends State<SettingsPage> {
                     _saveManifoldConfigNow();
                   },
                 ),
-                _buildSwitch(
-                  'Sensorless Level',
-                  bm.sensorlessLeveling,
-                  (value) {
-                    bm.sensorlessLeveling = value;
-                    bm.refreshFromUi();
-                    _saveManifoldConfigNow();
-                  },
-                ),
+                if (!bm.heightSensorMode)
+                  _buildSwitch(
+                    'Sensorless Level',
+                    bm.sensorlessLeveling,
+                    (value) {
+                      bm.sensorlessLeveling = value;
+                      bm.refreshFromUi();
+                      _saveManifoldConfigNow();
+                    },
+                  ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

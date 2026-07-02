@@ -202,14 +202,18 @@ static void aux_mode_shutdown_handler(void *data)
     alertValueUpdated();
 }
 
-void ScrSettings::updateHeightInvertOptionsVisibility(bool isLevelMode)
+void ScrSettings::updateLevelModeOptionsVisibility(bool isLevelMode)
 {
     if (isLevelMode) {
         lv_obj_remove_flag(this->ui_calibrateMinHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_sensorlessleveling->root, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(this->ui_maintainprssure->text, "Maintain Height");
     } else {
         lv_obj_add_flag(this->ui_calibrateMinHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_sensorlessleveling->root, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(this->ui_maintainprssure->text, "Auto Leak Detect Refill");
     }
 }
 
@@ -558,7 +562,7 @@ void ScrSettings::init(lv_obj_t *parent)
             []() -> void {}, false);
     });
 
-    this->updateHeightInvertOptionsVisibility(false);
+    this->updateLevelModeOptionsVisibility(false);
 
     // --- Auxillary Output page ---
     lv_obj_t *aux_page = this->addSettingsPage(pages_container, true);
@@ -957,7 +961,7 @@ void ScrSettings::loop()
         this->ui_aiEnabled->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED)) != 0, false);
         bool heightSensorMode = (flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0;
         this->ui_heightsensormode->setSelectedOption(heightSensorMode ? 1 : 0);
-        this->updateHeightInvertOptionsVisibility(heightSensorMode);
+        this->updateLevelModeOptionsVisibility(heightSensorMode);
 
         AuxillaryOutputModePayload *aux = util_configValues._auxillaryOutputConfig();
         this->ui_auxModeStartup->setBooleanValue((aux->mode & (1u << AUX_MODE_STARTUP_TIMED)) != 0, false);
