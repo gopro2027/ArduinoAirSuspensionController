@@ -417,7 +417,7 @@ void Wheel::goalRoutine() {
             }
             iteration++;
 
-            custom_barrier_wait(count_participants());
+            custom_barrier_wait(count_participants()); // TODO: test and see if this should be removed during height sensor mode, as im not sure if it may hold up threads with the 1ms delay. id worry that under some edge cases this may hold up a thread and cause us to air out for too long and overshoot our minimum ride height at times
         }
 
         // since this function (goalRoutine) is blocking the same thread, we must manually reset sensorless baseline and mark instability. If we had trackPressureStability() and pressureCaptureBaseline() in a different thread, we wouldn't need to do this.
@@ -567,6 +567,10 @@ void Wheel::pressureCaptureBaseline()
     {
         if (!this->slBaselineCaptured && isPressureStable() && ((millis() - this->slValvesClosedSince) >= SENSORLESS_LEVEL_BASELINE_SETTLE_MS))
         {
+            if (getheightSensorMode() && getheightCalMinRide(this->thisWheelNum) > this->getSelectedInputValue()) {
+                // we are in height sensor mode and the current height is less than the minimum ride height. We don't want to capture a baseline in this case because it will cause the car to try to stabalize below a ride height
+                return;
+            }
             this->directlySetPressure = (byte)this->getSelectedInputValue();
             this->slBaselineCaptured = true;
         }

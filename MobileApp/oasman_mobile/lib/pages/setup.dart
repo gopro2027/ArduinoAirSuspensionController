@@ -1440,7 +1440,7 @@ class SettingsPageState extends State<SettingsPage> {
                     onPressed: () => _showConfirm(
                       title: 'Calibrate Minimum Ride Height?',
                       message:
-                          'Set your vehicle to the lowest ride height you want to allow before you click ok. This is used for maintain height.',
+                          'Set your vehicle to the lowest ride height you want to allow before you click ok. This is used for maintain height. Only use this after calibrating min and max.',
                       confirmLabel: 'OK',
                       onConfirm: () {
                         bm.sendCalibrateHeightSensors(

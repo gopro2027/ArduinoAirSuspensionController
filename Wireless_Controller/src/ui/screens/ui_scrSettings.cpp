@@ -567,7 +567,7 @@ void ScrSettings::init(lv_obj_t *parent)
     this->ui_calibrateMinRideHeight = new Option(levelling_page, OptionType::BUTTON, "Calibrate Min Ride Height", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Calibrate Minimum Ride Height?",
-            "Set your vehicle to the lowest ride height you want to allow before you click ok. This is used for maintain height.",
+            "Set your vehicle to the lowest ride height you want to allow before you click ok. This is used for maintain height. Only use this after calibrating min and max.",
             "OK", "Cancel",
             []() -> void
             {

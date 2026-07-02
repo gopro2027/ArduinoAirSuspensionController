@@ -888,7 +888,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
                 setheightCalMax(i, raw);
                 break;
             case HEIGHT_CAL_MIN_RIDE_HEIGHT:
-                setheightCalMinRide(i, raw);
+                setheightCalMinRide(i, getWheel(i)->getSelectedInputValue());
                 break;
             }
         }
