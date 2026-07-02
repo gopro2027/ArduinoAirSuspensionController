@@ -194,9 +194,6 @@ Commands are sent via the packet queue system (see [Packet Queue System](#packet
 
 **Air Control:**
 
-- `AirupPacket` - Add air to all bags
-- `AiroutPacket` - Release air from all bags
-- `AirsmPacket` - Adjust air relative to average pressure
 - `AirupQuickPacket` - Load profile then air up (main method)
 
 **Preset Management:**
@@ -217,9 +214,6 @@ Commands are sent via the packet queue system (see [Packet Queue System](#packet
 - Rise on start, maintain pressure, air-out on shutoff, height sensor mode, safety mode, AI enabled are set via `ConfigValuesPacket` with `setValues = true` and the appropriate bits in `configFlagsBits` (see ConfigFlagsBit enum).
 
 **Wheel Pressure:**
-
-- `SetAirheightPacket` - Set target pressure for a specific wheel
-- Takes wheel index (0-3) and pressure value
 
 See [Packet Types](#packet-types) section for complete list and parameter details.
 
@@ -352,44 +346,6 @@ All multi-byte values are **little-endian**.
 ```cpp
 AuthPacket packet(passkey, AUTHRESULT_WAITING);
 // Write packet.tx() (104 bytes) to REST characteristic
-```
-
----
-
-#### AIRUP
-
-**Command ID**: `2`  
-**Purpose**: Add air to all bags
-
-**Structure**: No parameters required
-
-**Usage**: Write empty packet with `cmd = 2` to REST characteristic
-
----
-
-#### AIROUT
-
-**Command ID**: `3`  
-**Purpose**: Release air from all bags
-
-**Structure**: No parameters required
-
----
-
-#### AIRSM
-
-**Command ID**: `4`  
-**Purpose**: Adjust air relative to average pressure
-
-**Structure**:
-
-- `args32()[0]`: `int relativeValue` - Pressure adjustment value (relative to average)
-
-**Example**:
-
-```cpp
-AirsmPacket packet(5); // Adjust +5 PSI relative to average
-```
 
 ---
 
@@ -436,28 +392,6 @@ AirsmPacket packet(5); // Adjust +5 PSI relative to average
 **Structure**:
 
 - `args32()[0]`: `int profileIndex` - Profile to set as base
-
----
-
-#### SETAIRHEIGHT
-
-**Command ID**: `9`  
-**Purpose**: Set target pressure for a specific wheel
-
-**Structure**:
-
-- `args32()[0]`: `int wheelIndex` - Wheel index:
-  - `0` = Front Passenger (WHEEL_FRONT_PASSENGER)
-  - `1` = Rear Passenger (WHEEL_REAR_PASSENGER)
-  - `2` = Front Driver (WHEEL_FRONT_DRIVER)
-  - `3` = Rear Driver (WHEEL_REAR_DRIVER)
-- `args32()[1]`: `int pressure` - Target pressure in PSI
-
-**Example**:
-
-```cpp
-SetAirheightPacket packet(0, 35); // Set front passenger to 35 PSI
-```
 
 ---
 
@@ -551,7 +485,7 @@ StartwebPacket packet("MyWiFi", "password123");
 - `args8()[12+5]`: `uint8_t rfButtonB` - RF button B preset assignment (read-only)
 - `args8()[12+6]`: `uint8_t rfButtonC` - RF button C preset assignment (read-only)
 - `args8()[12+7]`: `uint8_t rfButtonD` - RF button D preset assignment (read-only)
-- `args8()[12+8]`: `uint8_t heightSensorInvertBits` - Per-wheel height sensor invert bits
+- `args8()[12+8]`: reserved (formerly `heightSensorInvertBits`) - unused; height sensor inversion is now auto-detected on the manifold. Byte kept reserved for compatibility with older firmware/app versions.
 
 **ConfigFlagsBit** (bits in `configFlagsBits`): Bit 0 = CONFIG_MAINTAIN_PRESSURE, 1 = CONFIG_RISE_ON_START, 2 = CONFIG_AIR_OUT_ON_SHUTOFF, 3 = CONFIG_HEIGHT_SENSOR_MODE, 4 = CONFIG_SAFETY_MODE, 5 = CONFIG_AI_STATUS_ENABLED.
 

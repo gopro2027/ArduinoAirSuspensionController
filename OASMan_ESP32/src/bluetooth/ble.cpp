@@ -512,6 +512,36 @@ uint8_t att_server_notify_SAFE(hci_con_handle_t con_handle, uint16_t attribute_h
 extern uint8_t AIReadyBittset; // 4
 extern uint8_t AIPercentage;   // 7
 
+// Build a ConfigValuesPacket reflecting the device's current config (setValues=false, i.e. a
+// report). Shared by the GETCONFIGVALUES handler and the deferred broadcast below.
+ConfigValuesPacket buildCurrentConfigValuesPacket()
+{
+    uint32_t configFlagsBits = 0;
+    if (getriseOnStart())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_RISE_ON_START);
+    if (getmaintainPressure())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE);
+#if ENABLE_AIR_OUT_ON_SHUTOFF
+    if (getairOutOnShutoff())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF);
+#endif
+    if (getheightSensorMode())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE);
+    if (getsafetyMode())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE);
+    if (getaiEnabled())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED);
+    if (getsensorlessLeveling())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING);
+
+    AuxillaryOutputModePayload auxillaryOutputConfig;
+    auxillaryOutputConfig.mode = (AuxillaryOutputMode)getauxillaryOutputMode();
+    auxillaryOutputConfig.timeUnit = (AuxillaryOutputModeTimeUnit)getauxillaryOutputModeTimeUnit();
+    auxillaryOutputConfig.time = getauxillaryOutputTime();
+    auxillaryOutputConfig.interval = getauxillaryOutputInterval();
+    return ConfigValuesPacket(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), configFlagsBits, auxillaryOutputConfig);
+}
+
 void ble_notify()
 {
 
@@ -526,6 +556,20 @@ void ble_notify()
         att_server_notify_SAFE(rest_con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
         Serial.println("Sent rest packet!");
         delay(40);
+    }
+
+    // A background task (e.g. sensorless levelling auto-disable) asked us to re-broadcast config.
+    if (sendConfigBT)
+    {
+        sendConfigBT = false;
+        if (authedClients.size() > 0)
+        {
+            ConfigValuesPacket cfgPkt = buildCurrentConfigValuesPacket();
+            for (hci_con_handle_t handle : authedClients)
+            {
+                packetMover::sendRestPacket(&cfgPkt, handle);
+            }
+        }
     }
 
     //  calculate whether or not to do stuff at a specific interval, in this case, every 1 second we want to send out a notify.
@@ -592,54 +636,18 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         break;
     case BTOasIdentifier::MESSAGE: // ignore from server
         break;
-    case BTOasIdentifier::AIRUP:
-        Serial.println("Calling air up!");
-        airUp();
-        break;
-    case BTOasIdentifier::AIROUT:
-        airOut();
-        break;
-    case BTOasIdentifier::AIRSM:
-        airUpRelativeToAverage(((AirsmPacket *)packet)->getRelativeValue());
-        break;
-    case BTOasIdentifier::SAVETOPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
-        writeProfile(((SaveToProfilePacket *)packet)->getProfileIndex());
-        break;
     case BTOasIdentifier::SAVECURRENTPRESSURESTOPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
         Serial.println("Calling Save Current Pressures To Profile!");
         savePressuresToProfile(((SaveCurrentPressuresToProfilePacket *)packet)->getProfileIndex(), getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue());
         break;
-    case BTOasIdentifier::READPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
-        readProfile(((ReadProfilePacket *)packet)->getProfileIndex());
-        break;
     case BTOasIdentifier::AIRUPQUICK:
         // load profile then air up. This is the main method for air up on the controller
         Serial.println("Calling air up quick!");
-        loadProfileAirUpQuick(((AirupQuickPacket *)packet)->getProfileIndex());
+        loadProfileAirUp(((AirupQuickPacket *)packet)->getProfileIndex());
         break;
     case BTOasIdentifier::BASEPROFILE:
         setbaseProfile(((BaseProfilePacket *)packet)->getProfileIndex());
         break;
-    case BTOasIdentifier::SETAIRHEIGHT:
-    {
-        SetAirheightPacket *ahp = (SetAirheightPacket *)packet;
-        switch (ahp->getWheelIndex())
-        {
-        case WHEEL_FRONT_PASSENGER:
-            setRideHeightFrontPassenger(ahp->getPressure());
-            break;
-        case WHEEL_REAR_PASSENGER:
-            setRideHeightRearPassenger(ahp->getPressure());
-            break;
-        case WHEEL_FRONT_DRIVER:
-            setRideHeightFrontDriver(ahp->getPressure());
-            break;
-        case WHEEL_REAR_DRIVER:
-            setRideHeightRearDriver(ahp->getPressure());
-            break;
-        }
-    }
-    break;
     case BTOasIdentifier::DETECTPRESSURESENSORS:
         setlearnPressureSensors(true);
         setinternalReboot(true);
@@ -670,8 +678,8 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         break;
     case BTOasIdentifier::PRESETREPORT:
     {
-        readProfile(((PresetPacket *)packet)->getProfile());
-        PresetPacket presetPacket(((PresetPacket *)packet)->getProfile(), currentProfile[WHEEL_FRONT_PASSENGER], currentProfile[WHEEL_REAR_PASSENGER], currentProfile[WHEEL_FRONT_DRIVER], currentProfile[WHEEL_REAR_DRIVER]);
+        ProfileRaw p = readProfile(((PresetPacket *)packet)->getProfile());
+        PresetPacket presetPacket(((PresetPacket *)packet)->getProfile(), p.pressure[WHEEL_FRONT_PASSENGER], p.pressure[WHEEL_REAR_PASSENGER], p.pressure[WHEEL_FRONT_DRIVER], p.pressure[WHEEL_REAR_DRIVER]);
         packetMover::sendRestPacket(&presetPacket, con_handle);
         presetPacket.dump();
 
@@ -694,10 +702,8 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             setcompressorOffPSI(*recpkt->_compressorOffPSI());
             setpressureSensorMax(*recpkt->_pressureSensorMax());
             setbagVolumePercentage(*recpkt->_bagVolumePercentage());
-            setheightSensorInvertBits(*recpkt->_heightSensorInvertBits());
             uint32_t flags = *recpkt->_configFlagsBits();
             setriseOnStart((flags & (1 << ConfigFlagsBit::CONFIG_RISE_ON_START)) != 0);
-            setmaintainPressure((flags & (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE)) != 0);
 #if ENABLE_AIR_OUT_ON_SHUTOFF
             setairOutOnShutoff((flags & (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF)) != 0);
 #endif
@@ -705,29 +711,29 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             setsafetyMode((flags & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0);
             setaiEnabled((flags & (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED)) != 0);
             saveAuxillaryOutputPreference(*recpkt->_auxillaryOutputConfig());
+
+
+
+            // sensorlessLevelling and maintain pressure are mutually exclusive, so if one is enabled, the other must be disabled
+            bool sensorlessLeveling = (flags & (1 << ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING)) != 0;
+            bool maintainPressure = (flags & (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE)) != 0;
+            if (maintainPressure == true && getmaintainPressure() == false) {
+                // maintain pressure was just switched to enable, so we disable sensorless leveling
+                sensorlessLeveling = false;
+            }
+            if (sensorlessLeveling == true && getsensorlessLeveling() == false) {
+                // sensorless leveling was just switched to enable, so we disable maintain pressure
+                maintainPressure = false;
+            }
+            setmaintainPressure(maintainPressure);
+            setsensorlessLeveling(sensorlessLeveling);
+
+            // if height sensor mode is enabled, we disable sensorless leveling
+            if (getheightSensorMode()) {
+                setsensorlessLeveling(false);
+            }
         }
-        uint32_t configFlagsBits = 0;
-        if (getriseOnStart())
-            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_RISE_ON_START);
-        if (getmaintainPressure())
-            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE);
-#if ENABLE_AIR_OUT_ON_SHUTOFF
-        if (getairOutOnShutoff())
-            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF);
-#endif
-        if (getheightSensorMode())
-            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE);
-        if (getsafetyMode())
-            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE);
-        if (getaiEnabled())
-            configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED);
-        
-        AuxillaryOutputModePayload auxillaryOutputConfig;
-        auxillaryOutputConfig.mode = (AuxillaryOutputMode)getauxillaryOutputMode();
-        auxillaryOutputConfig.timeUnit = (AuxillaryOutputModeTimeUnit)getauxillaryOutputModeTimeUnit();
-        auxillaryOutputConfig.time = getauxillaryOutputTime();
-        auxillaryOutputConfig.interval = getauxillaryOutputInterval();
-        ConfigValuesPacket pkt(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getheightSensorInvertBits(), configFlagsBits, auxillaryOutputConfig);
+        ConfigValuesPacket pkt = buildCurrentConfigValuesPacket();
         if (*recpkt->_setValues())
         {
             // if we changes values, update all the connected clients
@@ -867,6 +873,27 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
     case BTOasIdentifier::AUXILLARYOUTPUTCONTROL:
         getAuxillaryOutput()->onOffOverride(((AuxillaryOutputControlPacket *)packet)->getBoolean());
         break;
+    case BTOasIdentifier::CALIBRATEHEIGHTSENSORS:
+    {
+        uint8_t calType = ((CalibrateHeightSensorsPacket *)packet)->getCalibrationType();
+        for (int i = 0; i < 4; i++)
+        {
+            float raw = getWheel(i)->readLevelSensorRaw();
+            switch (calType)
+            {
+            case HEIGHT_CAL_MIN:
+                setheightCalMin(i, raw);
+                break;
+            case HEIGHT_CAL_MAX:
+                setheightCalMax(i, raw);
+                break;
+            case HEIGHT_CAL_MIN_RIDE_HEIGHT:
+                setheightCalMinRide(i, getWheel(i)->getSelectedInputValue());
+                break;
+            }
+        }
+        break;
+    }
     }
 }
 

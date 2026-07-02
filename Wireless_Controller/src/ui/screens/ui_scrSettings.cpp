@@ -113,6 +113,13 @@ static void maintain_pressure_handler(void *data)
     log_i("Pressed maintain pressure %i", value);
 }
 
+static void sensorless_leveling_handler(void *data)
+{
+    bool value = (bool)data;
+    setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING, value);
+    log_i("Pressed sensorless leveling %i", value);
+}
+
 static void rise_on_start_handler(void *data)
 {
     bool value = (bool)data;
@@ -136,17 +143,6 @@ static void safety_mode_handler(void *data)
     log_i("Pressed safetymode %i", value);
 }
 
-static void height_invert_handler(int wheelNum, void *data)
-{
-    uint8_t bits = *util_configValues._heightSensorInvertBits();
-    if ((bool)data)
-        bits |= (1 << wheelNum);
-    else
-        bits &= ~(1 << wheelNum);
-    *util_configValues._heightSensorInvertBits() = bits;
-    sendConfigValuesPacket(true);
-    alertValueUpdated();
-}
 
 static void aux_output_switch_handler(void *data)
 {
@@ -206,18 +202,20 @@ static void aux_mode_shutdown_handler(void *data)
     alertValueUpdated();
 }
 
-void ScrSettings::updateHeightInvertOptionsVisibility(bool isLevelMode)
+void ScrSettings::updateLevelModeOptionsVisibility(bool isLevelMode)
 {
     if (isLevelMode) {
-        lv_obj_remove_flag(this->ui_heightInvertFP->root, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_remove_flag(this->ui_heightInvertRP->root, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_remove_flag(this->ui_heightInvertFD->root, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_remove_flag(this->ui_heightInvertRD->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_calibrateMinHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_calibrateMinRideHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_sensorlessleveling->root, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(this->ui_maintainprssure->text, "Maintain Height");
     } else {
-        lv_obj_add_flag(this->ui_heightInvertFP->root, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(this->ui_heightInvertRP->root, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(this->ui_heightInvertFD->root, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(this->ui_heightInvertRD->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_calibrateMinHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_calibrateMinRideHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_sensorlessleveling->root, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(this->ui_maintainprssure->text, "Auto Leak Detect Refill");
     }
 }
 
@@ -443,7 +441,8 @@ void ScrSettings::init(lv_obj_t *parent)
     // --- Basic settings page ---
     lv_obj_t *basic_settings_page = this->addSettingsPage(pages_container, true);
 
-    this->ui_maintainprssure = new Option(basic_settings_page, OptionType::ON_OFF, "Maintain Preset", {.INT = 0}, maintain_pressure_handler);
+    this->ui_maintainprssure = new Option(basic_settings_page, OptionType::ON_OFF, "Maintain Pressure", {.INT = 0}, maintain_pressure_handler);
+    this->ui_sensorlessleveling = new Option(basic_settings_page, OptionType::ON_OFF, "Height levelling", {.INT = 0}, sensorless_leveling_handler);
     this->ui_riseonstart = new Option(basic_settings_page, OptionType::ON_OFF, "Rise on start", {.INT = 0}, rise_on_start_handler);
 
 #if ENABLE_AIR_OUT_ON_SHUTOFF
@@ -535,12 +534,52 @@ void ScrSettings::init(lv_obj_t *parent)
     };
     this->ui_heightsensormode = new RadioOption(levelling_page, levelTypeRadioText, 2, levelTypeRadioCB);
 
-    this->ui_heightInvertFD = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Left", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_FRONT_DRIVER, data); });
-    this->ui_heightInvertFP = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Right", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_FRONT_PASSENGER, data); });
-    this->ui_heightInvertRD = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Left", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_REAR_DRIVER, data); });
-    this->ui_heightInvertRP = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Right", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_REAR_PASSENGER, data); });
+    this->ui_calibrateMinHeight = new Option(levelling_page, OptionType::BUTTON, "Calibrate Min Height", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Calibrate Min Height?",
+            "Please air out your car to the lowest it goes before you click ok",
+            "OK", "Cancel",
+            []() -> void
+            {
+                CalibrateHeightSensorsPacket pkt(HEIGHT_CAL_MIN);
+                sendRestPacket(&pkt);
+                log_i("Pressed calibrate min height");
+                showDialog("Calibrated min height", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
 
-    this->updateHeightInvertOptionsVisibility(false);
+    this->ui_calibrateMaxHeight = new Option(levelling_page, OptionType::BUTTON, "Calibrate Max Height", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Calibrate Max Height?",
+            "Raise your vehicle as high as it can go before you click ok",
+            "OK", "Cancel",
+            []() -> void
+            {
+                CalibrateHeightSensorsPacket pkt(HEIGHT_CAL_MAX);
+                sendRestPacket(&pkt);
+                log_i("Pressed calibrate max height");
+                showDialog("Calibrated max height", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
+
+    this->ui_calibrateMinRideHeight = new Option(levelling_page, OptionType::BUTTON, "Calibrate Min Ride Height", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Calibrate Minimum Ride Height?",
+            "Set your vehicle to the lowest ride height you want to allow before you click ok. This is used for maintain height. Only use this after calibrating min and max.",
+            "OK", "Cancel",
+            []() -> void
+            {
+                CalibrateHeightSensorsPacket pkt(HEIGHT_CAL_MIN_RIDE_HEIGHT);
+                sendRestPacket(&pkt);
+                log_i("Pressed calibrate min ride height");
+                showDialog("Calibrated min ride height", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
+
+    this->updateLevelModeOptionsVisibility(false);
 
     // --- Auxillary Output page ---
     lv_obj_t *aux_page = this->addSettingsPage(pages_container, true);
@@ -928,15 +967,10 @@ void ScrSettings::loop()
         this->ui_rfbuttonC->setRightHandText(itoa(*util_configValues._rfButtonC() + 1, buf, 10));
         this->ui_rfbuttonD->setRightHandText(itoa(*util_configValues._rfButtonD() + 1, buf, 10));
 
-        uint8_t invertBits = *util_configValues._heightSensorInvertBits();
-        this->ui_heightInvertFP->setBooleanValue((invertBits & (1 << WHEEL_FRONT_PASSENGER)) != 0, false);
-        this->ui_heightInvertRP->setBooleanValue((invertBits & (1 << WHEEL_REAR_PASSENGER)) != 0, false);
-        this->ui_heightInvertFD->setBooleanValue((invertBits & (1 << WHEEL_FRONT_DRIVER)) != 0, false);
-        this->ui_heightInvertRD->setBooleanValue((invertBits & (1 << WHEEL_REAR_DRIVER)) != 0, false);
-
         uint8_t flags = *util_configValues._configFlagsBits();
         this->ui_riseonstart->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_RISE_ON_START)) != 0, false);
         this->ui_maintainprssure->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE)) != 0, false);
+        this->ui_sensorlessleveling->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING)) != 0, false);
 #if ENABLE_AIR_OUT_ON_SHUTOFF
         this->ui_airoutonshutoff->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF)) != 0, false);
 #endif
@@ -944,7 +978,7 @@ void ScrSettings::loop()
         this->ui_aiEnabled->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED)) != 0, false);
         bool heightSensorMode = (flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0;
         this->ui_heightsensormode->setSelectedOption(heightSensorMode ? 1 : 0);
-        this->updateHeightInvertOptionsVisibility(heightSensorMode);
+        this->updateLevelModeOptionsVisibility(heightSensorMode);
 
         AuxillaryOutputModePayload *aux = util_configValues._auxillaryOutputConfig();
         this->ui_auxModeStartup->setBooleanValue((aux->mode & (1u << AUX_MODE_STARTUP_TIMED)) != 0, false);
@@ -975,16 +1009,16 @@ void ScrSettings::cleanup()
     delete ui_aiPercentage;
     delete ui_aiEnabled;
     delete ui_maintainprssure;
+    delete ui_sensorlessleveling;
     delete ui_riseonstart;
 #if ENABLE_AIR_OUT_ON_SHUTOFF
     delete ui_airoutonshutoff;
 #endif
     delete ui_safetymode;
     delete ui_heightsensormode;
-    delete ui_heightInvertFP;
-    delete ui_heightInvertRP;
-    delete ui_heightInvertFD;
-    delete ui_heightInvertRD;
+    delete ui_calibrateMinHeight;
+    delete ui_calibrateMaxHeight;
+    delete ui_calibrateMinRideHeight;
     delete ui_config1;
     delete ui_config2;
     delete ui_config3;

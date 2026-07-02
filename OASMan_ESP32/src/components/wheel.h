@@ -22,7 +22,6 @@ private:
 
     byte pressureGoal;
     unsigned long routineStartTime;
-    bool quickMode; // flag to skip extra percise measurements
 
     float pressureValue;
     float levelValue;
@@ -30,12 +29,39 @@ private:
     int s_AirIn;
     int s_AirOut;
 
+    // Sensorless levelling per-corner runtime state (see Wheel::heightsensorlessLevelling())
+    float slLastSample = 0;             // pressure-stability window reference reading
+    unsigned long slParkedSince = 0;    // when continuous parked state began (0 = not parked)
+    unsigned long slLastInstabilityDetectedTimeMS = 0;    // when current pressure-stable window began (0 = none)
+    unsigned long slLastCorrection = 0; // last correction time (for cooldown)
+    int8_t slSameDirCount = 0;          // signed run-length of same-direction corrections
+    // Baseline capture (see Wheel::sensorlessCaptureBaseline())
+    unsigned long slValvesClosedSince = 0; // when all valves last became closed (0 = a valve is open)
+    bool slBaselineCaptured = false;       // captured the baseline once for the current valve-close event
+    byte directlySetPressure = 0; // This is the 'real' pressure that is read after any valve movement. This is our 'expected' pressure in a sense. This is tracked by the sensorlessCaptureBaseline and is only usable when slBaselineCaptured is true.
+
+    void goalRoutine();
+    void maintainPressure();
+    void heightsensorlessLevelling();
+    void pressureCaptureBaseline();
+    void nullifySensorlessBaseline();
+    void markInstability(float current);
+
+    bool onlyAirUp = false;
+    bool initPressureGoal(int newPressure, bool onlyAirUp);
+    void trackPressureStability();
+    bool isPressureStable();
+
+    float readLevelSensorNormalized();
+
+
 public:
     Wheel();
     Wheel(int solenoidInPin, int solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum);
-    void initPressureGoal(int newPressure, bool quick = false);
+    bool initPressureGoal(int newPressure);
     void loop();
     void readInputs();
+    float readLevelSensorRaw();
     float getSelectedInputValue();
     bool isActive();
     Solenoid *getInSolenoid();

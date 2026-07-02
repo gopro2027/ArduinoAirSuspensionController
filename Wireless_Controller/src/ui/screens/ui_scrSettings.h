@@ -40,16 +40,16 @@ public:
     Option *ui_aiPercentage;  // AI Percentage (text with value)
     Option *ui_aiEnabled;  // AI Enabled (switch)
     Option *ui_maintainprssure;  // Maintain Pressure (switch)
+    Option *ui_sensorlessleveling;  // Sensorless Leveling (switch)
     Option *ui_riseonstart;  // Rise on start (switch)
 #if ENABLE_AIR_OUT_ON_SHUTOFF
     Option *ui_airoutonshutoff;  // Fall on shutdown (switch)
 #endif
     Option *ui_safetymode;  // Safety Mode (switch)
     RadioOption *ui_heightsensormode;  // Height sensor mode (radio)
-    Option *ui_heightInvertFP;  // Invert Front Passenger height sensor
-    Option *ui_heightInvertRP;  // Invert Rear Passenger height sensor
-    Option *ui_heightInvertFD;  // Invert Front Driver height sensor
-    Option *ui_heightInvertRD;  // Invert Rear Driver height sensor
+    Option *ui_calibrateMinHeight;  // Calibrate Min Height button (level mode only)
+    Option *ui_calibrateMinRideHeight;  // Calibrate Minimum Ride Height button (level mode only)
+    Option *ui_calibrateMaxHeight;  // Calibrate Max Height button (level mode only)
     Option *ui_config1;  // Bag Max PSI (slider)
     Option *ui_config2;  // Shutoff Time (textarea)
     Option *ui_config3;  // Compressor On PSI (textarea)
@@ -84,7 +84,7 @@ public:
     void loop() override;
     void cleanup() override;
     void showColorPickerModal();
-    void updateHeightInvertOptionsVisibility(bool isLevelMode);
+    void updateLevelModeOptionsVisibility(bool isLevelMode);
 };
 
 extern ScrSettings scrSettings;

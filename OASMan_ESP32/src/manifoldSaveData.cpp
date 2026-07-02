@@ -1,8 +1,13 @@
 #include "manifoldSaveData.h"
 
 SaveData _SaveData;
-byte currentProfile[4];
-bool sendProfileBT = false;
+// Set by background tasks (e.g. sensorless levelling auto-disable) to ask the BLE task to
+// re-broadcast the current config values to all authed clients so their UIs stay in sync.
+bool sendConfigBT = false;
+void requestSendConfigBT()
+{
+    sendConfigBT = true;
+}
 
 int learnDataIndex[4];
 PressureLearnSaveStruct learnData[4][LEARN_SAVE_COUNT];// TODO: This data needs to be moved to be a malloc or new array, so that when we do OTA stuff it doesn't take up memory (currently it is statically allocated and uses 8kb even during OTA updates which is quite a lot )
@@ -124,6 +129,7 @@ void beginSaveData()
 
     _SaveData.riseOnStart.load("riseOnStart", false);
     _SaveData.maintainPressure.load("maintainPressure", false);
+    _SaveData.sensorlessLeveling.load("sensorlessLevel", false);
     _SaveData.airOutOnShutoff.load("airOutOnShutoff", false);
     _SaveData.heightSensorMode.load("heightSensorMode", false);
     _SaveData.baseProfile.load("baseProfile", 2);
@@ -150,7 +156,6 @@ void beginSaveData()
     _SaveData.rfButtonBPreset.load("rfButtonBPreset", RIDE_HEIGHT_PRESET_NUMBER);
     _SaveData.rfButtonCPreset.load("rfButtonCPreset", RIDE_HEIGHT_PRESET_NUMBER);
     _SaveData.rfButtonDPreset.load("rfButtonDPreset", RIDE_HEIGHT_PRESET_NUMBER);
-    _SaveData.heightSensorInvertBits.load("heightSensorInvertBits", 0);
 
     _SaveData.systemShutoffTimeM.load("systemShutoffTimeM", SYSTEM_SHUTOFF_TIME_M);
     _SaveData.compressorOnPSI.load("compressorOnPSI", COMPRESSOR_ON_BELOW_PSI);
@@ -169,6 +174,17 @@ void beginSaveData()
             snprintf(buf, sizeof(buf), "profile%i|%i", i, j);
             _SaveData.profile[i].pressure[j].load(buf, 50);
         }
+    }
+
+    for (int j = 0; j < 4; j++)
+    {
+        char buf[15];
+        snprintf(buf, sizeof(buf), "hsCalMin%i", j);
+        _SaveData.heightSensorCalMin[j].loadDouble(buf, 0.0);
+        snprintf(buf, sizeof(buf), "hsCalMax%i", j);
+        _SaveData.heightSensorCalMax[j].loadDouble(buf, 100.0);
+        snprintf(buf, sizeof(buf), "hsCalMinRide%i", j);
+        _SaveData.heightSensorCalMinRide[j].loadDouble(buf, 0.0);
     }
 
     // _SaveData.upModel.weights[0].loadDouble("upmod0", 0.1);
@@ -319,29 +335,15 @@ AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex)
     return &_SaveData.aiModels[aiIndex];
 }
 
-void readProfile(byte profileIndex)
+ProfileRaw readProfile(byte profileIndex)
 {
-    currentProfile[WHEEL_FRONT_PASSENGER] = _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER].get().i;
-    currentProfile[WHEEL_REAR_PASSENGER] = _SaveData.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER].get().i;
-    currentProfile[WHEEL_FRONT_DRIVER] = _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER].get().i;
-    currentProfile[WHEEL_REAR_DRIVER] = _SaveData.profile[profileIndex].pressure[WHEEL_REAR_DRIVER].get().i;
-    sendProfileBT = true;
-}
-
-void writeProfile(byte profileIndex)
-{
-
-    if (currentProfile[WHEEL_FRONT_PASSENGER] != _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER].get().i ||
-        currentProfile[WHEEL_REAR_PASSENGER] != _SaveData.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER].get().i ||
-        currentProfile[WHEEL_FRONT_DRIVER] != _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER].get().i ||
-        currentProfile[WHEEL_REAR_DRIVER] != _SaveData.profile[profileIndex].pressure[WHEEL_REAR_DRIVER].get().i)
-    {
-
-        _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER].set(currentProfile[WHEEL_FRONT_PASSENGER]);
-        _SaveData.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER].set(currentProfile[WHEEL_REAR_PASSENGER]);
-        _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER].set(currentProfile[WHEEL_FRONT_DRIVER]);
-        _SaveData.profile[profileIndex].pressure[WHEEL_REAR_DRIVER].set(currentProfile[WHEEL_REAR_DRIVER]);
-    }
+    static ProfileRaw profile;
+    profile.profileNum = profileIndex;
+    profile.pressure[WHEEL_FRONT_PASSENGER] = _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_PASSENGER].get().i;
+    profile.pressure[WHEEL_REAR_PASSENGER] = _SaveData.profile[profileIndex].pressure[WHEEL_REAR_PASSENGER].get().i;
+    profile.pressure[WHEEL_FRONT_DRIVER] = _SaveData.profile[profileIndex].pressure[WHEEL_FRONT_DRIVER].get().i;
+    profile.pressure[WHEEL_REAR_DRIVER] = _SaveData.profile[profileIndex].pressure[WHEEL_REAR_DRIVER].get().i;
+    return profile;
 }
 
 void savePressuresToProfile(byte profileIndex, float _WHEEL_FRONT_PASSENGER, float _WHEEL_REAR_PASSENGER, float _WHEEL_FRONT_DRIVER, float _WHEEL_REAR_DRIVER)
@@ -354,6 +356,7 @@ void savePressuresToProfile(byte profileIndex, float _WHEEL_FRONT_PASSENGER, flo
 
 createSaveFuncInt(riseOnStart, bool);
 createSaveFuncInt(maintainPressure, bool);
+createSaveFuncInt(sensorlessLeveling, bool);
 createSaveFuncInt(airOutOnShutoff, bool);
 createSaveFuncInt(heightSensorMode, bool);
 createSaveFuncInt(baseProfile, byte);
@@ -390,7 +393,6 @@ createSaveFuncInt(rfButtonAPreset, uint8_t);
 createSaveFuncInt(rfButtonBPreset, uint8_t);
 createSaveFuncInt(rfButtonCPreset, uint8_t);
 createSaveFuncInt(rfButtonDPreset, uint8_t);
-createSaveFuncInt(heightSensorInvertBits, uint8_t);
 
 // auxillary output preference is in it's own class so we have custom functions defined
 AuxillaryOutputMode getauxillaryOutputMode() {
@@ -423,4 +425,29 @@ void saveAuxillaryOutputPreference(AuxillaryOutputModePayload payload) {
 float getHeightSensorMax()
 {
     return 100.0f;
+}
+
+float getheightCalMin(byte wheelNum)
+{
+    return _SaveData.heightSensorCalMin[wheelNum].get().d;
+}
+float getheightCalMax(byte wheelNum)
+{
+    return _SaveData.heightSensorCalMax[wheelNum].get().d;
+}
+void setheightCalMin(byte wheelNum, float value)
+{
+    _SaveData.heightSensorCalMin[wheelNum].setDouble(value);
+}
+void setheightCalMax(byte wheelNum, float value)
+{
+    _SaveData.heightSensorCalMax[wheelNum].setDouble(value);
+}
+float getheightCalMinRide(byte wheelNum)
+{
+    return _SaveData.heightSensorCalMinRide[wheelNum].get().d;
+}
+void setheightCalMinRide(byte wheelNum, float value)
+{
+    _SaveData.heightSensorCalMinRide[wheelNum].setDouble(value);
 }

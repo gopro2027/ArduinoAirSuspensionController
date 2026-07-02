@@ -673,7 +673,7 @@ class SettingsPageState extends State<SettingsPage> {
           bool,
           bool,
           bool,
-          int,
+          bool,
           int,
           int,
           int,
@@ -681,11 +681,11 @@ class SettingsPageState extends State<SettingsPage> {
         )>(
       selector: (_, m) => (
         m.maintainPressure,
+        m.sensorlessLeveling,
         m.riseOnStart,
         m.airOutOnShutoff,
         m.safetyMode,
         m.heightSensorMode,
-        m.heightSensorInvertBits,
         m.rfButtonAPreset,
         m.rfButtonBPreset,
         m.rfButtonCPreset,
@@ -1167,7 +1167,7 @@ class SettingsPageState extends State<SettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildSwitch(
-                  'Maintain Preset',
+                  bm.heightSensorMode ? 'Maintain Height' : 'Auto Leak Detect Refill',
                   bm.maintainPressure,
                   (value) {
                     bm.maintainPressure = value;
@@ -1175,6 +1175,16 @@ class SettingsPageState extends State<SettingsPage> {
                     _saveManifoldConfigNow();
                   },
                 ),
+                if (!bm.heightSensorMode)
+                  _buildSwitch(
+                    'Sensorless Level',
+                    bm.sensorlessLeveling,
+                    (value) {
+                      bm.sensorlessLeveling = value;
+                      bm.refreshFromUi();
+                      _saveManifoldConfigNow();
+                    },
+                  ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -1384,41 +1394,68 @@ class SettingsPageState extends State<SettingsPage> {
                 ),
                 if (bm.heightSensorMode) ...[
                   const SizedBox(height: 8),
-                  _buildSwitch(
-                    'Invert Front Right',
-                    (bm.heightSensorInvertBits & (1 << 0)) != 0,
-                    (value) {
-                      bm.setHeightInvertWheel(0, value);
-                      bm.refreshFromUi();
-                      _saveManifoldConfigNow();
-                    },
+                  TextButton(
+                    onPressed: () => _showConfirm(
+                      title: 'Calibrate Min Height?',
+                      message:
+                          'Please air out your car to the lowest it goes before you click ok',
+                      confirmLabel: 'OK',
+                      onConfirm: () {
+                        bm.sendCalibrateHeightSensors(
+                            HeightCalibrationType.min);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Calibrated min height'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    child: const Text('Calibrate Min Height'),
                   ),
-                  _buildSwitch(
-                    'Invert Rear Right',
-                    (bm.heightSensorInvertBits & (1 << 1)) != 0,
-                    (value) {
-                      bm.setHeightInvertWheel(1, value);
-                      bm.refreshFromUi();
-                      _saveManifoldConfigNow();
-                    },
+                  TextButton(
+                    onPressed: () => _showConfirm(
+                      title: 'Calibrate Max Height?',
+                      message:
+                          'Raise your vehicle as high as it can go before you click ok',
+                      confirmLabel: 'OK',
+                      onConfirm: () {
+                        bm.sendCalibrateHeightSensors(
+                            HeightCalibrationType.max);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Calibrated max height'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    child: const Text('Calibrate Max Height'),
                   ),
-                  _buildSwitch(
-                    'Invert Front Left',
-                    (bm.heightSensorInvertBits & (1 << 2)) != 0,
-                    (value) {
-                      bm.setHeightInvertWheel(2, value);
-                      bm.refreshFromUi();
-                      _saveManifoldConfigNow();
-                    },
-                  ),
-                  _buildSwitch(
-                    'Invert Rear Left',
-                    (bm.heightSensorInvertBits & (1 << 3)) != 0,
-                    (value) {
-                      bm.setHeightInvertWheel(3, value);
-                      bm.refreshFromUi();
-                      _saveManifoldConfigNow();
-                    },
+                  TextButton(
+                    onPressed: () => _showConfirm(
+                      title: 'Calibrate Minimum Ride Height?',
+                      message:
+                          'Set your vehicle to the lowest ride height you want to allow before you click ok. This is used for maintain height. Only use this after calibrating min and max.',
+                      confirmLabel: 'OK',
+                      onConfirm: () {
+                        bm.sendCalibrateHeightSensors(
+                            HeightCalibrationType.minRideHeight);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Calibrated min ride height'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    child: const Text('Calibrate Min Ride Height'),
                   ),
                 ],
               ],

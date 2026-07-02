@@ -637,7 +637,7 @@ void doDance()
     Serial.println("Loading profile 2");
     // TODO: make base profile work (look in other spots in app for this)
     // go to the 2nd profile since that is default right now for ride height.
-    loadProfileAirUpQuick(RIDE_HEIGHT_PRESET_NUMBER);
+    loadProfileAirUp(RIDE_HEIGHT_PRESET_NUMBER);
 }
 
 void updateKonami(ControllerPtr ctl)

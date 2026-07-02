@@ -91,6 +91,7 @@ public:
     Preferencable pressureInputTank;
 
     Preferencable maintainPressure;
+    Preferencable sensorlessLeveling;
     Preferencable airOutOnShutoff;
     Preferencable heightSensorMode;
     Preferencable bagMaxPressure;
@@ -107,7 +108,9 @@ public:
     Preferencable rfButtonBPreset;
     Preferencable rfButtonCPreset;
     Preferencable rfButtonDPreset;
-    Preferencable heightSensorInvertBits;
+    Preferencable heightSensorCalMin[4]; // double, raw height % at calibrated lowest point
+    Preferencable heightSensorCalMax[4]; // double, raw height % at calibrated highest point
+    Preferencable heightSensorCalMinRide[4]; // double, raw height % at calibrated minimum ride height
 
     AuxillaryOutputPreference auxillaryOutputPreference;
 
@@ -136,13 +139,17 @@ struct PressureLearnSaveStruct
     }
 };
 
+struct ProfileRaw {
+    int profileNum;
+    byte pressure[4];
+};
+
 extern SaveData _SaveData;
-extern byte currentProfile[4];
-extern bool sendProfileBT;
+extern bool sendConfigBT;
+void requestSendConfigBT();
 
 void beginSaveData();
-void readProfile(byte profileIndex);
-void writeProfile(byte profileIndex);
+ProfileRaw readProfile(byte profileIndex);
 void savePressuresToProfile(byte profileIndex, float _WHEEL_FRONT_PASSENGER, float _WHEEL_REAR_PASSENGER, float _WHEEL_FRONT_DRIVER, float _WHEEL_REAR_DRIVER);
 
 PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX aiIndex);
@@ -156,6 +163,7 @@ AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex);
 
 headerDefineSaveFunc(riseOnStart, bool);
 headerDefineSaveFunc(maintainPressure, bool);
+headerDefineSaveFunc(sensorlessLeveling, bool);
 headerDefineSaveFunc(airOutOnShutoff, bool);
 headerDefineSaveFunc(heightSensorMode, bool);
 headerDefineSaveFunc(baseProfile, byte);
@@ -191,7 +199,6 @@ headerDefineSaveFunc(rfButtonAPreset, uint8_t);
 headerDefineSaveFunc(rfButtonBPreset, uint8_t);
 headerDefineSaveFunc(rfButtonCPreset, uint8_t);
 headerDefineSaveFunc(rfButtonDPreset, uint8_t);
-headerDefineSaveFunc(heightSensorInvertBits, uint8_t);
 
 headerDefineSaveFunc(auxillaryOutputMode, AuxillaryOutputMode);
 headerDefineSaveFunc(auxillaryOutputModeTimeUnit, AuxillaryOutputModeTimeUnit);
@@ -202,5 +209,12 @@ headerDefineSaveFunc(auxillaryIntervalCounter, uint8_t);
 void saveAuxillaryOutputPreference(AuxillaryOutputModePayload payload);
 
 float getHeightSensorMax();
+
+float getheightCalMin(byte wheelNum);
+float getheightCalMax(byte wheelNum);
+float getheightCalMinRide(byte wheelNum);
+void setheightCalMin(byte wheelNum, float value);
+void setheightCalMax(byte wheelNum, float value);
+void setheightCalMinRide(byte wheelNum, float value);
 
 #endif
