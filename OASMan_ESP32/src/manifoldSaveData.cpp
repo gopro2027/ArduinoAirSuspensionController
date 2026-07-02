@@ -183,6 +183,8 @@ void beginSaveData()
         _SaveData.heightSensorCalMin[j].loadDouble(buf, 0.0);
         snprintf(buf, sizeof(buf), "hsCalMax%i", j);
         _SaveData.heightSensorCalMax[j].loadDouble(buf, 100.0);
+        snprintf(buf, sizeof(buf), "hsCalMinRide%i", j);
+        _SaveData.heightSensorCalMinRide[j].loadDouble(buf, 0.0);
     }
 
     // _SaveData.upModel.weights[0].loadDouble("upmod0", 0.1);
@@ -440,4 +442,12 @@ void setheightCalMin(byte wheelNum, float value)
 void setheightCalMax(byte wheelNum, float value)
 {
     _SaveData.heightSensorCalMax[wheelNum].setDouble(value);
+}
+float getheightCalMinRide(byte wheelNum)
+{
+    return _SaveData.heightSensorCalMinRide[wheelNum].get().d;
+}
+void setheightCalMinRide(byte wheelNum, float value)
+{
+    _SaveData.heightSensorCalMinRide[wheelNum].setDouble(value);
 }

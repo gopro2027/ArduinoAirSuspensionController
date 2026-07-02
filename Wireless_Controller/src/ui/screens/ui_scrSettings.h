@@ -48,6 +48,7 @@ public:
     Option *ui_safetymode;  // Safety Mode (switch)
     RadioOption *ui_heightsensormode;  // Height sensor mode (radio)
     Option *ui_calibrateMinHeight;  // Calibrate Min Height button (level mode only)
+    Option *ui_calibrateMinRideHeight;  // Calibrate Minimum Ride Height button (level mode only)
     Option *ui_calibrateMaxHeight;  // Calibrate Max Height button (level mode only)
     Option *ui_config1;  // Bag Max PSI (slider)
     Option *ui_config2;  // Shutoff Time (textarea)

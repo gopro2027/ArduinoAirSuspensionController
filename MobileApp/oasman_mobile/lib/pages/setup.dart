@@ -1401,7 +1401,8 @@ class SettingsPageState extends State<SettingsPage> {
                           'Please air out your car to the lowest it goes before you click ok',
                       confirmLabel: 'OK',
                       onConfirm: () {
-                        bm.sendCalibrateHeightSensors(false);
+                        bm.sendCalibrateHeightSensors(
+                            HeightCalibrationType.min);
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -1421,7 +1422,8 @@ class SettingsPageState extends State<SettingsPage> {
                           'Raise your vehicle as high as it can go before you click ok',
                       confirmLabel: 'OK',
                       onConfirm: () {
-                        bm.sendCalibrateHeightSensors(true);
+                        bm.sendCalibrateHeightSensors(
+                            HeightCalibrationType.max);
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -1433,6 +1435,27 @@ class SettingsPageState extends State<SettingsPage> {
                       },
                     ),
                     child: const Text('Calibrate Max Height'),
+                  ),
+                  TextButton(
+                    onPressed: () => _showConfirm(
+                      title: 'Calibrate Minimum Ride Height?',
+                      message:
+                          'Set your vehicle to the lowest ride height you want to allow before you click ok. This is used for maintain height.',
+                      confirmLabel: 'OK',
+                      onConfirm: () {
+                        bm.sendCalibrateHeightSensors(
+                            HeightCalibrationType.minRideHeight);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Calibrated min ride height'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    child: const Text('Calibrate Min Ride Height'),
                   ),
                 ],
               ],

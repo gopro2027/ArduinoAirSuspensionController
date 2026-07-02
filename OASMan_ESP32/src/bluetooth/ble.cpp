@@ -875,17 +875,21 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         break;
     case BTOasIdentifier::CALIBRATEHEIGHTSENSORS:
     {
-        bool isMax = ((CalibrateHeightSensorsPacket *)packet)->getBoolean();
+        uint8_t calType = ((CalibrateHeightSensorsPacket *)packet)->getCalibrationType();
         for (int i = 0; i < 4; i++)
         {
             float raw = getWheel(i)->readLevelSensorRaw();
-            if (isMax)
+            switch (calType)
             {
-                setheightCalMax(i, raw);
-            }
-            else
-            {
+            case HEIGHT_CAL_MIN:
                 setheightCalMin(i, raw);
+                break;
+            case HEIGHT_CAL_MAX:
+                setheightCalMax(i, raw);
+                break;
+            case HEIGHT_CAL_MIN_RIDE_HEIGHT:
+                setheightCalMinRide(i, raw);
+                break;
             }
         }
         break;

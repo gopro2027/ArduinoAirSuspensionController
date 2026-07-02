@@ -207,11 +207,13 @@ void ScrSettings::updateLevelModeOptionsVisibility(bool isLevelMode)
     if (isLevelMode) {
         lv_obj_remove_flag(this->ui_calibrateMinHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_calibrateMinRideHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(this->ui_sensorlessleveling->root, LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(this->ui_maintainprssure->text, "Maintain Height");
     } else {
         lv_obj_add_flag(this->ui_calibrateMinHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_calibrateMinRideHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(this->ui_sensorlessleveling->root, LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(this->ui_maintainprssure->text, "Auto Leak Detect Refill");
     }
@@ -539,7 +541,7 @@ void ScrSettings::init(lv_obj_t *parent)
             "OK", "Cancel",
             []() -> void
             {
-                CalibrateHeightSensorsPacket pkt(false);
+                CalibrateHeightSensorsPacket pkt(HEIGHT_CAL_MIN);
                 sendRestPacket(&pkt);
                 log_i("Pressed calibrate min height");
                 showDialog("Calibrated min height", lv_color_hex(0xFFFF00));
@@ -554,10 +556,25 @@ void ScrSettings::init(lv_obj_t *parent)
             "OK", "Cancel",
             []() -> void
             {
-                CalibrateHeightSensorsPacket pkt(true);
+                CalibrateHeightSensorsPacket pkt(HEIGHT_CAL_MAX);
                 sendRestPacket(&pkt);
                 log_i("Pressed calibrate max height");
                 showDialog("Calibrated max height", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
+
+    this->ui_calibrateMinRideHeight = new Option(levelling_page, OptionType::BUTTON, "Calibrate Min Ride Height", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Calibrate Minimum Ride Height?",
+            "Set your vehicle to the lowest ride height you want to allow before you click ok. This is used for maintain height.",
+            "OK", "Cancel",
+            []() -> void
+            {
+                CalibrateHeightSensorsPacket pkt(HEIGHT_CAL_MIN_RIDE_HEIGHT);
+                sendRestPacket(&pkt);
+                log_i("Pressed calibrate min ride height");
+                showDialog("Calibrated min ride height", lv_color_hex(0xFFFF00));
             },
             []() -> void {}, false);
     });
@@ -1001,6 +1018,7 @@ void ScrSettings::cleanup()
     delete ui_heightsensormode;
     delete ui_calibrateMinHeight;
     delete ui_calibrateMaxHeight;
+    delete ui_calibrateMinRideHeight;
     delete ui_config1;
     delete ui_config2;
     delete ui_config3;

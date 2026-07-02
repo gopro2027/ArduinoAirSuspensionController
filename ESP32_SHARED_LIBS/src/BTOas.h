@@ -123,6 +123,14 @@ enum BP32CMD
     BP32CMD_DISCONNECT_DEVICES
 };
 
+// Which per-wheel height calibration point CalibrateHeightSensorsPacket should capture.
+enum HeightCalibrationType : uint8_t
+{
+    HEIGHT_CAL_MIN = 0,             // lowest the vehicle physically goes
+    HEIGHT_CAL_MAX = 1,             // highest the vehicle physically goes
+    HEIGHT_CAL_MIN_RIDE_HEIGHT = 2  // lowest ride height allowed during normal use
+};
+
 union BTOasValue32
 {
     uint32_t i;
@@ -304,12 +312,10 @@ struct AuxillaryOutputControlPacket : BooleanPacket
     AuxillaryOutputControlPacket(bool on);
 };
 
-// One-way packet: manifold samples the raw (pre-invert, pre-normalization) height
-// sensor value on all 4 wheels and stores it as the per-wheel calibration point.
-// getBoolean() == false -> store as min, true -> store as max.
-struct CalibrateHeightSensorsPacket : BooleanPacket
+struct CalibrateHeightSensorsPacket : BTOasPacket
 {
-    CalibrateHeightSensorsPacket(bool isMax);
+    CalibrateHeightSensorsPacket(uint8_t calibrationType);
+    uint8_t getCalibrationType();
 };
 
 #endif

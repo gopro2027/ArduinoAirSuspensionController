@@ -110,6 +110,7 @@ public:
     Preferencable rfButtonDPreset;
     Preferencable heightSensorCalMin[4]; // double, raw height % at calibrated lowest point
     Preferencable heightSensorCalMax[4]; // double, raw height % at calibrated highest point
+    Preferencable heightSensorCalMinRide[4]; // double, raw height % at calibrated minimum ride height
 
     AuxillaryOutputPreference auxillaryOutputPreference;
 
@@ -211,7 +212,9 @@ float getHeightSensorMax();
 
 float getheightCalMin(byte wheelNum);
 float getheightCalMax(byte wheelNum);
+float getheightCalMinRide(byte wheelNum);
 void setheightCalMin(byte wheelNum, float value);
 void setheightCalMax(byte wheelNum, float value);
+void setheightCalMinRide(byte wheelNum, float value);
 
 #endif

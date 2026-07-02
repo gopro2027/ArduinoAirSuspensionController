@@ -51,6 +51,14 @@ class BTOasIdentifier {
   static const int CALIBRATEHEIGHTSENSORS = 39;
 }
 
+/// Which per-wheel height calibration point CALIBRATEHEIGHTSENSORS captures.
+/// Mirrors HeightCalibrationType in BTOas.h.
+class HeightCalibrationType {
+  static const int min = 0;
+  static const int max = 1;
+  static const int minRideHeight = 2;
+}
+
 /// GETCONFIGVALUES read request (cmd only, args zeroed). Reused on every connect.
 final List<int> kConfigReadPacket = List<int>.filled(btoasPacketSize, 0)
   ..[0] = BTOasIdentifier.GETCONFIGVALUES & 0xFF
@@ -507,10 +515,11 @@ class BLEManager extends ChangeNotifier {
   }
 
   /// Capture the current raw height sensor reading on all 4 wheels as the
-  /// per-wheel calibration point. isMax == false -> store as min, true -> max.
-  void sendCalibrateHeightSensors(bool isMax) {
+  /// per-wheel calibration point selected by [calibrationType]
+  /// (a HeightCalibrationType value).
+  void sendCalibrateHeightSensors(int calibrationType) {
     sendRestCommand(buildRestPacket(
-        BTOasIdentifier.CALIBRATEHEIGHTSENSORS, [BLEInt(isMax ? 1 : 0)]));
+        BTOasIdentifier.CALIBRATEHEIGHTSENSORS, [BLEInt(calibrationType)]));
   }
 
   /// RfCommandType / chip / button numbers match [BTOas.h].

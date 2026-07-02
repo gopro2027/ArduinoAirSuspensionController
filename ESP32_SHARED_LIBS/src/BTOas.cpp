@@ -350,8 +350,12 @@ AuxillaryOutputControlPacket::AuxillaryOutputControlPacket(bool on)
     this->cmd = AUXILLARYOUTPUTCONTROL;
     this->args32()[0].i = on;
 }
-CalibrateHeightSensorsPacket::CalibrateHeightSensorsPacket(bool isMax)
+CalibrateHeightSensorsPacket::CalibrateHeightSensorsPacket(uint8_t calibrationType)
 {
     this->cmd = CALIBRATEHEIGHTSENSORS;
-    this->args32()[0].i = isMax;
+    this->args32()[0].i = calibrationType;
+}
+uint8_t CalibrateHeightSensorsPacket::getCalibrationType()
+{
+    return (uint8_t)this->args32()[0].i;
 }
