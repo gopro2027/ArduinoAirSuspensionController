@@ -439,21 +439,23 @@ void Wheel::maintainPressure() {
     {
         if (this->slBaselineCaptured) 
         {
-            if (this->directlySetPressure > (getheightSensorMode() ? MAINTAIN_PRESSURE_MIN_ACTIVATION_LEVEL : MAINTAIN_PRESSURE_MIN_ACTIVATION_PSI))
-            {
-                float dif = this->directlySetPressure - this->getSelectedInputValue();
-                if (getheightSensorMode()) {
-                    dif = fabs(dif);
-                }
-                if (dif >= (getheightSensorMode() ? MAINTAIN_PRESSURE_THRESHOLD_LEVEL : MAINTAIN_PRESSURE_THRESHOLD_PSI))
+            // if we are in pressure mode, we don't care about stable values. we only want to go up to prevent a leaky bag. If we are in height sensor mode though, we care about stability as this is more meant as a weight levelling function not a leak detector.
+            if (!getheightSensorMode() || isPressureStable()) {
+                if (this->directlySetPressure > (getheightSensorMode() ? MAINTAIN_PRESSURE_MIN_ACTIVATION_LEVEL : MAINTAIN_PRESSURE_MIN_ACTIVATION_PSI))
                 {
-                    bool success = this->initPressureGoal(this->directlySetPressure, !getheightSensorMode()); // try to go back to the desired pressure
-                    if (!success) {
-                        Serial.println("Maintain pressure auto-disabled: failed to init pressure goal");
-                        setmaintainPressure(false);
-                        requestSendConfigBT(); // because we setsensorlessLeveling, ask BLE task to re-broadcast config so UIs reflect OFF
+                    float dif = this->directlySetPressure - this->getSelectedInputValue();
+                    if (getheightSensorMode()) {
+                        dif = fabs(dif);
                     }
-
+                    if (dif >= (getheightSensorMode() ? MAINTAIN_PRESSURE_THRESHOLD_LEVEL : MAINTAIN_PRESSURE_THRESHOLD_PSI))
+                    {
+                        bool success = this->initPressureGoal(this->directlySetPressure, !getheightSensorMode()); // try to go back to the desired pressure
+                        if (!success) {
+                            Serial.println("Maintain pressure auto-disabled: failed to init pressure goal");
+                            setmaintainPressure(false);
+                            requestSendConfigBT(); // because we setsensorlessLeveling, ask BLE task to re-broadcast config so UIs reflect OFF
+                        }
+                    }
                 }
             }
         }
