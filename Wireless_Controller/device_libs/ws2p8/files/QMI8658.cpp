@@ -8,7 +8,10 @@
 #define QMI8658_REG_CTRL3    0x04  // gyro ODR + full scale
 #define QMI8658_REG_CTRL5    0x06  // low-pass filters
 #define QMI8658_REG_CTRL7    0x08  // sensor enable
+#define QMI8658_REG_RESET    0x60  // soft reset command register
 #define QMI8658_REG_AX_L     0x35  // accel/gyro output block start
+
+#define QMI8658_RESET_CMD    0xB0
 
 #define QMI8658_WHO_AM_I_VAL 0x05
 
@@ -35,6 +38,27 @@ static bool writeReg(uint8_t reg, uint8_t value)
     return I2C_Write(s_addr, reg, &value, 1) == 0;
 }
 
+// Log every device that ACKs on the shared Wire bus, to help diagnose a
+// missing/relocated IMU (wrong bus, wrong address, or bus not yet initialized).
+static void scanBus(void)
+{
+    uint8_t found = 0;
+    for (uint8_t addr = 0x08; addr < 0x78; addr++)
+    {
+        Wire.beginTransmission(addr);
+        if (Wire.endTransmission(true) == 0)
+        {
+            log_i("QMI8658 scan: I2C device at 0x%02X", addr);
+            found++;
+        }
+    }
+    if (found == 0)
+    {
+        log_w("QMI8658 scan: no I2C devices responded on the Wire bus (SDA=%d SCL=%d)",
+              I2C_SDA_PIN, I2C_SCL_PIN);
+    }
+}
+
 bool QMI8658_Init(void)
 {
     s_present = false;
@@ -54,19 +78,26 @@ bool QMI8658_Init(void)
 
     if (s_addr == 0)
     {
-        log_w("QMI8658 not found on I2C bus (WHO_AM_I=0x%02X)", whoami);
+        log_w("QMI8658 not found (last WHO_AM_I=0x%02X); scanning bus...", whoami);
+        scanBus();
         return false;
     }
 
     log_i("QMI8658 found at 0x%02X", s_addr);
+
+    // Soft reset for a known-good starting state, then let it come back up.
+    writeReg(QMI8658_REG_RESET, QMI8658_RESET_CMD);
+    delay(20);
 
     // CTRL1: enable address auto-increment (bit6), keep I2C mode.
     if (!writeReg(QMI8658_REG_CTRL1, 0x40)) return false;
     // Configure accel + gyro scales/ODR.
     if (!writeReg(QMI8658_REG_CTRL2, QMI8658_CTRL2_VAL)) return false;
     if (!writeReg(QMI8658_REG_CTRL3, QMI8658_CTRL3_VAL)) return false;
-    // CTRL5: no additional low-pass filtering.
-    if (!writeReg(QMI8658_REG_CTRL5, 0x00)) return false;
+    // CTRL5: enable accel + gyro low-pass filters (mode 3, ~13.4% of ODR
+    // = ~17Hz BW at 125Hz). Cuts sensor noise so a stationary device reads
+    // near-zero activity. aLPF: bit0 en + bits[2:1] mode; gLPF: bit4 + bits[6:5].
+    if (!writeReg(QMI8658_REG_CTRL5, 0x77)) return false;
     // CTRL7: enable accelerometer (bit0) + gyroscope (bit1).
     if (!writeReg(QMI8658_REG_CTRL7, 0x03)) return false;
 

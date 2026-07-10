@@ -13,9 +13,10 @@ static bool vehicleMoving = false;
 // Poll cadence (~30 Hz is plenty for motion classification).
 static const uint32_t IMU_POLL_MS = 33;
 
-// Gravity estimate low-pass factor (per sample). Small => slow to track,
-// so real gravity is removed but sustained driving accel still shows up.
-static const float GRAVITY_ALPHA = 0.02f;
+// Slow low-pass factor (per sample) used to track constant offsets: gravity on
+// the accel and zero-rate bias on the gyro. Small => slow to track, so the DC
+// offset is removed but real transient motion still shows up.
+static const float BIAS_ALPHA = 0.02f;
 // Activity smoothing (exponential moving average of the per-sample metric).
 static const float ACTIVITY_BETA = 0.20f;
 
@@ -30,44 +31,85 @@ static const float ACTIVITY_PARKED_THRESH = 0.02f;
 static const uint32_t MOVING_CONFIRM_MS = 1000;
 static const uint32_t PARKED_CONFIRM_MS = 3000;
 
+// Retry the (lazy) IMU init up to this many times, ~1s apart, then give up.
+static const uint8_t IMU_INIT_MAX_ATTEMPTS = 10;
+
 static float gravityX = 0.0f, gravityY = 0.0f, gravityZ = 1.0f;
+// Gyro zero-rate bias (dps). MEMS gyros read several dps when perfectly still;
+// without subtracting this the activity metric never drops back to "parked".
+static float gyroBiasX = 0.0f, gyroBiasY = 0.0f, gyroBiasZ = 0.0f;
 static float activityAvg = 0.0f;
-static bool gravityInit = false;
+static bool biasInit = false;
 
 static void imu_motion_loop()
 {
-    if (!imuPresent) return;
-
     static uint32_t nextPoll = 0;
     static uint32_t conditionStart = 0; // when the opposing condition began
+    static uint32_t nextInitAttempt = 0;
+    static uint8_t initAttempts = 0;
+    static uint32_t nextDebugLog = 0;
     uint32_t now = millis();
+
+    // Lazy, self-healing init. task_waveshare (priority 5) starts before
+    // board_drivers_init() runs I2C_Init()/Wire.begin(), so an init attempt in
+    // waveshare_init() would race the bus setup and fail permanently. Retry here
+    // (on this task, the only Wire user) until the IMU answers.
+    if (!imuPresent)
+    {
+        if (initAttempts >= IMU_INIT_MAX_ATTEMPTS) return;
+        if (now < nextInitAttempt) return;
+        nextInitAttempt = now + 1000;
+        initAttempts++;
+        imuPresent = QMI8658_Init();
+        if (!imuPresent) return;
+    }
+
     if (now < nextPoll) return;
     nextPoll = now + IMU_POLL_MS;
 
     float ax, ay, az, gx, gy, gz;
     if (!QMI8658_ReadAccelGyro(&ax, &ay, &az, &gx, &gy, &gz)) return;
 
-    // Seed the gravity estimate on first valid sample to avoid a startup spike.
-    if (!gravityInit)
+    // Seed the offset estimates on the first valid sample to avoid a startup spike.
+    if (!biasInit)
     {
         gravityX = ax;
         gravityY = ay;
         gravityZ = az;
-        gravityInit = true;
+        gyroBiasX = gx;
+        gyroBiasY = gy;
+        gyroBiasZ = gz;
+        biasInit = true;
     }
 
-    gravityX += GRAVITY_ALPHA * (ax - gravityX);
-    gravityY += GRAVITY_ALPHA * (ay - gravityY);
-    gravityZ += GRAVITY_ALPHA * (az - gravityZ);
+    gravityX += BIAS_ALPHA * (ax - gravityX);
+    gravityY += BIAS_ALPHA * (ay - gravityY);
+    gravityZ += BIAS_ALPHA * (az - gravityZ);
+    gyroBiasX += BIAS_ALPHA * (gx - gyroBiasX);
+    gyroBiasY += BIAS_ALPHA * (gy - gyroBiasY);
+    gyroBiasZ += BIAS_ALPHA * (gz - gyroBiasZ);
 
     float lx = ax - gravityX;
     float ly = ay - gravityY;
     float lz = az - gravityZ;
+    float rx = gx - gyroBiasX;
+    float ry = gy - gyroBiasY;
+    float rz = gz - gyroBiasZ;
     float linMag = sqrtf(lx * lx + ly * ly + lz * lz);
-    float gyroMag = sqrtf(gx * gx + gy * gy + gz * gz);
+    float gyroMag = sqrtf(rx * rx + ry * ry + rz * rz);
 
     float activity = linMag + gyroMag * GYRO_WEIGHT;
     activityAvg += ACTIVITY_BETA * (activity - activityAvg);
+
+    // Periodic diagnostics (once per second) to confirm the IMU is being read
+    // and to help tune the thresholds against real motion.
+    if (now >= nextDebugLog)
+    {
+        nextDebugLog = now + 1000;
+        log_i("IMU lin=%.4fg gyro=%.1fdps (bias %.1f,%.1f,%.1f) activity=%.4f avg=%.4f moving=%d",
+              linMag, gyroMag, gyroBiasX, gyroBiasY, gyroBiasZ,
+              activity, activityAvg, vehicleMoving ? 1 : 0);
+    }
 
     if (!vehicleMoving)
     {
@@ -108,9 +150,9 @@ void waveshare_init()
 {
     BAT_Init();
     PWR_Init();
-#if HAS_MOTION_IMU == 1
-    imuPresent = QMI8658_Init();
-#endif
+    // NOTE: IMU init is deliberately NOT done here. This task starts before
+    // board_drivers_init() brings up the I2C bus, so the IMU is initialized
+    // lazily (with retries) from imu_motion_loop() once the bus is ready.
 }
 
 bool isVehicleMoving()
