@@ -15,6 +15,7 @@ public:
     lv_obj_t* batteryIcon;        // Battery symbol
     lv_obj_t* batteryLabel;       // Battery percentage text
     lv_obj_t* alertIcon;          // Alert warning icon (left side)
+    lv_obj_t* motionLabel;        // Moving/Parked indicator (top left, IMU only)
 
     // Pull-down panel elements
     lv_obj_t* overlay;            // Dark overlay behind panel
@@ -69,11 +70,13 @@ private:
     const char* cachedBattIcon;   // Last battery icon symbol
     uint32_t cachedBattColor;     // Last battery icon color
     uint8_t cachedStatusBits;     // Last status bitmask
+    int cachedMotionState;        // -1 uninit, 0 parked, 1 moving
 
     void createPullDownPanel(lv_obj_t* parent);
     void updateBatteryStatus();
     void updateAlertStatus();
     void updateStatusSection();
+    void updateMotionStatus();
 };
 
 // Global statusbar instance

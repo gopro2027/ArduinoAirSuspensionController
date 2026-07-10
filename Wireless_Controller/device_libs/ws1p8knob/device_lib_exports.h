@@ -13,6 +13,9 @@
 
 #define SUPPORTS_ROTATION 0
 
+// No IMU on this board
+#define HAS_MOTION_IMU 0
+
 #define ENCODER_PIN_A 8
 #define ENCODER_PIN_B 7
 

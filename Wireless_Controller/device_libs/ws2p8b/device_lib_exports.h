@@ -13,3 +13,6 @@
 #include "files/PWR_Key_Dummy.h"
 
 #define SUPPORTS_ROTATION 0
+
+// No IMU on this board
+#define HAS_MOTION_IMU 0

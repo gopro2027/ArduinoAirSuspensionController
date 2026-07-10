@@ -33,6 +33,7 @@ Statusbar::Statusbar() {
     batteryIcon = nullptr;
     batteryLabel = nullptr;
     alertIcon = nullptr;
+    motionLabel = nullptr;
     overlay = nullptr;
     pullDownPanel = nullptr;
     batterySection = nullptr;
@@ -56,6 +57,7 @@ Statusbar::Statusbar() {
     cachedBattIcon = nullptr;
     cachedBattColor = 0;
     cachedStatusBits = 0xFF; // Force first update
+    cachedMotionState = -1;  // Force first update
 }
 
 void Statusbar::create(lv_obj_t* parent) {
@@ -81,6 +83,16 @@ void Statusbar::create(lv_obj_t* parent) {
     lv_obj_set_style_text_font(alertIcon, &lv_font_montserrat_10, 0);
     lv_obj_align(alertIcon, LV_ALIGN_LEFT_MID, padding, 0);
     lv_obj_add_flag(alertIcon, LV_OBJ_FLAG_HIDDEN);
+
+#if HAS_MOTION_IMU == 1
+    // Moving/Parked indicator (top left). The alert icon in this slot is
+    // hidden/disabled, so no overlap in practice.
+    motionLabel = lv_label_create(container);
+    lv_label_set_text(motionLabel, "Parked");
+    lv_obj_set_style_text_color(motionLabel, lv_color_hex(0x4ADE80), 0);
+    lv_obj_set_style_text_font(motionLabel, &lv_font_montserrat_10, 0);
+    lv_obj_align(motionLabel, LV_ALIGN_LEFT_MID, padding, 0);
+#endif
 
     // Battery icon (right side)
     batteryIcon = lv_label_create(container);
@@ -371,6 +383,25 @@ void Statusbar::update() {
     updateBatteryStatus();
     updateAlertStatus();
     updateStatusSection();
+    updateMotionStatus();
+}
+
+void Statusbar::updateMotionStatus() {
+#if HAS_MOTION_IMU == 1
+    if (!motionLabel) return;
+
+    int state = isVehicleMoving() ? 1 : 0;
+    if (state == cachedMotionState) return;
+    cachedMotionState = state;
+
+    if (state == 1) {
+        lv_label_set_text(motionLabel, "Moving");
+        lv_obj_set_style_text_color(motionLabel, lv_color_hex(0xFBBF24), 0); // amber
+    } else {
+        lv_label_set_text(motionLabel, "Parked");
+        lv_obj_set_style_text_color(motionLabel, lv_color_hex(0x4ADE80), 0); // green
+    }
+#endif
 }
 
 void Statusbar::updateBatteryStatus() {
@@ -555,6 +586,7 @@ void Statusbar::cleanup() {
     batteryIcon = nullptr;
     batteryLabel = nullptr;
     alertIcon = nullptr;
+    motionLabel = nullptr;
     overlay = nullptr;
     pullDownPanel = nullptr;
     batterySection = nullptr;
@@ -574,6 +606,7 @@ void Statusbar::cleanup() {
     visible = false;
     panelOpen = false;
     hasActiveAlert = false;
+    cachedMotionState = -1;
 }
 
 int Statusbar::getHeight() {

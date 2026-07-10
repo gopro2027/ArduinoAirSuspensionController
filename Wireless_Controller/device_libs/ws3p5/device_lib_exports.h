@@ -48,6 +48,9 @@
 
 #define SUPPORTS_ROTATION 1
 
+// No IMU support on this board (yet)
+#define HAS_MOTION_IMU 0
+
 // Struct for LVGL initialization
 struct touch_and_screen
 {
