@@ -15,8 +15,10 @@ static const uint32_t IMU_POLL_MS = 33;
 
 // Slow low-pass factor (per sample) used to track constant offsets: gravity on
 // the accel and zero-rate bias on the gyro. Small => slow to track, so the DC
-// offset is removed but real transient motion still shows up.
-static const float BIAS_ALPHA = 0.02f;
+// offset is removed but real transient motion still shows up. Kept slow (~8s
+// time constant @30Hz) so the gentle sustained accel of creeping/reversing
+// still registers as motion instead of being absorbed into the baseline.
+static const float BIAS_ALPHA = 0.005f; // ; was: 0.02f
 // Activity smoothing (exponential moving average of the per-sample metric).
 static const float ACTIVITY_BETA = 0.20f;
 
@@ -28,8 +30,11 @@ static const float ACTIVITY_MOVING_THRESH = 0.05f;
 static const float ACTIVITY_PARKED_THRESH = 0.02f;
 
 // Hysteresis: the opposing condition must hold this long before switching.
+// Note: any single activity blip above the parked threshold resets the parked
+// timer, so PARKED_CONFIRM_MS means "continuously quiet for this long".
+// Erring on the side of caution: prefer a stale "Moving" over a false "Parked".
 static const uint32_t MOVING_CONFIRM_MS = 1000;
-static const uint32_t PARKED_CONFIRM_MS = 3000;
+static const uint32_t PARKED_CONFIRM_MS = 7000; // ; was: 3000
 
 // Retry the (lazy) IMU init up to this many times, ~1s apart, then give up.
 static const uint8_t IMU_INIT_MAX_ATTEMPTS = 10;
