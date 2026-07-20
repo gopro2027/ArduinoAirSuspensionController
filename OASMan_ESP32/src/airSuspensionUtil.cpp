@@ -42,41 +42,6 @@ Wheel *getWheel(int i)
 
 #pragma endregion
 
-#pragma region setting_current_profile
-void setRideHeightFrontPassenger(byte value)
-{
-    currentProfile[WHEEL_FRONT_PASSENGER] = value;
-    if (getraiseOnPressure())
-    {
-        getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(value);
-    }
-}
-void setRideHeightRearPassenger(byte value)
-{
-    currentProfile[WHEEL_REAR_PASSENGER] = value;
-    if (getraiseOnPressure())
-    {
-        getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(value);
-    }
-}
-void setRideHeightFrontDriver(byte value)
-{
-    currentProfile[WHEEL_FRONT_DRIVER] = value;
-    if (getraiseOnPressure())
-    {
-        getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(value);
-    }
-}
-void setRideHeightRearDriver(byte value)
-{
-    currentProfile[WHEEL_REAR_DRIVER] = value;
-    if (getraiseOnPressure())
-    {
-        getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(value);
-    }
-}
-#pragma endregion
-
 #pragma region initialization
 
 void initializeADS()
@@ -150,7 +115,7 @@ void setupManifold()
 
 #if EBRAKE_WIRE_FUNCTIONALITY
 
-const int ebrakeSampleSize = AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE == true ? 2 : 5; // when normal ebrake on, use long sample of 5 samples. When doing double lock mode, only take 2 samples (100ms per sample) to make it a bit more snappy on time
+const int ebrakeSampleSize = AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE == true ? 2 : 20; // when normal ebrake on, use long sample of 20 samples (2 seconds). When doing double lock mode, only take 2 samples (100ms per sample) to make it a bit more snappy on time
 bool ebrakeHistory[ebrakeSampleSize];
 int ebrakeCounter = 0;
 bool ebrakeOn = false;
@@ -173,7 +138,7 @@ void ebrakeWireLoop()
     if (!isVehicleOn())
     {
         static long lastOnTime = millis();
-        if (ebrakeOn)
+        if (ebrakeOn) // important to use ebrakeOn instead of isEBrakeOn() because isEBrakeOn() will always return false when AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE is enabled
         {
             long currentReadTime = millis();
             if (previousReading == false)
@@ -184,8 +149,7 @@ void ebrakeWireLoop()
                     // check air out on shutoff enabled
                     if (getairOutOnShutoff())
                     {
-                        readProfile(0); // packet 0 should be the lowest setting!
-                        airUp(false);
+                        loadProfileAirUp(0); // packet 0 should be the lowest setting!
                     }
                 }
             }
@@ -198,6 +162,9 @@ void ebrakeWireLoop()
 
 bool isEBrakeOn()
 {
+    #if AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE
+    return false;
+    #endif
     return ebrakeOn;
 }
 
@@ -225,44 +192,45 @@ bool gps_exists = false;
 int getVehicleSpeed() {
     return 0;
 }
-bool isGPSCurrentlyAccurate() {
+bool isGPSCurrentlyAccurate() { // this will error on the side of caution, so we can always be sure our gps readings are accurate/safe
     return true;
 }
 
 // This function should not be used as a trigger on it's own, it should only be used as a check upon user interaction.
-// Strict mode is used when we need extra precaution against old boards that only have ACC wire. Aka setting strict mode to true forced gps or ebrake to be available to have a chance at returning true
-bool isVehicleParked(bool strict) {
-    bool ebrake_exists = false;
-    #if EBRAKE_WIRE_FUNCTIONALITY
-        ebrake_exists = true;
-    #endif
+// 'dontTrustEBrakeAlone' will make it so it skips the ebrake check by ittself, because in a stricter moder we may not want to trust only the ebrake
+// 'requireBothAccAndEbrake' will make it so it requires both the accessory wire and the ebrake to be on to return true. GPS will still return true on it's own tho if it is working. 
+bool isVehicleParked(bool dontTrustEBrakeAlone, bool requireBothAccAndEbrake_or_GPS) {
 
-    #if ACCESSORY_WIRE_FUNCTIONALITY
-    // If neither ebrake or gps are available, we don't have anything to double check isVehicleOn against. So we can assume that if the vehicle is off, it is parked, and if it is on, it is not parked.
-    // If strict mode is enabled, we ignore this code, so we basically force ebrake or gps to be available to make a decision.
-    if (!strict && !ebrake_exists && !gps_exists) {
-        return !isVehicleOn();
+    if (requireBothAccAndEbrake_or_GPS) {
+        dontTrustEBrakeAlone = true; // we are pairing both the acc and ebrake together, so skip the single ebrake check.
     }
-    #endif
         
-    // pretty simple, if gps is working and we are moving less than 5mph, we will assume we are parked. This is highly reliable.
+    // pretty simple, if gps is working and we are moving less than 3mph, we will assume we are parked. This is highly reliable since we have essentially 100% accuracy knowing if the gps is working or not.
     if (gps_exists && isGPSCurrentlyAccurate()) {
-        if (getVehicleSpeed() < 5) {
+        if (getVehicleSpeed() < 4) {
             return true; // vehicle is parked if less than 5mph
         } else {
             return false; // vehicle is moving more than 5mph, so it is not parked.
         }
     }
 
-    // ebrake is slightly less of a reliable source of whether or not the vehicle is parked because it is highly likely a user may try to bypass it, so we put it after the gps check.
-    if (ebrake_exists && isEBrakeOn()) {
-        return true; // if the ebrake is on, we can assume the vehicle is parked
-    }
-    if (ebrake_exists && !isEBrakeOn()) {
-        // ebrake being disengaged doesn't necessarily mean the vehicle is driving or parked, it could be either, so don't return anything here.
+    // don't trust e-brake if we are in strict mode
+    if (dontTrustEBrakeAlone == false) {
+        // ebrake is slightly less of a reliable source of whether or not the vehicle is parked because it is highly likely a user may try to bypass it, so we put it after the gps check.
+        if (isEBrakeOn()) { //I consider this safe because for isEBrakeOn to return true, it must have been on for at least 2 seconds. 
+            return true; // if the ebrake is on, we can assume the vehicle is parked
+        }
+        if (!isEBrakeOn()) {
+            // ebrake being disengaged doesn't necessarily mean the vehicle is driving or parked, it could be either, so don't return anything here.
+        }
     }
 
-    // We don't know basically anything, so return false.
+    #if ACCESSORY_WIRE_FUNCTIONALITY
+    // We can assume that if the vehicle is off, it is parked, and if it is on, it is not parked.
+    return isVehicleOn() == false && (requireBothAccAndEbrake_or_GPS == true ? isEBrakeOn() : true);
+    #endif
+
+    // We don't know basically anything, so return false. This is for v2 firmwares because they don't have acc.
     return false;
 
 }
@@ -283,53 +251,30 @@ bool isAnyWheelActive()
     return false;
 }
 
-void airUp(bool quick)
-{
-    // TODO: if quick, skip high percision
-    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(currentProfile[WHEEL_FRONT_PASSENGER], quick);
-    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(currentProfile[WHEEL_REAR_PASSENGER], quick);
-    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(currentProfile[WHEEL_FRONT_DRIVER], quick);
-    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(currentProfile[WHEEL_REAR_DRIVER], quick);
-}
-
-void loadProfileAirUpQuick(int profileIndex)
+void loadProfileAirUp(int profileIndex)
 {
     if (profileIndex > MAX_PROFILE_COUNT)
     {
         return;
     }
     // load profile then air up
-    readProfile(profileIndex);
-    airUp(false);
-}
-
-void airOut()
-{
-    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
-    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
-    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
-    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(AIR_OUT_PRESSURE_PSI);
-}
-
-void airUpRelativeToAverage(int value)
-{
-    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue() + value, true);
-    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue() + value, true);
-    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue() + value, true);
-    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue() + value, true);
+    ProfileRaw p = readProfile(profileIndex);
+    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(p.pressure[WHEEL_FRONT_PASSENGER]);
+    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(p.pressure[WHEEL_REAR_PASSENGER]);
+    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(p.pressure[WHEEL_FRONT_DRIVER]);
+    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(p.pressure[WHEEL_REAR_DRIVER]);
 }
 
 void airOutWithSafetyCheck()
 {
 #if ENABLE_AIR_OUT_ON_SHUTOFF
 #if !AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE
-    // only air out if car is in park
-    if (isVehicleParked(true))
+    // regarding the second parameter, true means we require both the accessory wire and the ebrake to be on to return true. This function already executes within the acc being off, but we need that double check of the ebrake also being enabled. If we didn't have the hard ebrake check then this would always return true because the acc is off, but we want to be extremely strict here and verify that both the car is off and the ebrake is pulled. (GPS will still return true on it's own tho if it is enabled)
+    if (isVehicleParked(true, true))
     {
         if (getairOutOnShutoff())
         {
-            readProfile(0); // packet 0 should be the lowest setting!
-            airUp(false);
+            loadProfileAirUp(0); // packet 0 should be the lowest setting!
         }
     }
 #endif

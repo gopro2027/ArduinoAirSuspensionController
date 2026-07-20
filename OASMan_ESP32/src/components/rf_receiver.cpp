@@ -83,7 +83,7 @@ void RfReceiver::loop()
                 if (counter_a == RF_DEBOUNCE_COUNT) {
                     // button A pressed
                     Serial.println("Button A pressed");
-                    loadProfileAirUpQuick(getrfButtonAPreset());
+                    loadProfileAirUp(getrfButtonAPreset());
                 }
             }
         } else {
@@ -97,7 +97,7 @@ void RfReceiver::loop()
                 if (counter_b == RF_DEBOUNCE_COUNT) {
                     // button B pressed
                     Serial.println("Button B pressed");
-                    loadProfileAirUpQuick(getrfButtonBPreset());
+                    loadProfileAirUp(getrfButtonBPreset());
                 }
             }
         } else {
@@ -111,7 +111,7 @@ void RfReceiver::loop()
                 if (counter_c == RF_DEBOUNCE_COUNT) {
                     // button C pressed
                     Serial.println("Button C pressed");
-                    loadProfileAirUpQuick(getrfButtonCPreset());
+                    loadProfileAirUp(getrfButtonCPreset());
                 }
             }
         } else {
@@ -125,7 +125,7 @@ void RfReceiver::loop()
                 if (counter_d == RF_DEBOUNCE_COUNT) {
                     // button D pressed
                     Serial.println("Button D pressed");
-                    loadProfileAirUpQuick(getrfButtonDPreset());
+                    loadProfileAirUp(getrfButtonDPreset());
                 }
             }
         } else {

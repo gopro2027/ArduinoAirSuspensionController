@@ -98,14 +98,6 @@ MessagePacket::MessagePacket(short recipient, std::string message)
 }
 
 // Incoming packets
-AirupPacket::AirupPacket()
-{
-    this->cmd = AIRUP;
-}
-AiroutPacket::AiroutPacket()
-{
-    this->cmd = AIROUT;
-}
 DetectPressureSensorsPacket::DetectPressureSensorsPacket()
 {
     this->cmd = DETECTPRESSURESENSORS;
@@ -114,24 +106,9 @@ CalibratePacket::CalibratePacket()
 {
     this->cmd = CALIBRATE;
 }
-AirsmPacket::AirsmPacket(int relativeValue)
-{
-    this->cmd = AIRSM;
-    this->args32()[0].i = relativeValue;
-}
-SaveToProfilePacket::SaveToProfilePacket(int profileIndex)
-{
-    this->cmd = SAVETOPROFILE;
-    this->args32()[0].i = profileIndex;
-}
 SaveCurrentPressuresToProfilePacket::SaveCurrentPressuresToProfilePacket(int profileIndex)
 {
     this->cmd = SAVECURRENTPRESSURESTOPROFILE;
-    this->args32()[0].i = profileIndex;
-}
-ReadProfilePacket::ReadProfilePacket(int profileIndex)
-{
-    this->cmd = READPROFILE;
     this->args32()[0].i = profileIndex;
 }
 AirupQuickPacket::AirupQuickPacket(int profileIndex)
@@ -143,12 +120,6 @@ BaseProfilePacket::BaseProfilePacket(int profileIndex)
 {
     this->cmd = BASEPROFILE;
     this->args32()[0].i = profileIndex;
-}
-SetAirheightPacket::SetAirheightPacket(int wheelIndex, int pressure)
-{
-    this->cmd = SETAIRHEIGHT;
-    this->args32()[0].i = wheelIndex;
-    this->args32()[1].i = pressure;
 }
 RaiseOnPressureSetPacket::RaiseOnPressureSetPacket(bool enable)
 {
@@ -186,10 +157,6 @@ String StartwebPacket::getPassword()
 {
     return String((char *)&this->args[50]);
 }
-int AirsmPacket::getRelativeValue()
-{
-    return this->args32()[0].i;
-}
 
 int ProfilePacket::getProfileIndex()
 {
@@ -201,15 +168,7 @@ bool BooleanPacket::getBoolean()
     return this->args32()[0].i != 0;
 }
 
-int SetAirheightPacket::getWheelIndex()
-{
-    return this->args32()[0].i;
-}
-int SetAirheightPacket::getPressure()
-{
-    return this->args32()[1].i;
-}
-ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t heightSensorInvertBits, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig)
+ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig)
 {
     this->cmd = GETCONFIGVALUES;
     *this->_systemShutoffTimeM() = systemShutoffTimeM;
@@ -223,7 +182,6 @@ ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, u
     *this->_rfButtonB() = rfButtonB;
     *this->_rfButtonC() = rfButtonC;
     *this->_rfButtonD() = rfButtonD;
-    *this->_heightSensorInvertBits() = heightSensorInvertBits;
     *this->_configFlagsBits() = configFlagsBits;
     this->_auxillaryOutputConfig()->mode = auxillaryOutputConfig.mode;
     this->_auxillaryOutputConfig()->timeUnit = auxillaryOutputConfig.timeUnit;
@@ -279,10 +237,10 @@ uint8_t *ConfigValuesPacket::_rfButtonD()
 {
     return (uint8_t *)&(this->args8()[12 + 7].i);
 }
-uint8_t *ConfigValuesPacket::_heightSensorInvertBits()
-{
-    return (uint8_t *)&(this->args8()[12 + 8].i);
-}
+// uint8_t *ConfigValuesPacket::unused0() // formerly _heightSensorInvertBits
+// {
+//     return (uint8_t *)&(this->args8()[12 + 8].i);
+// }
 // uint8_t *ConfigValuesPacket::unused1()
 // {
 //     return (uint8_t *)&(this->args8()[12 + 9].i);
@@ -391,4 +349,13 @@ AuxillaryOutputControlPacket::AuxillaryOutputControlPacket(bool on)
 {
     this->cmd = AUXILLARYOUTPUTCONTROL;
     this->args32()[0].i = on;
+}
+CalibrateHeightSensorsPacket::CalibrateHeightSensorsPacket(uint8_t calibrationType)
+{
+    this->cmd = CALIBRATEHEIGHTSENSORS;
+    this->args32()[0].i = calibrationType;
+}
+uint8_t CalibrateHeightSensorsPacket::getCalibrationType()
+{
+    return (uint8_t)this->args32()[0].i;
 }

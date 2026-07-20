@@ -16,7 +16,7 @@ This agent owns the **mobile app client** for **OAS-Man**. Repo: `https://github
 **The wire protocol the app must speak (critical):** the app talks to the manifold over the same BLE service (`679425c8-…`) and the **`BTOasPacket`** format defined in `ESP32_SHARED_LIBS/src/BTOas.h`:
 - Packet is **104 bytes**: `uint16_t cmd` + `uint8_t sender` + `uint8_t recipient` + `uint8_t args[100]`. The Dart side mirrors this (`btoasPacketSize = 104`, `btoasArgsSize = 100`).
 - `cmd` is a `BTOasIdentifier` enum shared with firmware: `STATUSREPORT`, `AIRUP`, `AIROUT`, `AIRSM`, `SAVETOPROFILE`, `READPROFILE`, `AIRUPQUICK`, `SETAIRHEIGHT`, `RAISEONPRESSURESET`, `REBOOT`, `CALIBRATE`, `STARTWEB` (triggers OTA), `GETCONFIGVALUES`, etc.
-- Typed arg accessors (`args8/16/32`) and packet subtypes (`AirupPacket`, `ProfilePacket`, `SetAirheightPacket`…) define the byte layout per command — **the app must match these exactly, including endianness and struct packing.**
+- Typed arg accessors (`args8/16/32`) and packet subtypes (`AirupPacket`, `ProfilePacket`…) define the byte layout per command — **the app must match these exactly, including endianness and struct packing.**
 - Auth: 6-digit `BLE_PASSKEY` pairing + the manifold's 5-second auth window; MTU 517 when negotiated.
 
 ## Role
