@@ -23,7 +23,6 @@ int getMinValveOpenPSI()
     return 0;
 }
 
-// TODO: Turn this into a function based on the values above so that it is smooth, and add a multiplier to change in the settings for people with larger volume bags where it's too slow by default
 int calculateValveOpenTimeMS(int pressureDifferenceAbsolute)
 {
     return getheightSensorMode() ? 0 : (getValveTimingSimpleFit(pressureDifferenceAbsolute) * ((float)getbagVolumePercentage() / 100.0f)); // Note: Added 0 for height sensor mode but it is unused
@@ -458,6 +457,21 @@ void Wheel::maintainPressure() {
                     }
                 }
             }
+        } else {
+            // TODO: This whole else statement could be removed if we removed isPressureStable() from pressureCaptureBaseline() but i am not sure if that would be ok to do
+            // bag potentially too leaky to settle and grab a baselinem need specifial logic to sync to last preset instead of the baseline since we can't grab one
+            if (!getheightSensorMode() && haveValvesBeenClosedForSomeTime(10000)) {
+                // We are in pressure mode and we haven't captured a baseline and valves have been closed for 10 seconds longer than the time required to capture a baseline, lets do a more aggressive check for leaks solely based off the last loaded preset (ie the old way to do this)
+                int pressureDif = this->pressureGoal - this->getSelectedInputValue();
+                if (pressureDif >= MAINTAIN_PRESSURE_THRESHOLD_PSI) {
+                    bool success = initPressureGoal(this->pressureGoal, true);
+                    if (!success) {
+                        Serial.println("Maintain pressure auto-disabled (no baseline): failed to init pressure goal");
+                        setmaintainPressure(false);
+                        requestSendConfigBT(); // because we setsensorlessLeveling, ask BLE task to re-broadcast config so UIs reflect OFF
+                    }
+                }
+            }
         }
     }
 }
@@ -554,6 +568,10 @@ void Wheel::trackPressureStability() {
     }
 }
 
+bool Wheel::haveValvesBeenClosedForSomeTime(uint32_t additionalTimeMS) {
+    return ((millis() - this->slValvesClosedSince) >= (SENSORLESS_LEVEL_BASELINE_SETTLE_MS + additionalTimeMS));
+}
+
 void Wheel::pressureCaptureBaseline()
 {
     // grab the baseline value 2 seconds after all valves have closed. We gate on stability because we don't want to accidentally store a baseline from an unstable reading.
@@ -565,7 +583,7 @@ void Wheel::pressureCaptureBaseline()
     }
     else
     {
-        if (!this->slBaselineCaptured && isPressureStable() && ((millis() - this->slValvesClosedSince) >= SENSORLESS_LEVEL_BASELINE_SETTLE_MS))
+        if (!this->slBaselineCaptured && isPressureStable() && haveValvesBeenClosedForSomeTime())
         {
             if (getheightSensorMode() && getheightCalMinRide(this->thisWheelNum) > this->getSelectedInputValue()) {
                 // we are in height sensor mode and the current height is less than the minimum ride height. We don't want to capture a baseline in this case because it will cause the car to try to stabalize below a ride height

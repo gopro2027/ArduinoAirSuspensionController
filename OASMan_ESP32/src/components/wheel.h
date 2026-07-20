@@ -53,7 +53,7 @@ private:
     bool isPressureStable();
 
     float readLevelSensorNormalized();
-
+    bool haveValvesBeenClosedForSomeTime(uint32_t additionalTimeMS = 0);
 
 public:
     Wheel();

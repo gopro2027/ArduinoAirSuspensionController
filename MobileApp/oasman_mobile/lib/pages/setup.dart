@@ -1167,7 +1167,7 @@ class SettingsPageState extends State<SettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildSwitch(
-                  bm.heightSensorMode ? 'Maintain Height' : 'Auto Leak Detect Refill',
+                  bm.heightSensorMode ? 'Maintain Height' : 'Maintain Pressure',
                   bm.maintainPressure,
                   (value) {
                     bm.maintainPressure = value;
@@ -1440,7 +1440,7 @@ class SettingsPageState extends State<SettingsPage> {
                     onPressed: () => _showConfirm(
                       title: 'Calibrate Minimum Ride Height?',
                       message:
-                          'Set your vehicle to the lowest ride height you want to allow before you click ok. This is used for maintain height. Only use this after calibrating min and max.',
+                          'Set your vehicle to the lowest ride height you want to allow before you click ok. This is used for maintain height (height sensor only). Only use this after calibrating min and max.',
                       confirmLabel: 'OK',
                       onConfirm: () {
                         bm.sendCalibrateHeightSensors(

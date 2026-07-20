@@ -512,8 +512,6 @@ uint8_t att_server_notify_SAFE(hci_con_handle_t con_handle, uint16_t attribute_h
 extern uint8_t AIReadyBittset; // 4
 extern uint8_t AIPercentage;   // 7
 
-// Build a ConfigValuesPacket reflecting the device's current config (setValues=false, i.e. a
-// report). Shared by the GETCONFIGVALUES handler and the deferred broadcast below.
 ConfigValuesPacket buildCurrentConfigValuesPacket()
 {
     uint32_t configFlagsBits = 0;

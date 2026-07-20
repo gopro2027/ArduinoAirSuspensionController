@@ -215,7 +215,7 @@ void ScrSettings::updateLevelModeOptionsVisibility(bool isLevelMode)
         lv_obj_add_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(this->ui_calibrateMinRideHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(this->ui_sensorlessleveling->root, LV_OBJ_FLAG_HIDDEN);
-        lv_label_set_text(this->ui_maintainprssure->text, "Auto Leak Detect Refill");
+        lv_label_set_text(this->ui_maintainprssure->text, "Maintain Pressure");
     }
 }
 
@@ -567,7 +567,7 @@ void ScrSettings::init(lv_obj_t *parent)
     this->ui_calibrateMinRideHeight = new Option(levelling_page, OptionType::BUTTON, "Calibrate Min Ride Height", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Calibrate Minimum Ride Height?",
-            "Set your vehicle to the lowest ride height you want to allow before you click ok. This is used for maintain height. Only use this after calibrating min and max.",
+            "Set your vehicle to the lowest ride height you want to allow before you click ok. This is used for maintain height (height sensor only). Only use this after calibrating min and max.",
             "OK", "Cancel",
             []() -> void
             {

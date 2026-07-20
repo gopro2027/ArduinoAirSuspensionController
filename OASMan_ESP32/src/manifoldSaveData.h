@@ -110,7 +110,7 @@ public:
     Preferencable rfButtonDPreset;
     Preferencable heightSensorCalMin[4]; // double, raw height % at calibrated lowest point
     Preferencable heightSensorCalMax[4]; // double, raw height % at calibrated highest point
-    Preferencable heightSensorCalMinRide[4]; // double, raw height % at calibrated minimum ride height
+    Preferencable heightSensorCalMinRide[4]; // double, normalized height % at calibrated minimum ride height
 
     AuxillaryOutputPreference auxillaryOutputPreference;
 
