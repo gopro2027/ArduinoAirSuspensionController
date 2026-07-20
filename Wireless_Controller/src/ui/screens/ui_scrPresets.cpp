@@ -6,15 +6,13 @@
 
 ScrPresets scrPresets(true);
 
-#ifdef CUSTOM_CAR_IMAGE
-LV_IMG_DECLARE(img_car_custom);
-LV_IMG_DECLARE(img_wheels_custom);
-const lv_image_dsc_t img_car = img_car_custom;
-const lv_image_dsc_t img_wheels = img_wheels_custom;
-#else
+#include "custom_car_storage.h"
+
+extern bool isScreenDimmed();
+
+// Default device-lib images (used via getPresetCarImage when no runtime custom images).
 LV_IMG_DECLARE(img_car);
 LV_IMG_DECLARE(img_wheels);
-#endif
 
 // ============================================
 // RESPONSIVE LAYOUT CALCULATIONS
@@ -27,8 +25,8 @@ static int getContentBottom() { return getScreenHeight() - getNavbarHeight() - g
 
 // Car/wheel display dimensions - images are device-specific and already at native resolution
 // (scale_img is a no-op), so use raw dimensions for layout calculations
-static int getScaledCarWidth() { return img_car.header.w; }
-static int getScaledWheelsWidth() { return img_wheels.header.w; }
+static int getScaledCarWidth() { return getPresetCarImage()->header.w; }
+static int getScaledWheelsWidth() { return getPresetWheelsImage()->header.w; }
 
 // Car center X - offset in landscape for sidebar
 static int getCarCenterX() {
@@ -127,10 +125,6 @@ static lv_obj_t* createPresetButton(lv_obj_t *parent, const char *text, int pres
     lv_obj_set_style_shadow_offset_x(btn, 0, LV_PART_MAIN);
     lv_obj_set_style_shadow_offset_y(btn, 0, LV_PART_MAIN);
 
-    // Focus state styling
-    lv_obj_set_style_bg_color(btn, lv_color_hex(PRESET_BTN_ACTIVE_COLOR), LV_PART_MAIN | (lv_style_selector_t)LV_STATE_FOCUSED);
-    lv_obj_set_style_border_color(btn, lv_color_hex(PRESET_BTN_ACTIVE_COLOR), LV_PART_MAIN | (lv_style_selector_t)LV_STATE_FOCUSED);
-
     lv_obj_set_style_pad_all(btn, 0, LV_PART_MAIN);
 
     // Label with modern font
@@ -160,8 +154,10 @@ void car_anim_func(lv_obj_t *obj, int32_t y)
 {
 
     lv_obj_set_y(obj, y);
-    lv_obj_set_y(scrPresets.ww1, y + fender1Offset.y);
-    lv_obj_set_y(scrPresets.ww2, y + fender2Offset.y);
+    if (!customCarHasImages()) {
+        lv_obj_set_y(scrPresets.ww1, y + fender1Offset.y);
+        lv_obj_set_y(scrPresets.ww2, y + fender2Offset.y);
+    }
     // lv_obj_move_foreground(scrPresets.wheels);
 }
 
@@ -197,41 +193,44 @@ void ScrPresets::init(lv_obj_t *parent)
     const int screenWidth = getScreenWidth();
     const int screenHeight = getScreenHeight();
 
-    // wheel well 1
-    this->ww1 = lv_obj_create(this->scr);
-    lv_obj_remove_style_all(this->ww1);
-    lv_obj_get_style_border_width(this->ww1, LV_PART_MAIN);
-    lv_obj_set_size(this->ww1, fender1Offset.w, fender1Offset.h);
-    scale_obj(this->ww1, fender1Offset.w, fender1Offset.h);
-    lv_obj_set_style_bg_color(this->ww1, lv_color_hex(0x0), LV_PART_MAIN);
-    lv_obj_remove_flag(this->ww1, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE));
-    lv_obj_set_style_bg_opa(this->ww1, 255, LV_PART_MAIN);
-    lv_obj_set_x(this->ww1, car_x + fender1Offset.x);
-    lv_obj_set_y(this->ww1, car_y_1 + fender1Offset.y);
+    if (!customCarHasImages()) {
+        // wheel well 1
+        this->ww1 = lv_obj_create(this->scr);
+        lv_obj_remove_style_all(this->ww1);
+        lv_obj_get_style_border_width(this->ww1, LV_PART_MAIN);
+        lv_obj_set_size(this->ww1, fender1Offset.w, fender1Offset.h);
+        scale_obj(this->ww1, fender1Offset.w, fender1Offset.h);
+        lv_obj_set_style_bg_color(this->ww1, lv_color_hex(0x0), LV_PART_MAIN);
+        lv_obj_remove_flag(this->ww1, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE));
+        lv_obj_set_style_bg_opa(this->ww1, 255, LV_PART_MAIN);
+        lv_obj_set_x(this->ww1, car_x + fender1Offset.x);
+        lv_obj_set_y(this->ww1, car_y_1 + fender1Offset.y);
 
-    // wheel well 2
-    this->ww2 = lv_obj_create(this->scr);
-    lv_obj_remove_style_all(this->ww2);
-    lv_obj_get_style_border_width(this->ww2, LV_PART_MAIN);
-    lv_obj_set_size(this->ww2, fender2Offset.w, fender2Offset.h);
-    scale_obj(this->ww2, fender2Offset.w, fender2Offset.h);
-    lv_obj_set_style_bg_color(this->ww2, lv_color_hex(0x0), LV_PART_MAIN);
-    lv_obj_remove_flag(this->ww2, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE));
-    lv_obj_set_style_bg_opa(this->ww2, 255, LV_PART_MAIN);
-    lv_obj_set_x(this->ww2, car_x + fender2Offset.x);
-    lv_obj_set_y(this->ww2, car_y_1 + fender2Offset.y);
+        // wheel well 2
+        this->ww2 = lv_obj_create(this->scr);
+        lv_obj_remove_style_all(this->ww2);
+        lv_obj_get_style_border_width(this->ww2, LV_PART_MAIN);
+        lv_obj_set_size(this->ww2, fender2Offset.w, fender2Offset.h);
+        scale_obj(this->ww2, fender2Offset.w, fender2Offset.h);
+        lv_obj_set_style_bg_color(this->ww2, lv_color_hex(0x0), LV_PART_MAIN);
+        lv_obj_remove_flag(this->ww2, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE));
+        lv_obj_set_style_bg_opa(this->ww2, 255, LV_PART_MAIN);
+        lv_obj_set_x(this->ww2, car_x + fender2Offset.x);
+        lv_obj_set_y(this->ww2, car_y_1 + fender2Offset.y);
+
+    }
 
     // wheels
     this->wheels = lv_image_create(this->scr);
-    lv_image_set_src(this->wheels, &img_wheels);
-    scale_img(this->wheels, img_wheels);
+    lv_image_set_src(this->wheels, getPresetWheelsImage());
+    scale_img(this->wheels, *getPresetWheelsImage());
     lv_obj_set_x(this->wheels, wheels_x);
     lv_obj_set_y(this->wheels, wheels_y);
 
     // car
     this->car = lv_image_create(this->scr);
-    lv_image_set_src(this->car, &img_car);
-    scale_img(this->car, img_car);
+    lv_image_set_src(this->car, getPresetCarImage());
+    scale_img(this->car, *getPresetCarImage());
     lv_obj_set_x(this->car, car_x);
     lv_obj_set_y(this->car, car_y_1);
 
@@ -372,6 +371,7 @@ void ScrPresets::updateButtonStyles()
     // Update button styles based on current preset
     lv_obj_t* btns[] = {btnPreset1, btnPreset2, btnPreset3, btnPreset4, btnPreset5};
     for (int i = 0; i < 5; i++) {
+        lv_obj_remove_state(btns[i], LV_STATE_FOCUSED);
         if (i + 1 == currentPreset) {
             // Active button - purple with glow (same shadow width to prevent shifting)
             lv_obj_set_style_bg_color(btns[i], lv_color_hex(PRESET_BTN_ACTIVE_COLOR), LV_PART_MAIN);
@@ -449,6 +449,12 @@ void loadSelectedPreset()
 
 void ScrPresets::loop()
 {
+    static bool wasDimmed = false;
+    const bool dimmed = isScreenDimmed();
+    if (wasDimmed && !dimmed) {
+        updateButtonStyles();
+    }
+    wasDimmed = dimmed;
     Scr::loop();
 }
 

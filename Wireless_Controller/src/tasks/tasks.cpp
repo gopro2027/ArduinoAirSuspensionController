@@ -43,13 +43,16 @@ void task_waveshare(void *parameters)
 // static StaticTask_t myTaskBuffer;
 void setup_tasks()
 {
+    // Priority 5: still above the Arduino loop task (priority 1, runs LVGL rendering) but no
+    // longer starves it. NimBLE's own host task handles the radio-critical work separately;
+    // these app loops just poll with 10ms sleeps.
     //  Bluetooth Task
     xTaskCreate(
         task_bluetooth,
         "Bluetooth",
         BLE_TASK_STACK_SIZE,
         NULL,
-        24,
+        5, // ; was: 24
         NULL);
 
     //  Waveshare board/button Task
@@ -58,7 +61,7 @@ void setup_tasks()
         "Waveshare",
         512 * 6,
         NULL,
-        24,
+        5, // ; was: 24
         NULL);
 
 

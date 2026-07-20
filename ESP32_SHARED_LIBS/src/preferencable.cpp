@@ -27,9 +27,7 @@ void writeBytes(const char *name, const void *bytes, size_t len, const char *mod
     if (!file) {
         Serial.println("Failed to open file for writing");
     } else {
-        for (int i = 0; i < len; i++) {
-            file.print(((char*)bytes)[i]);
-        }
+        file.write(static_cast<const uint8_t *>(bytes), len);
         file.close();
     }
 }
@@ -39,21 +37,13 @@ size_t readBytes(const char *name, void *buf, size_t maxLen) {
     File file = SPIFFS.open(name, "r");
     if (!file) {
         Serial.println("Failed to open file for reading");
-        return -1;
-    } else {
-        //Serial.println("Contents of test.txt:");
-        int i = 0;
-        while (file.available()) {
-            if (i == maxLen) {
-                break;
-            }
-            ((char*)buf)[i] = (char)file.read();
-            //Serial.print(((char*)buf)[i]);
-            i++;
-        }
-        file.close(); // Close the file
-        return i;
+        return static_cast<size_t>(-1);
     }
+
+    const size_t toRead = file.size() < maxLen ? file.size() : maxLen;
+    const size_t got = file.readBytes(static_cast<char *>(buf), toRead);
+    file.close();
+    return got;
 }
 
 void deleteFile(const char *name) {

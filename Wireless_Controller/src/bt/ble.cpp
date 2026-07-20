@@ -404,8 +404,7 @@ bool connectToServer(const BLEAdvertisedDevice *myDevice)
             connectionErrorInfoString = "Auth timed out";
             return false;
         }
-        Serial.print(".");
-        delay(10);
+        delay(10); // was: also Serial.print(".") each iteration — blocked the BLE task on UART during auth
     }
 
     log_i("Connected Successfully");
@@ -559,7 +558,9 @@ void ble_loop()
         bool success = true;
         if (hasPacketToSend)
         {
-            packet.dump();
+#ifndef OFFICIAL_RELEASE
+            packet.dump(); // serial dump of the full packet; dev-only, blocks the BLE task on UART
+#endif
             success = pRemoteChar_Rest->writeValue(packet.tx(), BTOAS_PACKET_SIZE, true);
             log_i("Sent rest packet!");
         }

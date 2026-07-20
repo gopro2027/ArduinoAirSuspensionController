@@ -86,7 +86,7 @@ void requestPreset()
     sendRestPacket(&pkt);
 }
 
-ConfigValuesPacket util_configValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ConfigValuesPacket util_configValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     {AUX_MODE_NONE, AUX_MODE_TIME_DECISECONDS, 1, 0});
 
 void sendConfigValuesPacket(bool saveToManifold)
@@ -291,6 +291,13 @@ void beginSaveData()
 createSaveFuncInt(unitsMode, int);
 createSaveFuncInt(blePasskey, uint32_t);
 createSaveFuncInt(screenDimTimeM, uint32_t);
+
+unsigned long getScreenDimTimeMs()
+{
+    const unsigned long configuredMs = 60UL * 1000UL * getscreenDimTimeM();
+    return configuredMs < MIN_SCREEN_DIM_TIME_MS ? MIN_SCREEN_DIM_TIME_MS : configuredMs;
+}
+
 createSaveFuncInt(updateMode, bool);
 createSaveFuncString(wifiSSID);
 createSaveFuncString(wifiPassword);

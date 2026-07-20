@@ -31,5 +31,5 @@ public:
     void programLearnRadioButton();
 };
 extern bool isVehicleOn();                                     // defined in airSuspensionUtil.h
-extern void loadProfileAirUpQuick(int profileIndex);           // defined in airSuspensionUtil.h
+extern void loadProfileAirUp(int profileIndex);           // defined in airSuspensionUtil.h
 #endif

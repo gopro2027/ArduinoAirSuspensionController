@@ -65,8 +65,17 @@
     #define LV_MEM_ADR 0     /*0: unused*/
     /*Instead of an address give a memory allocator that will be called to get a memory pool for LVGL. E.g. my_malloc*/
     #if LV_MEM_ADR == 0
-        #undef LV_MEM_POOL_INCLUDE
-        #undef LV_MEM_POOL_ALLOC
+        #ifdef LV_MEM_POOL_PSRAM
+            /* RGB-panel boards (e.g. ws2p8b) define LV_MEM_POOL_PSRAM so LVGL's builtin pool is
+             * created once in external PSRAM instead of internal RAM. This keeps the (large) UI
+             * allocations off the internal heap, leaving it free for the BLE stack to allocate on
+             * connect. Pair with a larger LV_MEM_SIZE since PSRAM has room to spare. */
+            #define LV_MEM_POOL_INCLUDE "esp_heap_caps.h"
+            #define LV_MEM_POOL_ALLOC(size) heap_caps_malloc(size, MALLOC_CAP_SPIRAM)
+        #else
+            #undef LV_MEM_POOL_INCLUDE
+            #undef LV_MEM_POOL_ALLOC
+        #endif
     #endif
 #endif  /*LV_USE_STDLIB_MALLOC == LV_STDLIB_BUILTIN*/
 
@@ -761,14 +770,19 @@
 #define LV_USE_SNAPSHOT 0
 
 /*1: Enable system monitor component*/
-#define LV_USE_SYSMON   0
+/* Dev builds get the FPS/CPU overlay for performance work; compiled out of official releases. */
+#ifdef OFFICIAL_RELEASE
+    #define LV_USE_SYSMON   0
+#else
+    #define LV_USE_SYSMON   1 /* ; was: 0 */
+#endif
 #if LV_USE_SYSMON
     /*Get the idle percentage. E.g. uint32_t my_get_idle(void);*/
     #define LV_SYSMON_GET_IDLE lv_timer_get_idle
 
     /*1: Show CPU usage and FPS count
      * Requires `LV_USE_SYSMON = 1`*/
-    #define LV_USE_PERF_MONITOR 0
+    #define LV_USE_PERF_MONITOR 1 /* ; was: 0 */
     #if LV_USE_PERF_MONITOR
         #define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_RIGHT
 
@@ -825,7 +839,12 @@
 #define LV_USE_IMGFONT 0
 
 /*1: Enable an observer pattern implementation*/
-#define LV_USE_OBSERVER 0
+/* Required by LV_USE_SYSMON/LV_USE_PERF_MONITOR (dev-only FPS overlay). */
+#ifdef OFFICIAL_RELEASE
+    #define LV_USE_OBSERVER 0
+#else
+    #define LV_USE_OBSERVER 1 /* ; was: 0 */
+#endif
 
 /*1: Enable Pinyin input method*/
 /*Requires: lv_keyboard*/
