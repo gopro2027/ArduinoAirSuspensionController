@@ -2,6 +2,7 @@
 
 #include "Arduino.h"
 #include <Wire.h>
+#include "Touch_CST3530.h"
 
 #define CST328_ADDR 0x1A
 #define CST328_SDA_PIN       1
@@ -66,7 +67,13 @@ struct CST328_Touch{
 };
 
 
-uint8_t Touch_Init();
+// Which touch controller was detected/active at runtime. The ws2p8 v2 board swaps the
+// CST328 for a CST3530; Touch_Init() probes CST328 first and falls back to CST3530.
+enum TouchController { TOUCH_CONTROLLER_NONE, TOUCH_CONTROLLER_CST328, TOUCH_CONTROLLER_CST3530 };
+extern TouchController active_touch_controller;
+
+uint8_t Touch_Init();     // dispatcher: tries CST328, falls back to CST3530
+uint8_t CST328_Init();    // ; was: uint8_t Touch_Init() (CST328-specific init)
 uint8_t CST328_Touch_Reset(void);
 uint16_t CST328_Read_cfg(void);
 uint8_t Touch_Read_Data(void);

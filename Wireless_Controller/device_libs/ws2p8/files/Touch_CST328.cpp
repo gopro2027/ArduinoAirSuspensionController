@@ -34,19 +34,47 @@ bool Touch_I2C_Write(uint8_t Driver_addr, uint16_t Reg_addr, const uint8_t *Reg_
   }
   return 0;
 }
+TouchController active_touch_controller = TOUCH_CONTROLLER_NONE;
+
+// Touch controller dispatcher. The ws2p8 v2 board uses a CST3530 instead of a CST328
+// (same panel/pins, different I2C address + protocol). Probe CST328 first; if it fails to
+// init over I2C, fall back to the CST3530.
 uint8_t Touch_Init(void) {
+  if (CST328_Init()) {
+    active_touch_controller = TOUCH_CONTROLLER_CST328;
+    printf("Touch controller: CST328\r\n");
+    return true;
+  }
+  printf("CST328 init failed, trying CST3530...\r\n");
+  if (TOUCH2_Init()) {
+    active_touch_controller = TOUCH_CONTROLLER_CST3530;
+    printf("Touch controller: CST3530\r\n");
+    return true;
+  }
+  active_touch_controller = TOUCH_CONTROLLER_NONE;
+  printf("No touch controller detected!\r\n");
+  return false;
+}
+
+// ; was: uint8_t Touch_Init(void) (this is the CST328-specific init, now dispatched to)
+uint8_t CST328_Init(void) {
   Wire1.begin(CST328_SDA_PIN, CST328_SCL_PIN, I2C_MASTER_FREQ_HZ);
   pinMode(CST328_INT_PIN, INPUT);
   pinMode(CST328_RST_PIN, OUTPUT);
 
   CST328_Touch_Reset();
   uint16_t Verification = CST328_Read_cfg();
-  if(!((Verification==0xCACA)?true:false))
-  printf("Touch initialization failed!\r\n");
+  bool ok = (Verification == 0xCACA);
+  if (!ok) {
+    printf("Touch initialization failed!\r\n");
+    return false;
+  }
 
-  attachInterrupt(CST328_INT_PIN, Touch_CST328_ISR, interrupt); 
+  // ; was: attachInterrupt ran unconditionally — only attach when the CST328 is present so a
+  // fallback to CST3530 doesn't leave a stray ISR bound to the shared INT pin.
+  attachInterrupt(CST328_INT_PIN, Touch_CST328_ISR, interrupt);
 
-  return ((Verification==0xCACA)?true:false);
+  return true;
 }
 /* Reset controller */
 uint8_t CST328_Touch_Reset(void)
