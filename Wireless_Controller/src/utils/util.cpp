@@ -350,8 +350,33 @@ void reinitializeScreens()
 }
 
 static lv_obj_t *kb = NULL;
+// While the keyboard is open we shrink the focused field's scroll container so it
+// ends at the keyboard's top edge; these remember what to restore on close.
+static lv_obj_t *kbScrollObj = NULL;
+static int32_t kbScrollOrigH = 0;
+
+// Find the nearest ancestor that actually scrolls vertically. Rows/pages carry the
+// default SCROLLABLE flag but never overflow, so require a non-zero scroll range.
+static lv_obj_t *findVScrollAncestor(lv_obj_t *o)
+{
+    lv_obj_t *p = lv_obj_get_parent(o);
+    while (p != NULL && p != lv_screen_active())
+    {
+        if (lv_obj_has_flag(p, LV_OBJ_FLAG_SCROLLABLE) &&
+            (lv_obj_get_scroll_top(p) + lv_obj_get_scroll_bottom(p)) > 0)
+            return p;
+        p = lv_obj_get_parent(p);
+    }
+    return NULL;
+}
+
 void closeKeyboard()
 {
+    if (kbScrollObj != NULL)
+    {
+        lv_obj_set_height(kbScrollObj, kbScrollOrigH);
+        kbScrollObj = NULL;
+    }
     if (kb != NULL)
     {
         lv_keyboard_set_textarea(kb, NULL);
@@ -367,6 +392,8 @@ void defocus(Option *option)
     lv_obj_remove_state(option->rightHandObj, LV_STATE_FOCUSED);
     lv_group_focus_obj(option->root);
     // lv_group_focus_prev(lv_obj_get_group(option->root));
+    // Clear the pointer indev's click-focus memory so tapping the same field again re-fires FOCUSED (reopens the keyboard).
+    lv_indev_reset(NULL, option->rightHandObj);
 }
 static void kb_event_cb(lv_event_t *e)
 {
@@ -428,6 +455,29 @@ void initKB(Option *option)
     lv_obj_set_style_text_font(kb, &lv_font_montserrat_14, LV_PART_ITEMS);
     lv_obj_set_style_pad_gap(kb, 2, LV_PART_MAIN);
 #endif
+
+    // Scroll the focused field above the keyboard by temporarily shrinking its scroll
+    // container to end at the keyboard's top edge, then bringing the field into view.
+    lv_obj_update_layout(kb);
+    lv_obj_t *sc = findVScrollAncestor(option->rightHandObj);
+    if (sc != NULL)
+    {
+        lv_area_t kbArea, scArea;
+        lv_obj_get_coords(kb, &kbArea);
+        lv_obj_get_coords(sc, &scArea);
+        int32_t visibleH = kbArea.y1 - scArea.y1; // area above the keyboard
+        // Only act if at least one row fits above the keyboard and the container
+        // currently extends below the keyboard's top (i.e. the field is covered).
+        if (visibleH > option->optionRowHeight && visibleH < lv_obj_get_height(sc))
+        {
+            kbScrollObj = sc;
+            kbScrollOrigH = lv_obj_get_height(sc);
+            lv_obj_set_height(sc, visibleH);
+            // Recursive: the textarea's direct parent (the option row) can't scroll;
+            // only walking up to pages_container actually moves the field into view.
+            lv_obj_scroll_to_view_recursive(option->rightHandObj, LV_ANIM_ON);
+        }
+    }
 }
 
 void ta_event_cb(lv_event_t *e)
