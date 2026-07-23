@@ -6,12 +6,12 @@
 		{
 			"path": "../ESP32_SHARED_LIBS"
 		},
-		{
-			"path": "../Wireless_Controller"
-		},
-		{
-			"path": "../MobileApp"
-		}
+		// {
+		// 	"path": "../Wireless_Controller"
+		// },
+		// {
+		// 	"path": "../MobileApp"
+		// }
 	],
 	"settings": {
 		"files.associations": {
