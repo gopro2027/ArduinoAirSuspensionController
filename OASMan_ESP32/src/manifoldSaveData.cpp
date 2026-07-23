@@ -162,6 +162,8 @@ void beginSaveData()
     _SaveData.compressorOffPSI.load("compressorOffPSI", COMPRESSOR_MAX_PSI);
     _SaveData.pressureSensorMax.load("pressureSensorMax", pressuretransducermaxPSI);
     _SaveData.bagVolumePercentage.load("bagVolumePercentage", 100);
+    _SaveData.extraAirUpBelowPressure.load("extraAirUpBelowP", 140);
+    _SaveData.extraAirUpUnroll.load("extraAirUpUnroll", 10);
 
     _SaveData.auxillaryOutputPreference.load();
 
@@ -388,6 +390,8 @@ createSaveFuncInt(compressorOnPSI, uint8_t);
 createSaveFuncInt(compressorOffPSI, uint8_t);
 createSaveFuncInt(pressureSensorMax, uint16_t);
 createSaveFuncInt(bagVolumePercentage, uint16_t);
+createSaveFuncInt(extraAirUpBelowPressure, uint8_t);
+createSaveFuncInt(extraAirUpUnroll, uint8_t);
 
 createSaveFuncInt(rfButtonAPreset, uint8_t);
 createSaveFuncInt(rfButtonBPreset, uint8_t);

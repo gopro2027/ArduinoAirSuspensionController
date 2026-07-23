@@ -56,6 +56,8 @@ public:
     Option *ui_config4;  // Compressor Off PSI (textarea)
     Option *ui_config5;  // Pressure Sensor Rating PSI (textarea)
     Option *ui_config6;  // Bag Volume Percentage (slider)
+    Option *ui_config7;  // Extra Air Up Below PSI (textarea)
+    Option *ui_config8;  // Extra Air Up Unroll PSI (textarea)
     Option *ui_updateBtn;  // Update button (Option*)
     Option *ui_manifoldUpdateStatus;  // Manifold status (text with value)
     Option *ui_mac;  // MAC address (text with value)

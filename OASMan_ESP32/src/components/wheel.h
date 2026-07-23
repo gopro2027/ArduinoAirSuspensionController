@@ -50,7 +50,6 @@ private:
 
     bool onlyAirUp = false;
     std::function<void()> onPressureGoalComplete;
-    bool initPressureGoal(int newPressure, bool onlyAirUp, std::function<void()> onComplete = nullptr);
     void trackPressureStability();
     bool isPressureStable();
 
@@ -61,6 +60,7 @@ public:
     Wheel();
     Wheel(int solenoidInPin, int solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum);
     bool initPressureGoal(int newPressure, std::function<void()> onComplete = nullptr);
+    bool initPressureGoal(int newPressure, bool onlyAirUp, std::function<void()> onComplete = nullptr);
     void loop();
     void readInputs();
     float readLevelSensorRaw();

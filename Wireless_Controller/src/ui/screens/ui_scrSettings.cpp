@@ -792,6 +792,22 @@ void ScrSettings::init(lv_obj_t *parent)
     });
     ((Option *)this->ui_config6)->setSliderParams(10, 600, true, LV_EVENT_RELEASED);
 
+    this->ui_config7 = new Option(config_page, OptionType::KEYBOARD_INPUT_NUMBER, "Unroll Below PSI", {.INT = 0}, [](void *data)
+    {
+        log_i("Pressed %i", ((uint32_t)data));
+        *util_configValues._extraAirUpBelowPressure() = (uint32_t)data;
+        sendConfigValuesPacket(true);
+        alertValueUpdated();
+    });
+
+    this->ui_config8 = new Option(config_page, OptionType::KEYBOARD_INPUT_NUMBER, "Unroll PSI", {.INT = 0}, [](void *data)
+    {
+        log_i("Pressed %i", ((uint32_t)data));
+        *util_configValues._extraAirUpUnroll() = (uint32_t)data;
+        sendConfigValuesPacket(true);
+        alertValueUpdated();
+    });
+
     // --- Wifi / Update page ---
     lv_obj_t *wifi_update_page = this->addSettingsPage(pages_container, true);
 
@@ -961,6 +977,8 @@ void ScrSettings::loop()
         this->ui_config4->setRightHandText(itoa(*util_configValues._compressorOffPSI(), buf, 10));
         this->ui_config5->setRightHandText(itoa(*util_configValues._pressureSensorMax(), buf, 10));
         this->ui_config6->setRightHandText(itoa(*util_configValues._bagVolumePercentage(), buf, 10));
+        this->ui_config7->setRightHandText(itoa(*util_configValues._extraAirUpBelowPressure(), buf, 10));
+        this->ui_config8->setRightHandText(itoa(*util_configValues._extraAirUpUnroll(), buf, 10));
 
         this->ui_rfbuttonA->setRightHandText(itoa(*util_configValues._rfButtonA() + 1, buf, 10));
         this->ui_rfbuttonB->setRightHandText(itoa(*util_configValues._rfButtonB() + 1, buf, 10));

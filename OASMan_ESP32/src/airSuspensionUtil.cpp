@@ -251,6 +251,22 @@ bool isAnyWheelActive()
     return false;
 }
 
+static void initPressureGoalWithUnroll(byte wheelNum, int goal)
+{
+    Wheel *w = getWheel(wheelNum);
+    int belowP = getextraAirUpBelowPressure();
+    int unroll = getextraAirUpUnroll();
+    if (unroll > 0 && goal < belowP && w->getSelectedInputValue() < goal + unroll)
+    {
+        w->initPressureGoal(goal + unroll, true, [w, goal]()
+                            { w->initPressureGoal(goal); });
+    }
+    else
+    {
+        w->initPressureGoal(goal);
+    }
+}
+
 void loadProfileAirUp(int profileIndex)
 {
     if (profileIndex > MAX_PROFILE_COUNT)
@@ -259,10 +275,10 @@ void loadProfileAirUp(int profileIndex)
     }
     // load profile then air up
     ProfileRaw p = readProfile(profileIndex);
-    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(p.pressure[WHEEL_FRONT_PASSENGER]);
-    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(p.pressure[WHEEL_REAR_PASSENGER]);
-    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(p.pressure[WHEEL_FRONT_DRIVER]);
-    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(p.pressure[WHEEL_REAR_DRIVER]);
+    initPressureGoalWithUnroll(WHEEL_FRONT_PASSENGER, p.pressure[WHEEL_FRONT_PASSENGER]);
+    initPressureGoalWithUnroll(WHEEL_REAR_PASSENGER, p.pressure[WHEEL_REAR_PASSENGER]);
+    initPressureGoalWithUnroll(WHEEL_FRONT_DRIVER, p.pressure[WHEEL_FRONT_DRIVER]);
+    initPressureGoalWithUnroll(WHEEL_REAR_DRIVER, p.pressure[WHEEL_REAR_DRIVER]);
 }
 
 void airOutWithSafetyCheck()
