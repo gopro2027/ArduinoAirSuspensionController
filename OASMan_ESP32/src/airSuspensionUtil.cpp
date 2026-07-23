@@ -256,7 +256,7 @@ static void initPressureGoalWithUnroll(byte wheelNum, int goal)
     Wheel *w = getWheel(wheelNum);
     int belowP = getextraAirUpBelowPressure();
     int unroll = getextraAirUpUnroll();
-    if (unroll > 0 && goal < belowP && w->getSelectedInputValue() < goal + unroll)
+    if (!getheightSensorMode() && unroll > 0 && goal < belowP && w->getSelectedInputValue() < goal + unroll)
     {
         w->initPressureGoal(goal + unroll, true, [w, goal]()
                             { w->initPressureGoal(goal); });

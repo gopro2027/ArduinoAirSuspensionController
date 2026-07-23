@@ -209,12 +209,16 @@ void ScrSettings::updateLevelModeOptionsVisibility(bool isLevelMode)
         lv_obj_remove_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(this->ui_calibrateMinRideHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(this->ui_sensorlessleveling->root, LV_OBJ_FLAG_HIDDEN);
+        if (this->ui_config7) lv_obj_add_flag(this->ui_config7->root, LV_OBJ_FLAG_HIDDEN);
+        if (this->ui_config8) lv_obj_add_flag(this->ui_config8->root, LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(this->ui_maintainprssure->text, "Maintain Height");
     } else {
         lv_obj_add_flag(this->ui_calibrateMinHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(this->ui_calibrateMinRideHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(this->ui_sensorlessleveling->root, LV_OBJ_FLAG_HIDDEN);
+        if (this->ui_config7) lv_obj_remove_flag(this->ui_config7->root, LV_OBJ_FLAG_HIDDEN);
+        if (this->ui_config8) lv_obj_remove_flag(this->ui_config8->root, LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(this->ui_maintainprssure->text, "Maintain Pressure");
     }
 }
