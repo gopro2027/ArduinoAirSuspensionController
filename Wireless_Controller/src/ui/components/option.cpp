@@ -292,7 +292,10 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_textarea_set_placeholder_text(this->rightHandObj, "Input");
         lv_textarea_set_one_line(this->rightHandObj, true);
 
-        // lv_textarea_set_cursor_hidden(ta, true);
+        // Hide the cursor even while focused; it is only shown once the field is
+        // actually clicked (ta_event_cb makes LV_PART_CURSOR opaque on LV_EVENT_CLICKED).
+        // This keeps the cursor from appearing when a scroll gesture starts on the field.
+        lv_obj_set_style_opa(this->rightHandObj, LV_OPA_TRANSP, LV_PART_CURSOR | (lv_style_selector_t)LV_STATE_FOCUSED);
         // lv_obj_set_event_cb(this->rightHandObj, ta_event_handler);
 
         lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);    // bg

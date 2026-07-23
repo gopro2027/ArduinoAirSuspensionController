@@ -485,8 +485,10 @@ void ta_event_cb(lv_event_t *e)
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t *ta = (lv_obj_t *)lv_event_get_target(e);
     Option *option = (Option *)lv_event_get_user_data(e);
-    if (code == LV_EVENT_FOCUSED)
+    if (code == LV_EVENT_CLICKED)
     {
+        // A genuine tap: reveal the cursor (hidden by default in option.cpp) and open the keyboard.
+        lv_obj_set_style_opa(ta, LV_OPA_COVER, LV_PART_CURSOR | (lv_style_selector_t)LV_STATE_FOCUSED);
         initKB(option);
         lv_keyboard_set_textarea(kb, ta);
         // lv_obj_clear_flag(kb, LV_OBJ_FLAG_HIDDEN);
@@ -494,6 +496,8 @@ void ta_event_cb(lv_event_t *e)
     }
     if (code == LV_EVENT_DEFOCUSED)
     {
+        // Re-hide the cursor so a later scroll-press on the field doesn't show it.
+        lv_obj_set_style_opa(ta, LV_OPA_TRANSP, LV_PART_CURSOR | (lv_style_selector_t)LV_STATE_FOCUSED);
         closeKeyboard();
     }
 }
