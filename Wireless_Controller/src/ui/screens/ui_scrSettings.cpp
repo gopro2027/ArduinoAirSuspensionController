@@ -35,6 +35,37 @@ void alertValueUpdated()
 const char *test = "";
 extern bool isConnectedToManifold();
 
+// Right-align the SSID dropdown's open list to the dropdown's right edge and clamp its width
+// to the screen, so long network names don't run off the right side. LVGL opens the list
+// left-aligned (LV_ALIGN_OUT_BOTTOM_LEFT) with a content-wide list, which overflows for long
+// SSIDs; call this right after the list opens to fix it.
+static void alignWifiSsidList(lv_obj_t *dropdown)
+{
+    lv_obj_t *list = lv_dropdown_get_list(dropdown);
+    if (!list)
+        return;
+
+    lv_obj_update_layout(list);
+
+    const int margin = scaledX(10);
+    const int maxW = getScreenWidth() - margin * 2;
+    int w = lv_obj_get_width(list);
+    if (w > maxW)
+        w = maxW;
+    const int ddW = lv_obj_get_width(dropdown);
+    if (w < ddW)
+        w = ddW;
+    lv_obj_set_width(list, w);
+
+    // Preserve whether LVGL decided to drop the list up or down (compare absolute coords,
+    // since the list is parented to the screen but the dropdown is not).
+    lv_area_t listCoords, ddCoords;
+    lv_obj_get_coords(list, &listCoords);
+    lv_obj_get_coords(dropdown, &ddCoords);
+    const bool openedUp = listCoords.y1 < ddCoords.y1;
+    lv_obj_align_to(list, dropdown, openedUp ? LV_ALIGN_OUT_TOP_RIGHT : LV_ALIGN_OUT_BOTTOM_RIGHT, 0, 0);
+}
+
 // Current page tracking
 static lv_obj_t *current_page = NULL;
 static int saved_page_index = 0;  // Remember page selection across reinits
@@ -796,19 +827,72 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_t *wifi_update_page = this->addSettingsPage(pages_container, true);
 
     char buf[50];
-    strncpy(buf, getwifiSSID().c_str(), sizeof(buf));
-    OptionValue wifiOptionValue;
-    wifiOptionValue.STRING = buf;
 
-    allOptions.push_back(new Option(wifi_update_page, OptionType::KEYBOARD_INPUT_TEXT, "SSID", wifiOptionValue, [](void *data)
+    // SSID selection is a dropdown that scans for nearby networks when opened.
+    // The first option is always the currently saved SSID (so the closed value stays put when
+    // the scan results change), or a "Select network" placeholder when nothing is saved yet.
+    this->scannedSSIDs.clear();
+    static char ssidInitOpts[64];
+    // note on these below, we are not attaching a value to the 'scanning...' options, but if you click 'select network' it will actually reset it to blank.
+    if (getwifiSSID().length() > 0)
     {
-        log_i("Typed %s", ((char *)data));
-        setwifiSSID(((char *)data));
-        alertValueUpdated();
-        ((ScrSettings *)currentScr)->updateUpdateButtonVisbility();
-    }));
+        snprintf(ssidInitOpts, sizeof(ssidInitOpts), "%s\nUnselect network\nScanning...", getwifiSSID().c_str());
+        this->scannedSSIDs.push_back(getwifiSSID());
+        this->scannedSSIDs.push_back(String(""));
+    }
+    else
+    {
+        snprintf(ssidInitOpts, sizeof(ssidInitOpts), "Select network\nScanning...");
+    }
+
+    this->ui_wifiSSID = new Option(wifi_update_page, OptionType::DROPDOWN_SELECT, "SSID", {.INT = 0}, [](void *data)
+    {
+        uint32_t idx = (uint32_t)(uintptr_t)data;
+        ScrSettings *s = (ScrSettings *)currentScr;
+        // Ignore the "Select network" placeholder (empty string); only real SSIDs are saved.
+        if (idx < s->scannedSSIDs.size())
+        {
+            log_i("Selected SSID %s", s->scannedSSIDs[idx].c_str());
+            setwifiSSID(s->scannedSSIDs[idx].c_str());
+            alertValueUpdated();
+            s->updateUpdateButtonVisbility();
+        }
+    }, (void *)ssidInitOpts);
+    allOptions.push_back(this->ui_wifiSSID);
+
+    // Widen the SSID dropdown: give the short "SSID" label a small fixed area and let the
+    // dropdown take the rest of the row (keeps its right edge at the -MARGIN alignment set
+    // by the Option constructor).
+    {
+        const int margin = scaledX(10);
+        const int labelW = scaledX(60);
+        lv_obj_set_width(this->ui_wifiSSID->text, labelW);
+        lv_obj_set_width(this->ui_wifiSSID->rightHandObj, getScreenWidth() - margin * 3 - labelW);
+    }
+
+    // Right-align the open list after LVGL opens it (this user callback runs after the
+    // dropdown's own class handler, which opens the list on release).
+    lv_obj_add_event_cb(this->ui_wifiSSID->rightHandObj, [](lv_event_t *e)
+    {
+        lv_obj_t *dd = lv_event_get_target_obj(e);
+        if (lv_dropdown_is_open(dd))
+            alignWifiSsidList(dd);
+    }, LV_EVENT_RELEASED, this);
+
+    // Kick off an async WiFi scan when the dropdown is opened.
+    lv_obj_add_event_cb(this->ui_wifiSSID->rightHandObj, [](lv_event_t *e)
+    {
+        ScrSettings *s = (ScrSettings *)currentScr;
+        if (s->wifiScanInProgress)
+            return;
+        s->wifiScanInProgress = true;
+        //lv_dropdown_set_options(s->ui_wifiSSID->rightHandObj, "Scanning...");
+        WiFi.mode(WIFI_STA);
+        WiFi.scanNetworks(true /* async */, false /* show hidden */);
+    }, LV_EVENT_CLICKED, this);
 
     strncpy(buf, getwifiPassword().c_str(), sizeof(buf));
+    OptionValue wifiOptionValue;
     wifiOptionValue.STRING = buf;
 
     Option *pass = new Option(wifi_update_page, OptionType::KEYBOARD_INPUT_TEXT, "PASS", wifiOptionValue, [](void *data)
@@ -917,6 +1001,74 @@ void ScrSettings::loop()
 {
     Scr::loop();
 
+    // Poll the async WiFi scan started when the SSID dropdown was opened.
+    if (this->wifiScanInProgress)
+    {
+        int n = WiFi.scanComplete();
+        if (n >= 0)
+        {
+            this->wifiScanInProgress = false;
+            this->scannedSSIDs.clear();
+            String opts;
+            String saved = getwifiSSID();
+
+            // First option is always the saved SSID (kept selected below so the displayed
+            // value doesn't jump when scan results change), or a placeholder when blank.
+            if (saved.length() > 0)
+            {
+                opts = saved;
+            } else {
+                opts = "Select network";
+            }
+            this->scannedSSIDs.push_back(saved);
+
+            for (int i = 0; i < n; i++)
+            {
+                String ss = WiFi.SSID(i);
+                if (ss.length() == 0)
+                    continue; // skip hidden networks
+                bool dup = false;
+                for (size_t j = 0; j < this->scannedSSIDs.size(); j++)
+                {
+                    if (this->scannedSSIDs[j] == ss)
+                    {
+                        dup = true;
+                        break;
+                    }
+                }
+                if (dup)
+                    continue; // already listed (incl. the saved SSID pinned first)
+                
+                opts += "\n";
+                opts += ss;
+                this->scannedSSIDs.push_back(ss);
+            }
+
+            // no results found and no saved ssid
+            if (this->scannedSSIDs.size() == 1)
+            {
+                opts += "No networks found!";
+            }
+
+            lv_dropdown_set_options(this->ui_wifiSSID->rightHandObj, opts.c_str());
+            // Keep the pinned saved SSID / placeholder (index 0) selected so the closed value stays put.
+            lv_dropdown_set_selected(this->ui_wifiSSID->rightHandObj, 0);
+
+            // Refresh the open list so the scanned results replace "Scanning...".
+            if (lv_dropdown_is_open(this->ui_wifiSSID->rightHandObj))
+            {
+                lv_dropdown_close(this->ui_wifiSSID->rightHandObj);
+                lv_dropdown_open(this->ui_wifiSSID->rightHandObj);
+                alignWifiSsidList(this->ui_wifiSSID->rightHandObj);
+            }
+
+            WiFi.scanDelete();
+            // Release the WiFi driver's internal RAM / coexistence load so the BLE link to
+            // the manifold stays stable between scans. A fresh scan re-inits on next open.
+            WiFi.mode(WIFI_OFF);
+        }
+    }
+
     // Update status text labels
     this->ui_s1->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_FROZEN) ? "Yes" : "No");
     this->ui_s3->setRightHandText(statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON) ? "On" : "Off");
@@ -996,6 +1148,15 @@ void ScrSettings::loop()
 
 void ScrSettings::cleanup()
 {
+    // Ensure any WiFi scan started from the SSID dropdown is torn down when leaving the
+    // screen, so WiFi doesn't keep holding internal RAM / coexistence load.
+    if (this->wifiScanInProgress)
+    {
+        WiFi.scanDelete();
+        WiFi.mode(WIFI_OFF);
+        this->wifiScanInProgress = false;
+    }
+
     // Call base class cleanup first (deletes Alert)
     Scr::cleanup();
 
