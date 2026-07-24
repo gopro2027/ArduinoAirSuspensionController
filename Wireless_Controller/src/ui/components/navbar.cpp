@@ -133,13 +133,13 @@ void Navbar::styleTabBar() {
         if (existingLabel) {
             // Store as text label
             this->tabLabels[i] = existingLabel;
-            lv_obj_set_style_text_font(existingLabel, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_font(existingLabel, getScaledFont(10), 0);
             lv_obj_remove_flag(existingLabel, LV_OBJ_FLAG_CLICKABLE);
 
             // Create icon above the text label
             this->tabIcons[i] = lv_label_create(tabBtn);
             lv_label_set_text(this->tabIcons[i], icons[i]);
-            lv_obj_set_style_text_font(this->tabIcons[i], &lv_font_montserrat_16, 0);
+            lv_obj_set_style_text_font(this->tabIcons[i], getScaledFont(16), 0);
             lv_obj_remove_flag(this->tabIcons[i], LV_OBJ_FLAG_CLICKABLE);
 
             // Move icon to be first child (above text)

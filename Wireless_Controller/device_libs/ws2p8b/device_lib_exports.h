@@ -13,3 +13,6 @@
 #include "files/PWR_Key_Dummy.h"
 
 #define SUPPORTS_ROTATION 0
+
+// Physical panel: 2.8" diagonal, 480x640 -> ~286 px/inch
+#define DEVICE_DPI 286

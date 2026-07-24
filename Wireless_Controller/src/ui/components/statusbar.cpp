@@ -78,7 +78,7 @@ void Statusbar::create(lv_obj_t* parent) {
     alertIcon = lv_label_create(container);
     lv_label_set_text(alertIcon, LV_SYMBOL_WARNING);
     lv_obj_set_style_text_color(alertIcon, lv_color_hex(STATUSBAR_ICON_COLOR), 0);
-    lv_obj_set_style_text_font(alertIcon, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(alertIcon, getScaledFont(10), 0);
     lv_obj_align(alertIcon, LV_ALIGN_LEFT_MID, padding, 0);
     lv_obj_add_flag(alertIcon, LV_OBJ_FLAG_HIDDEN);
 
@@ -86,14 +86,14 @@ void Statusbar::create(lv_obj_t* parent) {
     batteryIcon = lv_label_create(container);
     lv_label_set_text(batteryIcon, LV_SYMBOL_BATTERY_FULL);
     lv_obj_set_style_text_color(batteryIcon, lv_color_hex(STATUSBAR_ICON_COLOR), 0);
-    lv_obj_set_style_text_font(batteryIcon, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(batteryIcon, getScaledFont(10), 0);
     lv_obj_align(batteryIcon, LV_ALIGN_RIGHT_MID, -padding - scaledX(30), 0);
 
     // Battery percentage label
     batteryLabel = lv_label_create(container);
     lv_label_set_text(batteryLabel, "100%");
     lv_obj_set_style_text_color(batteryLabel, lv_color_hex(STATUSBAR_TEXT_COLOR), 0);
-    lv_obj_set_style_text_font(batteryLabel, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(batteryLabel, getScaledFont(10), 0);
     lv_obj_align(batteryLabel, LV_ALIGN_RIGHT_MID, -padding, 0);
 
     // Center line marker (pull indicator)
@@ -163,12 +163,12 @@ void Statusbar::createPullDownPanel(lv_obj_t* parent) {
         lv_obj_t* iconLabel = lv_label_create(row);
         lv_label_set_text(iconLabel, icon);
         lv_obj_set_style_text_color(iconLabel, lv_color_hex(STATUSBAR_ICON_COLOR), 0);
-        lv_obj_set_style_text_font(iconLabel, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(iconLabel, getScaledFont(10), 0);
 
         lv_obj_t* textLabel = lv_label_create(row);
         lv_label_set_text(textLabel, text);
         lv_obj_set_style_text_color(textLabel, lv_color_hex(STATUSBAR_TEXT_COLOR), 0);
-        lv_obj_set_style_text_font(textLabel, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(textLabel, getScaledFont(10), 0);
         lv_obj_set_flex_grow(textLabel, 1);
 
         return textLabel;
@@ -190,12 +190,12 @@ void Statusbar::createPullDownPanel(lv_obj_t* parent) {
     panelBatteryIcon = lv_label_create(batterySection);
     lv_label_set_text(panelBatteryIcon, LV_SYMBOL_BATTERY_FULL);
     lv_obj_set_style_text_color(panelBatteryIcon, lv_color_hex(0x4ADE80), 0);
-    lv_obj_set_style_text_font(panelBatteryIcon, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(panelBatteryIcon, getScaledFont(20), 0);
 
     panelBatteryLabel = lv_label_create(batterySection);
     lv_label_set_text(panelBatteryLabel, "Battery: 100%");
     lv_obj_set_style_text_color(panelBatteryLabel, lv_color_hex(STATUSBAR_TEXT_COLOR), 0);
-    lv_obj_set_style_text_font(panelBatteryLabel, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(panelBatteryLabel, getScaledFont(10), 0);
 
     // ========== ALERT SECTION ==========
     alertSection = lv_obj_create(pullDownPanel);
@@ -214,12 +214,12 @@ void Statusbar::createPullDownPanel(lv_obj_t* parent) {
     panelAlertIcon = lv_label_create(alertSection);
     lv_label_set_text(panelAlertIcon, LV_SYMBOL_WARNING);
     lv_obj_set_style_text_color(panelAlertIcon, lv_color_hex(STATUSBAR_ICON_COLOR), 0);
-    lv_obj_set_style_text_font(panelAlertIcon, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(panelAlertIcon, getScaledFont(16), 0);
 
     panelAlertLabel = lv_label_create(alertSection);
     lv_label_set_text(panelAlertLabel, "No alerts");
     lv_obj_set_style_text_color(panelAlertLabel, lv_color_hex(STATUSBAR_TEXT_COLOR), 0);
-    lv_obj_set_style_text_font(panelAlertLabel, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(panelAlertLabel, getScaledFont(10), 0);
     lv_label_set_long_mode(panelAlertLabel, LV_LABEL_LONG_WRAP);
     lv_obj_set_flex_grow(panelAlertLabel, 1);
 
@@ -239,7 +239,7 @@ void Statusbar::createPullDownPanel(lv_obj_t* parent) {
     lv_obj_t* brightnessIcon = lv_label_create(brightnessSection);
     lv_label_set_text(brightnessIcon, LV_SYMBOL_IMAGE);
     lv_obj_set_style_text_color(brightnessIcon, lv_color_hex(0xFBBF24), 0);
-    lv_obj_set_style_text_font(brightnessIcon, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(brightnessIcon, getScaledFont(20), 0);
 
     brightnessSlider = lv_slider_create(brightnessSection);
     lv_obj_set_flex_grow(brightnessSlider, 1);
@@ -271,7 +271,7 @@ void Statusbar::createPullDownPanel(lv_obj_t* parent) {
     lv_obj_t* statusTitle = lv_label_create(statusSection);
     lv_label_set_text(statusTitle, "System Status");
     lv_obj_set_style_text_color(statusTitle, lv_color_hex(STATUSBAR_TEXT_COLOR), 0);
-    lv_obj_set_style_text_font(statusTitle, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(statusTitle, getScaledFont(10), 0);
     lv_obj_set_style_pad_bottom(statusTitle, scaledY(4), 0);
 
     // Status rows with icons

@@ -6,8 +6,13 @@
  * Deploy as: oasman-ota → http://oasman-ota.gopro2027.workers.dev/
  */
 
-const RELEASES_LATEST_URL =
-  'https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases/latest';
+/**
+ * List releases (newest first) instead of only /latest, so a device can fall back
+ * to the newest release that actually ships ITS firmware asset. A hotfix that only
+ * rebuilds one variant must not strand every other variant on a 404.
+ */
+const RELEASES_LIST_URL =
+  'https://api.github.com/repos/gopro2027/ArduinoAirSuspensionController/releases?per_page=30';
 
 const BINARY_URL_PREFIX =
   'https://github.com/gopro2027/ArduinoAirSuspensionController/releases/download/';
@@ -29,52 +34,57 @@ function listFirmwareBinAssets(release) {
   );
 }
 
-/** Remove cached firmware binaries for a release (URLs are tag-specific). */
-async function invalidateFirmwareBinaries(release) {
+/** Remove cached firmware binaries across releases (URLs are tag-specific). */
+async function invalidateFirmwareBinaries(releases) {
   const cache = caches.default;
-  const assets = listFirmwareBinAssets(release);
+  const assets = (releases || []).flatMap(listFirmwareBinAssets);
   await Promise.all(
     assets.map((asset) => cache.delete(binaryCacheRequest(asset.browser_download_url)))
   );
   if (assets.length > 0) {
-    console.log(
-      `Invalidated ${assets.length} firmware binary cache entries for release ${release?.tag_name}`
-    );
+    console.log(`Invalidated ${assets.length} firmware binary cache entries`);
   }
 }
 
-async function parseCachedRelease(cachedResponse) {
+/** Tag of the newest (first) non-draft release in a list, used for cache change detection. */
+function newestReleaseTag(releases) {
+  const newest = (releases || []).find((r) => !r?.draft);
+  return newest?.tag_name || null;
+}
+
+async function parseCachedReleases(cachedResponse) {
   if (!cachedResponse) return null;
   try {
     const buffer = await cachedResponse.arrayBuffer();
-    return JSON.parse(new TextDecoder().decode(buffer));
+    const parsed = JSON.parse(new TextDecoder().decode(buffer));
+    return Array.isArray(parsed) ? parsed : null;
   } catch {
     return null;
   }
 }
 
-function releaseTagFromCache(cachedResponse, release) {
-  return cachedResponse?.headers.get('X-Release-Tag') || release?.tag_name || null;
+function releasesTagFromCache(cachedResponse, releases) {
+  return cachedResponse?.headers.get('X-Release-Tag') || newestReleaseTag(releases);
 }
 
-async function fetchCachedReleaseJson() {
-  const cacheKey = new Request(RELEASES_LATEST_URL, { method: 'GET' });
+async function fetchCachedReleasesJson() {
+  const cacheKey = new Request(RELEASES_LIST_URL, { method: 'GET' });
   const cache = caches.default;
   const cachedResponse = await cache.match(cacheKey);
-  let cachedRelease = null;
+  let cachedReleases = null;
   if (cachedResponse) {
-    cachedRelease = await parseCachedRelease(cachedResponse);
+    cachedReleases = await parseCachedReleases(cachedResponse);
     const cacheExpiry = cachedResponse.headers.get('X-Cache-Expiry');
-    if (cacheExpiry && Date.now() < parseInt(cacheExpiry, 10) && cachedRelease) {
+    if (cacheExpiry && Date.now() < parseInt(cacheExpiry, 10) && cachedReleases) {
       return {
         ok: true,
-        release: cachedRelease,
+        releases: cachedReleases,
         fromCache: true,
       };
     }
   }
 
-  const response = await fetch(RELEASES_LATEST_URL, {
+  const response = await fetch(RELEASES_LIST_URL, {
     headers: {
       'User-Agent': 'OASMan-OTA/1.0',
       Accept: 'application/vnd.github+json',
@@ -87,10 +97,10 @@ async function fetchCachedReleaseJson() {
   const rateLimitReset = response.headers.get('x-ratelimit-reset');
 
   if (response.status === 403 || response.status === 429) {
-    if (cachedRelease) {
+    if (cachedReleases) {
       return {
         ok: true,
-        release: cachedRelease,
+        releases: cachedReleases,
         fromCache: true,
         rateLimited: true,
       };
@@ -113,13 +123,14 @@ async function fetchCachedReleaseJson() {
     };
   }
 
-  const release = JSON.parse(new TextDecoder().decode(buffer));
-  const newTag = release.tag_name;
-  const previousTag = releaseTagFromCache(cachedResponse, cachedRelease);
+  const parsed = JSON.parse(new TextDecoder().decode(buffer));
+  const releases = Array.isArray(parsed) ? parsed : [];
+  const newTag = newestReleaseTag(releases);
+  const previousTag = releasesTagFromCache(cachedResponse, cachedReleases);
 
-  if (previousTag && newTag && previousTag !== newTag && cachedRelease) {
+  if (previousTag && newTag && previousTag !== newTag && cachedReleases) {
     console.log(`Release tag changed ${previousTag} -> ${newTag}, clearing firmware caches`);
-    await invalidateFirmwareBinaries(cachedRelease);
+    await invalidateFirmwareBinaries(cachedReleases);
   }
 
   const responseToCache = new Response(buffer, {
@@ -136,17 +147,25 @@ async function fetchCachedReleaseJson() {
 
   return {
     ok: true,
-    release,
+    releases,
     fromCache: false,
   };
 }
 
-function findFirmwareAsset(release, firmware) {
+/**
+ * Newest (list is newest-first) non-draft release that ships this device's firmware.
+ * This is the fix: a variant-specific hotfix release no longer hides older releases
+ * that are still the latest available build for every other variant.
+ */
+function findReleaseWithFirmware(releases, firmware) {
   const assetName = `${firmware}_firmware.bin`;
-  const assets = release.assets || [];
-  for (const asset of assets) {
-    if (asset.name === assetName) {
-      return asset;
+  for (const release of releases || []) {
+    if (release?.draft) continue;
+    const asset = (release.assets || []).find(
+      (a) => a.name === assetName && a.browser_download_url
+    );
+    if (asset) {
+      return { release, asset };
     }
   }
   return null;
@@ -272,7 +291,7 @@ export default {
       });
     }
 
-    const releaseResult = await fetchCachedReleaseJson();
+    const releaseResult = await fetchCachedReleasesJson();
     if (!releaseResult.ok) {
       const headers = { 'Content-Type': 'application/json' };
       if (releaseResult.status === 429) {
@@ -284,9 +303,16 @@ export default {
       });
     }
 
-    const release = releaseResult.release;
-    const tagName = release.tag_name;
+    const match = findReleaseWithFirmware(releaseResult.releases, firmware);
+    if (!match) {
+      return new Response(
+        JSON.stringify({ error: 'firmware asset not found', firmware }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
+    // Up to date only relative to the newest release that actually ships this firmware.
+    const tagName = match.release.tag_name;
     if (tagName === tag) {
       return new Response(null, {
         status: 204,
@@ -297,14 +323,6 @@ export default {
       });
     }
 
-    const asset = findFirmwareAsset(release, firmware);
-    if (!asset || !asset.browser_download_url) {
-      return new Response(
-        JSON.stringify({ error: 'firmware asset not found', firmware, tag: tagName }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    return proxyBinary(asset.browser_download_url, ctx);
+    return proxyBinary(match.asset.browser_download_url, ctx);
   },
 };
