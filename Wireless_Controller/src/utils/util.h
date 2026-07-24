@@ -31,6 +31,92 @@ inline int scaledY(int referenceValue) {
     return (int)(referenceValue * getScaleY());
 }
 
+// Physical (DPI-based) sizing. Use for touch targets that must be a consistent real-world
+// size regardless of panel resolution (e.g. settings rows). DEVICE_DPI is the panel's true
+// pixels-per-inch, defined per-device in each device_libs/<dev>/device_lib_exports.h. There is
+// no way to read physical size from the hardware, so it must be declared per panel.
+#ifndef DEVICE_DPI
+#define DEVICE_DPI 143 // fallback: 2.8in 240x320 reference panel (~143 dpi)
+#endif
+inline int mmToPx(float mm) {
+    return (int)(mm * (float)DEVICE_DPI / 25.4f + 0.5f);
+}
+
+// DPI the hardcoded UI font sizes were originally tuned at (ws2p8, 2.8in 240x320 ~143 dpi).
+#define UI_BASELINE_DPI 143
+
+// Cap on how much text is enlarged for high-DPI panels. Glyphs are rasterized on the CPU (no GPU)
+// and blend cost grows ~quadratically with size; on the 480x640 RGB 2.8b panel a full 2.0x
+// (286/143 dpi) font scale dropped scroll to ~5 FPS. Capping the *font* multiplier (touch targets
+// still use mmToPx for row height) roughly halves glyph blend cost while keeping text clearly
+// larger than baseline. Only panels above this ratio are affected: ws2p8b ~2.0x -> clamped;
+// ws3p5/ws3p5b ~1.15x and ws1p8knob ~1.4x are below the cap and unchanged. Per-device overridable
+// in device_lib_exports.h.
+#ifndef UI_MAX_FONT_SCALE
+#define UI_MAX_FONT_SCALE 1.5f
+#endif
+
+// getScaledFont(baselinePx) -> a compiled LVGL font whose pixel size approximates `baselinePx`
+// scaled from the baseline-DPI design to this device's real DPI (capped by UI_MAX_FONT_SCALE),
+// snapped to the nearest available compiled size. Use it instead of a raw &lv_font_montserrat_N for
+// any on-screen text/icons; LVGL bitmap fonts can't be scaled at runtime, so heights only track DPI
+// if we pick a bigger font here.
+//
+// This resolves ENTIRELY AT COMPILE TIME (it's a macro over the templates below), so each call site
+// references exactly one lv_font_montserrat_* symbol. Fonts that no call site selects on a given
+// device are never referenced, so the linker never pulls their translation unit out of the LVGL
+// archive -> they don't bloat that variant's .bin. (A runtime lookup table, by contrast, names
+// every font and forces all of them into every device's firmware.)
+//
+// Requirements:
+//  - `baselinePx` MUST be a compile-time constant at every call site (all current callers pass a
+//    literal). Passing a runtime value is a compile error (it can't be a template argument).
+//  - DEVICE_DPI/UI_BASELINE_DPI/UI_MAX_FONT_SCALE must be defined before this point (they are, and
+//    util.h pulls in device_lib_exports.h up top so DEVICE_DPI is the panel's real value).
+//  - Every size listed in uiFontForPx() must be enabled in include/lv_conf.h (LV_FONT_MONTSERRAT_*)
+//    so its symbol is declared; keep uiSnapFontPx()'s list and uiFontForPx()'s cases in sync.
+
+// Design px -> this panel's px, using the panel DPI ratio capped at UI_MAX_FONT_SCALE.
+constexpr int uiScaledTargetPx(int baselinePx) {
+    float scale = (float)DEVICE_DPI / (float)UI_BASELINE_DPI;
+    if (scale > (float)UI_MAX_FONT_SCALE) scale = (float)UI_MAX_FONT_SCALE;
+    return (int)((float)baselinePx * scale + 0.5f);
+}
+
+// Snap a target px to the nearest size that has a case in uiFontForPx() below.
+constexpr int uiSnapFontPx(int target) {
+    const int sizes[] = {10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 40};
+    int best = sizes[0];
+    int bestDiff = target - best;
+    if (bestDiff < 0) bestDiff = -bestDiff;
+    for (int i = 1; i < (int)(sizeof(sizes) / sizeof(sizes[0])); i++) {
+        int diff = target - sizes[i];
+        if (diff < 0) diff = -diff;
+        if (diff < bestDiff) { bestDiff = diff; best = sizes[i]; }
+    }
+    return best;
+}
+
+// Map an already-snapped px to its font. `if constexpr` discards the non-matching branches for each
+// instantiation, so only the selected font symbol is odr-used.
+template <int px>
+constexpr const lv_font_t *uiFontForPx() {
+    if constexpr (px == 10) return &lv_font_montserrat_10;
+    else if constexpr (px == 12) return &lv_font_montserrat_12;
+    else if constexpr (px == 14) return &lv_font_montserrat_14;
+    else if constexpr (px == 16) return &lv_font_montserrat_16;
+    else if constexpr (px == 18) return &lv_font_montserrat_18;
+    else if constexpr (px == 20) return &lv_font_montserrat_20;
+    else if constexpr (px == 22) return &lv_font_montserrat_22;
+    else if constexpr (px == 24) return &lv_font_montserrat_24;
+    else if constexpr (px == 28) return &lv_font_montserrat_28;
+    else if constexpr (px == 32) return &lv_font_montserrat_32;
+    else if constexpr (px == 40) return &lv_font_montserrat_40;
+    else return &lv_font_montserrat_14; // unreachable while the snap list matches the cases above
+}
+
+#define getScaledFont(baselinePx) (::uiFontForPx< ::uiSnapFontPx(::uiScaledTargetPx((baselinePx))) >())
+
 // Dynamic UI constants that scale with display size
 inline int getNavbarHeight() {
     return scaledY(50);

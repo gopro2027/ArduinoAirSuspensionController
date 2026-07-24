@@ -13,14 +13,9 @@ enum BTOasIdentifier
 {
     IDLE = 0,
     STATUSREPORT = 1,
-    AIRUP = 2,
-    AIROUT = 3,
     AIRSM = 4,
-    SAVETOPROFILE = 5,
-    READPROFILE = 6,
     AIRUPQUICK = 7,
     BASEPROFILE = 8,
-    SETAIRHEIGHT = 9,
     RAISEONPRESSURESET = 11,
     REBOOT = 12,
     CALIBRATE = 13,
@@ -39,7 +34,8 @@ enum BTOasIdentifier
     BROADCASTNAME = 35,
     UPDATESTATUSREQUEST = 36,
     RFCOMMAND = 37,
-    AUXILLARYOUTPUTCONTROL = 38
+    AUXILLARYOUTPUTCONTROL = 38,
+    CALIBRATEHEIGHTSENSORS = 39
 };
 
 enum StatusPacketBittset
@@ -60,7 +56,8 @@ enum ConfigFlagsBit
     CONFIG_AIR_OUT_ON_SHUTOFF = 2,
     CONFIG_HEIGHT_SENSOR_MODE = 3,
     CONFIG_SAFETY_MODE = 4,
-    CONFIG_AI_STATUS_ENABLED = 5
+    CONFIG_AI_STATUS_ENABLED = 5,
+    CONFIG_SENSORLESS_LEVELING = 6
 };
 
 enum AuthResult
@@ -124,6 +121,14 @@ enum BP32CMD
     BP32CMD_ENABLE_NEW_CONN,
     BP32CMD_FORGET_DEVICES,
     BP32CMD_DISCONNECT_DEVICES
+};
+
+// Which per-wheel height calibration point CalibrateHeightSensorsPacket should capture.
+enum HeightCalibrationType : uint8_t
+{
+    HEIGHT_CAL_MIN = 0,             // lowest the vehicle physically goes
+    HEIGHT_CAL_MAX = 1,             // highest the vehicle physically goes
+    HEIGHT_CAL_MIN_RIDE_HEIGHT = 2  // lowest ride height allowed during normal use
 };
 
 union BTOasValue32
@@ -191,14 +196,6 @@ struct MessagePacket : BTOasPacket
 };
 
 // Incoming packets
-struct AirupPacket : BTOasPacket
-{
-    AirupPacket();
-};
-struct AiroutPacket : BTOasPacket
-{
-    AiroutPacket();
-};
 struct DetectPressureSensorsPacket : BTOasPacket
 {
     DetectPressureSensorsPacket();
@@ -206,11 +203,6 @@ struct DetectPressureSensorsPacket : BTOasPacket
 struct CalibratePacket : BTOasPacket
 {
     CalibratePacket();
-};
-struct AirsmPacket : BTOasPacket
-{
-    AirsmPacket(int relativeValue);
-    int getRelativeValue();
 };
 struct ProfilePacket : BTOasPacket
 {
@@ -220,17 +212,9 @@ struct BooleanPacket : BTOasPacket
 {
     bool getBoolean();
 };
-struct SaveToProfilePacket : ProfilePacket
-{
-    SaveToProfilePacket(int profileIndex);
-};
 struct SaveCurrentPressuresToProfilePacket : ProfilePacket
 {
     SaveCurrentPressuresToProfilePacket(int profileIndex);
-};
-struct ReadProfilePacket : ProfilePacket
-{
-    ReadProfilePacket(int profileIndex);
 };
 struct AirupQuickPacket : ProfilePacket
 {
@@ -239,12 +223,6 @@ struct AirupQuickPacket : ProfilePacket
 struct BaseProfilePacket : ProfilePacket
 {
     BaseProfilePacket(int profileIndex);
-};
-struct SetAirheightPacket : BTOasPacket
-{
-    SetAirheightPacket(int wheelIndex, int pressure);
-    int getWheelIndex();
-    int getPressure();
 };
 // TODO: This is just straight up not used by the controller currently. It's related to the og pressure preset code, where you manually set the values when we only had rest based communication on the original bluetooth (not ble). We really need to remove all of the unused functionality from that.
 struct RaiseOnPressureSetPacket : BooleanPacket
@@ -277,7 +255,7 @@ struct StartwebPacket : BTOasPacket
 };
 struct ConfigValuesPacket : BTOasPacket
 {
-    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t heightSensorInvertBits, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig);
+    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig);
     bool *_setValues();
     uint8_t *_bagMaxPressure();
     uint32_t *_systemShutoffTimeM();
@@ -289,7 +267,6 @@ struct ConfigValuesPacket : BTOasPacket
     uint8_t *_rfButtonB();
     uint8_t *_rfButtonC();
     uint8_t *_rfButtonD();
-    uint8_t *_heightSensorInvertBits();
     uint32_t *_configFlagsBits();
     AuxillaryOutputModePayload *_auxillaryOutputConfig();
 };
@@ -333,6 +310,12 @@ struct RfCommandPacket : BTOasPacket
 struct AuxillaryOutputControlPacket : BooleanPacket
 {
     AuxillaryOutputControlPacket(bool on);
+};
+
+struct CalibrateHeightSensorsPacket : BTOasPacket
+{
+    CalibrateHeightSensorsPacket(uint8_t calibrationType);
+    uint8_t getCalibrationType();
 };
 
 #endif

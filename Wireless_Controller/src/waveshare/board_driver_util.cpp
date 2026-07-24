@@ -142,10 +142,12 @@ void board_drivers_init()
     // Register callback for hardware rotation
     lv_display_add_event_cb(display, lvgl_display_resolution_changed_callback, LV_EVENT_RESOLUTION_CHANGED, NULL);
 
-    delay(1000);
+    lv_obj_t *splashScr = applyRotationAndShowSplashScreen();
+
     if (!SPIFFS.begin(false))
     {
         log_i("SPIFFS needs formatting");
+        delay(1000);
         showBootStatusText("Formatting partitions in 3...");
         delay(1000);
         showBootStatusText("Formatting partitions in 2...");
@@ -165,8 +167,6 @@ void board_drivers_init()
         delay(10000);
         ESP.restart();
     }
-
-    lv_obj_t *splashScr = applyRotationAndShowSplashScreen();
 
     // Setup touch
     // indev = lvgl_touch_init();

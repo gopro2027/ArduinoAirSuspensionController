@@ -28,17 +28,10 @@ Manifold *getManifold();
 Compressor *getCompressor();
 AuxillaryOutput *getAuxillaryOutput();
 Wheel *getWheel(int i);
-void setRideHeightFrontPassenger(byte value);
-void setRideHeightRearPassenger(byte value);
-void setRideHeightFrontDriver(byte value);
-void setRideHeightRearDriver(byte value);
 void initializeADS();
 void setupManifold();
 bool isAnyWheelActive();
-void airUp(bool quick = false);
-void loadProfileAirUpQuick(int profileIndex);
-void airOut();
-void airUpRelativeToAverage(int value);
+void loadProfileAirUp(int profileIndex);
 void accessoryWireSetup();
 void accessoryWireLoop();
 void ebrakeWireSetup();
@@ -46,7 +39,7 @@ void ebrakeWireLoop();
 bool isEBrakeOn();
 void notifyKeepAlive();
 bool isVehicleOn();
-bool isVehicleParked(bool strict = false);
+bool isVehicleParked(bool dontTrustEBrakeAlone = false, bool requireBothAccAndEbrake_or_GPS = false);
 bool isKeepAliveTimerExpired();
 namespace PressureSensorCalibration
 {

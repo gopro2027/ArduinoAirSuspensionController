@@ -35,6 +35,37 @@ void alertValueUpdated()
 const char *test = "";
 extern bool isConnectedToManifold();
 
+// Right-align the SSID dropdown's open list to the dropdown's right edge and clamp its width
+// to the screen, so long network names don't run off the right side. LVGL opens the list
+// left-aligned (LV_ALIGN_OUT_BOTTOM_LEFT) with a content-wide list, which overflows for long
+// SSIDs; call this right after the list opens to fix it.
+static void alignWifiSsidList(lv_obj_t *dropdown)
+{
+    lv_obj_t *list = lv_dropdown_get_list(dropdown);
+    if (!list)
+        return;
+
+    lv_obj_update_layout(list);
+
+    const int margin = scaledX(10);
+    const int maxW = getScreenWidth() - margin * 2;
+    int w = lv_obj_get_width(list);
+    if (w > maxW)
+        w = maxW;
+    const int ddW = lv_obj_get_width(dropdown);
+    if (w < ddW)
+        w = ddW;
+    lv_obj_set_width(list, w);
+
+    // Preserve whether LVGL decided to drop the list up or down (compare absolute coords,
+    // since the list is parented to the screen but the dropdown is not).
+    lv_area_t listCoords, ddCoords;
+    lv_obj_get_coords(list, &listCoords);
+    lv_obj_get_coords(dropdown, &ddCoords);
+    const bool openedUp = listCoords.y1 < ddCoords.y1;
+    lv_obj_align_to(list, dropdown, openedUp ? LV_ALIGN_OUT_TOP_RIGHT : LV_ALIGN_OUT_BOTTOM_RIGHT, 0, 0);
+}
+
 // Current page tracking
 static lv_obj_t *current_page = NULL;
 static int saved_page_index = 0;  // Remember page selection across reinits
@@ -113,6 +144,13 @@ static void maintain_pressure_handler(void *data)
     log_i("Pressed maintain pressure %i", value);
 }
 
+static void sensorless_leveling_handler(void *data)
+{
+    bool value = (bool)data;
+    setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING, value);
+    log_i("Pressed sensorless leveling %i", value);
+}
+
 static void rise_on_start_handler(void *data)
 {
     bool value = (bool)data;
@@ -136,17 +174,6 @@ static void safety_mode_handler(void *data)
     log_i("Pressed safetymode %i", value);
 }
 
-static void height_invert_handler(int wheelNum, void *data)
-{
-    uint8_t bits = *util_configValues._heightSensorInvertBits();
-    if ((bool)data)
-        bits |= (1 << wheelNum);
-    else
-        bits &= ~(1 << wheelNum);
-    *util_configValues._heightSensorInvertBits() = bits;
-    sendConfigValuesPacket(true);
-    alertValueUpdated();
-}
 
 static void aux_output_switch_handler(void *data)
 {
@@ -206,18 +233,20 @@ static void aux_mode_shutdown_handler(void *data)
     alertValueUpdated();
 }
 
-void ScrSettings::updateHeightInvertOptionsVisibility(bool isLevelMode)
+void ScrSettings::updateLevelModeOptionsVisibility(bool isLevelMode)
 {
     if (isLevelMode) {
-        lv_obj_remove_flag(this->ui_heightInvertFP->root, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_remove_flag(this->ui_heightInvertRP->root, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_remove_flag(this->ui_heightInvertFD->root, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_remove_flag(this->ui_heightInvertRD->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_calibrateMinHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_calibrateMinRideHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_sensorlessleveling->root, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(this->ui_maintainprssure->text, "Maintain Height");
     } else {
-        lv_obj_add_flag(this->ui_heightInvertFP->root, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(this->ui_heightInvertRP->root, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(this->ui_heightInvertFD->root, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(this->ui_heightInvertRD->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_calibrateMinHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(this->ui_calibrateMinRideHeight->root, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(this->ui_sensorlessleveling->root, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(this->ui_maintainprssure->text, "Maintain Pressure");
     }
 }
 
@@ -245,13 +274,13 @@ void styleSettingsSectionDropdown(lv_obj_t *dd)
 
     lv_obj_set_style_text_color(dd, lv_color_hex(0xF2F4F7), LV_PART_MAIN);
 #ifdef SCREEN_MODE_CIRCLE
-    lv_obj_set_style_text_font(dd, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_text_font(dd, getScaledFont(14), LV_PART_MAIN);
     lv_obj_set_style_pad_left(dd, 10, LV_PART_MAIN);
     lv_obj_set_style_pad_right(dd, 10, LV_PART_MAIN);
     lv_obj_set_style_pad_top(dd, 8, LV_PART_MAIN);
     lv_obj_set_style_pad_bottom(dd, 8, LV_PART_MAIN);
 #else
-    lv_obj_set_style_text_font(dd, &lv_font_montserrat_20, LV_PART_MAIN);
+    lv_obj_set_style_text_font(dd, getScaledFont(20), LV_PART_MAIN);
     lv_obj_set_style_pad_left(dd, 14, LV_PART_MAIN);
     lv_obj_set_style_pad_right(dd, 14, LV_PART_MAIN);
     lv_obj_set_style_pad_top(dd, 10, LV_PART_MAIN);
@@ -443,7 +472,8 @@ void ScrSettings::init(lv_obj_t *parent)
     // --- Basic settings page ---
     lv_obj_t *basic_settings_page = this->addSettingsPage(pages_container, true);
 
-    this->ui_maintainprssure = new Option(basic_settings_page, OptionType::ON_OFF, "Maintain Preset", {.INT = 0}, maintain_pressure_handler);
+    this->ui_maintainprssure = new Option(basic_settings_page, OptionType::ON_OFF, "Maintain Pressure", {.INT = 0}, maintain_pressure_handler);
+    this->ui_sensorlessleveling = new Option(basic_settings_page, OptionType::ON_OFF, "Height levelling", {.INT = 0}, sensorless_leveling_handler);
     this->ui_riseonstart = new Option(basic_settings_page, OptionType::ON_OFF, "Rise on start", {.INT = 0}, rise_on_start_handler);
 
 #if ENABLE_AIR_OUT_ON_SHUTOFF
@@ -535,12 +565,52 @@ void ScrSettings::init(lv_obj_t *parent)
     };
     this->ui_heightsensormode = new RadioOption(levelling_page, levelTypeRadioText, 2, levelTypeRadioCB);
 
-    this->ui_heightInvertFD = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Left", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_FRONT_DRIVER, data); });
-    this->ui_heightInvertFP = new Option(levelling_page, OptionType::ON_OFF, "Invert Front Right", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_FRONT_PASSENGER, data); });
-    this->ui_heightInvertRD = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Left", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_REAR_DRIVER, data); });
-    this->ui_heightInvertRP = new Option(levelling_page, OptionType::ON_OFF, "Invert Rear Right", {.INT = 0}, [](void *data) { height_invert_handler(WHEEL_REAR_PASSENGER, data); });
+    this->ui_calibrateMinHeight = new Option(levelling_page, OptionType::BUTTON, "Calibrate Min Height", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Calibrate Min Height?",
+            "Please air out your car to the lowest it goes before you click ok",
+            "OK", "Cancel",
+            []() -> void
+            {
+                CalibrateHeightSensorsPacket pkt(HEIGHT_CAL_MIN);
+                sendRestPacket(&pkt);
+                log_i("Pressed calibrate min height");
+                showDialog("Calibrated min height", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
 
-    this->updateHeightInvertOptionsVisibility(false);
+    this->ui_calibrateMaxHeight = new Option(levelling_page, OptionType::BUTTON, "Calibrate Max Height", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Calibrate Max Height?",
+            "Raise your vehicle as high as it can go before you click ok",
+            "OK", "Cancel",
+            []() -> void
+            {
+                CalibrateHeightSensorsPacket pkt(HEIGHT_CAL_MAX);
+                sendRestPacket(&pkt);
+                log_i("Pressed calibrate max height");
+                showDialog("Calibrated max height", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
+
+    this->ui_calibrateMinRideHeight = new Option(levelling_page, OptionType::BUTTON, "Calibrate Min Ride Height", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Calibrate Minimum Ride Height?",
+            "Set your vehicle to the lowest ride height you want to allow before you click ok. This is used for maintain height (height sensor only). Only use this after calibrating min and max.",
+            "OK", "Cancel",
+            []() -> void
+            {
+                CalibrateHeightSensorsPacket pkt(HEIGHT_CAL_MIN_RIDE_HEIGHT);
+                sendRestPacket(&pkt);
+                log_i("Pressed calibrate min ride height");
+                showDialog("Calibrated min ride height", lv_color_hex(0xFFFF00));
+            },
+            []() -> void {}, false);
+    });
+
+    this->updateLevelModeOptionsVisibility(false);
 
     // --- Auxillary Output page ---
     lv_obj_t *aux_page = this->addSettingsPage(pages_container, true);
@@ -757,19 +827,72 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_t *wifi_update_page = this->addSettingsPage(pages_container, true);
 
     char buf[50];
-    strncpy(buf, getwifiSSID().c_str(), sizeof(buf));
-    OptionValue wifiOptionValue;
-    wifiOptionValue.STRING = buf;
 
-    allOptions.push_back(new Option(wifi_update_page, OptionType::KEYBOARD_INPUT_TEXT, "SSID", wifiOptionValue, [](void *data)
+    // SSID selection is a dropdown that scans for nearby networks when opened.
+    // The first option is always the currently saved SSID (so the closed value stays put when
+    // the scan results change), or a "Select network" placeholder when nothing is saved yet.
+    this->scannedSSIDs.clear();
+    static char ssidInitOpts[64];
+    // note on these below, we are not attaching a value to the 'scanning...' options, but if you click 'select network' it will actually reset it to blank.
+    if (getwifiSSID().length() > 0)
     {
-        log_i("Typed %s", ((char *)data));
-        setwifiSSID(((char *)data));
-        alertValueUpdated();
-        ((ScrSettings *)currentScr)->updateUpdateButtonVisbility();
-    }));
+        snprintf(ssidInitOpts, sizeof(ssidInitOpts), "%s\nUnselect network\nScanning...", getwifiSSID().c_str());
+        this->scannedSSIDs.push_back(getwifiSSID());
+        this->scannedSSIDs.push_back(String(""));
+    }
+    else
+    {
+        snprintf(ssidInitOpts, sizeof(ssidInitOpts), "Select network\nScanning...");
+    }
+
+    this->ui_wifiSSID = new Option(wifi_update_page, OptionType::DROPDOWN_SELECT, "SSID", {.INT = 0}, [](void *data)
+    {
+        uint32_t idx = (uint32_t)(uintptr_t)data;
+        ScrSettings *s = (ScrSettings *)currentScr;
+        // Ignore the "Select network" placeholder (empty string); only real SSIDs are saved.
+        if (idx < s->scannedSSIDs.size())
+        {
+            log_i("Selected SSID %s", s->scannedSSIDs[idx].c_str());
+            setwifiSSID(s->scannedSSIDs[idx].c_str());
+            alertValueUpdated();
+            s->updateUpdateButtonVisbility();
+        }
+    }, (void *)ssidInitOpts);
+    allOptions.push_back(this->ui_wifiSSID);
+
+    // Widen the SSID dropdown: give the short "SSID" label a small fixed area and let the
+    // dropdown take the rest of the row (keeps its right edge at the -MARGIN alignment set
+    // by the Option constructor).
+    {
+        const int margin = scaledX(10);
+        const int labelW = scaledX(60);
+        lv_obj_set_width(this->ui_wifiSSID->text, labelW);
+        lv_obj_set_width(this->ui_wifiSSID->rightHandObj, getScreenWidth() - margin * 3 - labelW);
+    }
+
+    // Right-align the open list after LVGL opens it (this user callback runs after the
+    // dropdown's own class handler, which opens the list on release).
+    lv_obj_add_event_cb(this->ui_wifiSSID->rightHandObj, [](lv_event_t *e)
+    {
+        lv_obj_t *dd = lv_event_get_target_obj(e);
+        if (lv_dropdown_is_open(dd))
+            alignWifiSsidList(dd);
+    }, LV_EVENT_RELEASED, this);
+
+    // Kick off an async WiFi scan when the dropdown is opened.
+    lv_obj_add_event_cb(this->ui_wifiSSID->rightHandObj, [](lv_event_t *e)
+    {
+        ScrSettings *s = (ScrSettings *)currentScr;
+        if (s->wifiScanInProgress)
+            return;
+        s->wifiScanInProgress = true;
+        //lv_dropdown_set_options(s->ui_wifiSSID->rightHandObj, "Scanning...");
+        WiFi.mode(WIFI_STA);
+        WiFi.scanNetworks(true /* async */, false /* show hidden */);
+    }, LV_EVENT_CLICKED, this);
 
     strncpy(buf, getwifiPassword().c_str(), sizeof(buf));
+    OptionValue wifiOptionValue;
     wifiOptionValue.STRING = buf;
 
     Option *pass = new Option(wifi_update_page, OptionType::KEYBOARD_INPUT_TEXT, "PASS", wifiOptionValue, [](void *data)
@@ -878,6 +1001,74 @@ void ScrSettings::loop()
 {
     Scr::loop();
 
+    // Poll the async WiFi scan started when the SSID dropdown was opened.
+    if (this->wifiScanInProgress)
+    {
+        int n = WiFi.scanComplete();
+        if (n >= 0)
+        {
+            this->wifiScanInProgress = false;
+            this->scannedSSIDs.clear();
+            String opts;
+            String saved = getwifiSSID();
+
+            // First option is always the saved SSID (kept selected below so the displayed
+            // value doesn't jump when scan results change), or a placeholder when blank.
+            if (saved.length() > 0)
+            {
+                opts = saved;
+            } else {
+                opts = "Select network";
+            }
+            this->scannedSSIDs.push_back(saved);
+
+            for (int i = 0; i < n; i++)
+            {
+                String ss = WiFi.SSID(i);
+                if (ss.length() == 0)
+                    continue; // skip hidden networks
+                bool dup = false;
+                for (size_t j = 0; j < this->scannedSSIDs.size(); j++)
+                {
+                    if (this->scannedSSIDs[j] == ss)
+                    {
+                        dup = true;
+                        break;
+                    }
+                }
+                if (dup)
+                    continue; // already listed (incl. the saved SSID pinned first)
+                
+                opts += "\n";
+                opts += ss;
+                this->scannedSSIDs.push_back(ss);
+            }
+
+            // no results found and no saved ssid
+            if (this->scannedSSIDs.size() == 1)
+            {
+                opts += "No networks found!";
+            }
+
+            lv_dropdown_set_options(this->ui_wifiSSID->rightHandObj, opts.c_str());
+            // Keep the pinned saved SSID / placeholder (index 0) selected so the closed value stays put.
+            lv_dropdown_set_selected(this->ui_wifiSSID->rightHandObj, 0);
+
+            // Refresh the open list so the scanned results replace "Scanning...".
+            if (lv_dropdown_is_open(this->ui_wifiSSID->rightHandObj))
+            {
+                lv_dropdown_close(this->ui_wifiSSID->rightHandObj);
+                lv_dropdown_open(this->ui_wifiSSID->rightHandObj);
+                alignWifiSsidList(this->ui_wifiSSID->rightHandObj);
+            }
+
+            WiFi.scanDelete();
+            // Release the WiFi driver's internal RAM / coexistence load so the BLE link to
+            // the manifold stays stable between scans. A fresh scan re-inits on next open.
+            WiFi.mode(WIFI_OFF);
+        }
+    }
+
     // Update status text labels
     this->ui_s1->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_FROZEN) ? "Yes" : "No");
     this->ui_s3->setRightHandText(statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON) ? "On" : "Off");
@@ -928,15 +1119,10 @@ void ScrSettings::loop()
         this->ui_rfbuttonC->setRightHandText(itoa(*util_configValues._rfButtonC() + 1, buf, 10));
         this->ui_rfbuttonD->setRightHandText(itoa(*util_configValues._rfButtonD() + 1, buf, 10));
 
-        uint8_t invertBits = *util_configValues._heightSensorInvertBits();
-        this->ui_heightInvertFP->setBooleanValue((invertBits & (1 << WHEEL_FRONT_PASSENGER)) != 0, false);
-        this->ui_heightInvertRP->setBooleanValue((invertBits & (1 << WHEEL_REAR_PASSENGER)) != 0, false);
-        this->ui_heightInvertFD->setBooleanValue((invertBits & (1 << WHEEL_FRONT_DRIVER)) != 0, false);
-        this->ui_heightInvertRD->setBooleanValue((invertBits & (1 << WHEEL_REAR_DRIVER)) != 0, false);
-
         uint8_t flags = *util_configValues._configFlagsBits();
         this->ui_riseonstart->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_RISE_ON_START)) != 0, false);
         this->ui_maintainprssure->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE)) != 0, false);
+        this->ui_sensorlessleveling->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING)) != 0, false);
 #if ENABLE_AIR_OUT_ON_SHUTOFF
         this->ui_airoutonshutoff->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF)) != 0, false);
 #endif
@@ -944,7 +1130,7 @@ void ScrSettings::loop()
         this->ui_aiEnabled->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED)) != 0, false);
         bool heightSensorMode = (flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0;
         this->ui_heightsensormode->setSelectedOption(heightSensorMode ? 1 : 0);
-        this->updateHeightInvertOptionsVisibility(heightSensorMode);
+        this->updateLevelModeOptionsVisibility(heightSensorMode);
 
         AuxillaryOutputModePayload *aux = util_configValues._auxillaryOutputConfig();
         this->ui_auxModeStartup->setBooleanValue((aux->mode & (1u << AUX_MODE_STARTUP_TIMED)) != 0, false);
@@ -962,6 +1148,15 @@ void ScrSettings::loop()
 
 void ScrSettings::cleanup()
 {
+    // Ensure any WiFi scan started from the SSID dropdown is torn down when leaving the
+    // screen, so WiFi doesn't keep holding internal RAM / coexistence load.
+    if (this->wifiScanInProgress)
+    {
+        WiFi.scanDelete();
+        WiFi.mode(WIFI_OFF);
+        this->wifiScanInProgress = false;
+    }
+
     // Call base class cleanup first (deletes Alert)
     Scr::cleanup();
 
@@ -975,16 +1170,16 @@ void ScrSettings::cleanup()
     delete ui_aiPercentage;
     delete ui_aiEnabled;
     delete ui_maintainprssure;
+    delete ui_sensorlessleveling;
     delete ui_riseonstart;
 #if ENABLE_AIR_OUT_ON_SHUTOFF
     delete ui_airoutonshutoff;
 #endif
     delete ui_safetymode;
     delete ui_heightsensormode;
-    delete ui_heightInvertFP;
-    delete ui_heightInvertRP;
-    delete ui_heightInvertFD;
-    delete ui_heightInvertRD;
+    delete ui_calibrateMinHeight;
+    delete ui_calibrateMaxHeight;
+    delete ui_calibrateMinRideHeight;
     delete ui_config1;
     delete ui_config2;
     delete ui_config3;

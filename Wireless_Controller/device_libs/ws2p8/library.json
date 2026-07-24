@@ -9,6 +9,7 @@
             "+<images/*>",
             "+<files/Display_ST7789.cpp>",
             "+<files/Touch_CST328.cpp>",
+            "+<files/Touch_CST3530.cpp>",
             "+<files/LVGL_Driver.cpp>",
             "+<files/I2C_Driver.cpp>",
             "+<files/PWR_Key.cpp>",

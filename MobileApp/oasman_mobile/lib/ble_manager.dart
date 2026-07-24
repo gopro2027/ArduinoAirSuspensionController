@@ -48,6 +48,15 @@ class BTOasIdentifier {
   static const int UPDATESTATUSREQUEST = 36;
   static const int RFCOMMAND = 37;
   static const int AUXILLARYOUTPUTCONTROL = 38;
+  static const int CALIBRATEHEIGHTSENSORS = 39;
+}
+
+/// Which per-wheel height calibration point CALIBRATEHEIGHTSENSORS captures.
+/// Mirrors HeightCalibrationType in BTOas.h.
+class HeightCalibrationType {
+  static const int min = 0;
+  static const int max = 1;
+  static const int minRideHeight = 2;
 }
 
 /// GETCONFIGVALUES read request (cmd only, args zeroed). Reused on every connect.
@@ -63,6 +72,7 @@ class ConfigFlagsBit {
   static const int CONFIG_HEIGHT_SENSOR_MODE = 3;
   static const int CONFIG_SAFETY_MODE = 4;
   static const int CONFIG_AI_STATUS_ENABLED = 5;
+  static const int CONFIG_SENSORLESS_LEVELING = 6;
 }
 
 class BLEByte {
@@ -181,6 +191,7 @@ class BLEManager extends ChangeNotifier {
   bool ebrakeOn = false;
   bool riseOnStart = false;
   bool maintainPressure = false;
+  bool sensorlessLeveling = false;
   bool airOutOnShutoff = false;
   bool safetyMode = true;
   bool aiStatusEnabled = false;
@@ -201,8 +212,6 @@ class BLEManager extends ChangeNotifier {
   int aiLearnPercent = 0;
   int aiReadyBittset = 0;
 
-  /// Height sensor invert flags (ConfigValuesPacket byte 20 / args offset 16+8).
-  int heightSensorInvertBits = 0;
 
   /// RF key fob button preset indices on manifold (0–4 = presets 1–5).
   int rfButtonAPreset = 0;
@@ -505,6 +514,14 @@ class BLEManager extends ChangeNotifier {
         BTOasIdentifier.AUXILLARYOUTPUTCONTROL, [BLEInt(on ? 1 : 0)]));
   }
 
+  /// Capture the current raw height sensor reading on all 4 wheels as the
+  /// per-wheel calibration point selected by [calibrationType]
+  /// (a HeightCalibrationType value).
+  void sendCalibrateHeightSensors(int calibrationType) {
+    sendRestCommand(buildRestPacket(
+        BTOasIdentifier.CALIBRATEHEIGHTSENSORS, [BLEInt(calibrationType)]));
+  }
+
   /// RfCommandType / chip / button numbers match [BTOas.h].
   static const int rfCommandChipCmd = 1;
   static const int rfCommandButtonAssign = 2;
@@ -579,16 +596,6 @@ class BLEManager extends ChangeNotifier {
     }
     sendRestCommand(
         [..._encodeInt32(BTOasIdentifier.STARTWEB), ...args]);
-  }
-
-  /// Toggle one wheel bit in [heightSensorInvertBits] (0..3 = FP, RP, FD, RD order matches wireless labels).
-  void setHeightInvertWheel(int wheelBitIndex, bool inverted) {
-    if (wheelBitIndex < 0 || wheelBitIndex > 3) return;
-    if (inverted) {
-      heightSensorInvertBits |= (1 << wheelBitIndex);
-    } else {
-      heightSensorInvertBits &= ~(1 << wheelBitIndex);
-    }
   }
 
   /// Mirrors Wireless_Controller's onBLEConnectionCompleted():
@@ -740,6 +747,9 @@ class BLEManager extends ChangeNotifier {
           maintainPressure = (configFlagsBits &
                   (1 << ConfigFlagsBit.CONFIG_MAINTAIN_PRESSURE)) !=
               0;
+          sensorlessLeveling = (configFlagsBits &
+                  (1 << ConfigFlagsBit.CONFIG_SENSORLESS_LEVELING)) !=
+              0;
           airOutOnShutoff = (configFlagsBits &
                   (1 << ConfigFlagsBit.CONFIG_AIR_OUT_ON_SHUTOFF)) !=
               0;
@@ -758,7 +768,7 @@ class BLEManager extends ChangeNotifier {
           rfButtonBPreset = data[21] & 0xFF;
           rfButtonCPreset = data[22] & 0xFF;
           rfButtonDPreset = data[23] & 0xFF;
-          heightSensorInvertBits = data[24] & 0xFF;
+          // data[24] reserved (formerly heightSensorInvertBits); ignored
 
           auxModeByte = data[28] & 0xFF;
           final tu = data[29] & 0xFF;
@@ -922,6 +932,8 @@ class BLEManager extends ChangeNotifier {
     int bits = 0;
     if (maintainPressure)
       bits |= (1 << ConfigFlagsBit.CONFIG_MAINTAIN_PRESSURE);
+    if (sensorlessLeveling)
+      bits |= (1 << ConfigFlagsBit.CONFIG_SENSORLESS_LEVELING);
     if (riseOnStart) bits |= (1 << ConfigFlagsBit.CONFIG_RISE_ON_START);
     if (airOutOnShutoff)
       bits |= (1 << ConfigFlagsBit.CONFIG_AIR_OUT_ON_SHUTOFF);
@@ -950,7 +962,7 @@ class BLEManager extends ChangeNotifier {
     args[17] = rfButtonBPreset.clamp(0, 255);
     args[18] = rfButtonCPreset.clamp(0, 255);
     args[19] = rfButtonDPreset.clamp(0, 255);
-    args[20] = heightSensorInvertBits.clamp(0, 255);
+    args[20] = 0; // reserved (formerly heightSensorInvertBits); kept for byte-layout compat
     args[24] = auxModeByte.clamp(0, 255);
     args[25] = auxTimeUnit.clamp(0, 3);
     args[26] = auxPulseDuration.clamp(0, 255);
