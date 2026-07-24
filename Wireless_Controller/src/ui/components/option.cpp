@@ -6,10 +6,14 @@ lv_style_t headerStyle;
 static bool styleCreated = false;
 
 
-// Use a minimum height to ensure usability
+// Settings rows are sized to a fixed *physical* height (independent of panel resolution) so the
+// touch target feels the same on every controller. Resolution-based scaling (getScaleY) can't do
+// this: it makes a same-size, higher-res panel's rows tiny to tap. mmToPx() uses each panel's true
+// DEVICE_DPI (declared per-device in device_lib_exports.h) to convert mm -> px.
+static constexpr float kOptionRowHeightMM = 7.5f; // comfortable min touch target
 static int getOptionRowHeight() {
-    int scaled = (int)(36 * getScaleY());
-    return (scaled < 36) ? 36 : scaled;  // Minimum 36px height
+    int scaled = mmToPx(kOptionRowHeightMM);
+    return (scaled < 36) ? 36 : scaled; // Minimum 36px height as a safety floor
 }
 #define OPTION_ROW_HEIGHT getOptionRowHeight()
 // Dynamic margin that scales with display
@@ -25,9 +29,9 @@ void createStyle()
     {
         lv_style_init(&headerStyle);
 #ifdef SCREEN_MODE_CIRCLE
-        lv_style_set_text_font(&headerStyle, &lv_font_montserrat_14);
+        lv_style_set_text_font(&headerStyle, getScaledFont(14));
 #else
-        lv_style_set_text_font(&headerStyle, &lv_font_montserrat_20);
+        lv_style_set_text_font(&headerStyle, getScaledFont(20));
 #endif
         styleCreated = true;
     }
@@ -50,6 +54,9 @@ void Option::styleDropdownClosed(lv_obj_t *dd)
     lv_obj_set_style_radius(dd, 12, LV_PART_MAIN);
 
     lv_obj_set_style_text_color(dd, lv_color_hex(0xF2F4F7), LV_PART_MAIN);
+    // Inline option dropdowns (SSID, aux unit, ...) should match the option-row text size, not the
+    // larger section-category selector (which sets its own font in styleSettingsSectionDropdown).
+    lv_obj_set_style_text_font(dd, getScaledFont(14), LV_PART_MAIN);
 
     lv_obj_set_style_text_color(dd, lv_color_hex(0xC9D0D8), LV_PART_INDICATOR);
 }
@@ -70,6 +77,10 @@ void Option::styleDropdownList(lv_obj_t *dd)
     lv_obj_set_style_clip_corner(list, true, LV_PART_MAIN);
 
     lv_obj_set_style_max_height(list, (int)(getScreenHeight() * 0.65f), LV_PART_MAIN);
+
+    // Open-list item rows inherit this dropdown's own font so the list matches the closed box
+    // (section selector stays large; inline option dropdowns stay at the option-row text size).
+    lv_obj_set_style_text_font(list, lv_obj_get_style_text_font(dd, LV_PART_MAIN), LV_PART_MAIN);
 
     lv_obj_set_style_text_color(list, lv_color_white(), LV_PART_MAIN);
     lv_obj_set_style_text_color(list, lv_color_white(), LV_PART_SELECTED);
@@ -242,6 +253,14 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
 
         lv_obj_t *btntext = lv_label_create(this->text);
         lv_label_set_text(btntext, text);
+        lv_obj_set_style_text_font(btntext, getScaledFont(16), 0);
+
+        // Scale the button's own touch size (LVGL's default button padding is fixed/small).
+        lv_obj_set_style_pad_top(this->text, scaledY(8), LV_PART_MAIN);
+        lv_obj_set_style_pad_bottom(this->text, scaledY(8), LV_PART_MAIN);
+        lv_obj_set_style_pad_left(this->text, scaledX(16), LV_PART_MAIN);
+        lv_obj_set_style_pad_right(this->text, scaledX(16), LV_PART_MAIN);
+        lv_obj_set_align(this->text, LV_ALIGN_LEFT_MID);
 
         lv_obj_set_style_bg_color(this->text, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);    // bg
         lv_obj_set_style_border_color(this->text, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN); // border
@@ -263,6 +282,15 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_checkbox_set_text(this->ui_switch, ""); // set blank because we render the text separately
         lv_obj_set_align(this->ui_switch, LV_ALIGN_LEFT_MID);
         lv_obj_set_x(this->ui_switch, MARGIN);
+
+        // lv_checkbox sizes its marker from the MAIN font line-height + LV_PART_INDICATOR padding
+        // (width/height styles are ignored by the widget). So scale the MAIN font to grow the box,
+        // the INDICATOR font to grow the checkmark glyph, and keep a small radius so it stays a
+        // rounded square (a checkbox), NOT a circle.
+        lv_obj_set_style_text_font(this->ui_switch, getScaledFont(20), LV_PART_MAIN);
+        lv_obj_set_style_text_font(this->ui_switch, getScaledFont(16), LV_PART_INDICATOR);
+        lv_obj_set_style_pad_all(this->ui_switch, scaledX(3), LV_PART_INDICATOR);
+        lv_obj_set_style_radius(this->ui_switch, scaledX(4), LV_PART_INDICATOR);
 
         lv_obj_set_style_bg_color(this->ui_switch, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR | (lv_style_selector_t)LV_STATE_CHECKED);
         lv_obj_set_style_border_color(this->ui_switch, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR);
@@ -302,6 +330,13 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         lv_obj_set_style_border_color(this->rightHandObj, lv_color_hex(THEME_COLOR_DARK), LV_PART_MAIN); // border
         lv_obj_set_style_text_color(this->rightHandObj, lv_color_hex(0xFFFFFF), LV_PART_MAIN);           // text
         lv_obj_set_style_text_color(this->rightHandObj, lv_color_hex(0xE0E0E0), LV_PART_TEXTAREA_PLACEHOLDER); // placeholder
+
+        // Scale the input font + inner padding so the field grows in height with DPI.
+        lv_obj_set_style_text_font(this->rightHandObj, getScaledFont(14), LV_PART_MAIN);
+        lv_obj_set_style_pad_top(this->rightHandObj, scaledY(6), LV_PART_MAIN);
+        lv_obj_set_style_pad_bottom(this->rightHandObj, scaledY(6), LV_PART_MAIN);
+        lv_obj_set_style_pad_left(this->rightHandObj, scaledX(8), LV_PART_MAIN);
+        lv_obj_set_style_pad_right(this->rightHandObj, scaledX(8), LV_PART_MAIN);
 
         lv_obj_set_style_radius(this->rightHandObj, 5, LV_PART_MAIN);
         // lv_obj_set_style_border_width(this->rightHandObj, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -361,6 +396,12 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         // lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_MAIN);      // bg
         lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_LIGHT), LV_PART_INDICATOR); // border
         lv_obj_set_style_bg_color(this->rightHandObj, lv_color_hex(THEME_COLOR_DARK), LV_PART_KNOB);       // border
+
+        // Scale the track thickness and knob (LVGL's default slider is a thin, small-knob line).
+        lv_obj_set_style_height(this->rightHandObj, scaledY(8), LV_PART_MAIN);
+        lv_obj_set_style_radius(this->rightHandObj, scaledY(4), LV_PART_MAIN);
+        lv_obj_set_style_pad_all(this->rightHandObj, scaledX(7), LV_PART_KNOB);
+        lv_obj_set_style_radius(this->rightHandObj, LV_RADIUS_CIRCLE, LV_PART_KNOB);
 
         lv_obj_add_flag(this->rightHandObj, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE));
         lv_obj_add_event_cb(this->rightHandObj, slider_event_cb, LV_EVENT_ALL, this);

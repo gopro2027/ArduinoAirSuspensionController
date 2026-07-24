@@ -274,13 +274,13 @@ void styleSettingsSectionDropdown(lv_obj_t *dd)
 
     lv_obj_set_style_text_color(dd, lv_color_hex(0xF2F4F7), LV_PART_MAIN);
 #ifdef SCREEN_MODE_CIRCLE
-    lv_obj_set_style_text_font(dd, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_text_font(dd, getScaledFont(14), LV_PART_MAIN);
     lv_obj_set_style_pad_left(dd, 10, LV_PART_MAIN);
     lv_obj_set_style_pad_right(dd, 10, LV_PART_MAIN);
     lv_obj_set_style_pad_top(dd, 8, LV_PART_MAIN);
     lv_obj_set_style_pad_bottom(dd, 8, LV_PART_MAIN);
 #else
-    lv_obj_set_style_text_font(dd, &lv_font_montserrat_20, LV_PART_MAIN);
+    lv_obj_set_style_text_font(dd, getScaledFont(20), LV_PART_MAIN);
     lv_obj_set_style_pad_left(dd, 14, LV_PART_MAIN);
     lv_obj_set_style_pad_right(dd, 14, LV_PART_MAIN);
     lv_obj_set_style_pad_top(dd, 10, LV_PART_MAIN);

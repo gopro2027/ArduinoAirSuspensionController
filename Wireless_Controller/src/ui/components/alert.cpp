@@ -123,6 +123,9 @@ Alert::Alert(Scr *scr)
     // ============================================
     this->text = lv_label_create(this->container);
     lv_obj_set_style_text_color(this->text, lv_color_hex(0xCDD6F4), 0);
+    // DPI-scale the toast text; without this it rendered at LV_FONT_DEFAULT (14px) on every panel,
+    // so it looked tiny inside the resolution-scaled toast on high-DPI screens (e.g. 2.8b).
+    lv_obj_set_style_text_font(this->text, getScaledFont(14), 0);
     lv_obj_set_width(this->text, TOAST_WIDTH - TOAST_PADDING_X * 2 - DISMISS_BTN_SIZE - ACCENT_BAR_WIDTH - scaledX(16));
     lv_obj_set_height(this->text, LV_SIZE_CONTENT);
     lv_obj_set_align(this->text, LV_ALIGN_LEFT_MID);
@@ -149,6 +152,8 @@ Alert::Alert(Scr *scr)
     lv_obj_t *btnLabel = lv_label_create(this->dismissBtn);
     lv_label_set_text(btnLabel, LV_SYMBOL_CLOSE);
     lv_obj_set_style_text_color(btnLabel, lv_color_hex(0x6C7086), LV_PART_MAIN);
+    // Scale the X glyph so it fills the (resolution-scaled) dismiss button instead of staying 14px.
+    lv_obj_set_style_text_font(btnLabel, getScaledFont(16), LV_PART_MAIN);
     lv_obj_set_align(btnLabel, LV_ALIGN_CENTER);
 
     lv_obj_add_event_cb(this->dismissBtn, dismiss_btn_cb, LV_EVENT_CLICKED, this);

@@ -63,6 +63,44 @@ float getScaleY() {
     return currentHeight / 320.0f;
 }
 
+const lv_font_t *getScaledFont(int baselinePx) {
+    // Only fonts enabled in include/lv_conf.h may be listed here (each must be non-zero).
+    static const struct { int px; const lv_font_t *font; } kFonts[] = {
+        {10, &lv_font_montserrat_10},
+        {12, &lv_font_montserrat_12},
+        {14, &lv_font_montserrat_14},
+        {16, &lv_font_montserrat_16},
+        {18, &lv_font_montserrat_18},
+        {20, &lv_font_montserrat_20},
+        {22, &lv_font_montserrat_22},
+        {24, &lv_font_montserrat_24},
+        {28, &lv_font_montserrat_28},
+        {32, &lv_font_montserrat_32},
+        {40, &lv_font_montserrat_40},
+    };
+    const int count = (int)(sizeof(kFonts) / sizeof(kFonts[0]));
+
+    // Enlarge by the panel's DPI ratio, but cap it (see UI_MAX_FONT_SCALE) so very high-DPI panels
+    // don't pay ~quadratic glyph blend cost that tanks scroll FPS.
+    float scale = (float)DEVICE_DPI / (float)UI_BASELINE_DPI;
+    if (scale > UI_MAX_FONT_SCALE) scale = UI_MAX_FONT_SCALE;
+    int targetPx = (int)((float)baselinePx * scale + 0.5f); // ; was: baselinePx * DEVICE_DPI / UI_BASELINE_DPI (uncapped)
+
+    // Snap to the nearest compiled size (clamps to the table's min/max at the ends).
+    const lv_font_t *best = kFonts[0].font;
+    int bestDiff = targetPx - kFonts[0].px;
+    if (bestDiff < 0) bestDiff = -bestDiff;
+    for (int i = 1; i < count; i++) {
+        int diff = targetPx - kFonts[i].px;
+        if (diff < 0) diff = -diff;
+        if (diff < bestDiff) {
+            bestDiff = diff;
+            best = kFonts[i].font;
+        }
+    }
+    return best;
+}
+
 void scale_obj(lv_obj_t *obj, int w, int h) {
     // lv_image_set_scale_x(obj, SCALE_X * 256);
     // lv_image_set_scale_y(obj, SCALE_Y * 256);
@@ -255,7 +293,7 @@ void setupPressureLabel(lv_obj_t *parent, lv_obj_t **label, int x, int y, lv_ali
 
     // Modern styling with better font and color
     lv_obj_set_style_text_color(*label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(*label, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(*label, getScaledFont(14), 0);
 
     lv_obj_set_style_text_opa(*label, LV_OPA_COVER, 0);
 
@@ -452,7 +490,7 @@ void initKB(Option *option)
     int kbW = getScreenWidth() - 80;
     lv_obj_set_width(kb, kbW);
     lv_obj_align(kb, LV_ALIGN_BOTTOM_MID, 0, -40);
-    lv_obj_set_style_text_font(kb, &lv_font_montserrat_14, LV_PART_ITEMS);
+    lv_obj_set_style_text_font(kb, getScaledFont(14), LV_PART_ITEMS);
     lv_obj_set_style_pad_gap(kb, 2, LV_PART_MAIN);
 #endif
 

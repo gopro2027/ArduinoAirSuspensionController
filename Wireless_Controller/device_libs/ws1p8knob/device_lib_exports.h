@@ -19,3 +19,6 @@
 /** Round 360x360 display: use swipe + circle UI under src/ui_circle/ instead of tab navbar. */
 #define SCREEN_MODE_CIRCLE
 #define HAS_ROTARY_ENCODER
+
+// Physical panel: 1.8" round, 360x360 -> ~200 px/inch
+#define DEVICE_DPI 200

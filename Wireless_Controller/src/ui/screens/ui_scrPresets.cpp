@@ -131,7 +131,7 @@ static lv_obj_t* createPresetButton(lv_obj_t *parent, const char *text, int pres
     lv_obj_t *label = lv_label_create(btn);
     lv_label_set_text(label, text);
     lv_obj_set_style_text_color(label, lv_color_hex(PRESET_BTN_TEXT_COLOR), LV_PART_MAIN);
-    lv_obj_set_style_text_font(label, &lv_font_montserrat_16, LV_PART_MAIN);
+    lv_obj_set_style_text_font(label, getScaledFont(16), LV_PART_MAIN);
     lv_obj_center(label);
 
     // Store label reference for color updates
@@ -311,7 +311,7 @@ void ScrPresets::init(lv_obj_t *parent)
     lv_obj_t *saveLabel = lv_label_create(this->btnSave);
     lv_label_set_text(saveLabel, "Save");
     lv_obj_set_style_text_color(saveLabel, lv_color_hex(0xCCCCCC), LV_PART_MAIN);
-    lv_obj_set_style_text_font(saveLabel, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_text_font(saveLabel, getScaledFont(14), LV_PART_MAIN);
     lv_obj_center(saveLabel);
     lv_obj_add_event_cb(this->btnSave, [](lv_event_t *e) {
         if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
@@ -338,7 +338,7 @@ void ScrPresets::init(lv_obj_t *parent)
     lv_obj_t *loadLabel = lv_label_create(this->btnLoad);
     lv_label_set_text(loadLabel, "Load");
     lv_obj_set_style_text_color(loadLabel, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-    lv_obj_set_style_text_font(loadLabel, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_text_font(loadLabel, getScaledFont(14), LV_PART_MAIN);
     lv_obj_center(loadLabel);
     lv_obj_add_event_cb(this->btnLoad, [](lv_event_t *e) {
         if (lv_event_get_code(e) == LV_EVENT_CLICKED) {

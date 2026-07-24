@@ -31,6 +31,38 @@ inline int scaledY(int referenceValue) {
     return (int)(referenceValue * getScaleY());
 }
 
+// Physical (DPI-based) sizing. Use for touch targets that must be a consistent real-world
+// size regardless of panel resolution (e.g. settings rows). DEVICE_DPI is the panel's true
+// pixels-per-inch, defined per-device in each device_libs/<dev>/device_lib_exports.h. There is
+// no way to read physical size from the hardware, so it must be declared per panel.
+#ifndef DEVICE_DPI
+#define DEVICE_DPI 143 // fallback: 2.8in 240x320 reference panel (~143 dpi)
+#endif
+inline int mmToPx(float mm) {
+    return (int)(mm * (float)DEVICE_DPI / 25.4f + 0.5f);
+}
+
+// DPI the hardcoded UI font sizes were originally tuned at (ws2p8, 2.8in 240x320 ~143 dpi).
+#define UI_BASELINE_DPI 143
+
+// Cap on how much text is enlarged for high-DPI panels. Glyphs are rasterized on the CPU (no GPU)
+// and blend cost grows ~quadratically with size; on the 480x640 RGB 2.8b panel a full 2.0x
+// (286/143 dpi) font scale dropped scroll to ~5 FPS. Capping the *font* multiplier (touch targets
+// still use mmToPx for row height) roughly halves glyph blend cost while keeping text clearly
+// larger than baseline. Only panels above this ratio are affected: ws2p8b ~2.0x -> clamped;
+// ws3p5/ws3p5b ~1.15x and ws1p8knob ~1.4x are below the cap and unchanged. Per-device overridable
+// in device_lib_exports.h.
+#ifndef UI_MAX_FONT_SCALE
+#define UI_MAX_FONT_SCALE 1.5f
+#endif
+
+// Returns a compiled LVGL font whose pixel size approximates `baselinePx` scaled from the
+// baseline-DPI design to this device's real DPI, snapped to the nearest font compiled into the
+// build (see LV_FONT_MONTSERRAT_* in include/lv_conf.h). LVGL bitmap fonts can't be scaled at
+// runtime, so text/icons/dropdown-item heights only track DPI if we pick a bigger font here.
+// Use this instead of a raw &lv_font_montserrat_N for any on-screen text.
+const lv_font_t *getScaledFont(int baselinePx);
+
 // Dynamic UI constants that scale with display size
 inline int getNavbarHeight() {
     return scaledY(50);
