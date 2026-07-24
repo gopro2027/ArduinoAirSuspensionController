@@ -63,6 +63,10 @@ float getScaleY() {
     return currentHeight / 320.0f;
 }
 
+// getScaledFont() is now a compile-time macro over templates in util.h (so unused fonts don't get
+// linked into each device). The former runtime lookup table lived here; it referenced every font,
+// which forced all of them into every variant's .bin.
+
 void scale_obj(lv_obj_t *obj, int w, int h) {
     // lv_image_set_scale_x(obj, SCALE_X * 256);
     // lv_image_set_scale_y(obj, SCALE_Y * 256);
@@ -255,7 +259,7 @@ void setupPressureLabel(lv_obj_t *parent, lv_obj_t **label, int x, int y, lv_ali
 
     // Modern styling with better font and color
     lv_obj_set_style_text_color(*label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(*label, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(*label, getScaledFont(14), 0);
 
     lv_obj_set_style_text_opa(*label, LV_OPA_COVER, 0);
 
@@ -350,8 +354,33 @@ void reinitializeScreens()
 }
 
 static lv_obj_t *kb = NULL;
+// While the keyboard is open we shrink the focused field's scroll container so it
+// ends at the keyboard's top edge; these remember what to restore on close.
+static lv_obj_t *kbScrollObj = NULL;
+static int32_t kbScrollOrigH = 0;
+
+// Find the nearest ancestor that actually scrolls vertically. Rows/pages carry the
+// default SCROLLABLE flag but never overflow, so require a non-zero scroll range.
+static lv_obj_t *findVScrollAncestor(lv_obj_t *o)
+{
+    lv_obj_t *p = lv_obj_get_parent(o);
+    while (p != NULL && p != lv_screen_active())
+    {
+        if (lv_obj_has_flag(p, LV_OBJ_FLAG_SCROLLABLE) &&
+            (lv_obj_get_scroll_top(p) + lv_obj_get_scroll_bottom(p)) > 0)
+            return p;
+        p = lv_obj_get_parent(p);
+    }
+    return NULL;
+}
+
 void closeKeyboard()
 {
+    if (kbScrollObj != NULL)
+    {
+        lv_obj_set_height(kbScrollObj, kbScrollOrigH);
+        kbScrollObj = NULL;
+    }
     if (kb != NULL)
     {
         lv_keyboard_set_textarea(kb, NULL);
@@ -367,6 +396,8 @@ void defocus(Option *option)
     lv_obj_remove_state(option->rightHandObj, LV_STATE_FOCUSED);
     lv_group_focus_obj(option->root);
     // lv_group_focus_prev(lv_obj_get_group(option->root));
+    // Clear the pointer indev's click-focus memory so tapping the same field again re-fires FOCUSED (reopens the keyboard).
+    lv_indev_reset(NULL, option->rightHandObj);
 }
 static void kb_event_cb(lv_event_t *e)
 {
@@ -425,9 +456,32 @@ void initKB(Option *option)
     int kbW = getScreenWidth() - 80;
     lv_obj_set_width(kb, kbW);
     lv_obj_align(kb, LV_ALIGN_BOTTOM_MID, 0, -40);
-    lv_obj_set_style_text_font(kb, &lv_font_montserrat_14, LV_PART_ITEMS);
+    lv_obj_set_style_text_font(kb, getScaledFont(14), LV_PART_ITEMS);
     lv_obj_set_style_pad_gap(kb, 2, LV_PART_MAIN);
 #endif
+
+    // Scroll the focused field above the keyboard by temporarily shrinking its scroll
+    // container to end at the keyboard's top edge, then bringing the field into view.
+    lv_obj_update_layout(kb);
+    lv_obj_t *sc = findVScrollAncestor(option->rightHandObj);
+    if (sc != NULL)
+    {
+        lv_area_t kbArea, scArea;
+        lv_obj_get_coords(kb, &kbArea);
+        lv_obj_get_coords(sc, &scArea);
+        int32_t visibleH = kbArea.y1 - scArea.y1; // area above the keyboard
+        // Only act if at least one row fits above the keyboard and the container
+        // currently extends below the keyboard's top (i.e. the field is covered).
+        if (visibleH > option->optionRowHeight && visibleH < lv_obj_get_height(sc))
+        {
+            kbScrollObj = sc;
+            kbScrollOrigH = lv_obj_get_height(sc);
+            lv_obj_set_height(sc, visibleH);
+            // Recursive: the textarea's direct parent (the option row) can't scroll;
+            // only walking up to pages_container actually moves the field into view.
+            lv_obj_scroll_to_view_recursive(option->rightHandObj, LV_ANIM_ON);
+        }
+    }
 }
 
 void ta_event_cb(lv_event_t *e)
@@ -435,8 +489,10 @@ void ta_event_cb(lv_event_t *e)
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t *ta = (lv_obj_t *)lv_event_get_target(e);
     Option *option = (Option *)lv_event_get_user_data(e);
-    if (code == LV_EVENT_FOCUSED)
+    if (code == LV_EVENT_CLICKED)
     {
+        // A genuine tap: reveal the cursor (hidden by default in option.cpp) and open the keyboard.
+        lv_obj_set_style_opa(ta, LV_OPA_COVER, LV_PART_CURSOR | (lv_style_selector_t)LV_STATE_FOCUSED);
         initKB(option);
         lv_keyboard_set_textarea(kb, ta);
         // lv_obj_clear_flag(kb, LV_OBJ_FLAG_HIDDEN);
@@ -444,6 +500,8 @@ void ta_event_cb(lv_event_t *e)
     }
     if (code == LV_EVENT_DEFOCUSED)
     {
+        // Re-hide the cursor so a later scroll-press on the field doesn't show it.
+        lv_obj_set_style_opa(ta, LV_OPA_TRANSP, LV_PART_CURSOR | (lv_style_selector_t)LV_STATE_FOCUSED);
         closeKeyboard();
     }
 }

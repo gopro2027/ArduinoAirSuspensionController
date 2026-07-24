@@ -21,9 +21,10 @@ flowchart TB
     subgraph worker [oasman-ota Worker]
         D[Validate firmware + tag params]
         E{Release JSON cache valid?}
-        F[Fetch releases/latest from GitHub API]
+        F[Fetch releases list from GitHub API]
         G[Cache JSON 30 min]
-        H{Installed tag equals latest tag?}
+        M[Pick newest release that ships this firmware]
+        H{Installed tag equals that release tag?}
         I{Firmware binary cache valid?}
         J[Fetch firmware.bin from GitHub]
         K[Cache binary 30 min]
@@ -31,19 +32,20 @@ flowchart TB
     end
 
     subgraph github [GitHub]
-        API[(API releases/latest)]
+        API[(API releases list)]
         BIN[(releases/download asset)]
     end
 
     A --> B
     B --> D
     D --> E
-    E -->|yes| H
+    E -->|yes| M
     E -->|no| F
     F --> API
     API --> G
     G --> L
-    L --> H
+    L --> M
+    M --> H
     H -->|yes| R204["204 No Content"]
     H -->|no| I
     I -->|yes| R200["200 firmware bytes"]
@@ -67,12 +69,12 @@ sequenceDiagram
     participant GH as GitHub
 
     ESP->>OTA: GET with firmware and tag
-    OTA->>GH: GET releases/latest
+    OTA->>GH: GET releases list
     Note right of OTA: JSON cached 30 minutes
 
-    OTA->>OTA: Find asset e.g. manifold_v4_firmware.bin
+    OTA->>OTA: Pick newest release with e.g. manifold_v4_firmware.bin
 
-    alt Installed tag is latest
+    alt Installed tag equals that release tag
         OTA-->>ESP: 204 No Content
         Note left of ESP: UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE
     else Newer release available
@@ -90,8 +92,9 @@ sequenceDiagram
 | Step | Who | What |
 |------|-----|------|
 | 1 | ESP32 | `GET oasman-ota?firmware=...&tag=...` |
-| 2 | Worker | Load or fetch `releases/latest` (30 min cache) |
-| 3 | Worker | If GitHub tag changed since last cache, delete old `*_firmware.bin` caches |
-| 4 | Worker | If `tag` param equals `tag_name` → **204** (already up to date) |
-| 5 | Worker | Else find `{firmware}_firmware.bin`, serve from cache or GitHub → **200** |
-| 6 | ESP32 | Flash via `Update` API and restart |
+| 2 | Worker | Load or fetch `releases` list (30 min cache) |
+| 3 | Worker | If newest GitHub tag changed since last cache, delete old `*_firmware.bin` caches |
+| 4 | Worker | Pick the newest release that actually ships `{firmware}_firmware.bin` |
+| 5 | Worker | If `tag` param equals that release's `tag_name` → **204** (already up to date) |
+| 6 | Worker | Else serve `{firmware}_firmware.bin` from that release, cache or GitHub → **200** |
+| 7 | ESP32 | Flash via `Update` API and restart |
