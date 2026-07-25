@@ -109,11 +109,11 @@ float Wheel::readLevelSensorNormalized()
     float calMin = getheightCalMin(this->thisWheelNum);
     float calMax = getheightCalMax(this->thisWheelNum);
 
-    float reading = this->readLevelSensorRaw();
+    float reading = this->readLevelSensorRaw(); // always 0 to 100
 
-    if (calMin > calMax) {
-        // we are flipped, so we need to invert the reading
-        reading = getHeightSensorMax() - reading;
+    bool inverted = calMin > calMax;
+
+    if (inverted) {
         float tmp = calMin;
         calMin = calMax;
         calMax = tmp;
@@ -133,6 +133,9 @@ float Wheel::readLevelSensorNormalized()
     if (normalized > getHeightSensorMax())
     {
         normalized = getHeightSensorMax();
+    }
+    if (inverted) {
+        normalized = getHeightSensorMax() - normalized;
     }
     return normalized;
 }
