@@ -162,8 +162,8 @@ void beginSaveData()
     _SaveData.compressorOffPSI.load("compressorOffPSI", COMPRESSOR_MAX_PSI);
     _SaveData.pressureSensorMax.load("pressureSensorMax", pressuretransducermaxPSI);
     _SaveData.bagVolumePercentage.load("bagVolumePercentage", 100);
-    _SaveData.extraAirUpBelowPressure.load("extraAirUpBelowP", 140);
-    _SaveData.extraAirUpUnroll.load("extraAirUpUnroll", 0); // 0 to make it disabled by default
+    _SaveData.extraAirUpBelowPressure.load("extraAirUpBelowP", 40); // if bag is currently below 40 psi...
+    _SaveData.extraAirUpUnroll.load("extraAirUpUnroll", 0); // go to this pressure to stretch bag out first
 
     _SaveData.auxillaryOutputPreference.load();
 

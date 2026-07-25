@@ -251,14 +251,21 @@ bool isAnyWheelActive()
     return false;
 }
 
+// function renamed to 'bag stretch'
 static void initPressureGoalWithUnroll(byte wheelNum, int goal)
 {
     Wheel *w = getWheel(wheelNum);
     int belowP = getextraAirUpBelowPressure();
     int unroll = getextraAirUpUnroll();
-    if (!getheightSensorMode() && unroll > 0 && goal < belowP && w->getSelectedInputValue() < goal + unroll)
+    // the functionality of this feature was changed a bit from the original idea. I've kind of deemed the original idea of 'going past the pressure' kind of useless on it's own, as it's just going to make almost every time you go to a preset be inaccurate.
+    // instead what this function will do is check if the current pressure is below the extraAirUpBelowPressure, which by default is 40psi, and if it is, it will go to the extraAirUpUnroll pressure first in order to stretch the bag out.
+    if (!getheightSensorMode() && // don't do this feature if height sensor mode is enabled
+        unroll > 0 && // unroll being 0 is functionally disabled
+        goal < unroll && // only run if the goal pressure is below stretch pressure, otherwise no need to stretch if it's already going past it
+        goal > w->getSelectedInputValue() && // only run if we are airing up
+        w->getSelectedInputValue() < belowP) // only run if the current pressure is below the extraAirUpBelowPressure
     {
-        w->initPressureGoal(goal + unroll, true, [w, goal]()
+        w->initPressureGoal(unroll, true, [w, goal]()
                             { w->initPressureGoal(goal); });
     }
     else
