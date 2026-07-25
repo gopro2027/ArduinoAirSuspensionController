@@ -163,7 +163,7 @@ void beginSaveData()
     _SaveData.pressureSensorMax.load("pressureSensorMax", pressuretransducermaxPSI);
     _SaveData.bagVolumePercentage.load("bagVolumePercentage", 100);
     _SaveData.extraAirUpBelowPressure.load("extraAirUpBelowP", 140);
-    _SaveData.extraAirUpUnroll.load("extraAirUpUnroll", 10);
+    _SaveData.extraAirUpUnroll.load("extraAirUpUnroll", 0); // 0 to make it disabled by default
 
     _SaveData.auxillaryOutputPreference.load();
 
