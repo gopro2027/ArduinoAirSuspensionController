@@ -56,6 +56,8 @@ public:
     Option *ui_config4;  // Compressor Off PSI (textarea)
     Option *ui_config5;  // Pressure Sensor Rating PSI (textarea)
     Option *ui_config6;  // Bag Volume Percentage (slider)
+    Option *ui_config7;  // Bag Stretch Below PSI (textarea)
+    Option *ui_config8;  // Bag Stretch PSI (textarea)
     Option *ui_wifiSSID;  // SSID selection (scanning dropdown)
     std::vector<String> scannedSSIDs;  // index -> SSID name mapping for the dropdown value callback
     bool wifiScanInProgress = false;
