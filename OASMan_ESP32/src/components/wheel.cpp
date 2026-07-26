@@ -167,7 +167,7 @@ bool Wheel::isActive()
     return getInSolenoid()->isOpen() || getOutSolenoid()->isOpen() || flagStartPressureGoalRoutine[thisWheelNum].load();
 }
 
-bool Wheel::initPressureGoal(int newPressure, bool onlyAirUp)
+bool Wheel::initPressureGoal(int newPressure, bool onlyAirUp, std::function<void()> onComplete)
 {
 
     if (newPressure > (getheightSensorMode() ? getHeightSensorMax() * 1.03f : getbagMaxPressure()))
@@ -194,6 +194,7 @@ bool Wheel::initPressureGoal(int newPressure, bool onlyAirUp)
             this->pressureGoal = newPressure;
             this->routineStartTime = millis();
             this->onlyAirUp = onlyAirUp;
+            this->onPressureGoalComplete = onComplete;
             flagStartPressureGoalRoutine[thisWheelNum] = true;
             return true;
         }
@@ -201,9 +202,9 @@ bool Wheel::initPressureGoal(int newPressure, bool onlyAirUp)
     return false;
 }
 
-bool Wheel::initPressureGoal(int newPressure)
+bool Wheel::initPressureGoal(int newPressure, std::function<void()> onComplete)
 {
-    return this->initPressureGoal(newPressure, false);
+    return this->initPressureGoal(newPressure, false, onComplete);
 }
 
 // height sensor: AA-ROT-120 https://www.aliexpress.us/item/3256807527882480.html https://www.amazon.com/Height-Sensor-Suspension-Leveling-AA-ROT-120/dp/B08DJ3HX1B https://www.aliexpress.us/item/3256806751644782.html
@@ -432,6 +433,13 @@ void Wheel::goalRoutine() {
         // close both after (only applies for level sensor logic)
         getInSolenoid()->close();
         getOutSolenoid()->close();
+
+        if (this->onPressureGoalComplete)
+        {
+            auto cb = std::move(this->onPressureGoalComplete);
+            this->onPressureGoalComplete = nullptr;
+            cb();
+        }
     }
 }
 

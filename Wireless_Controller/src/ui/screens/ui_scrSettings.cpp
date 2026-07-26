@@ -240,12 +240,16 @@ void ScrSettings::updateLevelModeOptionsVisibility(bool isLevelMode)
         lv_obj_remove_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(this->ui_calibrateMinRideHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(this->ui_sensorlessleveling->root, LV_OBJ_FLAG_HIDDEN);
+        if (this->ui_config7) lv_obj_add_flag(this->ui_config7->root, LV_OBJ_FLAG_HIDDEN);
+        if (this->ui_config8) lv_obj_add_flag(this->ui_config8->root, LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(this->ui_maintainprssure->text, "Maintain Height");
     } else {
         lv_obj_add_flag(this->ui_calibrateMinHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(this->ui_calibrateMaxHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(this->ui_calibrateMinRideHeight->root, LV_OBJ_FLAG_HIDDEN);
         lv_obj_remove_flag(this->ui_sensorlessleveling->root, LV_OBJ_FLAG_HIDDEN);
+        if (this->ui_config7) lv_obj_remove_flag(this->ui_config7->root, LV_OBJ_FLAG_HIDDEN);
+        if (this->ui_config8) lv_obj_remove_flag(this->ui_config8->root, LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(this->ui_maintainprssure->text, "Maintain Pressure");
     }
 }
@@ -823,6 +827,22 @@ void ScrSettings::init(lv_obj_t *parent)
     });
     ((Option *)this->ui_config6)->setSliderParams(10, 600, true, LV_EVENT_RELEASED);
 
+    this->ui_config7 = new Option(config_page, OptionType::KEYBOARD_INPUT_NUMBER, "Bag Stretch Below PSI", {.INT = 0}, [](void *data)
+    {
+        log_i("Pressed %i", ((uint32_t)data));
+        *util_configValues._AirUpBagStretchTriggerBelowPressure() = (uint32_t)data;
+        sendConfigValuesPacket(true);
+        alertValueUpdated();
+    });
+
+    this->ui_config8 = new Option(config_page, OptionType::KEYBOARD_INPUT_NUMBER, "Bag Stretch PSI", {.INT = 0}, [](void *data)
+    {
+        log_i("Pressed %i", ((uint32_t)data));
+        *util_configValues._AirUpBagStretchPressure() = (uint32_t)data;
+        sendConfigValuesPacket(true);
+        alertValueUpdated();
+    });
+
     // --- Wifi / Update page ---
     lv_obj_t *wifi_update_page = this->addSettingsPage(pages_container, true);
 
@@ -1113,6 +1133,8 @@ void ScrSettings::loop()
         this->ui_config4->setRightHandText(itoa(*util_configValues._compressorOffPSI(), buf, 10));
         this->ui_config5->setRightHandText(itoa(*util_configValues._pressureSensorMax(), buf, 10));
         this->ui_config6->setRightHandText(itoa(*util_configValues._bagVolumePercentage(), buf, 10));
+        this->ui_config7->setRightHandText(itoa(*util_configValues._AirUpBagStretchTriggerBelowPressure(), buf, 10));
+        this->ui_config8->setRightHandText(itoa(*util_configValues._AirUpBagStretchPressure(), buf, 10));
 
         this->ui_rfbuttonA->setRightHandText(itoa(*util_configValues._rfButtonA() + 1, buf, 10));
         this->ui_rfbuttonB->setRightHandText(itoa(*util_configValues._rfButtonB() + 1, buf, 10));
