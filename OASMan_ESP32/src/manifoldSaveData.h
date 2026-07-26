@@ -103,8 +103,8 @@ public:
     Preferencable compressorOffPSI;
     Preferencable pressureSensorMax;
     Preferencable bagVolumePercentage;
-    Preferencable extraAirUpBelowPressure;
-    Preferencable extraAirUpUnroll;
+    Preferencable AirUpBagStretchTriggerBelowPressure;
+    Preferencable AirUpBagStretchPressure;
 
     Preferencable rfButtonAPreset;
     Preferencable rfButtonBPreset;
@@ -196,8 +196,8 @@ headerDefineSaveFunc(compressorOnPSI, uint8_t);
 headerDefineSaveFunc(compressorOffPSI, uint8_t);
 headerDefineSaveFunc(pressureSensorMax, uint16_t);
 headerDefineSaveFunc(bagVolumePercentage, uint16_t);
-headerDefineSaveFunc(extraAirUpBelowPressure, uint8_t);
-headerDefineSaveFunc(extraAirUpUnroll, uint8_t);
+headerDefineSaveFunc(AirUpBagStretchTriggerBelowPressure, uint8_t);
+headerDefineSaveFunc(AirUpBagStretchPressure, uint8_t);
 
 headerDefineSaveFunc(rfButtonAPreset, uint8_t);
 headerDefineSaveFunc(rfButtonBPreset, uint8_t);
