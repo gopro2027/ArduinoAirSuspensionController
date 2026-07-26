@@ -266,7 +266,7 @@ static void initPressureGoalWithStretch(byte wheelNum, int goal)
         w->getSelectedInputValue() < belowP) // only run if the current pressure is below the AirUpBagStretchTriggerBelowPressure
     {
         w->initPressureGoal(unroll, true, [w, goal]()
-                            { w->initPressureGoal(goal); });
+                            { w->initPressureGoal(goal); }); //this could technically be initPressureGoalWithStretch (recursive) but with a chance of an infinite loop, so we will go straight to initPressureGoal for now unless we want to add more functionality and failsafe checks to initPressureGoalWithStretch in the future
     }
     else
     {
