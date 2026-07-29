@@ -88,7 +88,7 @@ void ScrSettings::showColorPickerModal() {
     // ========== Title ==========
     lv_obj_t *titleLabel = lv_label_create(container);
     lv_label_set_text(titleLabel, "Pick Color");
-    lv_obj_set_style_text_font(titleLabel, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(titleLabel, getScaledFont(16), 0);
     lv_obj_set_style_text_color(titleLabel, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_pad_bottom(titleLabel, scaledY(8), 0);
 
@@ -110,7 +110,7 @@ void ScrSettings::showColorPickerModal() {
     // ========== Hex Code Label ==========
     data->hexLabel = lv_label_create(container);
     lv_label_set_text_fmt(data->hexLabel, "#%02X%02X%02X", currentR, currentG, currentB);
-    lv_obj_set_style_text_font(data->hexLabel, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(data->hexLabel, getScaledFont(16), 0);
     lv_obj_set_style_text_color(data->hexLabel, lv_color_hex(0xFFFFFF), 0);
 
     // ========== Sliders ==========
@@ -142,12 +142,12 @@ void ScrSettings::showColorPickerModal() {
 
         lv_obj_t *nameLabel = lv_label_create(topRow);
         lv_label_set_text(nameLabel, label);
-        lv_obj_set_style_text_font(nameLabel, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(nameLabel, getScaledFont(14), 0);
         lv_obj_set_style_text_color(nameLabel, lv_color_hex(0x999999), 0);
 
         *valueLabelOut = lv_label_create(topRow);
         lv_label_set_text_fmt(*valueLabelOut, "%d", initialValue);
-        lv_obj_set_style_text_font(*valueLabelOut, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(*valueLabelOut, getScaledFont(14), 0);
         lv_obj_set_style_text_color(*valueLabelOut, lv_color_hex(0xFFFFFF), 0);
 
         // Slider
@@ -210,7 +210,7 @@ void ScrSettings::showColorPickerModal() {
 
     lv_obj_t *cancelLabel = lv_label_create(cancelBtn);
     lv_label_set_text(cancelLabel, "Cancel");
-    lv_obj_set_style_text_font(cancelLabel, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(cancelLabel, getScaledFont(14), 0);
     lv_obj_set_style_text_color(cancelLabel, lv_color_hex(0xAAAAAA), 0);
     lv_obj_center(cancelLabel);
 
@@ -237,7 +237,7 @@ void ScrSettings::showColorPickerModal() {
 
     lv_obj_t *applyLabel = lv_label_create(applyBtn);
     lv_label_set_text(applyLabel, "Apply");
-    lv_obj_set_style_text_font(applyLabel, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(applyLabel, getScaledFont(14), 0);
     lv_obj_set_style_text_color(applyLabel, lv_color_hex(0x000000), 0);
     lv_obj_center(applyLabel);
 

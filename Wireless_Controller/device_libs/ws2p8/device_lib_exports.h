@@ -11,3 +11,6 @@
 #include "files/BAT_Driver.h"
 
 #define SUPPORTS_ROTATION 1
+
+// Physical panel: 2.8" diagonal, 240x320 -> ~143 px/inch (the scaling reference panel)
+#define DEVICE_DPI 143

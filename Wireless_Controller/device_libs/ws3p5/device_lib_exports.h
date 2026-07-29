@@ -48,6 +48,9 @@
 
 #define SUPPORTS_ROTATION 1
 
+// Physical panel: 3.5" diagonal, 320x480 -> ~165 px/inch
+#define DEVICE_DPI 165
+
 // Struct for LVGL initialization
 struct touch_and_screen
 {

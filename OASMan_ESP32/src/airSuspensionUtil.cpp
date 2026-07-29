@@ -251,6 +251,29 @@ bool isAnyWheelActive()
     return false;
 }
 
+// function renamed to 'bag stretch'
+static void initPressureGoalWithStretch(byte wheelNum, int goal)
+{
+    Wheel *w = getWheel(wheelNum);
+    int belowP = getAirUpBagStretchTriggerBelowPressure();
+    int unroll = getAirUpBagStretchPressure();
+    // the functionality of this feature was changed a bit from the original idea. I've kind of deemed the original idea of 'going past the pressure' kind of useless on it's own, as it's just going to make almost every time you go to a preset be inaccurate.
+    // instead what this function will do is check if the current pressure is below the AirUpBagStretchTriggerBelowPressure, which by default is 40psi, and if it is, it will go to the AirUpBagStretchPressure pressure first in order to stretch the bag out.
+    if (!getheightSensorMode() && // don't do this feature if height sensor mode is enabled
+        unroll > 0 && // unroll being 0 is functionally disabled
+        goal < unroll && // only run if the goal pressure is below stretch pressure, otherwise no need to stretch if it's already going past it
+        goal > w->getSelectedInputValue() && // only run if we are airing up
+        w->getSelectedInputValue() < belowP) // only run if the current pressure is below the AirUpBagStretchTriggerBelowPressure
+    {
+        w->initPressureGoal(unroll, true, [w, goal]()
+                            { w->initPressureGoal(goal); }); //this could technically be initPressureGoalWithStretch (recursive) but with a chance of an infinite loop, so we will go straight to initPressureGoal for now unless we want to add more functionality and failsafe checks to initPressureGoalWithStretch in the future
+    }
+    else
+    {
+        w->initPressureGoal(goal);
+    }
+}
+
 void loadProfileAirUp(int profileIndex)
 {
     if (profileIndex > MAX_PROFILE_COUNT)
@@ -259,10 +282,10 @@ void loadProfileAirUp(int profileIndex)
     }
     // load profile then air up
     ProfileRaw p = readProfile(profileIndex);
-    getWheel(WHEEL_FRONT_PASSENGER)->initPressureGoal(p.pressure[WHEEL_FRONT_PASSENGER]);
-    getWheel(WHEEL_REAR_PASSENGER)->initPressureGoal(p.pressure[WHEEL_REAR_PASSENGER]);
-    getWheel(WHEEL_FRONT_DRIVER)->initPressureGoal(p.pressure[WHEEL_FRONT_DRIVER]);
-    getWheel(WHEEL_REAR_DRIVER)->initPressureGoal(p.pressure[WHEEL_REAR_DRIVER]);
+    initPressureGoalWithStretch(WHEEL_FRONT_PASSENGER, p.pressure[WHEEL_FRONT_PASSENGER]);
+    initPressureGoalWithStretch(WHEEL_REAR_PASSENGER, p.pressure[WHEEL_REAR_PASSENGER]);
+    initPressureGoalWithStretch(WHEEL_FRONT_DRIVER, p.pressure[WHEEL_FRONT_DRIVER]);
+    initPressureGoalWithStretch(WHEEL_REAR_DRIVER, p.pressure[WHEEL_REAR_DRIVER]);
 }
 
 void airOutWithSafetyCheck()

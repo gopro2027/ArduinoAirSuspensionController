@@ -44,8 +44,18 @@ void Lvgl_Touchpad_Read(lv_indev_t *indev, lv_indev_data_t *data)
   uint16_t touchpad_y[5] = {0};
   uint16_t strength[5] = {0};
   uint8_t touchpad_cnt = 0;
-  Touch_Read_Data();
-  uint8_t touchpad_pressed = Touch_Get_XY(touchpad_x, touchpad_y, strength, &touchpad_cnt, CST328_LCD_TOUCH_MAX_POINTS);
+  uint8_t touchpad_pressed;
+  // Route to whichever touch controller Touch_Init() detected (CST328 v1 / CST3530 v2).
+  if (active_touch_controller == TOUCH_CONTROLLER_CST3530)
+  {
+    Touch2_Read_Data();
+    touchpad_pressed = Touch2_Get_XY(touchpad_x, touchpad_y, strength, &touchpad_cnt, CST3530_LCD_TOUCH_MAX_POINTS);
+  }
+  else
+  {
+    Touch_Read_Data();
+    touchpad_pressed = Touch_Get_XY(touchpad_x, touchpad_y, strength, &touchpad_cnt, CST328_LCD_TOUCH_MAX_POINTS);
+  }
   if (touchpad_pressed && touchpad_cnt > 0)
   {
     data->point.x = touchpad_x[0];

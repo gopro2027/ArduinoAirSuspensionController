@@ -207,6 +207,8 @@ class BLEManager extends ChangeNotifier {
   int pressureSensorMax = 0;
   int bagVolumePercentage = 0;
   int bagMaxPressure = 0;
+  int AirUpBagStretchTriggerBelowPressure = 0;
+  int AirUpBagStretchPressure = 0;
 
   /// From STATUSREPORT args (AI learning UI).
   int aiLearnPercent = 0;
@@ -768,7 +770,8 @@ class BLEManager extends ChangeNotifier {
           rfButtonBPreset = data[21] & 0xFF;
           rfButtonCPreset = data[22] & 0xFF;
           rfButtonDPreset = data[23] & 0xFF;
-          // data[24] reserved (formerly heightSensorInvertBits); ignored
+          AirUpBagStretchTriggerBelowPressure = data[24] & 0xFF;
+          AirUpBagStretchPressure = data[25] & 0xFF;
 
           auxModeByte = data[28] & 0xFF;
           final tu = data[29] & 0xFF;
@@ -962,7 +965,8 @@ class BLEManager extends ChangeNotifier {
     args[17] = rfButtonBPreset.clamp(0, 255);
     args[18] = rfButtonCPreset.clamp(0, 255);
     args[19] = rfButtonDPreset.clamp(0, 255);
-    args[20] = 0; // reserved (formerly heightSensorInvertBits); kept for byte-layout compat
+    args[20] = AirUpBagStretchTriggerBelowPressure.clamp(0, 255);
+    args[21] = AirUpBagStretchPressure.clamp(0, 255);
     args[24] = auxModeByte.clamp(0, 255);
     args[25] = auxTimeUnit.clamp(0, 3);
     args[26] = auxPulseDuration.clamp(0, 255);

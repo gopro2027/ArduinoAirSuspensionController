@@ -42,13 +42,46 @@ static void enlarge_msgbox_footer_for_circle(lv_obj_t *mbox)
         for (uint32_t j = 0; j < nc; j++) {
             lv_obj_t *ch = lv_obj_get_child(btn, (int32_t)j);
             if (lv_obj_check_type(ch, &lv_label_class)) {
-                lv_obj_set_style_text_font(ch, &lv_font_montserrat_14, LV_PART_MAIN);
+                lv_obj_set_style_text_font(ch, getScaledFont(14), LV_PART_MAIN);
                 lv_label_set_long_mode(ch, LV_LABEL_LONG_WRAP);
                 lv_obj_set_width(ch, lv_pct(100));
                 lv_obj_set_style_text_align(ch, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
             }
         }
     }
+}
+#else
+/* Standard displays: scale the msgbox title/body/footer with DPI so dialogs are not tiny on
+ * high-resolution panels. LVGL's default msgbox theme uses fixed, font-based sizes. */
+static void styleMsgBoxScaled(lv_obj_t *mbox)
+{
+    lv_obj_t *header = lv_msgbox_get_header(mbox);
+    if (header != nullptr)
+        lv_obj_set_style_text_font(header, getScaledFont(18), LV_PART_MAIN); // title
+
+    lv_obj_t *content = lv_msgbox_get_content(mbox);
+    if (content != nullptr)
+        lv_obj_set_style_text_font(content, getScaledFont(14), LV_PART_MAIN); // body text
+
+    lv_obj_t *footer = lv_msgbox_get_footer(mbox);
+    if (footer != nullptr) {
+        // The footer class hard-codes its height to LV_DPI_DEF/3 and the footer buttons are
+        // height = LV_PCT(100) of it, so the button height is locked regardless of font and a larger
+        // font clips. Let the footer and buttons size to their content instead. This changes ONLY
+        // sizing -- the theme's radius, drop shadow, padding, colours and press/hover effect are left
+        // untouched, so the button keeps its original design, just larger with the scaled font.
+        lv_obj_set_height(footer, LV_SIZE_CONTENT);
+
+        const uint32_t n = lv_obj_get_child_count(footer);
+        for (uint32_t i = 0; i < n; i++) {
+            lv_obj_t *btn = lv_obj_get_child(footer, (int32_t)i);
+            if (btn == nullptr)
+                continue;
+            lv_obj_set_style_text_font(btn, getScaledFont(16), LV_PART_MAIN); // inherited by the button label
+            lv_obj_set_height(btn, LV_SIZE_CONTENT);
+        }
+    }
+
 }
 #endif
 
@@ -194,6 +227,8 @@ void Scr::showMsgBox(const char *title, const char *text, const char *yesText, c
 
 #ifdef SCREEN_MODE_CIRCLE
     enlarge_msgbox_footer_for_circle(this->mb_dialog);
+#else
+    styleMsgBoxScaled(this->mb_dialog);
 #endif
 }
 

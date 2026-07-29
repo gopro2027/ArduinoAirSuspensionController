@@ -5,6 +5,7 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <atomic>
+#include <functional>
 #include <user_defines.h>
 #include "input_type.h"
 #include "solenoid.h"
@@ -48,7 +49,7 @@ private:
     void markInstability(float current);
 
     bool onlyAirUp = false;
-    bool initPressureGoal(int newPressure, bool onlyAirUp);
+    std::function<void()> onPressureGoalComplete;
     void trackPressureStability();
     bool isPressureStable();
 
@@ -58,7 +59,8 @@ private:
 public:
     Wheel();
     Wheel(int solenoidInPin, int solenoidOutPin, InputType *pressurePin, InputType *levelSensorPin, byte thisWheelNum);
-    bool initPressureGoal(int newPressure);
+    bool initPressureGoal(int newPressure, std::function<void()> onComplete = nullptr);
+    bool initPressureGoal(int newPressure, bool onlyAirUp, std::function<void()> onComplete = nullptr);
     void loop();
     void readInputs();
     float readLevelSensorRaw();
