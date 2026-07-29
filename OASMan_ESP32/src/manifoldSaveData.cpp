@@ -365,18 +365,6 @@ bool dequeueLearnSample(SOLENOID_AI_INDEX aiIndex, PressureLearnSaveStruct *out)
     return true;
 }
 
-bool isLearnSampleQueueEmpty(SOLENOID_AI_INDEX aiIndex)
-{
-    if (learnDataMutex == NULL)
-    {
-        return true;
-    }
-    xSemaphoreTake(learnDataMutex, portMAX_DELAY);
-    bool empty = learnSampleQueues[(int)aiIndex].count == 0;
-    xSemaphoreGive(learnDataMutex);
-    return empty;
-}
-
 void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
 {
     if (getAIModel(aiIndex)->isReadyToUse.get().i)

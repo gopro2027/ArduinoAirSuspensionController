@@ -657,10 +657,11 @@ bool processLearnSampleQueues()
             continue;
         }
 
+        bool trained = false;
         PressureLearnSaveStruct sample;
         while (dequeueLearnSample(index, &sample))
         {
-            didWork = true;
+            trained = true;
             pref->model.trainRepeated(
                 LEARN_STEPS_PER_SAMPLE_ONLINE,
                 sample.start_pressure,
@@ -669,9 +670,10 @@ bool processLearnSampleQueues()
                 sample.timeMS);
         }
 
-        if (isLearnSampleQueueEmpty(index))
+        if (trained)
         {
             pref->saveWeights();
+            didWork = true;
         }
     }
 
