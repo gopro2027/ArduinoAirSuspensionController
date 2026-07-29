@@ -643,10 +643,8 @@ void trainAIModels()
     updateAIPercentage();
 }
 
-bool processLearnSampleQueues()
+void processLearnSampleQueues()
 {
-    bool didWork = false;
-
     for (int i = 0; i < 4; i++)
     {
         SOLENOID_AI_INDEX index = (SOLENOID_AI_INDEX)i;
@@ -673,11 +671,8 @@ bool processLearnSampleQueues()
         if (trained)
         {
             pref->saveWeights();
-            didWork = true;
         }
     }
-
-    return didWork;
 }
 
 double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure)

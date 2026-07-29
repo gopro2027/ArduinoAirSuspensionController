@@ -107,8 +107,8 @@ void task_trainAI(void *parameters)
 
     for (;;)
     {
-        bool busy = processLearnSampleQueues();
-        vTaskDelay(pdMS_TO_TICKS(busy ? 5 : 50));
+        processLearnSampleQueues();
+        delay(100);
     }
 }
 
