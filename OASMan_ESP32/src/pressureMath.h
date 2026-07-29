@@ -10,6 +10,7 @@
 class AIModel
 {
     double learning_rate = 0.00075;
+    bool isSampleValid(double start_pressure, double end_pressure, double tank_pressure);
     double predict(double start_pressure, double end_pressure, double tank_pressure);
     void calculateDescent(double error, double start_pressure, double end_pressure, double tank_pressure);
 

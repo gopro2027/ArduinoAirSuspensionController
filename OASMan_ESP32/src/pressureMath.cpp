@@ -25,9 +25,28 @@ void AIModel::loadWeights(double _w1, double _w2, double _b)
     b = _b;
 }
 
+// Single definition of "the log terms below will produce a finite number for this sample".
+// Written with > comparisons so that a nan input also comes back invalid. Safe to check before
+// normalizing since normalize() here is just a divide by 200, which keeps the sign and ordering.
+bool AIModel::isSampleValid(double start_pressure, double end_pressure, double tank_pressure)
+{
+    if (this->up)
+    {
+        // tank has to be above the goal pressure, otherwise log(tank / (tank - end)) divides by zero or takes the log of a negative
+        return (tank_pressure > 0) && (tank_pressure > end_pressure);
+    }
+    // log(start / end) needs both sides above zero
+    return (end_pressure > 0) && (start_pressure > 0);
+}
+
 // Predict time from inputs
 double AIModel::predict(double start_pressure, double end_pressure, double tank_pressure)
 {
+    if (!isSampleValid(start_pressure, end_pressure, tank_pressure))
+    {
+        return 0;
+    }
+
     start_pressure = normalize(start_pressure, 0, 200);
     end_pressure = normalize(end_pressure, 0, 200);
     tank_pressure = normalize(tank_pressure, 0, 200);
@@ -56,6 +75,9 @@ double AIModel::predict(double start_pressure, double end_pressure, double tank_
     return result;
 }
 
+// Caller must have already passed the sample through isSampleValid(). An inf/nan reaching
+// w1/w2/b is unrecoverable in the field once saveWeights() commits it to nvs
+// We do not put isSampleValid in here for performance reasons so make sure this is not called without a proper isSampleValid check beforehand
 void AIModel::calculateDescent(double error, double start_pressure, double end_pressure, double tank_pressure)
 {
     // Gradient descent updates
@@ -78,8 +100,6 @@ void AIModel::calculateDescent(double error, double start_pressure, double end_p
     }
     else
     {
-        if (!(end_pressure > 0) || !(start_pressure > 0))
-            return;
         double timeDifEndMinusStart = log(start_pressure / end_pressure); //(-log(end_pressure)) - (-log(start_pressure));
         w1 -= learning_rate * error * timeDifEndMinusStart;
         b -= learning_rate * error;
@@ -109,6 +129,11 @@ double AIModel::predictDeNormalized(double start_pressure, double end_pressure, 
 // Train the model with one sample
 void AIModel::train(double start_pressure, double end_pressure, double tank_pressure, double actual_time)
 {
+    if (!isSampleValid(start_pressure, end_pressure, tank_pressure))
+    {
+        return;
+    }
+
     double pred = predict(start_pressure, end_pressure, tank_pressure);
     double error = pred - normalize(actual_time, 0, 5000); // use normalized version here so that the values made by the predict are normalized
 
