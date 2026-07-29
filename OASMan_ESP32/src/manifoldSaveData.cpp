@@ -14,6 +14,9 @@ PressureLearnSaveStruct learnData[4][LEARN_SAVE_COUNT];// TODO: This data needs 
 static LearnSampleQueue learnSampleQueues[4];
 static SemaphoreHandle_t learnDataMutex;
 
+// exclusive, pressure must be higher than this to log
+#define MIN_PRESSURE_CHANGE_LOG_PSI 1
+
 extern void updateAIPercentage();
 void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
 
@@ -325,7 +328,7 @@ void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure,
 {
     int *size = &learnDataIndex[aiIndex];
 
-    if (abs((int)start_pressure - (int)goal_pressure) < 1)
+    if (abs((int)start_pressure - (int)goal_pressure) <= MIN_PRESSURE_CHANGE_LOG_PSI)
     {
         // Don't want to spam a ton of super low valve timings where the pressures basically didn't move. This happened to a tester and the result was a ton of useless repetitive data saved where we could have had more useful data.
         return;
@@ -376,7 +379,7 @@ AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex)
 
 bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
 {
-    if (abs((int)start_pressure - (int)goal_pressure) < 1)
+    if (abs((int)start_pressure - (int)goal_pressure) <= MIN_PRESSURE_CHANGE_LOG_PSI)
     {
         return false;
     }
