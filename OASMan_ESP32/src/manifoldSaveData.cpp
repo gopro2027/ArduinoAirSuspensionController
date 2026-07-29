@@ -338,15 +338,27 @@ void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure,
         return;
     }
 
-    PressureLearnSaveStruct *pls = getLearnData(aiIndex);
-    pls[*size].start_pressure = start_pressure;
-    pls[*size].goal_pressure = goal_pressure;
-    pls[*size].tank_pressure = tank_pressure;
-    pls[*size].timeMS = timeMS;
+    if (learnDataMutex == NULL)
+    {
+        return;
+    }
+    xSemaphoreTake(learnDataMutex, portMAX_DELAY);
 
-    writeBytes(getLogFileName(aiIndex), &pls[*size], sizeof(PressureLearnSaveStruct), "a");
+    // Both front wheels share AI_MODEL_UP_FRONT (and both rears share AI_MODEL_UP_REAR), so two wheel tasks can land here at the same time. This is the size check that actually matters since it is inside the semaphore now and safe
+    if (*size < LEARN_SAVE_COUNT)
+    {
+        PressureLearnSaveStruct *pls = getLearnData(aiIndex);
+        pls[*size].start_pressure = start_pressure;
+        pls[*size].goal_pressure = goal_pressure;
+        pls[*size].tank_pressure = tank_pressure;
+        pls[*size].timeMS = timeMS;
 
-    *size = *size + 1;
+        writeBytes(getLogFileName(aiIndex), &pls[*size], sizeof(PressureLearnSaveStruct), "a");
+
+        *size = *size + 1;
+    }
+
+    xSemaphoreGive(learnDataMutex);
 
     updateAIPercentage();
 }
