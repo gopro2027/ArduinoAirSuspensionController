@@ -306,6 +306,56 @@ void clearPressureData()
     loadAILearnedDataPreferences();
 }
 
+void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
+{
+    if (getAIModel(aiIndex)->isReadyToUse.get().i)
+    {
+        enqueueLearnSample(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS);
+    }
+    else
+    {
+        appendPressureDataToFile(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS);
+    }
+}
+
+void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
+{
+    int *size = &learnDataIndex[aiIndex];
+
+    if (abs((int)start_pressure - (int)goal_pressure) < 1)
+    {
+        // Don't want to spam a ton of super low valve timings where the pressures basically didn't move. This happened to a tester and the result was a ton of useless repetitive data saved where we could have had more useful data.
+        return;
+    }
+
+    if (*size >= LEARN_SAVE_COUNT)
+    {
+        return;
+    }
+
+    if (!isLearnSampleDirectionValid(aiIndex, start_pressure, goal_pressure))
+    {
+        return;
+    }
+
+    PressureLearnSaveStruct *pls = getLearnData(aiIndex);
+    pls[*size].start_pressure = start_pressure;
+    pls[*size].goal_pressure = goal_pressure;
+    pls[*size].tank_pressure = tank_pressure;
+    pls[*size].timeMS = timeMS;
+
+    writeBytes(getLogFileName(aiIndex), &pls[*size], sizeof(PressureLearnSaveStruct), "a");
+
+    *size = *size + 1;
+
+    updateAIPercentage();
+}
+
+AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex)
+{
+    return &_SaveData.aiModels[aiIndex];
+}
+
 bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
 {
     if (abs((int)start_pressure - (int)goal_pressure) < 1)
@@ -363,56 +413,6 @@ bool dequeueLearnSample(SOLENOID_AI_INDEX aiIndex, PressureLearnSaveStruct *out)
 
     xSemaphoreGive(learnDataMutex);
     return true;
-}
-
-void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
-{
-    if (getAIModel(aiIndex)->isReadyToUse.get().i)
-    {
-        enqueueLearnSample(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS);
-    }
-    else
-    {
-        appendPressureDataToFile(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS);
-    }
-}
-
-void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
-{
-    int *size = &learnDataIndex[aiIndex];
-
-    if (abs((int)start_pressure - (int)goal_pressure) < 1)
-    {
-        // Don't want to spam a ton of super low valve timings where the pressures basically didn't move. This happened to a tester and the result was a ton of useless repetitive data saved where we could have had more useful data.
-        return;
-    }
-
-    if (*size >= LEARN_SAVE_COUNT)
-    {
-        return;
-    }
-
-    if (!isLearnSampleDirectionValid(aiIndex, start_pressure, goal_pressure))
-    {
-        return;
-    }
-
-    PressureLearnSaveStruct *pls = getLearnData(aiIndex);
-    pls[*size].start_pressure = start_pressure;
-    pls[*size].goal_pressure = goal_pressure;
-    pls[*size].tank_pressure = tank_pressure;
-    pls[*size].timeMS = timeMS;
-
-    writeBytes(getLogFileName(aiIndex), &pls[*size], sizeof(PressureLearnSaveStruct), "a");
-
-    *size = *size + 1;
-
-    updateAIPercentage();
-}
-
-AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex)
-{
-    return &_SaveData.aiModels[aiIndex];
 }
 
 ProfileRaw readProfile(byte profileIndex)
