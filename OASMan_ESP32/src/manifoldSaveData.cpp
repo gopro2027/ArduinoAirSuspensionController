@@ -275,7 +275,10 @@ void clearLearnSampleQueues()
 {
     if (learnDataMutex != NULL)
     {
-        xSemaphoreTake(learnDataMutex, portMAX_DELAY);
+        while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
+        {
+            delay(1);
+        }
     }
     for (int i = 0; i < 4; i++)
     {
@@ -342,7 +345,10 @@ void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure,
     {
         return;
     }
-    xSemaphoreTake(learnDataMutex, portMAX_DELAY);
+    while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
+    {
+        delay(1);
+    }
 
     // Both front wheels share AI_MODEL_UP_FRONT (and both rears share AI_MODEL_UP_REAR), so two wheel tasks can land here at the same time. This is the size check that actually matters since it is inside the semaphore now and safe
     if (*size < LEARN_SAVE_COUNT)
@@ -383,7 +389,10 @@ bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8
     {
         return false;
     }
-    xSemaphoreTake(learnDataMutex, portMAX_DELAY);
+    while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
+    {
+        delay(1);
+    }
 
     LearnSampleQueue *q = &learnSampleQueues[(int)aiIndex];
     if (q->count >= ML_IMMEDIATE_TRAIN_SAMPLE_QUE)
@@ -410,7 +419,10 @@ bool dequeueLearnSample(SOLENOID_AI_INDEX aiIndex, PressureLearnSaveStruct *out)
     {
         return false;
     }
-    xSemaphoreTake(learnDataMutex, portMAX_DELAY);
+    while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
+    {
+        delay(1);
+    }
 
     LearnSampleQueue *q = &learnSampleQueues[(int)aiIndex];
     if (q->count == 0)
