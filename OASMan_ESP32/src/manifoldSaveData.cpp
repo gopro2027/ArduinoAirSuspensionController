@@ -18,7 +18,6 @@ static SemaphoreHandle_t learnDataMutex;
 #define MIN_PRESSURE_CHANGE_LOG_PSI 1
 
 extern void updateAIPercentage();
-void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
 
 static bool isLearnSampleDirectionValid(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure)
 {
@@ -312,18 +311,6 @@ void clearPressureData()
     loadAILearnedDataPreferences();
 }
 
-void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
-{
-    if (getAIModel(aiIndex)->isReadyToUse.get().i)
-    {
-        enqueueLearnSample(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS);
-    }
-    else
-    {
-        appendPressureDataToFile(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS);
-    }
-}
-
 void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
 {
     int *size = &learnDataIndex[aiIndex];
@@ -375,6 +362,18 @@ void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure,
 AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex)
 {
     return &_SaveData.aiModels[aiIndex];
+}
+
+void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
+{
+    if (getAIModel(aiIndex)->isReadyToUse.get().i)
+    {
+        enqueueLearnSample(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS);
+    }
+    else
+    {
+        appendPressureDataToFile(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS);
+    }
 }
 
 bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
