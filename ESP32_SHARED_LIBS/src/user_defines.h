@@ -39,12 +39,12 @@
 #define AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE_TIME 3 * 1000
 
 // original full amount is 500
-#define LEARN_SAVE_COUNT 250
+#define LEARN_SAVE_COUNT 150
 
 // Phase 2 online training: ring buffer depth per AI model (after isReadyToUse)
+// Online-learning tuning constants (RLS forgetting, outlier gate, anchor replay) live in
+// OASMan_ESP32/src/pressureMath.h next to the model they tune
 #define ML_IMMEDIATE_TRAIN_SAMPLE_QUE 20
-// SGD steps per sample dequeued from the online queue
-#define LEARN_STEPS_PER_SAMPLE_ONLINE 5
 
 /* Bags generally do not like to sit at exactly 0psi. Please choose which pressure is desired for air out */
 /* Not really used anymore, just using presets! Only kept here as legacy for og app */

@@ -336,10 +336,9 @@ void Wheel::goalRoutine() {
                     if (canUseAiPrediction(valve->getAIIndex()))
                     {
 
-                        // conversion float to int eliminates inf and nan
                         int aiPredict = getAiPredictionTime(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure);
 
-                        // There are some valid scenarios where we can get inf or nan if say the tank pressure is lower than the end pressure
+                        // 0 means the model declined to predict (e.g. tank at/below the goal pressure)
                         if (aiPredict < 5000 && aiPredict > 0)
                         {
                             valveTime = aiPredict;

@@ -118,6 +118,7 @@ public:
 
     Profile profile[MAX_PROFILE_COUNT];
     AIModelPreference aiModels[4];
+    Preferencable mlModelSchema; // ML_MODEL_SCHEMA_VERSION the stored weights were trained with
 };
 
 struct PressureLearnSaveStruct
@@ -158,6 +159,9 @@ PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX aiIndex);
 int getLearnDataLength(SOLENOID_AI_INDEX aiIndex);
 
 void clearPressureData();
+/** Clear one model's bootstrap samples (file + RAM) without touching its stored weights.
+ * Used when the batch fit fails its quality gate and we want to re-collect. */
+void clearPressureDataSingle(SOLENOID_AI_INDEX index);
 
 struct LearnSampleQueue
 {

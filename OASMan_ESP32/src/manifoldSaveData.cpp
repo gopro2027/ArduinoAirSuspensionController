@@ -115,6 +115,26 @@ void loadAILearnedDataPreferences()
     _SaveData.aiModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT].model.up = false;
     _SaveData.aiModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR].model.up = false;
 
+    // Weights trained on an older feature set are meaningless with the new math. Reset them and
+    // drop back to not-ready; the retained bootstrap samples retrain the models on this same boot
+    // (closed-form fit is near-instant). Devices from before this check default to schema 1.
+    _SaveData.mlModelSchema.load("mlModelSchema", 1);
+    if (_SaveData.mlModelSchema.get().i != ML_MODEL_SCHEMA_VERSION)
+    {
+        Serial.print("AI model schema changed to ");
+        Serial.print(ML_MODEL_SCHEMA_VERSION);
+        Serial.println(", resetting stored weights (bootstrap samples kept)");
+        for (int i = 0; i < 4; i++)
+        {
+            _SaveData.aiModels[i].weights[0].setDouble(0.1);
+            _SaveData.aiModels[i].weights[1].setDouble(0.1);
+            _SaveData.aiModels[i].weights[2].setDouble(0.0);
+            _SaveData.aiModels[i].setReady(false);
+            _SaveData.aiModels[i].loadModel();
+        }
+        _SaveData.mlModelSchema.set(ML_MODEL_SCHEMA_VERSION);
+    }
+
     for (int i = 0; i < 10; i++)
         Serial.println("");
     Serial.println("BEGIN IMPORTANT DATA FOR PRO");
@@ -309,6 +329,24 @@ void clearPressureData()
     AIReadyBittset = 0;
     AIPercentage = 0;
     loadAILearnedDataPreferences();
+}
+
+void clearPressureDataSingle(SOLENOID_AI_INDEX index)
+{
+    if (learnDataMutex != NULL)
+    {
+        while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
+        {
+            delay(1);
+        }
+    }
+    deleteFile(getLogFileName(index));
+    learnDataIndex[index] = 0;
+    if (learnDataMutex != NULL)
+    {
+        xSemaphoreGive(learnDataMutex);
+    }
+    updateAIPercentage();
 }
 
 void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)

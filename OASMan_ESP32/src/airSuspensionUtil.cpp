@@ -565,39 +565,113 @@ uint8_t AIPercentage = 0;
 
 void trainSingleAIModel(SOLENOID_AI_INDEX index)
 {
-    AIModel aiModelsTemp;
+    AIModelPreference *pref = getAIModel(index);
 
-    if (index == SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT || index == SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR)
-    {
-        aiModelsTemp.up = false;
-    }
+    // Fit into a temp model so a failed/rejected fit can't leave half-written weights in the live one.
+    // up flag mirrors the live model (set in loadAILearnedDataPreferences).
+    AIModel aiModelsTemp;
+    aiModelsTemp.up = pref->model.up;
 
     Serial.print(F("Training AI "));
     Serial.println((int)index);
     unsigned long t = millis();
-    for (int epoch = 0; epoch < 1000 * 10; ++epoch)
+
+    // The model is linear in its weights, so exact least squares (normal equations) replaces the
+    // old 10k-epoch gradient descent: true optimum, no learning rate, milliseconds instead of ~45s
+    AIFitter fitter;
+    PressureLearnSaveStruct *pls = getLearnData(index);
+    int len = getLearnDataLength(index);
+    for (int j = 0; j < len; j++)
     {
-        for (int j = 0; j < getLearnDataLength(index); j++)
-        {
-            PressureLearnSaveStruct *pls = getLearnData(index);
-            aiModelsTemp.train(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].timeMS);
-        }
-        if (epoch % 10 == 0)
-        {
-            delay(1); // inside a task, delay 1 so it doesn't block other things i guess. Should take about 4.5ms per loop
-        }
+        fitter.add(aiModelsTemp, pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].timeMS);
     }
+
+    if (!fitter.solveInto(aiModelsTemp))
+    {
+        Serial.print("AI fit failed (valid samples: ");
+        Serial.print(fitter.sampleCount());
+        Serial.println("), clearing this model's data to re-collect");
+        clearPressureDataSingle(index);
+        return;
+    }
+
+    // Quality gate: don't hand valve control to a model that can't even fit its own training data
+    double sumSqMs = 0;
+    int n = 0;
+    for (int j = 0; j < len; j++)
+    {
+        if (!aiModelsTemp.isSampleValid(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure))
+        {
+            continue;
+        }
+        double d = aiModelsTemp.predictDeNormalized(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure) - (double)pls[j].timeMS;
+        sumSqMs += d * d;
+        n++;
+    }
+    double rmseMs = n > 0 ? sqrt(sumSqMs / n) : 0;
+    if (n == 0 || rmseMs > ML_BATCH_RMSE_GATE_MS)
+    {
+        Serial.print("AI fit rejected, RMSE ms: ");
+        Serial.println(rmseMs);
+        Serial.println("Clearing this model's data to re-collect");
+        clearPressureDataSingle(index);
+        return;
+    }
+
     unsigned long total = millis() - t;
 
     Serial.print("Ready ai model: ");
     Serial.println(index);
+    Serial.print("Fit RMSE ms: ");
+    Serial.println(rmseMs);
     Serial.print("Time for training: ");
     Serial.println(total);
 
-    getAIModel(index)->model.loadWeights(aiModelsTemp.w1, aiModelsTemp.w2, aiModelsTemp.b);
-    getAIModel(index)->saveWeights();
-    getAIModel(index)->setReady(true); // set to not train again and let it know it's ready to use
+    pref->model.loadWeights(aiModelsTemp.w1, aiModelsTemp.w2, aiModelsTemp.b);
+    // Hand the batch fit's covariance + noise floor to the online learner so RLS updates start
+    // appropriately small and the outlier gate is armed from sample one
+    fitter.initOnline(pref->model);
+    pref->model.onlineSeedGate((sumSqMs / n) / (ML_TIME_NORM_MS * ML_TIME_NORM_MS));
+    pref->saveWeights();
+    pref->setReady(true); // set to not train again and let it know it's ready to use
     AIReadyBittset = AIReadyBittset | (1 << index);
+}
+
+// Rebuild a ready model's RLS covariance and outlier-gate noise floor from the retained bootstrap
+// samples (these are RAM-only and lost on reboot; the weights themselves persist in NVS)
+static void initOnlineStateFromLearnData(SOLENOID_AI_INDEX index)
+{
+    AIModelPreference *pref = getAIModel(index);
+    PressureLearnSaveStruct *pls = getLearnData(index);
+    int len = getLearnDataLength(index);
+
+    AIFitter fitter;
+    for (int j = 0; j < len; j++)
+    {
+        fitter.add(pref->model, pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].timeMS);
+    }
+    if (!fitter.initOnline(pref->model))
+    {
+        // no usable bootstrap data (initOnline already fell back to the default covariance)
+        return;
+    }
+
+    double sumSqNorm = 0;
+    int n = 0;
+    for (int j = 0; j < len; j++)
+    {
+        if (!pref->model.isSampleValid(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure))
+        {
+            continue;
+        }
+        double d = (pref->model.predictDeNormalized(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure) - (double)pls[j].timeMS) / ML_TIME_NORM_MS;
+        sumSqNorm += d * d;
+        n++;
+    }
+    if (n > 0)
+    {
+        pref->model.onlineSeedGate(sumSqNorm / n);
+    }
 }
 
 void updateAIPercentage()
@@ -635,6 +709,7 @@ void trainAIModels()
         else
         {
             AIReadyBittset = AIReadyBittset | (1 << i);
+            initOnlineStateFromLearnData((SOLENOID_AI_INDEX)i);
         }
     }
 
@@ -645,6 +720,9 @@ void trainAIModels()
 
 void processLearnSampleQueues()
 {
+    static int anchorCursor[4] = {0, 0, 0, 0};
+    static int samplesSinceAnchor[4] = {0, 0, 0, 0};
+
     for (int i = 0; i < 4; i++)
     {
         SOLENOID_AI_INDEX index = (SOLENOID_AI_INDEX)i;
@@ -659,17 +737,31 @@ void processLearnSampleQueues()
         PressureLearnSaveStruct sample;
         while (dequeueLearnSample(index, &sample))
         {
-            trained = true;
-            pref->model.trainRepeated(
-                LEARN_STEPS_PER_SAMPLE_ONLINE,
-                sample.start_pressure,
-                sample.goal_pressure,
-                sample.tank_pressure,
-                sample.timeMS);
+            if (pref->model.trainOnline(sample.start_pressure, sample.goal_pressure, sample.tank_pressure, sample.timeMS))
+            {
+                trained = true;
+            }
+
+            // Anchor replay: day-to-day driving produces mostly small trim moves, and the RLS
+            // forgetting window would slowly wash out what the bootstrap taught about big lifts.
+            // Re-feeding an occasional retained bootstrap sample keeps that knowledge anchored.
+            samplesSinceAnchor[i]++;
+            int len = getLearnDataLength(index);
+            if (samplesSinceAnchor[i] >= ML_ONLINE_ANCHOR_INTERVAL && len > 0)
+            {
+                samplesSinceAnchor[i] = 0;
+                PressureLearnSaveStruct *anchor = &getLearnData(index)[anchorCursor[i] % len];
+                anchorCursor[i] = (anchorCursor[i] + 1) % len;
+                if (pref->model.trainOnline(anchor->start_pressure, anchor->goal_pressure, anchor->tank_pressure, anchor->timeMS))
+                {
+                    trained = true;
+                }
+            }
         }
 
         if (trained)
         {
+            // The loop above drains the queue, so this saves once per burst rather than per sample
             pref->saveWeights();
         }
     }
