@@ -115,26 +115,6 @@ void loadAILearnedDataPreferences()
     _SaveData.aiModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT].model.up = false;
     _SaveData.aiModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR].model.up = false;
 
-    // Weights trained on an older feature set are meaningless with the new math. Reset them and
-    // drop back to not-ready; the retained bootstrap samples retrain the models on this same boot
-    // (closed-form fit is near-instant). Devices from before this check default to schema 1.
-    _SaveData.mlModelSchema.load("mlModelSchema", 1);
-    if (_SaveData.mlModelSchema.get().i != ML_MODEL_SCHEMA_VERSION)
-    {
-        Serial.print("AI model schema changed to ");
-        Serial.print(ML_MODEL_SCHEMA_VERSION);
-        Serial.println(", resetting stored weights (bootstrap samples kept)");
-        for (int i = 0; i < 4; i++)
-        {
-            _SaveData.aiModels[i].weights[0].setDouble(0.1);
-            _SaveData.aiModels[i].weights[1].setDouble(0.1);
-            _SaveData.aiModels[i].weights[2].setDouble(0.0);
-            _SaveData.aiModels[i].setReady(false);
-            _SaveData.aiModels[i].loadModel();
-        }
-        _SaveData.mlModelSchema.set(ML_MODEL_SCHEMA_VERSION);
-    }
-
     for (int i = 0; i < 10; i++)
         Serial.println("");
     Serial.println("BEGIN IMPORTANT DATA FOR PRO");
@@ -271,6 +251,20 @@ void beginSaveData()
     learnDataMutex = xSemaphoreCreateMutex();
     clearLearnSampleQueues();
     // downDataMutex = xSemaphoreCreateMutex();
+
+    // Weights trained on an older feature set are meaningless with the new math, and samples
+    // collected by the older firmware are not worth carrying into it either, so start the whole
+    // model over. Devices from before this check default to schema 1. This lives here rather than
+    // in loadAILearnedDataPreferences() because clearPressureData() calls that function itself.
+    _SaveData.mlModelSchema.load("mlModelSchema", 1);
+    if (_SaveData.mlModelSchema.get().i != ML_MODEL_SCHEMA_VERSION)
+    {
+        Serial.print("AI model schema changed to ");
+        Serial.print(ML_MODEL_SCHEMA_VERSION);
+        Serial.println(", clearing stored weights and samples");
+        clearPressureData();
+        _SaveData.mlModelSchema.set(ML_MODEL_SCHEMA_VERSION);
+    }
 
     // Reset ai models
     //  _SaveData.upModel.weights[0].setDouble(0.1);

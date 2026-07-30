@@ -83,7 +83,8 @@ minimum 1 psi change).
   drops oldest when full) consumed by the training task.
 
 The bootstrap samples are **kept forever** after training — they are reused to rebuild online-learning
-state at every boot, as anchor-replay material, and to retrain instantly after a schema change.
+state at every boot and as anchor-replay material. They are only discarded when a fit fails its
+quality gate, when the app sends a reset, or on a schema change.
 
 ---
 
@@ -156,10 +157,14 @@ re-measures and re-decides every iteration.
 ## Schema migration (fielded devices)
 
 `ML_MODEL_SCHEMA_VERSION` (in `pressureMath.h`) identifies the feature set the stored weights were
-trained with. At boot, `loadAILearnedDataPreferences()` compares it against the `mlModelSchema`
-NVS value (devices from before this mechanism default to 1). On mismatch it resets weights to
-defaults, clears the ready flags, and stores the new version — **but keeps the bootstrap samples**,
-so the models retrain with the new math within milliseconds on that same boot.
+trained with. At boot, `beginSaveData()` compares it against the `mlModelSchema` NVS value (devices
+from before this mechanism default to 1). On mismatch it calls `clearPressureData()` — wiping
+weights, ready flags, bootstrap sample files, and the reported AI percentage — then stores the new
+version. The vehicle re-collects `LEARN_SAVE_COUNT` samples per model and falls back to lookup-table
+timing until it does.
+
+The check lives in `beginSaveData()` rather than in `loadAILearnedDataPreferences()` because
+`clearPressureData()` calls the latter itself, which would recurse.
 
 **Bump the schema version whenever `computeFeatures()` changes meaning.** Weights are not
 transferable between feature sets.
