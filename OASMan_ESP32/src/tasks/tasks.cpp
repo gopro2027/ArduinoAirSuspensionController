@@ -105,6 +105,11 @@ void task_trainAI(void *parameters)
 {
     trainAIModels();
 
+    // Batch training is the deepest this task ever gets, so this is the number to watch if the
+    // fitter or the nvs write ever grows again
+    Serial.print("trainAI stack headroom (bytes): ");
+    Serial.println(uxTaskGetStackHighWaterMark(NULL));
+
     for (;;)
     {
         processLearnSampleQueues();
@@ -179,7 +184,7 @@ void setup_tasks()
     xTaskCreate(
         task_trainAI,
         "trainAI",
-        512 * 4,
+        512 * 8, // was: 512 * 4 -- the batch fitter/RLS matrix locals stack on top of an nvs write and overflowed it
         NULL,
         1000,
         NULL);
