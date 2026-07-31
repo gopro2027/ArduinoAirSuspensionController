@@ -123,9 +123,10 @@ see *Contention* above. It is the model's third input.
 - **At/above `LEARN_SAVE_COUNT` (online):** pushed into a small ring queue
   (`ML_IMMEDIATE_TRAIN_SAMPLE_QUE` = 20 deep, drops oldest when full) consumed by the training task.
 
-The bootstrap samples are **kept forever** — they are reused to rebuild online-learning
-state at every boot and as anchor-replay material. They are only discarded when the app sends a reset
-or on a sample-record change.
+The bootstrap samples are **kept** — they are reused to rebuild online-learning
+state at every boot and as anchor-replay material. They are discarded when the app sends a reset, on a
+sample-record change, or when a batch fit that had enough samples rejects them as unusable (see the
+quality gate below).
 
 The RAM array is heap-allocated the first time samples are loaded. Update/OTA mode returns from
 `beginSaveData()` before that load, so the ~14 KB is never held during an OTA.
@@ -152,11 +153,14 @@ model still collecting is (re)fit from its current samples on every boot — no 
    ~1 ms) and lands on the true optimum instead of orbiting it. Pivoting matters here: the two
    physics features correlate around +0.95, and Cramer's rule on that is numerically fragile.
 3. **Quality gate:** RMSE of the fit over its own training data must be ≤ `ML_BATCH_RMSE_GATE_MS`
-   (400 ms). A model that can't fit its own data never gets valve control. On failure (or a
-   singular/underdetermined solve) the model is simply left untrained and the corner keeps using
-   lookup-table timing; the collected samples are kept. Training never deletes logged data — a
-   sample good enough to log is good enough to keep. Fitting happens in a temp model so a rejected
-   fit never leaves half-written weights in the live one.
+   (400 ms). A model that can't fit its own data never gets valve control. When a fit that had at
+   least `ML_FIT_MIN_SAMPLES` valid samples is rejected — RMSE over the gate, or a singular/degenerate
+   solve — the samples are treated as **unusable and wiped** (`clearPressureDataSingle`), and the
+   corner re-collects from scratch on lookup-table timing. A solve skipped only because there are
+   fewer than `ML_FIT_MIN_SAMPLES` samples is *not* bad data — those samples are kept and the model
+   keeps collecting (this matters because every model is re-fit at boot, often on a partial set).
+   Fitting happens in a temp model so a rejected fit never leaves half-written weights in the live
+   one. (Earlier firmware kept rejected samples; that was reversed — unusable data is now discarded.)
 4. On success: weights are copied to the live model and saved to NVS, the RLS covariance is
    initialized from the batch fit ($P = (X^TX + ridge)^{-1}$), the outlier gate is seeded with the
    batch residual noise floor, and the model's **`trainedSampleCount`** is set to the number of valid

@@ -585,9 +585,16 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
     {
         Serial.print("AI fit failed (valid samples: ");
         Serial.print(fitter.sampleCount());
-        Serial.println("), leaving this model untrained - it will fall back to table timing");
-        // clearPressureDataSingle(index);
+        Serial.println(")");
         pref->setTrainedCount(0);
+        // Enough samples to attempt a real fit but it still could not solve => the data is unusable
+        // (degenerate/singular), so wipe it and let the corner re-collect. Fewer than ML_FIT_MIN_SAMPLES
+        // is only not-enough-data-yet, not bad data, so those samples are kept.
+        if (fitter.sampleCount() >= ML_FIT_MIN_SAMPLES)
+        {
+            Serial.println("Wiping unusable samples for this model.");
+            clearPressureDataSingle(index);
+        }
         return;
     }
 
@@ -606,11 +613,12 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
     double rmseMs = n > 0 ? sqrt(sumSqMs / n) : 0;
     if (n == 0 || rmseMs > ML_BATCH_RMSE_GATE_MS)
     {
-        Serial.print("AI fit rejected, RMSE ms: ");
+        Serial.print("AI fit rejected (data does not fit the model), RMSE ms: ");
         Serial.println(rmseMs);
-        Serial.println("Leaving this model untrained - it will fall back to table timing. Samples are kept.");
-        // clearPressureDataSingle(index);
+        Serial.println("Wiping unusable samples for this model and re-collecting on table timing.");
         pref->setTrainedCount(0);
+        // Fit used >= ML_FIT_MIN_SAMPLES (solveInto passed) but the data does not fit the model - unusable.
+        clearPressureDataSingle(index);
         return;
     }
 
@@ -679,7 +687,7 @@ void updateAIPercentage()
     AIPercentage = ((float)totalLen / ((float)AI_LEARN_RATIO_NUM * 4)) * 100;
 }
 
-// Measurement aid - drops the ready flags (keeping every stored sample) so the batch-fit path runs
+// Measurement aid - drops the trained counts (keeping every stored sample) so the batch-fit path runs
 // again and the headroom print in task_trainAI measures the deepest path rather than the shallow
 // boot-time one. Leave this off; it re-fits and rewrites nvs on every boot.
 // #define FORCE_AI_RETRAIN_TEST
@@ -687,8 +695,9 @@ void updateAIPercentage()
 void trainAIModels()
 {
 #ifdef FORCE_AI_RETRAIN_TEST
-    // The fit is deterministic, so models that already passed the rmse gate pass it again and
-    // clearPressureDataSingle() is never reached - the stored samples survive this.
+    // The fit is deterministic, so a model whose data already passed the rmse gate passes it again -
+    // for those models clearPressureDataSingle() is not reached and the stored samples survive. A model
+    // whose data is unusable would be wiped by the batch path (see trainSingleAIModel).
     Serial.println(F("!! FORCE_AI_RETRAIN_TEST is on - retraining every model. Disable this define. !!"));
     for (int i = 0; i < 4; i++)
     {
