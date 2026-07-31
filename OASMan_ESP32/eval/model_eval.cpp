@@ -472,6 +472,291 @@ static void evalDataset(const char *name, const EvalSample *ds, int len, bool up
     printf("\n");
 }
 
+// ---------------------------------------------------------------------------
+// Relative-error weighting experiment
+//
+// The production fit minimizes squared error in *milliseconds*. Recorded times span 20..3000 ms,
+// so a 200 ms miss on a 2500 ms move (8%) costs the same as a 200 ms miss on a 150 ms move (133%).
+// The fit therefore buys accuracy on long moves by wrecking short ones. Weighting each sample by
+// 1/t minimizes *relative* error instead, which is what the valve actually cares about.
+// ---------------------------------------------------------------------------
+
+// Fits w1/w2/b by weighted least squares. weightByTime scales each row by 1/t.
+// forceZeroBias drops the intercept (physically, a zero-size move should take zero time).
+// Gaussian elimination with partial pivoting for a k x k system, k <= 3. M and rhs are destroyed.
+static bool solveK(double *M, double *rhs, double *out, int k)
+{
+    for (int col = 0; col < k; col++)
+    {
+        int piv = col;
+        for (int r = col + 1; r < k; r++)
+            if (fabs(M[r * k + col]) > fabs(M[piv * k + col]))
+                piv = r;
+        if (fabs(M[piv * k + col]) < 1e-12)
+            return false;
+        if (piv != col)
+        {
+            for (int c = 0; c < k; c++)
+            {
+                double t = M[col * k + c];
+                M[col * k + c] = M[piv * k + c];
+                M[piv * k + c] = t;
+            }
+            double t = rhs[col];
+            rhs[col] = rhs[piv];
+            rhs[piv] = t;
+        }
+        for (int r = col + 1; r < k; r++)
+        {
+            double factor = M[r * k + col] / M[col * k + col];
+            for (int c = col; c < k; c++)
+                M[r * k + c] -= factor * M[col * k + c];
+            rhs[r] -= factor * rhs[col];
+        }
+    }
+    for (int r = k - 1; r >= 0; r--)
+    {
+        double sum = rhs[r];
+        for (int c = r + 1; c < k; c++)
+            sum -= M[r * k + c] * out[c];
+        out[r] = sum / M[r * k + r];
+    }
+    return true;
+}
+
+// Exact non-negative least squares for the 3-coefficient problem. At the constrained optimum the
+// non-zero coefficients satisfy the unconstrained normal equations restricted to their own support,
+// so enumerating all 8 supports and keeping the feasible one with the lowest residual is exact.
+static void solveNonNegative(const double *A, const double *v, double *w)
+{
+    double bestObj = 0; // the all-zero solution is always feasible
+    w[0] = w[1] = w[2] = 0;
+    for (int mask = 1; mask < 8; mask++)
+    {
+        int idx[3], k = 0;
+        for (int i = 0; i < 3; i++)
+            if (mask & (1 << i))
+                idx[k++] = i;
+        double M[9], rhs[3], sol[3] = {0, 0, 0};
+        for (int r = 0; r < k; r++)
+        {
+            rhs[r] = v[idx[r]];
+            for (int c = 0; c < k; c++)
+                M[r * k + c] = A[idx[r] * 3 + idx[c]];
+        }
+        if (!solveK(M, rhs, sol, k))
+            continue;
+        bool feasible = true;
+        for (int r = 0; r < k; r++)
+            if (sol[r] < 0)
+                feasible = false;
+        if (!feasible)
+            continue;
+        double cand[3] = {0, 0, 0};
+        for (int r = 0; r < k; r++)
+            cand[idx[r]] = sol[r];
+        double obj = 0; // w'Aw - 2v'w, dropping the constant y'y
+        for (int r = 0; r < 3; r++)
+        {
+            for (int c = 0; c < 3; c++)
+                obj += cand[r] * A[r * 3 + c] * cand[c];
+            obj -= 2 * v[r] * cand[r];
+        }
+        if (obj < bestObj)
+        {
+            bestObj = obj;
+            w[0] = cand[0];
+            w[1] = cand[1];
+            w[2] = cand[2];
+        }
+    }
+}
+
+static bool fitWeighted(AIModel &m, const std::vector<EvalSample> &set, bool weightByTime, bool forceZeroBias,
+                        bool nonNeg = false, double dither = 0)
+{
+    double A[9] = {0}, v[3] = {0};
+    int n = 0;
+    for (const EvalSample &x : set)
+    {
+        double s = x.s, e = x.e;
+        if (dither > 0)
+        {
+            // simulate the fractional psi the uint8_t learn file threw away
+            s += dither * (2.0 * (nextRand() % 10000) / 10000.0 - 1.0);
+            e += dither * (2.0 * (nextRand() % 10000) / 10000.0 - 1.0);
+        }
+        if (!m.isSampleValid(s, e, x.tank))
+            continue;
+        double f[3];
+        m.computeFeatures(s, e, x.tank, f);
+        double y = x.ms / ML_TIME_NORM_MS;
+        if (forceZeroBias)
+            f[2] = 0;
+        if (weightByTime)
+        {
+            double w = ML_TIME_NORM_MS / (x.ms > 20 ? x.ms : 20);
+            f[0] *= w;
+            f[1] *= w;
+            f[2] *= w;
+            y *= w;
+        }
+        for (int r = 0; r < 3; r++)
+        {
+            for (int c = 0; c < 3; c++)
+                A[r * 3 + c] += f[r] * f[c];
+            v[r] += f[r] * y;
+        }
+        n++;
+    }
+    if (n < ML_FIT_MIN_SAMPLES)
+        return false;
+    double ridge = ML_FIT_RIDGE * n;
+    A[0] += ridge;
+    A[4] += ridge;
+    A[8] += ridge;
+    double w[3];
+    if (nonNeg)
+    {
+        solveNonNegative(A, v, w);
+    }
+    else if (!solve3(A, v, w))
+    {
+        return false;
+    }
+    m.w1 = w[0];
+    m.w2 = w[1];
+    m.b = forceZeroBias ? 0 : w[2];
+    return true;
+}
+
+// Mean absolute percentage error - the metric that matches "did the valve open roughly the right
+// fraction of the needed time", which is what causes visible overshoot/undershoot in the car.
+static double mape(const std::vector<EvalSample> &set, AIModel &m)
+{
+    double sum = 0;
+    int n = 0;
+    for (const EvalSample &x : set)
+    {
+        double p = m.predictDeNormalized(x.s, x.e, x.tank);
+        sum += fabs(p - x.ms) / (x.ms > 20 ? x.ms : 20);
+        n++;
+    }
+    return n ? 100.0 * sum / n : 0;
+}
+
+static void reportVariant(const char *label, AIModel &m, const std::vector<EvalSample> &hold)
+{
+    std::vector<EvalSample> small, large;
+    for (const EvalSample &x : hold)
+        (fabs(x.e - x.s) <= 15 ? small : large).push_back(x);
+    Metrics all = score(hold, [&](const EvalSample &x) { return m.predictDeNormalized(x.s, x.e, x.tank); });
+    Metrics sm = score(small, [&](const EvalSample &x) { return m.predictDeNormalized(x.s, x.e, x.tank); });
+    Metrics lg = score(large, [&](const EvalSample &x) { return m.predictDeNormalized(x.s, x.e, x.tank); });
+    printf("    %-22s RMSE %6.1f  MAPE %5.0f%%   bias <=15psi %+7.1f | >15psi %+7.1f   w=(%.4f, %.4f, %.4f)\n",
+           label, all.rmse, mape(hold, m), sm.bias, lg.bias, m.w1, m.w2, m.b);
+}
+
+static void evalWeighting(const char *name, const EvalSample *ds, int len, bool up)
+{
+    std::vector<EvalSample> all = filterLikeFirmware(ds, len, up);
+    if ((int)all.size() < 50)
+        return;
+    rngState = 0x9E3779B97F4A7C15ull;
+    for (int i = (int)all.size() - 1; i > 0; i--)
+    {
+        int j = (int)(nextRand() % (uint64_t)(i + 1));
+        EvalSample tmp = all[i];
+        all[i] = all[j];
+        all[j] = tmp;
+    }
+    int nHold = (int)all.size() / 5;
+    std::vector<EvalSample> train(all.begin(), all.end() - nHold);
+    std::vector<EvalSample> hold(all.end() - nHold, all.end());
+
+    printf("  %s\n", name);
+    AIModel a, b, c, d, e;
+    a.up = b.up = c.up = d.up = e.up = up;
+    if (fitWeighted(a, train, false, false))
+        reportVariant("absolute error (now)", a, hold);
+    if (fitWeighted(b, train, true, false))
+        reportVariant("relative (1/t)", b, hold);
+    if (fitWeighted(c, train, true, true))
+        reportVariant("relative + no bias", c, hold);
+    if (fitWeighted(d, train, false, false, true))
+        reportVariant("absolute + nonneg", d, hold);
+    if (fitWeighted(e, train, true, false, true))
+        reportVariant("relative + nonneg", e, hold);
+}
+
+// Every logged pressure is a uint8_t, so the fractional psi is gone. Re-fit repeatedly with the
+// lost fraction dithered back in and report how far the weights and a representative prediction
+// wander - that spread is the accuracy the integer learn file is costing us.
+static void evalQuantization(const char *name, const EvalSample *ds, int len, bool up, double ps, double pe)
+{
+    std::vector<EvalSample> all = filterLikeFirmware(ds, len, up);
+    if ((int)all.size() < 50)
+        return;
+    const int trials = 40;
+    double preds[trials], sum = 0;
+    for (int t = 0; t < trials; t++)
+    {
+        rngState = 0x1234567 + t * 7919ull;
+        AIModel m;
+        m.up = up;
+        if (!fitWeighted(m, all, false, false, false, 0.5))
+        {
+            return;
+        }
+        preds[t] = m.predictDeNormalized(ps, pe, 130);
+        sum += preds[t];
+    }
+    double mean = sum / trials, var = 0;
+    for (int t = 0; t < trials; t++)
+        var += (preds[t] - mean) * (preds[t] - mean);
+    double sd = sqrt(var / trials);
+    printf("  %-22s %2.0f->%2.0f psi: prediction %6.0f ms, spread from lost fraction +-%.0f ms (%.1f%%)\n",
+           name, ps, pe, mean, sd, mean > 1 ? 100.0 * sd / mean : 0);
+}
+
+// Runs the user's reported in-car moves through the weights actually on their device.
+static void evalCarScenarios()
+{
+    struct Scenario
+    {
+        const char *label;
+        bool up;
+        double s, e, tank;
+    };
+    // corner weights read off the device serial log, in SOLENOID_AI_INDEX order
+    const double W[4][3] = {
+        {0.29317, 0.07423, 0.02297},   // up front
+        {0.58444, -0.45446, -0.01635}, // up rear
+        {0.35850, -0.22567, 0.10627},  // down front
+        {0.29808, -0.09550, 0.01919},  // down rear
+    };
+    const Scenario scenarios[] = {
+        {"air up   20 -> 75", true, 20, 75, 130},
+        {"trim down 75 -> 55", false, 75, 55, 130},
+        {"air out  75 -> 20", false, 75, 20, 130},
+        {"tiny trim 75 -> 70", false, 75, 70, 130},
+    };
+    for (const Scenario &sc : scenarios)
+    {
+        printf("  %-20s", sc.label);
+        for (int i = 0; i < 4; i++)
+        {
+            if ((i < 2) != sc.up)
+                continue;
+            AIModel m;
+            m.up = sc.up;
+            m.loadWeights(W[i][0], W[i][1], W[i][2]);
+            printf("  model%d %6.0f ms", i, m.predictDeNormalized(sc.s, sc.e, sc.tank));
+        }
+        printf("\n");
+    }
+}
+
 int main()
 {
     printf("=== UP (fill) datasets ===\n");
@@ -495,5 +780,26 @@ int main()
     evalShippedWeights("up_rear_car2026", ds_up_rear_car2026, ds_up_rear_car2026_len, true, 0.13275, 0.80219, -0.05428);
     evalShippedWeights("down_front_car2026", ds_down_front_car2026, ds_down_front_car2026_len, false, 0.15206, 0.10000, 0.05793);
     evalShippedWeights("down_rear_car2026", ds_down_rear_car2026, ds_down_rear_car2026_len, false, 0.08166, 0.10000, 0.04473);
+
+    printf("\n=== predictions from the weights currently on the device ===\n");
+    evalCarScenarios();
+
+    printf("\n=== absolute vs relative error weighting ===\n");
+    evalWeighting("up_front_car2026", ds_up_front_car2026, ds_up_front_car2026_len, true);
+    evalWeighting("up_rear_car2026", ds_up_rear_car2026, ds_up_rear_car2026_len, true);
+    evalWeighting("up_front_corvette_v3", ds_up_front_corvette_v3, ds_up_front_corvette_v3_len, true);
+    evalWeighting("down_front_car2026", ds_down_front_car2026, ds_down_front_car2026_len, false);
+    evalWeighting("down_rear_car2026", ds_down_rear_car2026, ds_down_rear_car2026_len, false);
+    evalWeighting("down_corvette_v1", ds_down_corvette_v1, ds_down_corvette_v1_len, false);
+
+    printf("\n=== cost of storing pressures as whole psi (uint8_t) ===\n");
+    evalQuantization("up_front_car2026", ds_up_front_car2026, ds_up_front_car2026_len, true, 20, 75);
+    evalQuantization("up_front_car2026", ds_up_front_car2026, ds_up_front_car2026_len, true, 70, 75);
+    evalQuantization("up_rear_car2026", ds_up_rear_car2026, ds_up_rear_car2026_len, true, 20, 75);
+    evalQuantization("up_rear_car2026", ds_up_rear_car2026, ds_up_rear_car2026_len, true, 70, 75);
+    evalQuantization("down_front_car2026", ds_down_front_car2026, ds_down_front_car2026_len, false, 75, 20);
+    evalQuantization("down_front_car2026", ds_down_front_car2026, ds_down_front_car2026_len, false, 75, 70);
+    evalQuantization("down_rear_car2026", ds_down_rear_car2026, ds_down_rear_car2026_len, false, 75, 20);
+    evalQuantization("down_rear_car2026", ds_down_rear_car2026, ds_down_rear_car2026_len, false, 75, 70);
     return 0;
 }

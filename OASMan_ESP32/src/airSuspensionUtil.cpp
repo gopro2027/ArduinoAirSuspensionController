@@ -685,8 +685,22 @@ void updateAIPercentage()
     AIPercentage = ((float)totalLen / ((float)LEARN_SAVE_COUNT * 4)) * 100;
 }
 
+// Measurement aid - drops the ready flags (keeping every stored sample) so the batch-fit path runs
+// again and the headroom print in task_trainAI measures the deepest path rather than the shallow
+// boot-time one. Leave this off; it re-fits and rewrites nvs on every boot.
+// #define FORCE_AI_RETRAIN_TEST
+
 void trainAIModels()
 {
+#ifdef FORCE_AI_RETRAIN_TEST
+    // The fit is deterministic, so models that already passed the rmse gate pass it again and
+    // clearPressureDataSingle() is never reached - the stored samples survive this.
+    Serial.println(F("!! FORCE_AI_RETRAIN_TEST is on - retraining every model. Disable this define. !!"));
+    for (int i = 0; i < 4; i++)
+    {
+        getAIModel((SOLENOID_AI_INDEX)i)->setReady(false);
+    }
+#endif
 
     // First load some default values based off info I grabbed from some corvette testing
     // I am using the first 4 weights because I think that makes the most logical sense to include all those. The 5th weight (ratio) I don't think is so great

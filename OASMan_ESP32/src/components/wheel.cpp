@@ -285,6 +285,7 @@ void Wheel::goalRoutine() {
         const int startIteration = -1;
         int iteration = startIteration; // - values make it skip the first generation. It won't start dividing until iteration = 1
         const int fullAirOutTime = 5000;
+        const int tankReadSettleTime = 50; // ms to let the tank equalize after the last pulse before reading it
         bool previousDirection = false;
         for (;;)
         {
@@ -292,6 +293,17 @@ void Wheel::goalRoutine() {
             if (millis() > this->routineStartTime + ROUTINE_TIMEOUT_MS)
             {
                 break;
+            }
+
+            // The barrier at the bottom of the loop releases every wheel thread together, right after
+            // each one closed its valve and settled, so this is the only point in the routine where
+            // nothing anywhere is flowing. Settle a bit more, then read the tank here. Both the value
+            // the model trains on and the value it predicts from come from this read.
+            double tank_pressure = 0;
+            if (!getheightSensorMode())
+            {
+                delay(tankReadSettleTime);
+                tank_pressure = getCompressor()->readTankPressureNow();
             }
 
             // Main routine
@@ -331,7 +343,6 @@ void Wheel::goalRoutine() {
 
                     double start_pressure = this->getSelectedInputValue();
                     double end_pressure = this->pressureGoal;
-                    double tank_pressure = getCompressor()->getTankPressure();
 
                     if (canUseAiPrediction(valve->getAIIndex()))
                     {
