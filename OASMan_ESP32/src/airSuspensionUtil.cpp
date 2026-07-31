@@ -108,9 +108,7 @@ void setupManifold()
 
 #endif
 
-#if USE_DEFAULT_WEIGHTS_IN_FALLBACK_TIMING
     initDefaultAIModels();
-#endif
 }
 
 #pragma endregion
@@ -837,6 +835,12 @@ void initDefaultAIModels()
 double getDefaultModelPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure, double others_flowing)
 {
     return defaultAIModels[aiIndex].predictDeNormalized(start_pressure, end_pressure, tank_pressure, others_flowing);
+}
+#else
+void initDefaultAIModels() {}
+double getDefaultModelPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure, double others_flowing)
+{
+    return -1;
 }
 #endif
 

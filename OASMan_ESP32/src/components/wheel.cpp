@@ -11,13 +11,11 @@ extern bool isAnyWheelActive();            // defined in airSuspensionUtil.cpp
 // Default hard coded fallback timing
 int getValveTimingSimpleFit(SOLENOID_AI_INDEX aiIndex, int pressureDifferenceAbsolute, double start_pressure, double end_pressure, double tank_pressure, double others_flowing)
 {
-    #if USE_DEFAULT_WEIGHTS_IN_FALLBACK_TIMING
     double pred = getDefaultModelPredictionTime(aiIndex, start_pressure, end_pressure, tank_pressure, others_flowing);
     if (pred > 0 && pred < 5000)
     {
         return (int)pred;
     }
-    #endif
 
     float valveTimingUntilWithin = 9.993f * pressureDifferenceAbsolute + 0.2189f; // very close to y = 10x, but our lookup table was just ever so slightly diverging from it
     if (valveTimingUntilWithin < 10) {
