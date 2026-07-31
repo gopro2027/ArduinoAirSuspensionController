@@ -131,6 +131,20 @@ quality gate below).
 The RAM array is heap-allocated the first time samples are loaded. Update/OTA mode returns from
 `beginSaveData()` before that load, so the ~14 KB is never held during an OTA.
 
+### Manual moves as a sample source
+
+Samples also come from **manual valve moves** driven over the BLE `valveControlBittset` path (mobile
+app / controller arrows), gated by `USE_MANUAL_SAMPLE_LOGGING`. This exists because the automatic
+preset path tends to undershoot big fills and therefore only ever logs *truncated* partial moves — it
+rarely reaches a high goal in one pulse, so the top of the fill/dump curve is starved of data. A manual
+hold is a single continuous open that reaches whatever pressure the user targets, with the real tank
+sag baked in, giving the goal-reaching coverage the model needs. `manualSampleLog.cpp` captures start
+pressure, settled tank, and the same-direction "others flowing" (counted from the bitset) at the open
+edge using cached reads on the BLE thread, then — `MANUAL_SETTLE_MS` (50 ms) after the close edge — the
+owning `Wheel::loop()` does the fresh end-pressure read and calls the same `recordLearnSample()`. Holds
+longer than `MANUAL_MAX_HOLD_MS` and height-sensor mode are skipped. It is pure data collection: no
+valve or prediction behavior changes.
+
 ---
 
 ## Phase 1 — batch training (closed-form least squares)

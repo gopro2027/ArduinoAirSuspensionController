@@ -1,4 +1,5 @@
 #include "ble.h"
+#include "manualSampleLog.h"
 
 #define ble2_new
 #ifdef ble2_new
@@ -304,6 +305,8 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
                         Serial.println(i);
                         getManifold()->get(i)->close();
                     }
+                    // Log this manual move for AI training (defers the settle-read to the wheel task).
+                    manualSampleOnValveEdge(i, curVal, valveControlBittset);
                 }
             }
             valveTableValues = valveControlBittset;

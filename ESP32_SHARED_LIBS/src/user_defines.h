@@ -52,7 +52,14 @@
 #define ML_IMMEDIATE_TRAIN_SAMPLE_QUE 20
 
 // Use the hardcoded default weights prediction in the fallback valve timing function
-#define USE_DEFAULT_WEIGHTS_IN_FALLBACK_TIMING false
+#define USE_DEFAULT_WEIGHTS_IN_FALLBACK_TIMING true
+
+// Log AI training samples from manual valve moves (the BLE valveControlBittset path: mobile app /
+// controller arrows). Gives the model goal-reaching coverage the automatic preset path never produces.
+// See OASMan_ESP32/AI_TRAINING.md.
+#define USE_MANUAL_SAMPLE_LOGGING true
+#define MANUAL_SETTLE_MS 50     // wait this long after a manual valve closes before reading the settled end pressure
+#define MANUAL_MAX_HOLD_MS 6000 // ignore manual holds longer than this (pathological / user fiddling; predictions cap at 5000ms anyway)
 
 /* Bags generally do not like to sit at exactly 0psi. Please choose which pressure is desired for air out */
 /* Not really used anymore, just using presets! Only kept here as legacy for og app */

@@ -1,5 +1,6 @@
 #include "wheel.h"
 #include "manifold.h"
+#include "manualSampleLog.h"
 
 #define NUM_WHEEL_THREADS 4
 std::atomic<bool> flagStartPressureGoalRoutine[NUM_WHEEL_THREADS];
@@ -676,4 +677,5 @@ void Wheel::loop()
     this->pressureCaptureBaseline();
     this->maintainPressure();
     this->heightsensorlessLevelling();
+    manualSampleServiceWheel(this->thisWheelNum); // deferred settle-read + log for manual moves
 }
