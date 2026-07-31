@@ -757,6 +757,134 @@ static void evalCarScenarios()
     }
 }
 
+// Air leaving the tank to fill a bag drops the tank by (V_bag / V_tank) times the bag's rise, so the
+// tank pressure actually driving flow across a pulse is lower than the value sampled before it, and
+// the shortfall grows with move size - which is exactly a large-move under-prediction. k is that
+// volume ratio. It is unknown per vehicle, so scan for it rather than assuming a number.
+static bool featuresDroop(double s, double e, double tank, double k, double f[3])
+{
+    double tEff = tank - k * (e - s);
+    if (!(tEff > s) || !(tEff > e))
+        return false;
+    f[0] = log((tEff - s) / (tEff - e));
+    f[1] = (e - s) / (tEff + ML_PSI_ATMOSPHERE);
+    f[2] = 1.0;
+    return true;
+}
+
+static bool fitDroop(const std::vector<EvalSample> &set, double k, double *w)
+{
+    double A[9] = {0}, v[3] = {0};
+    int n = 0;
+    for (const EvalSample &x : set)
+    {
+        double f[3];
+        if (!featuresDroop(x.s, x.e, x.tank, k, f))
+            continue;
+        double y = x.ms / ML_TIME_NORM_MS;
+        for (int r = 0; r < 3; r++)
+        {
+            for (int c = 0; c < 3; c++)
+                A[r * 3 + c] += f[r] * f[c];
+            v[r] += f[r] * y;
+        }
+        n++;
+    }
+    if (n < ML_FIT_MIN_SAMPLES)
+        return false;
+    double ridge = ML_FIT_RIDGE * n;
+    A[0] += ridge;
+    A[4] += ridge;
+    A[8] += ridge;
+    return solve3(A, v, w);
+}
+
+static void droopMetrics(const std::vector<EvalSample> &set, double k, const double *w,
+                         double &rmse, double &biasSmall, double &biasLarge, int &dropped)
+{
+    double ss = 0, bs = 0, bl = 0;
+    int n = 0, ns = 0, nl = 0;
+    dropped = 0;
+    for (const EvalSample &x : set)
+    {
+        double f[3];
+        if (!featuresDroop(x.s, x.e, x.tank, k, f))
+        {
+            dropped++;
+            continue;
+        }
+        double d = (w[0] * f[0] + w[1] * f[1] + w[2]) * ML_TIME_NORM_MS - x.ms;
+        ss += d * d;
+        n++;
+        if (fabs(x.e - x.s) <= 15)
+        {
+            bs += d;
+            ns++;
+        }
+        else
+        {
+            bl += d;
+            nl++;
+        }
+    }
+    rmse = n ? sqrt(ss / n) : 0;
+    biasSmall = ns ? bs / ns : 0;
+    biasLarge = nl ? bl / nl : 0;
+}
+
+static void evalTankDroop(const char *name, const EvalSample *ds, int len)
+{
+    std::vector<EvalSample> all = filterLikeFirmware(ds, len, true);
+    if ((int)all.size() < 50)
+        return;
+    rngState = 0x9E3779B97F4A7C15ull;
+    for (int i = (int)all.size() - 1; i > 0; i--)
+    {
+        int j = (int)(nextRand() % (uint64_t)(i + 1));
+        EvalSample tmp = all[i];
+        all[i] = all[j];
+        all[j] = tmp;
+    }
+    int nHold = (int)all.size() / 5;
+    std::vector<EvalSample> train(all.begin(), all.end() - nHold);
+    std::vector<EvalSample> hold(all.end() - nHold, all.end());
+
+    double bestK = 0, bestTrain = 1e18, bestW[3] = {0, 0, 0};
+    for (int i = 0; i <= 100; i++)
+    {
+        double k = i * 0.005;
+        double w[3];
+        if (!fitDroop(train, k, w))
+            continue;
+        double rmse, bsm, blg;
+        int dropped;
+        droopMetrics(train, k, w, rmse, bsm, blg, dropped);
+        // a k that only "wins" by making hard samples invalid is not a win
+        if (dropped > (int)train.size() / 50)
+            continue;
+        if (rmse < bestTrain)
+        {
+            bestTrain = rmse;
+            bestK = k;
+            bestW[0] = w[0];
+            bestW[1] = w[1];
+            bestW[2] = w[2];
+        }
+    }
+
+    double w0[3];
+    if (!fitDroop(train, 0, w0))
+        return;
+    double r0, s0, l0, rk, sk, lk;
+    int d0, dk;
+    droopMetrics(hold, 0, w0, r0, s0, l0, d0);
+    droopMetrics(hold, bestK, bestW, rk, sk, lk, dk);
+    printf("  %-22s k=0.000  holdout RMSE %6.1f  bias <=15psi %+7.1f | >15psi %+7.1f\n",
+           name, r0, s0, l0);
+    printf("  %-22s k=%.3f  holdout RMSE %6.1f  bias <=15psi %+7.1f | >15psi %+7.1f  (dropped %d)\n",
+           "", bestK, rk, sk, lk, dk);
+}
+
 int main()
 {
     printf("=== UP (fill) datasets ===\n");
@@ -801,5 +929,13 @@ int main()
     evalQuantization("down_front_car2026", ds_down_front_car2026, ds_down_front_car2026_len, false, 75, 70);
     evalQuantization("down_rear_car2026", ds_down_rear_car2026, ds_down_rear_car2026_len, false, 75, 20);
     evalQuantization("down_rear_car2026", ds_down_rear_car2026, ds_down_rear_car2026_len, false, 75, 70);
+
+    printf("\n=== tank droop during the pulse (up models only) ===\n");
+    evalTankDroop("up_front_car2026", ds_up_front_car2026, ds_up_front_car2026_len);
+    evalTankDroop("up_rear_car2026", ds_up_rear_car2026, ds_up_rear_car2026_len);
+    evalTankDroop("up_front_corvette_v3", ds_up_front_corvette_v3, ds_up_front_corvette_v3_len);
+    evalTankDroop("up_corvette_v1", ds_up_corvette_v1, ds_up_corvette_v1_len);
+    evalTankDroop("up_front_v2", ds_up_front_v2, ds_up_front_v2_len);
+    evalTankDroop("up_rear_v2", ds_up_rear_v2, ds_up_rear_v2_len);
     return 0;
 }

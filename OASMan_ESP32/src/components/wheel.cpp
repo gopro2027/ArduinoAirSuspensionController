@@ -398,8 +398,8 @@ void Wheel::goalRoutine() {
                             // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
                             delay(valveSettleTime); // Changed to 250. 150 was... confusing
 
-                            // only bother saving data for first 2 iterations AND when the valve was opened for more than 10ms AND it wasn't just set to do a special low value full smooth air out AND if the pressure change is greater than 3psi
-                            if (iteration < startIteration + 2 && valveTime > 10 && !specialSmoothAirOut)
+                            // save every pulse where the valve was opened for more than 10ms AND it wasn't just set to do a special low value full smooth air out AND the pressure change is greater than 3psi. was: only the first 2 iterations, which collected samples far slower for no accuracy gain
+                            if (valveTime > 10 && !specialSmoothAirOut)
                             {
                                 this->readInputs();
                                 end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal

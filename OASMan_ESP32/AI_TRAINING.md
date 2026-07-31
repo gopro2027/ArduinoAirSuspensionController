@@ -70,10 +70,16 @@ ratios only (wrong regime for most real dumps) and needed a 1 psi clamp hack in 
 ## Sample collection
 
 `Wheel::goalRoutine()` records a sample after a valve pulse: start pressure, measured end pressure
-(read after a 250 ms settle), pre-pulse tank pressure, and the commanded open time. Recording is
-limited to the first two iterations of a goal routine, pulses longer than 10 ms, moves bigger than
-3 psi, and the correct direction for the model (`manifoldSaveData.cpp` re-checks direction and a
-minimum 1 psi change).
+(read after a 250 ms settle), pre-pulse tank pressure, and the commanded open time. Every pulse in a
+goal routine is recorded, subject to pulses longer than 10 ms, moves bigger than 3 psi, and the
+correct direction for the model (`manifoldSaveData.cpp` re-checks direction and a minimum 1 psi
+change).
+
+The tank pressure is read at the top of each routine iteration, 50 ms after the barrier releases all
+four wheel threads together. That is the only point in a routine where no valve anywhere is open, so
+it is the only place a tank reading reflects the tank rather than whatever was flowing out of it.
+`Compressor::getTankPressure()` is deliberately *not* used here — it is a 5-sample mean that refreshes
+only every 500 ms and is sampled regardless of valve state.
 
 `recordLearnSample()` routes each sample by model state:
 
@@ -99,9 +105,10 @@ When a not-ready model has 150 samples, `trainSingleAIModel()` runs once (from `
    optimum instead of orbiting it.
 3. **Quality gate:** RMSE of the fit over its own training data must be ≤ `ML_BATCH_RMSE_GATE_MS`
    (400 ms). A model that can't fit its own data never gets valve control. On failure (or a
-   singular/underdetermined solve), that model's samples are cleared (`clearPressureDataSingle`)
-   and collection restarts. Fitting happens in a temp model so a rejected fit never leaves
-   half-written weights in the live one.
+   singular/underdetermined solve) the model is simply left untrained and the corner keeps using
+   lookup-table timing; the collected samples are kept. Training never deletes logged data — a
+   sample good enough to log is good enough to keep. Fitting happens in a temp model so a rejected
+   fit never leaves half-written weights in the live one.
 4. On success: weights are copied to the live model and saved to NVS, the RLS covariance is
    initialized from the batch fit ($P = (X^TX + ridge)^{-1}$), the outlier gate is seeded with the
    batch residual noise floor, and `isReadyToUse` is set.

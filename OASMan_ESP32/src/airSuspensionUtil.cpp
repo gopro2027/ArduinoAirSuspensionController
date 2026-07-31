@@ -590,8 +590,8 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
     {
         Serial.print("AI fit failed (valid samples: ");
         Serial.print(fitter.sampleCount());
-        Serial.println("), clearing this model's data to re-collect");
-        clearPressureDataSingle(index);
+        Serial.println("), leaving this model untrained - it will fall back to table timing");
+        // clearPressureDataSingle(index);
         return;
     }
 
@@ -613,8 +613,8 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
     {
         Serial.print("AI fit rejected, RMSE ms: ");
         Serial.println(rmseMs);
-        Serial.println("Clearing this model's data to re-collect");
-        clearPressureDataSingle(index);
+        Serial.println("Leaving this model untrained - it will fall back to table timing. Samples are kept.");
+        // clearPressureDataSingle(index);
         return;
     }
 
