@@ -147,7 +147,7 @@ All responses arrive via characteristic notifications. Use a single callback fun
    - Extract wheel pressures from `args16()[0-3]` (Front Passenger, Rear Passenger, Front Driver, Rear Driver)
    - Extract tank pressure from `args16()[4]`
    - Extract AI percentage from `args8()[10]`
-   - Extract AI ready bitset from `args8()[11]`
+   - `args8()[11]` is reserved (formerly AI ready bitset; removed in manifold schema 5) and reads 0
    - Extract status bitset from `args32()[3]` and parse individual flags
 4. Update your application state/UI with the new values
 
@@ -644,8 +644,8 @@ RfCommandPacket packet(RF_COMMAND_BUTTON_ASSIGN, RF_BUTTON_A, 2); // Assign butt
 - `args16()[2]`: `uint16_t` - Front Driver pressure (PSI)
 - `args16()[3]`: `uint16_t` - Rear Driver pressure (PSI)
 - `args16()[4]`: `uint16_t` - Tank pressure (PSI)
-- `args8()[10]`: `uint8_t` - AI percentage
-- `args8()[11]`: `uint8_t` - AI ready bitset
+- `args8()[10]`: `uint8_t` - AI percentage (0-100). Progress toward full AI-weighted valve timing: 100% once every model has `AI_LEARN_RATIO_NUM` (150) samples, i.e. the AI is fully driving. Not progress toward the `LEARN_SAVE_COUNT` (300) collection ceiling. As of manifold schema 5.
+- `args8()[11]`: `uint8_t` - reserved, always 0 (formerly AI ready bitset; removed in manifold schema 5, which blends the AI in gradually by `trainedSampleCount` rather than exposing a per-model ready flag). Byte kept for wire compatibility.
 - `args32()[3]`: `uint32_t` - Status bitset (see below)
 
 **Status Bitset Flags** (bits in `args32()[3]`). Only live status flags; user-config toggles (maintain pressure, rise on start, etc.) are in `ConfigValuesPacket` as `configFlagsBits`.
@@ -895,7 +895,7 @@ void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic,
         // Update status bits
         statusBittset = status->args32()[3].i;
         AIPercentage = status->args8()[10].i;
-        AIReadyBittset = status->args8()[11].i;
+        // args8()[11] is reserved (formerly AI ready bitset) and reads 0
 
         // Check individual status flags (live status only; user config from GETCONFIGVALUES)
         bool compressorOn = (statusBittset >> StatusPacketBittset::COMPRESSOR_STATUS_ON) & 1;

@@ -36,7 +36,6 @@ public:
     Option *ui_s3;  // ACC Status (text with value)
     Option *ui_ebrakeStatus;  // E-Brake Status (text with value)
     Option *ui_rebootbutton;  // Reboot button
-    Option *ui_aiReady;  // AI Ready (text with value)
     Option *ui_aiPercentage;  // AI Percentage (text with value)
     Option *ui_aiEnabled;  // AI Enabled (switch)
     Option *ui_maintainprssure;  // Maintain Pressure (switch)

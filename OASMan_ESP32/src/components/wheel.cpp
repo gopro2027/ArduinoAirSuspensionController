@@ -411,7 +411,10 @@ void Wheel::goalRoutine() {
                     int aiPredict = getAiPredictionTime(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, othersFlowing);
                     if (aiPredict < 5000 && aiPredict > 0)
                     {
-                        valveTime = aiPredict;
+                        // Blend AI with the lookup table by how trained the model is (valveTime still holds
+                        // the table value here). Full AI once the model reaches AI_LEARN_RATIO_NUM samples.
+                        double aiWeight = getAiBlendWeight(valve->getAIIndex());
+                        valveTime = (int)(aiPredict * aiWeight + valveTime * (1.0 - aiWeight));
                     }
                 }
 

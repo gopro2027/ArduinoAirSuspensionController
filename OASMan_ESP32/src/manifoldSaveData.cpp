@@ -10,7 +10,10 @@ void requestSendConfigBT()
 }
 
 int learnDataIndex[4];
-PressureLearnSaveStruct learnData[4][LEARN_SAVE_COUNT];// TODO: This data needs to be moved to be a malloc or new array, so that when we do OTA stuff it doesn't take up memory (currently it is statically allocated and uses 8kb even during OTA updates which is quite a lot )
+// Heap-allocated lazily in loadAILearnedDataPreferences. beginSaveData() returns before that call
+// in OTA/update mode, so these ~14KB are never allocated during an OTA. Each row holds
+// LEARN_SAVE_COUNT samples. See AI_TRAINING.md.
+PressureLearnSaveStruct *learnData[4] = {nullptr, nullptr, nullptr, nullptr};
 static LearnSampleQueue learnSampleQueues[4];
 static SemaphoreHandle_t learnDataMutex;
 
@@ -98,6 +101,17 @@ void loadAILearnedDataPreferences()
     // load the 4 models and learn data
     for (int i = 0; i < 4; i++)
     {
+        if (learnData[i] == nullptr)
+        {
+            learnData[i] = (PressureLearnSaveStruct *)malloc(LEARN_SAVE_COUNT * sizeof(PressureLearnSaveStruct));
+            if (learnData[i] == nullptr)
+            {
+                Serial.print("FATAL: failed to allocate learnData row ");
+                Serial.println(i);
+                learnDataIndex[i] = 0;
+                continue;
+            }
+        }
         learnDataIndex[i] = readBytes(getLogFileName((SOLENOID_AI_INDEX)i), learnData[i], LEARN_SAVE_COUNT * sizeof(PressureLearnSaveStruct)) / sizeof(PressureLearnSaveStruct);
         char buf[15];
         const double weightDefaults[ML_NUM_COEFF] = {0.1, 0.1, 0.0, 0.0};
@@ -106,10 +120,10 @@ void loadAILearnedDataPreferences()
             snprintf(buf, sizeof(buf), "model%i|%i", i, w);
             _SaveData.aiModels[i].weights[w].loadDouble(buf, weightDefaults[w]);
         }
-        snprintf(buf, sizeof(buf), "model%i|r", i);
-        _SaveData.aiModels[i].isReadyToUse.load(buf, false);
+        snprintf(buf, sizeof(buf), "model%i|n", i);
+        _SaveData.aiModels[i].trainedSampleCount.load(buf, 0);
         _SaveData.aiModels[i].loadModel(); // copy the values to the internal model
-        // Serial.println(getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.get().i);
+        // Serial.println(getAIModel((SOLENOID_AI_INDEX)i)->trainedSampleCount.get().i);
     }
 
     _SaveData.aiModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT].model.up = false;
@@ -277,7 +291,6 @@ void beginSaveData()
     }
 }
 
-extern uint8_t AIReadyBittset;
 extern uint8_t AIPercentage;
 void clearLearnSampleQueues()
 {
@@ -312,7 +325,6 @@ void clearPressureData()
         _SaveData.aiModels[i].deletePreferences();
     }
     clearLearnSampleQueues();
-    AIReadyBittset = 0;
     AIPercentage = 0;
     loadAILearnedDataPreferences();
 }
@@ -324,7 +336,6 @@ void clearAIWeightsOnly()
         _SaveData.aiModels[i].deletePreferences();
     }
     clearLearnSampleQueues();
-    AIReadyBittset = 0;
     loadAILearnedDataPreferences();
     updateAIPercentage();
 }
@@ -403,7 +414,7 @@ AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex)
 
 void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS, uint8_t others_flowing)
 {
-    if (getAIModel(aiIndex)->isReadyToUse.get().i)
+    if (getLearnDataLength(aiIndex) >= LEARN_SAVE_COUNT)
     {
         enqueueLearnSample(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS, others_flowing);
     }

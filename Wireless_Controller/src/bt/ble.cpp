@@ -161,7 +161,6 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
             currentPressures[_TANK_INDEX] = status->args16()[_TANK_INDEX].i;
             statusBittset = status->args32()[3].i;
             AIPercentage = status->args8()[10].i;
-            AIReadyBittset = status->args8()[11].i;
         }
     }
     if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Rest.toString())

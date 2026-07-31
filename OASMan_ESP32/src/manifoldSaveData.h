@@ -19,7 +19,7 @@ class AIModelPreference
 {
 public:
     Preferencable weights[ML_NUM_COEFF]; // doubles
-    Preferencable isReadyToUse;          // bool
+    Preferencable trainedSampleCount;    // int: valid samples the live weights were batch-fit from (0 = untrained). Replaces isReadyToUse; drives blend + routing. See AI_TRAINING.md
     AIModel model;
     void loadModel()
     {
@@ -33,13 +33,13 @@ public:
         weights[2].setDouble(model.w3);
         weights[3].setDouble(model.b);
     }
-    void setReady(bool ready)
+    void setTrainedCount(int count)
     {
-        isReadyToUse.set(ready);
+        trainedSampleCount.set(count);
     }
     void deletePreferences()
     {
-        isReadyToUse.deletePreference();
+        trainedSampleCount.deletePreference();
         for (int i = 0; i < ML_NUM_COEFF; i++)
         {
             weights[i].deletePreference();

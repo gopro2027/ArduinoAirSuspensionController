@@ -11,7 +11,7 @@
 
 // Feature-set version. Bump when computeFeatures / coefficient meaning changes.
 // Boot clears weights only and refits from samples — see AI_TRAINING.md.
-#define ML_MODEL_SCHEMA_VERSION 4
+#define ML_MODEL_SCHEMA_VERSION 5 // ; was: 4
 
 // On-disk PressureLearnSaveStruct layout. Bump only when size/field order changes (forces sample wipe).
 #define ML_SAMPLE_RECORD_VERSION 2

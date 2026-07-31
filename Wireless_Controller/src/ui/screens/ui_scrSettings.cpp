@@ -457,7 +457,6 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_t *ml_ai_page = this->addSettingsPage(pages_container, true);
 
     this->ui_aiPercentage = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Learn Progress:", {.STRING = test});
-    this->ui_aiReady = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Trained:", {.STRING = test});
     this->ui_aiEnabled = new Option(ml_ai_page, OptionType::ON_OFF, "Enabled:", {.INT = 0}, ai_status_handler);
 
     allOptions.push_back(new Option(ml_ai_page, OptionType::BUTTON, "Reset Learned Data", {.STRING = test}, [](void *data)
@@ -1112,14 +1111,6 @@ void ScrSettings::loop()
     snprintf(buf, sizeof(buf), "%i%%", AIPercentage);
     this->ui_aiPercentage->setRightHandText(buf);
 
-    snprintf(buf, sizeof(buf), "UF:  %c UR:  %c\nDF: %c DR: %c",
-        (AIReadyBittset & 0b1) ? 'Y' : 'n',
-        (AIReadyBittset & 0b10 >> 1) ? 'Y' : 'n',
-        (AIReadyBittset & 0b100 >> 2) ? 'Y' : 'n',
-        (AIReadyBittset & 0b1000 >> 3) ? 'Y' : 'n');
-
-    this->ui_aiReady->setRightHandText(buf);
-
     this->ui_mac->setRightHandText(ble_getMAC());
     this->ui_volts->setRightHandText(getBatteryVoltageString());
 
@@ -1188,7 +1179,6 @@ void ScrSettings::cleanup()
     delete ui_s3;
     delete ui_ebrakeStatus;
     delete ui_rebootbutton;
-    delete ui_aiReady;
     delete ui_aiPercentage;
     delete ui_aiEnabled;
     delete ui_maintainprssure;

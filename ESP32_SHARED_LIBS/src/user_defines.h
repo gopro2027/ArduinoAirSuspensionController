@@ -39,9 +39,14 @@
 #define AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE_TIME 3 * 1000
 
 // original full amount is 500
-#define LEARN_SAVE_COUNT 150
+#define LEARN_SAVE_COUNT 300 // ; was: 150
 
-// Phase 2 online training: ring buffer depth per AI model (after isReadyToUse)
+// Sample count at which the AI prediction is trusted 100%. Below this the AI prediction is
+// blended with the lookup table proportionally (w = min(n, AI_LEARN_RATIO_NUM) / AI_LEARN_RATIO_NUM),
+// so AI phases in measurably before a model is fully trained. See OASMan_ESP32/AI_TRAINING.md.
+#define AI_LEARN_RATIO_NUM 150
+
+// Phase 2 online training: ring buffer depth per AI model (used once stored samples reach LEARN_SAVE_COUNT)
 // Online-learning tuning constants (RLS forgetting, outlier gate, anchor replay) live in
 // OASMan_ESP32/src/pressureMath.h next to the model they tune
 #define ML_IMMEDIATE_TRAIN_SAMPLE_QUE 20

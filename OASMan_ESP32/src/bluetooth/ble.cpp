@@ -509,7 +509,6 @@ uint8_t att_server_notify_SAFE(hci_con_handle_t con_handle, uint16_t attribute_h
     return att_server_notify(con_handle, attribute_handle, value, value_len);
 }
 
-extern uint8_t AIReadyBittset; // 4
 extern uint8_t AIPercentage;   // 7
 
 ConfigValuesPacket buildCurrentConfigValuesPacket()
@@ -607,11 +606,7 @@ void ble_notify()
             statusBittset = statusBittset | (1 << StatusPacketBittset::CLOCK);
         }
 
-        // // pack these 2 values together at the top of the statusBittset
-        // int aiDataPacked = (AIPercentage << 4) + AIReadyBittset; // combine at bottom
-        // aiDataPacked = (aiDataPacked << 21);                     // move to top end (4 + 7 = 11; 32-11 = 21)
-        // statusBittset = statusBittset | aiDataPacked;
-        StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue(), getCompressor()->getTankPressure(), statusBittset, AIPercentage, AIReadyBittset);
+        StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue(), getCompressor()->getTankPressure(), statusBittset, AIPercentage);
 
         memcpy(status_characteristic_data, statusPacket.tx(), BTOAS_PACKET_SIZE);
 

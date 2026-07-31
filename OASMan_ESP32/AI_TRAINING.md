@@ -1,8 +1,9 @@
 # AI Valve Timing — How It Works
 
 The manifold learns, per vehicle, how long to open each solenoid to move a bag from one pressure
-to another. This document describes the model (schema v2), the two-phase training pipeline,
-the safety rails around it, and the PC evaluation harness used to validate changes offline.
+to another. This document describes the model, the two-phase training pipeline, how the AI is
+blended into valve timing as it trains, the safety rails around it, and the PC evaluation harness
+used to validate changes offline.
 
 Relevant code:
 
@@ -115,22 +116,34 @@ only every 500 ms and is sampled regardless of valve state.
 Each sample also records `others_flowing` from the shared intent table after the sync barrier —
 see *Contention* above. It is the model's third input.
 
-`recordLearnSample()` routes each sample by model state:
+`recordLearnSample()` routes each sample by **stored sample count**, not by a readiness flag:
 
-- **Not ready (bootstrap):** appended to that model's SPIFFS file and RAM array
-  (`learnData[4][LEARN_SAVE_COUNT]`, 150 samples per model).
-- **Ready (online):** pushed into a small ring queue (`ML_IMMEDIATE_TRAIN_SAMPLE_QUE` = 20 deep,
-  drops oldest when full) consumed by the training task.
+- **Below `LEARN_SAVE_COUNT` (bootstrap):** appended to that model's SPIFFS file and RAM array
+  (`learnData[4]`, each row `LEARN_SAVE_COUNT` = 300 samples, heap-allocated).
+- **At/above `LEARN_SAVE_COUNT` (online):** pushed into a small ring queue
+  (`ML_IMMEDIATE_TRAIN_SAMPLE_QUE` = 20 deep, drops oldest when full) consumed by the training task.
 
-The bootstrap samples are **kept forever** after training — they are reused to rebuild online-learning
+The bootstrap samples are **kept forever** — they are reused to rebuild online-learning
 state at every boot and as anchor-replay material. They are only discarded when the app sends a reset
-or on a schema change.
+or on a sample-record change.
+
+The RAM array is heap-allocated the first time samples are loaded. Update/OTA mode returns from
+`beginSaveData()` before that load, so the ~14 KB is never held during an OTA.
 
 ---
 
 ## Phase 1 — batch training (closed-form least squares)
 
-When a not-ready model has 150 samples, `trainSingleAIModel()` runs once (from `task_trainAI`):
+Every model is batch-fit **at boot** from whatever samples it has stored (`trainAIModels()` in
+`task_trainAI`), not only once a full bootstrap set is collected — the closed-form solve is ~1 ms, so
+there is no reason to wait. This lets the AI phase into valve timing measurably long before the model
+is "done" (see *Blended prediction* below). Two exceptions preserve accumulated online learning: a
+model that has already reached `LEARN_SAVE_COUNT` samples **and** trained once is in online mode, so
+boot keeps its NVS weights (which carry the RLS drift) and only rebuilds the RAM-only RLS state. A
+model still collecting is (re)fit from its current samples on every boot — no online drift exists below
+`LEARN_SAVE_COUNT`, so nothing is lost.
+
+`trainSingleAIModel()`:
 
 1. `AIFitter` accumulates the normal equations ($X^TX$, $X^Ty$) over all valid samples in one pass.
 2. A ridge-regularized 4×4 solve (Gaussian elimination with partial pivoting, `ML_FIT_RIDGE`)
@@ -146,7 +159,9 @@ When a not-ready model has 150 samples, `trainSingleAIModel()` runs once (from `
    fit never leaves half-written weights in the live one.
 4. On success: weights are copied to the live model and saved to NVS, the RLS covariance is
    initialized from the batch fit ($P = (X^TX + ridge)^{-1}$), the outlier gate is seeded with the
-   batch residual noise floor, and `isReadyToUse` is set.
+   batch residual noise floor, and the model's **`trainedSampleCount`** is set to the number of valid
+   samples the fit used (persisted in NVS). A failed/rejected fit sets it to 0. This count — not a
+   boolean ready flag — is what gates prediction and drives the blend below.
 
 ## Phase 2 — online learning (RLS)
 
@@ -171,17 +186,18 @@ Once ready, every new sample updates the model immediately. `processLearnSampleQ
 - Weights are saved to NVS once per queue drain (not per sample); `Preferencable::setDouble` also
   skips writes when the value hasn't changed, limiting flash wear.
 
-The RLS state (`P`, gate EMA) is RAM-only. At boot, `trainAIModels()` rebuilds it for already-ready
-models from the retained bootstrap samples (`initOnlineStateFromLearnData`); with no samples it
-falls back to a conservative default covariance.
+The RLS state (`P`, gate EMA) is RAM-only. At boot, `trainAIModels()` rebuilds it for online models
+(those at `LEARN_SAVE_COUNT` samples that have trained) from the retained bootstrap samples
+(`initOnlineStateFromLearnData`); with no samples it falls back to a conservative default covariance.
+Online RLS only runs once a model has reached `LEARN_SAVE_COUNT` — below that, samples go to the
+bootstrap file and the model is re-batch-fit at each boot instead.
 
 ---
 
 ## Prediction and safety rails
 
 `Wheel::goalRoutine()` asks the model for a pulse time via `getAiPredictionTime()` when
-`canUseAiPrediction()` (AI enabled + model ready). The lookup-table timing is only a bootstrap
-fallback; an accepted AI prediction replaces it directly. Two checks reject bad predictions:
+`canUseAiPrediction()` (AI enabled + `trainedSampleCount > 0`). Two checks reject bad predictions:
 
 1. **Validity:** invalid inputs (e.g. tank at/below goal pressure) return 0, rejected by the
    `aiPredict > 0` check → the corner falls back to the lookup-table timing.
@@ -189,6 +205,25 @@ fallback; an accepted AI prediction replaces it directly. Two checks reject bad 
 2. **NaN hygiene:** validity checks reject NaN inputs by construction, `trainOnline` refuses
    non-finite errors, and the solvers check determinants and finiteness — a non-finite value can
    never reach the weights (which would be unrecoverable once committed to NVS).
+
+### Blended prediction
+
+The AI does not switch on all-at-once. An accepted prediction is **blended** with the lookup-table
+time in proportion to how much data the model has been trained on, so improvement is visible and
+measurable well before a model is "done":
+
+$$t = t_{AI}\,w + t_{table}\,(1-w), \qquad w = \frac{\min(n,\ \texttt{AI\_LEARN\_RATIO\_NUM})}{\texttt{AI\_LEARN\_RATIO\_NUM}}$$
+
+where $n$ is the model's `trainedSampleCount` (`getAiBlendWeight()`). At $n=0$ the corner is pure
+table (and `canUseAiPrediction()` is false); the AI ramps in linearly as $n$ grows; at
+$n \ge$ `AI_LEARN_RATIO_NUM` (150) the table is no longer consulted. Because $w$ uses the count the
+model was *trained from* (fixed until the next boot re-fit), not the live stored count, the AI is
+never weighted beyond what it has actually learned. The 4-parameter fit needs `ML_FIT_MIN_SAMPLES`
+(25) valid samples and must clear the RMSE gate before it trains at all, so blending begins there,
+not at the very first sample.
+
+Collection continues to `LEARN_SAVE_COUNT` (300) after the blend reaches full AI at 150 — the extra
+samples keep improving the batch fit (re-run each boot) until the model transitions to online RLS.
 
 None of this touches the hard safety layer (`MAX_PRESSURE_SAFETY`, goal checks, timeouts) — the AI
 only ever chooses *how long* to open a valve the routine already decided to open, and the routine
@@ -202,7 +237,7 @@ Two version numbers in `pressureMath.h`, checked at boot in `beginSaveData()`:
 
 | Key | Constant | On mismatch |
 |---|---|---|
-| `mlModelSchema` | `ML_MODEL_SCHEMA_VERSION` | `clearAIWeightsOnly()` — drop weights + ready flags, **keep samples**, refit this boot |
+| `mlModelSchema` | `ML_MODEL_SCHEMA_VERSION` | `clearAIWeightsOnly()` — drop weights + trained counts, **keep samples**, refit this boot |
 | `mlSampleRec` | `ML_SAMPLE_RECORD_VERSION` | `clearPressureData()` — wipe samples and weights; vehicle re-collects |
 
 Feature / algorithm OTAs bump the schema version so fielded devices retrain automatically. Users
@@ -214,7 +249,11 @@ Devices predating these keys default schema to 1. The sample-record default is s
 schema (`>= 3` → record 2) so a device that already wrote the current layout is not told to wipe.
 
 History: schema/record 3 added `others_flowing` + per-pulse tank reads; schema 4 made
-`others_flowing` a model input (record stayed 2).
+`others_flowing` a model input (record stayed 2); schema 5 blended the AI into valve timing by
+trained-sample count, replaced the persisted `isReadyToUse` bool with `trainedSampleCount`
+(NVS key `model<i>|n`), routed collection by stored count, and raised `LEARN_SAVE_COUNT` to 300
+(record stayed 2 — on-disk layout unchanged). The old `model<i>|r` bool keys are left orphaned in
+NVS on upgrade; they are harmless.
 
 ---
 
@@ -222,7 +261,7 @@ History: schema/record 3 added `others_flowing` + per-pulse tank reads; schema 4
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `ML_MODEL_SCHEMA_VERSION` | 4 | Feature-set version (weights-only clear + refit) |
+| `ML_MODEL_SCHEMA_VERSION` | 5 | Feature-set version (weights-only clear + refit) |
 | `ML_SAMPLE_RECORD_VERSION` | 2 | Sample-file layout version (full wipe) |
 | `ML_TIME_NORM_MS` | 5000 | Time normalization scale |
 | `ML_PSI_ATMOSPHERE` | 14.7 | Gauge→absolute offset |
@@ -235,8 +274,10 @@ History: schema/record 3 added `others_flowing` + per-pulse tank reads; schema 4
 | `ML_ONLINE_ANCHOR_INTERVAL` | 5 | Replay one bootstrap sample per N online samples |
 | `ML_BATCH_RMSE_GATE_MS` | 400 | Max self-fit RMSE allowed before `setReady` |
 
-`LEARN_SAVE_COUNT` (150, bootstrap size) and `ML_IMMEDIATE_TRAIN_SAMPLE_QUE` (20, online queue
-depth) live in `ESP32_SHARED_LIBS/src/user_defines.h`.
+`LEARN_SAVE_COUNT` (300, bootstrap size / online-switch threshold), `AI_LEARN_RATIO_NUM` (150,
+sample count at which the AI is trusted 100% and the blend reaches pure AI), and
+`ML_IMMEDIATE_TRAIN_SAMPLE_QUE` (20, online queue depth) live in
+`ESP32_SHARED_LIBS/src/user_defines.h`.
 
 If a noisy vehicle ever loops on collect → gate-reject → clear, `ML_BATCH_RMSE_GATE_MS` is the
 knob to loosen (the worst observed real-vehicle fit was ~250 ms RMSE).

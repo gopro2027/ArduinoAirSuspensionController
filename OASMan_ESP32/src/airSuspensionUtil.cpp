@@ -560,7 +560,6 @@ namespace PressureSensorCalibration
 
 #pragma region training
 
-uint8_t AIReadyBittset = 0;
 uint8_t AIPercentage = 0;
 
 void trainSingleAIModel(SOLENOID_AI_INDEX index)
@@ -588,6 +587,7 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
         Serial.print(fitter.sampleCount());
         Serial.println("), leaving this model untrained - it will fall back to table timing");
         // clearPressureDataSingle(index);
+        pref->setTrainedCount(0);
         return;
     }
 
@@ -610,6 +610,7 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
         Serial.println(rmseMs);
         Serial.println("Leaving this model untrained - it will fall back to table timing. Samples are kept.");
         // clearPressureDataSingle(index);
+        pref->setTrainedCount(0);
         return;
     }
 
@@ -626,8 +627,7 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
     fitter.initOnline(pref->model);
     pref->model.onlineSeedGate((sumSqMs / n) / (ML_TIME_NORM_MS * ML_TIME_NORM_MS));
     pref->saveWeights();
-    pref->setReady(true);
-    AIReadyBittset = AIReadyBittset | (1 << index);
+    pref->setTrainedCount(fitter.sampleCount());
 }
 
 // RLS covariance / outlier gate are RAM-only; rebuild from retained bootstrap samples at boot.
@@ -668,13 +668,15 @@ static void initOnlineStateFromLearnData(SOLENOID_AI_INDEX index)
 
 void updateAIPercentage()
 {
+    // Progress toward full AI weighting (100% == every model at AI_LEARN_RATIO_NUM samples, i.e.
+    // AI fully driving), not toward the LEARN_SAVE_COUNT collection ceiling. See AI_TRAINING.md.
     int totalLen = 0;
     for (int i = 0; i < 4; i++)
     {
         int len = getLearnDataLength((SOLENOID_AI_INDEX)i);
-        totalLen += len;
+        totalLen += len < AI_LEARN_RATIO_NUM ? len : AI_LEARN_RATIO_NUM;
     }
-    AIPercentage = ((float)totalLen / ((float)LEARN_SAVE_COUNT * 4)) * 100;
+    AIPercentage = ((float)totalLen / ((float)AI_LEARN_RATIO_NUM * 4)) * 100;
 }
 
 // Measurement aid - drops the ready flags (keeping every stored sample) so the batch-fit path runs
@@ -690,7 +692,7 @@ void trainAIModels()
     Serial.println(F("!! FORCE_AI_RETRAIN_TEST is on - retraining every model. Disable this define. !!"));
     for (int i = 0; i < 4; i++)
     {
-        getAIModel((SOLENOID_AI_INDEX)i)->setReady(false);
+        getAIModel((SOLENOID_AI_INDEX)i)->setTrainedCount(0);
     }
 #endif
 
@@ -705,22 +707,22 @@ void trainAIModels()
 
     for (int i = 0; i < 4; i++)
     {
-        if (getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.get().i == false)
+        SOLENOID_AI_INDEX index = (SOLENOID_AI_INDEX)i;
+        // A model that has finished bootstrap collection (>= LEARN_SAVE_COUNT samples) and moved to
+        // online RLS keeps its NVS weights (which carry the online drift) - only rebuild the RAM-only
+        // RLS state. A model still collecting is (re)batch-fit from whatever it has stored, so the
+        // blend can ramp in long before the full set. No online drift exists below LEARN_SAVE_COUNT,
+        // so refitting there loses nothing. See AI_TRAINING.md.
+        if (getLearnDataLength(index) >= LEARN_SAVE_COUNT && getAIModel(index)->trainedSampleCount.get().i > 0)
         {
-            if (getLearnDataLength((SOLENOID_AI_INDEX)i) >= LEARN_SAVE_COUNT)
-            {
-                trainSingleAIModel((SOLENOID_AI_INDEX)i);
-            }
+            initOnlineStateFromLearnData(index);
         }
         else
         {
-            AIReadyBittset = AIReadyBittset | (1 << i);
-            initOnlineStateFromLearnData((SOLENOID_AI_INDEX)i);
+            trainSingleAIModel(index);
         }
     }
 
-    Serial.print("AI training bittset: ");
-    Serial.println(AIReadyBittset);
     updateAIPercentage();
 }
 
@@ -734,7 +736,7 @@ void processLearnSampleQueues()
         SOLENOID_AI_INDEX index = (SOLENOID_AI_INDEX)i;
         AIModelPreference *pref = getAIModel(index);
 
-        if (!pref->isReadyToUse.get().i)
+        if (pref->trainedSampleCount.get().i <= 0)
         {
             continue;
         }
@@ -780,7 +782,24 @@ bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex)
     {
         return false;
     }
-    return getAIModel(aiIndex)->isReadyToUse.get().i;
+    return getAIModel(aiIndex)->trainedSampleCount.get().i > 0;
+}
+
+// Fraction the AI prediction should contribute to the final valve time, ramping the AI in as it
+// trains: 0 when untrained, n/AI_LEARN_RATIO_NUM while learning, 1.0 once fully trained. The caller
+// blends the remainder from the lookup table. See AI_TRAINING.md.
+double getAiBlendWeight(SOLENOID_AI_INDEX aiIndex)
+{
+    int n = getAIModel(aiIndex)->trainedSampleCount.get().i;
+    if (n <= 0)
+    {
+        return 0.0;
+    }
+    if (n >= AI_LEARN_RATIO_NUM)
+    {
+        return 1.0;
+    }
+    return (double)n / (double)AI_LEARN_RATIO_NUM;
 }
 
 #pragma endregion
