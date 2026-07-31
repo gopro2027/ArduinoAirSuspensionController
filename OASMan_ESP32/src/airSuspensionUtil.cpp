@@ -567,8 +567,6 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
 {
     AIModelPreference *pref = getAIModel(index);
 
-    // Fit into a temp model so a failed/rejected fit can't leave half-written weights in the live one.
-    // up flag mirrors the live model (set in loadAILearnedDataPreferences).
     AIModel aiModelsTemp;
     aiModelsTemp.up = pref->model.up;
 
@@ -576,8 +574,6 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
     Serial.println((int)index);
     unsigned long t = millis();
 
-    // The model is linear in its weights, so exact least squares (normal equations) replaces the
-    // old 10k-epoch gradient descent: true optimum, no learning rate, milliseconds instead of ~45s
     AIFitter fitter;
     PressureLearnSaveStruct *pls = getLearnData(index);
     int len = getLearnDataLength(index);
@@ -595,7 +591,6 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
         return;
     }
 
-    // Quality gate: don't hand valve control to a model that can't even fit its own training data
     double sumSqMs = 0;
     int n = 0;
     for (int j = 0; j < len; j++)
@@ -628,17 +623,14 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
     Serial.println(total);
 
     pref->model.loadWeights(aiModelsTemp.w1, aiModelsTemp.w2, aiModelsTemp.w3, aiModelsTemp.b);
-    // Hand the batch fit's covariance + noise floor to the online learner so RLS updates start
-    // appropriately small and the outlier gate is armed from sample one
     fitter.initOnline(pref->model);
     pref->model.onlineSeedGate((sumSqMs / n) / (ML_TIME_NORM_MS * ML_TIME_NORM_MS));
     pref->saveWeights();
-    pref->setReady(true); // set to not train again and let it know it's ready to use
+    pref->setReady(true);
     AIReadyBittset = AIReadyBittset | (1 << index);
 }
 
-// Rebuild a ready model's RLS covariance and outlier-gate noise floor from the retained bootstrap
-// samples (these are RAM-only and lost on reboot; the weights themselves persist in NVS)
+// RLS covariance / outlier gate are RAM-only; rebuild from retained bootstrap samples at boot.
 static void initOnlineStateFromLearnData(SOLENOID_AI_INDEX index)
 {
     AIModelPreference *pref = getAIModel(index);
@@ -756,9 +748,6 @@ void processLearnSampleQueues()
                 trained = true;
             }
 
-            // Anchor replay: day-to-day driving produces mostly small trim moves, and the RLS
-            // forgetting window would slowly wash out what the bootstrap taught about big lifts.
-            // Re-feeding an occasional retained bootstrap sample keeps that knowledge anchored.
             samplesSinceAnchor[i]++;
             int len = getLearnDataLength(index);
             if (samplesSinceAnchor[i] >= ML_ONLINE_ANCHOR_INTERVAL && len > 0)
@@ -775,7 +764,6 @@ void processLearnSampleQueues()
 
         if (trained)
         {
-            // The loop above drains the queue, so this saves once per burst rather than per sample
             pref->saveWeights();
         }
     }

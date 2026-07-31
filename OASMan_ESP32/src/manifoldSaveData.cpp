@@ -100,8 +100,6 @@ void loadAILearnedDataPreferences()
     {
         learnDataIndex[i] = readBytes(getLogFileName((SOLENOID_AI_INDEX)i), learnData[i], LEARN_SAVE_COUNT * sizeof(PressureLearnSaveStruct)) / sizeof(PressureLearnSaveStruct);
         char buf[15];
-        // w1 and w2 default to a gentle non-zero so an untrained model still moves; the contention
-        // weight and the bias start at zero so they contribute nothing until they are fitted.
         const double weightDefaults[ML_NUM_COEFF] = {0.1, 0.1, 0.0, 0.0};
         for (int w = 0; w < ML_NUM_COEFF; w++)
         {
@@ -254,17 +252,10 @@ void beginSaveData()
     clearLearnSampleQueues();
     // downDataMutex = xSemaphoreCreateMutex();
 
-    // Two independent versions, because they have very different costs. A feature-set change only
-    // makes the stored *weights* meaningless - the samples are still valid input, so wiping the
-    // weights and refitting from the files already on disk gets the vehicle a correct model on this
-    // same boot with no re-collection. A record-layout change makes the files themselves
-    // unparseable, and that is the only case that justifies making an owner re-collect.
-    //
-    // This lives here rather than in loadAILearnedDataPreferences() because the clear functions
-    // call that function themselves.
+    // Dual AI versioning — see "Schema migration" in AI_TRAINING.md.
+    // Lives here (not in loadAILearnedDataPreferences) because the clear functions call that.
     _SaveData.mlModelSchema.load("mlModelSchema", 1);
-    // A device that already ran schema 3 wrote its files in the current record layout, so seed the
-    // record version from the feature version instead of assuming the oldest.
+    // Schema >= 3 already wrote the current record layout; seed record version from that.
     _SaveData.mlSampleRecord.load("mlSampleRec", _SaveData.mlModelSchema.get().i >= 3 ? 2 : 1);
 
     if (_SaveData.mlSampleRecord.get().i != ML_SAMPLE_RECORD_VERSION)
@@ -280,28 +271,10 @@ void beginSaveData()
     {
         Serial.print("AI feature set changed to ");
         Serial.print(ML_MODEL_SCHEMA_VERSION);
-        Serial.println(", clearing weights and refitting from the samples already on disk");
+        Serial.println(", clearing weights and refitting from samples on disk");
         clearAIWeightsOnly();
         _SaveData.mlModelSchema.set(ML_MODEL_SCHEMA_VERSION);
     }
-
-    // Reset ai models
-    //  _SaveData.upModel.weights[0].setDouble(0.1);
-    //  _SaveData.upModel.weights[1].setDouble(0.1);
-    //  _SaveData.upModel.weights[2].setDouble(-0.1);
-    //  _SaveData.upModel.weights[3].setDouble(0.1);
-    //  _SaveData.upModel.weights[4].setDouble(0.1);
-    //  _SaveData.upModel.weights[5].setDouble(0.0);
-
-    // _SaveData.downModel.weights[0].setDouble(0.1);
-    // _SaveData.downModel.weights[1].setDouble(0.1);
-    // _SaveData.downModel.weights[2].setDouble(0.0);
-    // _SaveData.downModel.weights[3].setDouble(0.0);
-    // _SaveData.downModel.weights[4].setDouble(0.1);
-    // _SaveData.downModel.weights[5].setDouble(0.0);
-
-    // _SaveData.upModel.count.set(0);
-    // _SaveData.downModel.count.set(0);
 }
 
 extern uint8_t AIReadyBittset;
@@ -353,8 +326,6 @@ void clearAIWeightsOnly()
     clearLearnSampleQueues();
     AIReadyBittset = 0;
     loadAILearnedDataPreferences();
-    // The sample files survived, so the percentage is whatever those files still hold - trainAIModels()
-    // refits from them on this boot rather than the vehicle collecting again
     updateAIPercentage();
 }
 

@@ -272,18 +272,28 @@ void custom_barrier_wait(int num_participants)
     }
 }
 
-// All four corners share one tank when filling and one exhaust when dumping, so an identical
-// pressure move runs at a materially different rate depending on how many others are competing for
-// the air. This count is a model input, which forces it to be something knowable *before* the valve
-// opens - a count of valves already open would be zero here, since every thread is sitting at the
-// barrier with its valve shut, and training on a count measured during the pulse would leave the
-// model predicting from a quantity it was never fitted on.
-//
-// So estimate intent rather than observe state: another corner will share the air with us if it is
-// still in its goal routine and its own remaining move is large enough to open the same-direction
-// valve. It is an estimate - a corner whose pulse is much shorter than ours stops competing partway
-// through - but it is the same estimate at training time and at prediction time, which is what
-// matters.
+// Early open-gate from goalRoutine: remaining ΔP, onlyAirUp, direction, timeout.
+// bagReading is passed in so callers can supply a fresh sensor value instead of a stale cache.
+bool Wheel::wouldOpenValve(bool wantUp, float bagReading) const
+{
+    if (millis() > this->routineStartTime + ROUTINE_TIMEOUT_MS)
+    {
+        return false;
+    }
+    int pressureDif = (int)this->pressureGoal - (int)bagReading;
+    if (abs(pressureDif) <= getMinValveOpenPSI())
+    {
+        return false;
+    }
+    bool up = pressureDif >= 0;
+    if (!up && this->onlyAirUp)
+    {
+        return false;
+    }
+    return up == wantUp;
+}
+
+// AI contention input — see "Contention" in AI_TRAINING.md.
 uint8_t Wheel::estimateOtherCornersFlowing(bool up)
 {
     uint8_t count = 0;
@@ -294,21 +304,13 @@ uint8_t Wheel::estimateOtherCornersFlowing(bool up)
             continue;
         }
         Wheel *other = getWheel(i);
-        int dif = (int)other->pressureGoal - (int)other->getSelectedInputValue();
-        if (abs(dif) <= getMinValveOpenPSI())
+        // Direct pin read: all valves are closed here, and the other thread may not have
+        // refreshed its cached pressureValue yet this iteration.
+        float reading = readPinPressure(other->pressurePin, false);
+        if (other->wouldOpenValve(up, reading))
         {
-            continue; // already at its goal, it just hasn't dropped its flag yet
+            count++;
         }
-        bool otherUp = dif >= 0;
-        if (otherUp != up)
-        {
-            continue; // filling while we dump costs us nothing, the two don't share a path
-        }
-        if (!otherUp && other->onlyAirUp)
-        {
-            continue; // it will break out rather than dump
-        }
-        count++;
     }
     return count;
 }
@@ -336,10 +338,6 @@ void Wheel::goalRoutine() {
                 break;
             }
 
-            // The barrier at the bottom of the loop releases every wheel thread together, right after
-            // each one closed its valve and settled, so this is the only point in the routine where
-            // nothing anywhere is flowing. Settle a bit more, then read the tank here. Both the value
-            // the model trains on and the value it predicts from come from this read.
             double tank_pressure = 0;
             if (!getheightSensorMode())
             {
@@ -440,7 +438,6 @@ void Wheel::goalRoutine() {
                             // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
                             delay(valveSettleTime); // Changed to 250. 150 was... confusing
 
-                            // save every pulse where the valve was opened for more than 10ms AND it wasn't just set to do a special low value full smooth air out AND the pressure change is greater than 3psi. was: only the first 2 iterations, which collected samples far slower for no accuracy gain
                             if (valveTime > 10 && !specialSmoothAirOut)
                             {
                                 this->readInputs();

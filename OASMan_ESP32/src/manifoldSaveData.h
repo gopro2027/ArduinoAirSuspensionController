@@ -120,8 +120,8 @@ public:
 
     Profile profile[MAX_PROFILE_COUNT];
     AIModelPreference aiModels[4];
-    Preferencable mlModelSchema; // ML_MODEL_SCHEMA_VERSION the stored weights were trained with
-    Preferencable mlSampleRecord; // ML_SAMPLE_RECORD_VERSION the stored sample files were written in
+    Preferencable mlModelSchema;  // ML_MODEL_SCHEMA_VERSION
+    Preferencable mlSampleRecord; // ML_SAMPLE_RECORD_VERSION
 };
 
 struct PressureLearnSaveStruct
@@ -130,12 +130,7 @@ struct PressureLearnSaveStruct
     uint8_t goal_pressure;
     uint16_t tank_pressure;
     uint32_t timeMS;
-    // How many OTHER corners were flowing the same direction at the midpoint of this pulse (0-3).
-    // All four corners share one tank filling and one exhaust dumping, so this is the difference
-    // between an identical pressure move that runs alone and one that runs while three others
-    // compete for the same air. Recorded but not yet a model input - the models still fit on
-    // start/goal/tank/time only.
-    uint8_t others_flowing;
+    uint8_t others_flowing; // AI contention input; see AI_TRAINING.md
     void print()
     {
         Serial.print("{");
@@ -169,11 +164,8 @@ PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX aiIndex);
 int getLearnDataLength(SOLENOID_AI_INDEX aiIndex);
 
 void clearPressureData();
-/** Clear one model's bootstrap samples (file + RAM) without touching its stored weights.
- * Used when the batch fit fails its quality gate and we want to re-collect. */
 void clearPressureDataSingle(SOLENOID_AI_INDEX index);
-/** Drop every model's stored weights and ready flag but keep the bootstrap sample files, so the
- * models refit from the samples already on the device instead of the vehicle re-collecting. */
+// Drop weights + ready flags but keep sample files so trainAIModels() refits this boot.
 void clearAIWeightsOnly();
 
 struct LearnSampleQueue
@@ -187,8 +179,6 @@ struct LearnSampleQueue
 void clearLearnSampleQueues();
 bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS, uint8_t others_flowing);
 bool dequeueLearnSample(SOLENOID_AI_INDEX aiIndex, PressureLearnSaveStruct *out);
-
-/** Bootstrap append or online enqueue based on isReadyToUse */
 void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS, uint8_t others_flowing);
 
 AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex);

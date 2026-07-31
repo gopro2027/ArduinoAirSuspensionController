@@ -5,17 +5,9 @@
 #include <iomanip>
 #endif
 
-// ---------------------------------------------------------------------------
-// N x N linear algebra helpers (row-major, N = ML_NUM_COEFF)
-//
-// Gauss-Jordan with partial pivoting rather than Cramer's rule: at 4x4 the determinant expansion
-// is both slower and worse conditioned, and pivoting is what keeps the near-collinear feature
-// columns (f0 and f1 correlate around +0.95) from producing garbage weights.
-// ---------------------------------------------------------------------------
-
 #define ML_N ML_NUM_COEFF
 
-// Solve M * x = r. Inputs are copied, so the caller's matrices survive.
+// Solve M * x = r (Gaussian elimination with partial pivoting). Copies inputs.
 static bool solveN(const double *Min, const double *rin, double *x)
 {
     double M[ML_N * ML_N];
@@ -85,7 +77,6 @@ static bool solveN(const double *Min, const double *rin, double *x)
     return true;
 }
 
-// Invert M by reducing [M | I] to [I | M^-1].
 static bool invertN(const double *Min, double *out)
 {
     double aug[ML_N * ML_N * 2];
@@ -181,10 +172,8 @@ bool AIModel::isSampleValid(double start_pressure, double end_pressure, double t
 {
     if (this->up)
     {
-        // tank must be above both bag pressures or the subsonic log blows up to inf/nan
         return (tank_pressure > start_pressure) && (tank_pressure > end_pressure);
     }
-    // venting features are finite for any non-negative gauge pressures
     return (start_pressure >= 0) && (end_pressure >= 0);
 }
 
@@ -193,26 +182,16 @@ void AIModel::computeFeatures(double start_pressure, double end_pressure, double
 {
     if (this->up)
     {
-        // Subsonic regime: bag charges toward tank pressure like an RC circuit,
-        // t = tau * ln((Pt-Ps)/(Pt-Pe)). Gauge/absolute offsets cancel in the differences.
         f[0] = log((tank_pressure - start_pressure) / (tank_pressure - end_pressure));
-        // Choked regime: flow through the orifice is sonic while the bag is far below tank
-        // pressure, so fill rate is constant and proportional to absolute tank pressure.
         f[1] = (end_pressure - start_pressure) / (tank_pressure + ML_PSI_ATMOSPHERE);
     }
     else
     {
-        // Choked venting (bag above ~13 psi gauge): mass flow scales with absolute bag pressure,
-        // so absolute pressure decays exponentially, t = tau * ln(Ps_abs/Pe_abs).
         f[0] = log((start_pressure + ML_PSI_ATMOSPHERE) / (end_pressure + ML_PSI_ATMOSPHERE));
-        // Subsonic tail (below ~13 psi gauge): decay toward atmosphere, i.e. toward 0 gauge.
-        // Clamp at 1 psi since the pure gauge log diverges at exactly atmospheric.
         double sg = start_pressure < 1 ? 1 : start_pressure;
         double eg = end_pressure < 1 ? 1 : end_pressure;
         f[1] = log(sg / eg);
     }
-    // Contention: all four corners share one tank filling and one exhaust dumping, so the same
-    // pressure move takes materially longer with others flowing than it does alone.
     f[2] = others_flowing;
     f[3] = 1.0;
 }
@@ -222,7 +201,6 @@ double AIModel::predictDeNormalized(double start_pressure, double end_pressure, 
 {
     if (!isSampleValid(start_pressure, end_pressure, tank_pressure))
     {
-        // 0 gets rejected by the aiPredict > 0 check in wheel.cpp, so the corner falls back to table timing
         return 0;
     }
     double f[ML_NUM_COEFF];
@@ -246,8 +224,7 @@ void AIModel::onlineInitDefault()
 
 void AIModel::onlineSeedGate(double meanSquaredNormError)
 {
-    // floor keeps a suspiciously perfect fit from arming a gate that would reject everything
-    const double floorSq = 1e-5; // ~16 ms rms in normalized units
+    const double floorSq = 1e-5;
     errEma = meanSquaredNormError > floorSq ? meanSquaredNormError : floorSq;
     errCount = ML_OUTLIER_GATE_WARMUP;
 }
@@ -265,13 +242,9 @@ bool AIModel::trainOnline(double start_pressure, double end_pressure, double tan
     double err = y - (w1 * f[0] + w2 * f[1] + w3 * f[2] + b);
     if (!isfinite(err))
     {
-        // an inf/nan reaching the weights would be unrecoverable once saveWeights() commits it to nvs
         return false;
     }
 
-    // Outlier gate: one bump/sensor glitch shouldn't yank the weights. Track a running mean of
-    // squared error; once warmed up, skip samples ~3 sigma out. The ema contribution of a gated
-    // sample is clipped so a burst of garbage can't talk its way past the gate.
     double e2 = err * err;
     bool gated = (errCount >= ML_OUTLIER_GATE_WARMUP) && (e2 > ML_OUTLIER_GATE_FACTOR * errEma);
     double e2Clipped = gated ? (ML_OUTLIER_GATE_FACTOR * errEma) : e2;
@@ -282,7 +255,6 @@ bool AIModel::trainOnline(double start_pressure, double end_pressure, double tan
         return false;
     }
 
-    // Standard RLS with forgetting factor: exact least squares over an exponentially weighted window
     double Pf[ML_N];
     double denom = ML_RLS_FORGETTING;
     for (int r = 0; r < ML_N; r++)
@@ -313,7 +285,6 @@ bool AIModel::trainOnline(double start_pressure, double end_pressure, double tan
     w3 += k[2] * err;
     b += k[3] * err;
 
-    // P = (P - k * Pf^T) / lambda. k is Pf scaled, so the update is a symmetric outer product
     for (int r = 0; r < ML_N; r++)
     {
         for (int c = 0; c < ML_N; c++)
@@ -401,7 +372,6 @@ int AIFitter::sampleCount()
     return n;
 }
 
-// Copy of the accumulated normal equations with ridge added to the diagonal.
 void AIFitter::ridged(double *out)
 {
     double ridge = ML_FIT_RIDGE * n;

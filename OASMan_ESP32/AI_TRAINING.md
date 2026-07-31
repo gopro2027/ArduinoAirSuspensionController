@@ -75,12 +75,19 @@ corner for up front / up rear / down front / down rear.
 
 **The count is an estimate of intent, not a measurement of state,** and it has to be: the model
 predicts before opening its valve, and at that moment every thread is parked at the barrier with its
-valve shut, so counting open valves would always return zero. `Wheel::estimateOtherCornersFlowing()`
-instead counts the other corners that are still in a goal routine and have a remaining move large
-enough to open the same-direction valve. A corner whose pulse turns out much shorter than ours stops
-competing partway through, so the estimate can run high — but it is the *same* estimate at training
-time and at prediction time, which is what actually matters. Training on a count measured during the
-pulse would leave the model predicting from a quantity it was never fitted on.
+valve shut, so counting open valves would always return zero.
+
+`Wheel::estimateOtherCornersFlowing()` asks the same early open-gate that `goalRoutine` uses
+(`Wheel::wouldOpenValve`: remaining ΔP, `onlyAirUp`, direction, routine timeout) for every other
+corner still in a goal routine. Bag pressure for those other corners is read **directly from their
+sensor pins** rather than from `pressureValue` — after the barrier all valves are closed, but the
+other threads may not have called `readInputs()` yet this iteration, so their caches can still hold
+a pre-pulse reading.
+
+A corner whose pulse turns out much shorter than ours stops competing partway through, so the
+estimate can run high — but it is the *same* estimate at training time and at prediction time, which
+is what actually matters. Later vetoes in `goalRoutine` (`valveTime` driven to 0 by oscillation
+dividing, six-valve `canOpen`) are intentionally not mirrored; they are rare and per-thread.
 
 ### Why these replaced the v1 features
 
@@ -105,10 +112,8 @@ it is the only place a tank reading reflects the tank rather than whatever was f
 `Compressor::getTankPressure()` is deliberately *not* used here — it is a 5-sample mean that refreshes
 only every 500 ms and is sampled regardless of valve state.
 
-Each sample also records `others_flowing`: how many of the other three corners are expected to share
-the tank (or the exhaust) during this pulse. All four corners share one tank filling and one exhaust
-dumping, so the same pressure move runs at a materially different rate alone than it does with three
-others competing. It is the model's third input — see *Contention* below.
+Each sample also records `others_flowing` via `estimateOtherCornersFlowing()` — see *Contention*
+above. It is the model's third input.
 
 `recordLearnSample()` routes each sample by model state:
 
@@ -118,8 +123,8 @@ others competing. It is the model's third input — see *Contention* below.
   drops oldest when full) consumed by the training task.
 
 The bootstrap samples are **kept forever** after training — they are reused to rebuild online-learning
-state at every boot and as anchor-replay material. They are only discarded when a fit fails its
-quality gate, when the app sends a reset, or on a schema change.
+state at every boot and as anchor-replay material. They are only discarded when the app sends a reset
+or on a schema change.
 
 ---
 
@@ -193,28 +198,23 @@ re-measures and re-decides every iteration.
 
 ## Schema migration (fielded devices)
 
-There are two version numbers in `pressureMath.h`, because the two kinds of change have very
-different costs to an owner. `beginSaveData()` checks both at boot.
+Two version numbers in `pressureMath.h`, checked at boot in `beginSaveData()`:
 
-`ML_MODEL_SCHEMA_VERSION` identifies the **feature set** the stored weights were trained with. A
-mismatch only invalidates the weights — the recorded samples are still perfectly good input — so it
-calls `clearAIWeightsOnly()`, which drops the weights and ready flags but leaves the sample files
-alone. `trainAIModels()` then refits from those files on that same boot. **Nobody re-collects for a
-feature change.** Bump this whenever `computeFeatures()` changes meaning; weights are not
-transferable between feature sets.
+| Key | Constant | On mismatch |
+|---|---|---|
+| `mlModelSchema` | `ML_MODEL_SCHEMA_VERSION` | `clearAIWeightsOnly()` — drop weights + ready flags, **keep samples**, refit this boot |
+| `mlSampleRec` | `ML_SAMPLE_RECORD_VERSION` | `clearPressureData()` — wipe samples and weights; vehicle re-collects |
 
-`ML_SAMPLE_RECORD_VERSION` identifies the **on-disk layout** of `PressureLearnSaveStruct`. A
-mismatch means the files can no longer be parsed, so this one calls `clearPressureData()` — wiping
-weights, ready flags, sample files, and the reported AI percentage — and the vehicle re-collects
-`LEARN_SAVE_COUNT` samples per model on lookup-table timing. Bump it *only* for a real size or field
-order change; it is the one version that costs an owner a collection cycle.
+Feature / algorithm OTAs bump the schema version so fielded devices retrain automatically. Users
+already have a button for `clearPressureData`, but there is no “retrain weights” control — the
+schema path is that control. Layout bumps (struct size / field order) bump the sample-record
+version and wipe, because old files can’t be parsed.
 
-Devices predating these keys default to schema 1. The record version defaults from the schema
-version (a device that already ran schema 3 wrote its files in the current layout, so it must not be
-told to wipe them).
+Devices predating these keys default schema to 1. The sample-record default is seeded from the
+schema (`>= 3` → record 2) so a device that already wrote the current layout is not told to wipe.
 
-The checks live in `beginSaveData()` rather than in `loadAILearnedDataPreferences()` because the
-clear functions call the latter themselves, which would recurse.
+History: schema/record 3 added `others_flowing` + per-pulse tank reads; schema 4 made
+`others_flowing` a model input (record stayed 2).
 
 ---
 
@@ -222,7 +222,8 @@ clear functions call the latter themselves, which would recurse.
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `ML_MODEL_SCHEMA_VERSION` | 2 | Feature-set version stamped into NVS |
+| `ML_MODEL_SCHEMA_VERSION` | 4 | Feature-set version (weights-only clear + refit) |
+| `ML_SAMPLE_RECORD_VERSION` | 2 | Sample-file layout version (full wipe) |
 | `ML_TIME_NORM_MS` | 5000 | Time normalization scale |
 | `ML_PSI_ATMOSPHERE` | 14.7 | Gauge→absolute offset |
 | `ML_FIT_RIDGE` | 0.001 | Per-sample ridge regularization for the batch solve |
