@@ -55,8 +55,6 @@ private:
 
     float readLevelSensorNormalized();
     bool haveValvesBeenClosedForSomeTime(uint32_t additionalTimeMS = 0);
-    bool wouldOpenValve(bool wantUp, float bagReading) const;
-    uint8_t estimateOtherCornersFlowing(bool up);
 
 public:
     Wheel();

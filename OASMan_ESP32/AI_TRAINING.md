@@ -77,17 +77,17 @@ corner for up front / up rear / down front / down rear.
 predicts before opening its valve, and at that moment every thread is parked at the barrier with its
 valve shut, so counting open valves would always return zero.
 
-`Wheel::estimateOtherCornersFlowing()` asks the same early open-gate that `goalRoutine` uses
-(`Wheel::wouldOpenValve`: remaining ΔP, `onlyAirUp`, direction, routine timeout) for every other
-corner still in a goal routine. Bag pressure for those other corners is read **directly from their
-sensor pins** rather than from `pressureValue` — after the barrier all valves are closed, but the
-other threads may not have called `readInputs()` yet this iteration, so their caches can still hold
-a pre-pulse reading.
+In pressure mode, each wheel thread decides its own pulse intent (`none` / `up` / `down`) from its
+own reading, writes it to a shared slot, then hits one barrier. After the barrier every thread reads
+the same table and counts how many *other* slots match its direction — that is `others_flowing`.
+Corners that are done, timed out, or `onlyAirUp` and need to dump still publish `none` and take that
+barrier before exiting, so mid-loop waiters cannot deadlock. Height-sensor mode skips this path
+(AI is unused there).
 
 A corner whose pulse turns out much shorter than ours stops competing partway through, so the
 estimate can run high — but it is the *same* estimate at training time and at prediction time, which
-is what actually matters. Later vetoes in `goalRoutine` (`valveTime` driven to 0 by oscillation
-dividing, six-valve `canOpen`) are intentionally not mirrored; they are rare and per-thread.
+is what actually matters. Later vetoes (`valveTime` driven to 0 by oscillation dividing, six-valve
+`canOpen`) are intentionally not mirrored; they are rare and per-thread.
 
 ### Why these replaced the v1 features
 
@@ -112,8 +112,8 @@ it is the only place a tank reading reflects the tank rather than whatever was f
 `Compressor::getTankPressure()` is deliberately *not* used here — it is a 5-sample mean that refreshes
 only every 500 ms and is sampled regardless of valve state.
 
-Each sample also records `others_flowing` via `estimateOtherCornersFlowing()` — see *Contention*
-above. It is the model's third input.
+Each sample also records `others_flowing` from the shared intent table after the sync barrier —
+see *Contention* above. It is the model's third input.
 
 `recordLearnSample()` routes each sample by model state:
 

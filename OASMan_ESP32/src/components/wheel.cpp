@@ -272,42 +272,25 @@ void custom_barrier_wait(int num_participants)
     }
 }
 
-// Early open-gate from goalRoutine: remaining ΔP, onlyAirUp, direction, timeout.
-// bagReading is passed in so callers can supply a fresh sensor value instead of a stale cache.
-bool Wheel::wouldOpenValve(bool wantUp, float bagReading) const
+// Per-corner pulse intent for AI contention (pressure mode). Each thread decides for itself,
+// barriers, then reads the table — see "Contention" in AI_TRAINING.md.
+static const int8_t FLOW_NONE = 0;
+static const int8_t FLOW_UP = 1;
+static const int8_t FLOW_DOWN = -1;
+static int8_t g_flowIntent[NUM_WHEEL_THREADS] = {FLOW_NONE, FLOW_NONE, FLOW_NONE, FLOW_NONE};
+
+static void syncFlowIntent(byte wheelNum, int8_t intent)
 {
-    if (millis() > this->routineStartTime + ROUTINE_TIMEOUT_MS)
-    {
-        return false;
-    }
-    int pressureDif = (int)this->pressureGoal - (int)bagReading;
-    if (abs(pressureDif) <= getMinValveOpenPSI())
-    {
-        return false;
-    }
-    bool up = pressureDif >= 0;
-    if (!up && this->onlyAirUp)
-    {
-        return false;
-    }
-    return up == wantUp;
+    g_flowIntent[wheelNum] = intent;
+    custom_barrier_wait(count_participants());
 }
 
-// AI contention input — see "Contention" in AI_TRAINING.md.
-uint8_t Wheel::estimateOtherCornersFlowing(bool up)
+static uint8_t countOthersSameFlowIntent(byte selfWheelNum, int8_t intent)
 {
     uint8_t count = 0;
     for (int i = 0; i < NUM_WHEEL_THREADS; i++)
     {
-        if (i == (int)this->thisWheelNum || !flagStartPressureGoalRoutine[i].load())
-        {
-            continue;
-        }
-        Wheel *other = getWheel(i);
-        // Direct pin read: all valves are closed here, and the other thread may not have
-        // refreshed its cached pressureValue yet this iteration.
-        float reading = readPinPressure(other->pressurePin, false);
-        if (other->wouldOpenValve(up, reading))
+        if (i != (int)selfWheelNum && g_flowIntent[i] == intent)
         {
             count++;
         }
@@ -329,144 +312,161 @@ void Wheel::goalRoutine() {
         int iteration = startIteration; // - values make it skip the first generation. It won't start dividing until iteration = 1
         const int fullAirOutTime = 5000;
         const int tankReadSettleTime = 50; // ms to let the tank equalize after the last pulse before reading it
-        bool previousDirection = false;
+        int8_t previousDirection = FLOW_NONE;
         for (;;)
         {
+            const bool heightMode = getheightSensorMode();
+
             // 10 second timeout in case tank doesn't have a whole lot of air or something
             if (millis() > this->routineStartTime + ROUTINE_TIMEOUT_MS)
             {
+                if (!heightMode)
+                {
+                    syncFlowIntent(this->thisWheelNum, FLOW_NONE); // reset flow intent for this wheel
+                }
                 break;
             }
 
             double tank_pressure = 0;
-            if (!getheightSensorMode())
+            if (!heightMode)
             {
                 delay(tankReadSettleTime);
                 tank_pressure = getCompressor()->readTankPressureNow();
             }
 
-            // Main routine
             this->readInputs();
             int pressureDif = this->pressureGoal - this->getSelectedInputValue();
             int pressureDifABS = abs(pressureDif);
 
-            if (pressureDifABS > getMinValveOpenPSI())
+            if (heightMode)
             {
-                // Decide which valve to use
-                Solenoid *valve;
-                bool up = pressureDif >= 0;
-                if (up)
+                if (pressureDifABS > getMinValveOpenPSI())
                 {
-                    valve = getInSolenoid();
-                    getOutSolenoid()->close();
-                }
-                else
-                {
-                    if (this->onlyAirUp) {
-                        // we are done, we don't want to air out
-                        break;
-                    }
-                    valve = getOutSolenoid();
-                    getInSolenoid()->close();
-                }
-
-                if (!getheightSensorMode())
-                {
-                    // Pressure sensor logic. You can't read the pressure accurately with the valve open. Essentially must open the valve for a guesstimate amount of time, then close it, then you are able to read the pressure.
-
-                    // Choose time to open for
-                    int valveTime = calculateValveOpenTimeMS(pressureDifABS);
-
-                    // right now not going to use this because it doesn't seem to work super well up air up. Results in super low values. Need to do more testing
-                    // int valveTime = this->calculatePressureTimingReal(valve);
-
-                    double start_pressure = this->getSelectedInputValue();
-                    double end_pressure = this->pressureGoal;
-                    uint8_t othersFlowing = this->estimateOtherCornersFlowing(up);
-
-                    if (canUseAiPrediction(valve->getAIIndex()))
+                    Solenoid *valve;
+                    bool up = pressureDif >= 0;
+                    if (up)
                     {
-
-                        int aiPredict = getAiPredictionTime(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, othersFlowing);
-
-                        // 0 means the model declined to predict (e.g. tank at/below the goal pressure)
-                        if (aiPredict < 5000 && aiPredict > 0)
-                        {
-                            valveTime = aiPredict;
-                        }
-                    }
-
-                    // To help prevent ocellations, check if previous direction is different than new direction. Ex: was going up, but suddently now is going down. It must have jumped over goal. Go ahead and start dividing valve time by (oscillation ^ oscillationPow)
-                    if (iteration > startIteration)
-                    {
-                        if (previousDirection != up)
-                        {
-                            oscillationPow++;
-                        }
-                    }
-                    valveTime = valveTime / std::pow(oscillation, oscillationPow);
-
-                    // save previous direction.
-                    previousDirection = up;
-
-                    // If the goal pressure is 0 or 1psi, go ahead and just open the valve for a long time to ensure a smooth air out
-                    bool specialSmoothAirOut = false;
-                    if (!up && pressureGoal < 2 && valveTime < fullAirOutTime)
-                    {
-                        valveTime = fullAirOutTime;
-                        specialSmoothAirOut = true;
-                    }
-
-                    if (valveTime > 0)
-                    {
-                        const int valveSettleTime = 250; // ms to wait after closing valve to allow pressure to stabilize a bit before reading again
-                        bool canOpen = true;
-                        #if SIX_VALVE_MANIFOLD == true
-                        if (!getManifold()->canOpenDirectionSixValveThreadSafe(valve)) {
-                            canOpen = false;
-                            iteration--;// don't count this as an iteration since we decided at last moment to skip it due to the other chamber being in use
-                            delay(valveSettleTime); // delay 250 to at least get some resemblence of matching the other valves that are opening
-                        }
-                        #endif
-
-                        if (canOpen) {
-                            // Open valve for calculated time
-                            valve->open();
-                            delay(valveTime);
-                            valve->close();
-
-                            // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
-                            delay(valveSettleTime); // Changed to 250. 150 was... confusing
-
-                            if (valveTime > 10 && !specialSmoothAirOut)
-                            {
-                                this->readInputs();
-                                end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
-                                if (abs(start_pressure - end_pressure) > 3)
-                                {
-                                    recordLearnSample(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime, othersFlowing);
-                                }
-                            }
-                        }
+                        valve = getInSolenoid();
+                        getOutSolenoid()->close();
                     }
                     else
                     {
-                        // calculated valve time is 0 so just break out of loop
-                        break;
+                        if (this->onlyAirUp)
+                        {
+                            break;
+                        }
+                        valve = getOutSolenoid();
+                        getInSolenoid()->close();
                     }
+                    // Level sensors can be read with the valve open
+                    valve->open();
+                    delay(1);
                 }
                 else
                 {
-                    // for level sensors, just open the valve and read level sensors while valves are open since it doesn't affect the reading
-                    valve->open();
-                    delay(1);
+                    break;
                 }
             }
             else
             {
-                // Completed
-                break;
+                // Decide own intent, sync so every pressure-mode participant sees the same table
+                // (including exiters, who publish NONE — otherwise mid-loop waiters deadlock).
+                int8_t intent = FLOW_NONE;
+                if (pressureDifABS > getMinValveOpenPSI())
+                {
+                    if (pressureDif > 0)
+                    {
+                        intent = FLOW_UP;
+                    }
+                    else if (!this->onlyAirUp)
+                    {
+                        intent = FLOW_DOWN;
+                    }
+                }
+
+                syncFlowIntent(this->thisWheelNum, intent);
+
+                if (intent == FLOW_NONE)
+                {
+                    break;
+                }
+
+                Solenoid *valve = (intent == FLOW_UP) ? getInSolenoid() : getOutSolenoid();
+                if (intent == FLOW_UP)
+                {
+                    getOutSolenoid()->close();
+                }
+                else
+                {
+                    getInSolenoid()->close();
+                }
+
+                int valveTime = calculateValveOpenTimeMS(pressureDifABS);
+                double start_pressure = this->getSelectedInputValue();
+                double end_pressure = this->pressureGoal;
+                uint8_t othersFlowing = countOthersSameFlowIntent(this->thisWheelNum, intent);
+
+                if (canUseAiPrediction(valve->getAIIndex()))
+                {
+                    int aiPredict = getAiPredictionTime(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, othersFlowing);
+                    if (aiPredict < 5000 && aiPredict > 0)
+                    {
+                        valveTime = aiPredict;
+                    }
+                }
+
+                // To help prevent ocellations, check if previous direction is different than new direction. Ex: was going up, but suddently now is going down. It must have jumped over goal. Go ahead and start dividing valve time by (oscillation ^ oscillationPow)
+                if (iteration > startIteration)
+                {
+                    if (previousDirection != intent)
+                    {
+                        oscillationPow++;
+                    }
+                }
+                valveTime = valveTime / std::pow(oscillation, oscillationPow);
+                previousDirection = intent;
+
+                bool specialSmoothAirOut = false;
+                if (intent == FLOW_DOWN && pressureGoal < 2 && valveTime < fullAirOutTime)
+                {
+                    valveTime = fullAirOutTime;
+                    specialSmoothAirOut = true;
+                }
+
+                if (valveTime <= 0)
+                {
+                    break;
+                }
+
+                const int valveSettleTime = 250; // ms to wait after closing valve to allow pressure to stabilize a bit before reading again
+                bool canOpen = true;
+                #if SIX_VALVE_MANIFOLD == true
+                if (!getManifold()->canOpenDirectionSixValveThreadSafe(valve)) {
+                    canOpen = false;
+                    iteration--;// don't count this as an iteration since we decided at last moment to skip it due to the other chamber being in use
+                    delay(valveSettleTime); // delay 250 to at least get some resemblence of matching the other valves that are opening
+                }
+                #endif
+
+                if (canOpen)
+                {
+                    valve->open();
+                    delay(valveTime);
+                    valve->close();
+                    delay(valveSettleTime);
+
+                    if (valveTime > 10 && !specialSmoothAirOut)
+                    {
+                        this->readInputs();
+                        end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
+                        if (abs(start_pressure - end_pressure) > 3)
+                        {
+                            recordLearnSample(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime, othersFlowing);
+                        }
+                    }
+                }
             }
+
             iteration++;
 
             custom_barrier_wait(count_participants()); // TODO: test and see if this should be removed during height sensor mode, as im not sure if it may hold up threads with the 1ms delay. id worry that under some edge cases this may hold up a thread and cause us to air out for too long and overshoot our minimum ride height at times
