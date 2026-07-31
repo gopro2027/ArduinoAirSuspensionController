@@ -272,6 +272,27 @@ void custom_barrier_wait(int num_participants)
     }
 }
 
+// All four corners share one tank when filling and one exhaust when dumping, so an identical
+// pressure move runs at a different rate depending on how many others are competing for the air.
+// Sampled at the midpoint of the pulse, since corners with shorter pulses drop out partway through.
+static uint8_t countOtherCornersFlowing(byte thisWheelNum, bool up)
+{
+    uint8_t count = 0;
+    for (int i = 0; i < 4; i++)
+    {
+        if (i == (int)thisWheelNum)
+        {
+            continue;
+        }
+        Solenoid *s = up ? getWheel(i)->getInSolenoid() : getWheel(i)->getOutSolenoid();
+        if (s->isOpen())
+        {
+            count++;
+        }
+    }
+    return count;
+}
+
 // logic https://www.figma.com/board/YOKnd1caeojOlEjpdfY5NF/Untitled?node-id=0-1&node-type=canvas&t=p1SyY3R7azjm1PKs-0
 void Wheel::goalRoutine() {
     if (flagStartPressureGoalRoutine[thisWheelNum].load())
@@ -390,9 +411,12 @@ void Wheel::goalRoutine() {
                         #endif
 
                         if (canOpen) {
-                            // Open valve for calculated time
+                            // Open valve for calculated time. The delay is split so the contention
+                            // count lands mid-pulse; the two halves still add up to valveTime.
                             valve->open();
-                            delay(valveTime);
+                            delay(valveTime / 2);
+                            uint8_t othersFlowing = countOtherCornersFlowing(this->thisWheelNum, up);
+                            delay(valveTime - (valveTime / 2)); // integer division rounds down, so this is the second half of the valve time
                             valve->close();
 
                             // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
@@ -405,7 +429,7 @@ void Wheel::goalRoutine() {
                                 end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
                                 if (abs(start_pressure - end_pressure) > 3)
                                 {
-                                    recordLearnSample(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime);
+                                    recordLearnSample(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime, othersFlowing);
                                 }
                             }
                         }

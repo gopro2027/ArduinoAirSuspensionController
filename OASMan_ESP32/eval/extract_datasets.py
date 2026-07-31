@@ -22,7 +22,9 @@ DUMP_DATASETS = [
     ("/DownDataR.dat", "ds_down_rear_car2026"),
 ]
 
-TUPLE_RE = re.compile(r"\{\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\}")
+# schema 3 dumps carry a 5th value (others_flowing); older dumps have 4. EvalSample zero-fills the
+# missing member, so both shapes can be emitted verbatim.
+TUPLE_RE = re.compile(r"\{\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*(\d+))?\s*\}")
 
 
 def main():
@@ -45,7 +47,7 @@ def main():
                 break
         if not samples:
             raise SystemExit(f"dump marker not found or empty: {marker}")
-        rows = ", ".join("{%s, %s, %s, %s}" % t for t in samples)
+        rows = ", ".join("{%s}" % ", ".join(v for v in t if v) for t in samples)
         additions.append(f"// From 'ai weights for corvette 7.19.2026.txt' serial dump ({marker})")
         additions.append(f"static const EvalSample {name}[] = {{{rows}}};")
         additions.append(f"static const int {name}_len = {len(samples)};")

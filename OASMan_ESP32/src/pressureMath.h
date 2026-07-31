@@ -9,11 +9,14 @@
 #include <Arduino.h>
 #endif
 
-// Schema version of the model feature set. Bump whenever AIModel's features change meaning:
-// manifoldSaveData checks it at boot and resets stored weights + ready flags so weights trained
-// on old features are never used with new math. Bootstrap samples are kept, so the model retrains
-// instantly from SPIFFS on the next boot.
-#define ML_MODEL_SCHEMA_VERSION 2
+// Schema version of the model feature set and the on-disk sample record. Bump whenever AIModel's
+// features change meaning OR PressureLearnSaveStruct changes layout: manifoldSaveData checks it at
+// boot and calls clearPressureData(), wiping stored weights, ready flags, and the bootstrap sample
+// files so weights trained on old features (or samples written in an old record format) are never
+// read back with new math. The vehicle re-collects from scratch.
+// 3: added others_flowing to PressureLearnSaveStruct, and tank pressure is now read per-pulse with
+//    all valves closed rather than taken from the compressor's 500ms running average
+#define ML_MODEL_SCHEMA_VERSION 3
 
 // Valve time normalization scale in ms (model trains/predicts time / this)
 #define ML_TIME_NORM_MS 5000.0

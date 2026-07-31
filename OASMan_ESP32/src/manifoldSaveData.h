@@ -127,9 +127,14 @@ struct PressureLearnSaveStruct
     uint8_t goal_pressure;
     uint16_t tank_pressure;
     uint32_t timeMS;
+    // How many OTHER corners were flowing the same direction at the midpoint of this pulse (0-3).
+    // All four corners share one tank filling and one exhaust dumping, so this is the difference
+    // between an identical pressure move that runs alone and one that runs while three others
+    // compete for the same air. Recorded but not yet a model input - the models still fit on
+    // start/goal/tank/time only.
+    uint8_t others_flowing;
     void print()
     {
-        // Serial.printf("{0x%X, 0x%X, 0x%X, 0x%X}", start_pressure, goal_pressure, tank_pressure, timeMS);
         Serial.print("{");
         Serial.print((int)start_pressure);
         Serial.print(", ");
@@ -138,6 +143,8 @@ struct PressureLearnSaveStruct
         Serial.print(tank_pressure);
         Serial.print(", ");
         Serial.print(timeMS);
+        Serial.print(", ");
+        Serial.print((int)others_flowing);
         Serial.print("}");
     }
 };
@@ -172,11 +179,11 @@ struct LearnSampleQueue
 };
 
 void clearLearnSampleQueues();
-bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
+bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS, uint8_t others_flowing);
 bool dequeueLearnSample(SOLENOID_AI_INDEX aiIndex, PressureLearnSaveStruct *out);
 
 /** Bootstrap append or online enqueue based on isReadyToUse */
-void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
+void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS, uint8_t others_flowing);
 
 AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex);
 

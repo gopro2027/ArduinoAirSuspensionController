@@ -81,6 +81,14 @@ it is the only place a tank reading reflects the tank rather than whatever was f
 `Compressor::getTankPressure()` is deliberately *not* used here — it is a 5-sample mean that refreshes
 only every 500 ms and is sampled regardless of valve state.
 
+Each sample also records `others_flowing`: how many of the other three corners had a same-direction
+valve open at the midpoint of the pulse. All four corners share one tank filling and one exhaust
+dumping, so the same pressure move runs at a different rate alone than it does with three others
+competing. **This field is logged but is not a model input** — it exists so we can measure whether
+contention explains the residual bias (predictions long on moves ≤15 psi, short on moves >15 psi)
+that survives every feature parameterization tried so far. Using it means widening the fitter and the
+RLS covariance from 3×3 to 4×4, which is deliberately deferred until the data justifies it.
+
 `recordLearnSample()` routes each sample by model state:
 
 - **Not ready (bootstrap):** appended to that model's SPIFFS file and RAM array
@@ -163,8 +171,9 @@ re-measures and re-decides every iteration.
 
 ## Schema migration (fielded devices)
 
-`ML_MODEL_SCHEMA_VERSION` (in `pressureMath.h`) identifies the feature set the stored weights were
-trained with. At boot, `beginSaveData()` compares it against the `mlModelSchema` NVS value (devices
+`ML_MODEL_SCHEMA_VERSION` (in `pressureMath.h`) identifies both the feature set the stored weights
+were trained with and the on-disk layout of `PressureLearnSaveStruct` — bump it for either. At boot,
+`beginSaveData()` compares it against the `mlModelSchema` NVS value (devices
 from before this mechanism default to 1). On mismatch it calls `clearPressureData()` — wiping
 weights, ready flags, bootstrap sample files, and the reported AI percentage — then stores the new
 version. The vehicle re-collects `LEARN_SAVE_COUNT` samples per model and falls back to lookup-table

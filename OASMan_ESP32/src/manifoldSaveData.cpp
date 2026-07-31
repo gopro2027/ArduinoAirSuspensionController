@@ -343,7 +343,7 @@ void clearPressureDataSingle(SOLENOID_AI_INDEX index)
     updateAIPercentage();
 }
 
-void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
+void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS, uint8_t others_flowing)
 {
     int *size = &learnDataIndex[aiIndex];
 
@@ -380,6 +380,7 @@ void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure,
         pls[*size].goal_pressure = goal_pressure;
         pls[*size].tank_pressure = tank_pressure;
         pls[*size].timeMS = timeMS;
+        pls[*size].others_flowing = others_flowing;
 
         writeBytes(getLogFileName(aiIndex), &pls[*size], sizeof(PressureLearnSaveStruct), "a");
 
@@ -396,19 +397,19 @@ AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex)
     return &_SaveData.aiModels[aiIndex];
 }
 
-void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
+void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS, uint8_t others_flowing)
 {
     if (getAIModel(aiIndex)->isReadyToUse.get().i)
     {
-        enqueueLearnSample(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS);
+        enqueueLearnSample(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS, others_flowing);
     }
     else
     {
-        appendPressureDataToFile(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS);
+        appendPressureDataToFile(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS, others_flowing);
     }
 }
 
-bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS)
+bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS, uint8_t others_flowing)
 {
     if (abs((int)start_pressure - (int)goal_pressure) <= MIN_PRESSURE_CHANGE_LOG_PSI)
     {
@@ -440,6 +441,7 @@ bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8
     slot->goal_pressure = goal_pressure;
     slot->tank_pressure = tank_pressure;
     slot->timeMS = timeMS;
+    slot->others_flowing = others_flowing;
     q->tail = (q->tail + 1) % ML_IMMEDIATE_TRAIN_SAMPLE_QUE;
     q->count++;
 

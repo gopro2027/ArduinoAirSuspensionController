@@ -885,6 +885,172 @@ static void evalTankDroop(const char *name, const EvalSample *ds, int len)
            "", bestK, rk, sk, lk, dk);
 }
 
+// ---------------------------------------------------------------------------------------------
+// Regime-split features.
+//
+// The shipped features both span the whole move: for a dump, f0 is the choked-flow log and f1 is
+// the subsonic log, and BOTH are evaluated from start to end. That makes them near-duplicates of
+// each other (they are both monotone in the same pressure ratio), so the fit can trade one against
+// the other almost freely - which is where weights like (+0.81, -0.38) come from and why the model
+// ends up flat.
+//
+// Physically the move is not two overlapping effects, it is two consecutive SEGMENTS. A dump is
+// choked while the bag is above ~14.7 psi gauge (absolute above 2 atm) and subsonic below it. A fill
+// is choked while the bag is below ~0.528x the tank's absolute pressure and subsonic above it. Split
+// the move at that crossover and give each segment its own term and the two features stop
+// overlapping: a 75->55 dump is pure choked, a 12->0 dump is pure subsonic.
+// ---------------------------------------------------------------------------------------------
+static const double PATM = ML_PSI_ATMOSPHERE;
+static const double CHOKED_RATIO = 0.528; // downstream/upstream absolute ratio where flow unchokes
+
+static bool featuresSplit(double s, double e, double tank, bool up, double f[3])
+{
+    f[2] = 1.0;
+    if (up)
+    {
+        if (!(tank > s) || !(tank > e))
+            return false;
+        double crit = CHOKED_RATIO * (tank + PATM) - PATM; // bag gauge pressure where the fill unchokes
+        // choked segment: constant mass flow set by the tank, so time is proportional to the
+        // pressure covered divided by the tank's absolute pressure
+        double chokedEnd = e < crit ? e : crit;
+        f[0] = (s < crit) ? (chokedEnd - s) / (tank + PATM) : 0.0;
+        // subsonic segment: exponential approach to tank pressure
+        double subStart = s > crit ? s : crit;
+        f[1] = (e > crit) ? log((tank - subStart) / (tank - e)) : 0.0;
+    }
+    else
+    {
+        const double crit = PATM; // gauge pressure where venting unchokes
+        // choked segment: absolute pressure decays exponentially
+        double chokedEnd = e > crit ? e : crit;
+        f[0] = (s > crit) ? log((s + PATM) / (chokedEnd + PATM)) : 0.0;
+        // subsonic tail: gauge pressure decays exponentially toward atmosphere
+        double subStart = s < crit ? s : crit;
+        double a = subStart < 1 ? 1 : subStart;
+        double b = e < 1 ? 1 : e;
+        f[1] = (e < crit) ? log(a / b) : 0.0;
+    }
+    return isfinite(f[0]) && isfinite(f[1]);
+}
+
+typedef bool (*FeatFn)(double, double, double, bool, double *);
+
+static bool featuresShipped(double s, double e, double tank, bool up, double f[3])
+{
+    AIModel m;
+    m.up = up;
+    if (!m.isSampleValid(s, e, tank))
+        return false;
+    m.computeFeatures(s, e, tank, f);
+    return true;
+}
+
+static bool fitFeat(const std::vector<EvalSample> &set, bool up, FeatFn ff, double *w)
+{
+    double A[9] = {0}, v[3] = {0};
+    int n = 0;
+    for (const EvalSample &x : set)
+    {
+        double f[3];
+        if (!ff(x.s, x.e, x.tank, up, f))
+            continue;
+        double y = x.ms / ML_TIME_NORM_MS;
+        for (int r = 0; r < 3; r++)
+        {
+            for (int c = 0; c < 3; c++)
+                A[r * 3 + c] += f[r] * f[c];
+            v[r] += f[r] * y;
+        }
+        n++;
+    }
+    if (n < ML_FIT_MIN_SAMPLES)
+        return false;
+    double ridge = ML_FIT_RIDGE * n;
+    A[0] += ridge;
+    A[4] += ridge;
+    A[8] += ridge;
+    return solve3(A, v, w);
+}
+
+// Correlation between the two features - the collinearity that destabilises the fit.
+static double featCorr(const std::vector<EvalSample> &set, bool up, FeatFn ff)
+{
+    double s0 = 0, s1 = 0, s00 = 0, s11 = 0, s01 = 0;
+    int n = 0;
+    for (const EvalSample &x : set)
+    {
+        double f[3];
+        if (!ff(x.s, x.e, x.tank, up, f))
+            continue;
+        s0 += f[0];
+        s1 += f[1];
+        s00 += f[0] * f[0];
+        s11 += f[1] * f[1];
+        s01 += f[0] * f[1];
+        n++;
+    }
+    if (n < 2)
+        return 0;
+    double c = s01 / n - (s0 / n) * (s1 / n);
+    double v0 = s00 / n - (s0 / n) * (s0 / n);
+    double v1 = s11 / n - (s1 / n) * (s1 / n);
+    return (v0 > 1e-12 && v1 > 1e-12) ? c / sqrt(v0 * v1) : 0;
+}
+
+static void reportFeat(const char *label, const std::vector<EvalSample> &train,
+                       const std::vector<EvalSample> &hold, bool up, FeatFn ff)
+{
+    double w[3];
+    if (!fitFeat(train, up, ff, w))
+        return;
+    double ss = 0, bs = 0, bl = 0;
+    int n = 0, ns = 0, nl = 0;
+    for (const EvalSample &x : hold)
+    {
+        double f[3];
+        if (!ff(x.s, x.e, x.tank, up, f))
+            continue;
+        double d = (w[0] * f[0] + w[1] * f[1] + w[2]) * ML_TIME_NORM_MS - x.ms;
+        ss += d * d;
+        n++;
+        if (fabs(x.e - x.s) <= 15)
+        {
+            bs += d;
+            ns++;
+        }
+        else
+        {
+            bl += d;
+            nl++;
+        }
+    }
+    printf("    %-16s RMSE %6.1f  bias <=15psi %+7.1f | >15psi %+7.1f  featcorr %+.3f  w=(%.4f, %.4f, %.4f)\n",
+           label, n ? sqrt(ss / n) : 0, ns ? bs / ns : 0, nl ? bl / nl : 0,
+           featCorr(train, up, ff), w[0], w[1], w[2]);
+}
+
+static void evalSplit(const char *name, const EvalSample *ds, int len, bool up)
+{
+    std::vector<EvalSample> all = filterLikeFirmware(ds, len, up);
+    if ((int)all.size() < 50)
+        return;
+    rngState = 0x9E3779B97F4A7C15ull;
+    for (int i = (int)all.size() - 1; i > 0; i--)
+    {
+        int j = (int)(nextRand() % (uint64_t)(i + 1));
+        EvalSample tmp = all[i];
+        all[i] = all[j];
+        all[j] = tmp;
+    }
+    int nHold = (int)all.size() / 5;
+    std::vector<EvalSample> train(all.begin(), all.end() - nHold);
+    std::vector<EvalSample> hold(all.end() - nHold, all.end());
+    printf("  %s\n", name);
+    reportFeat("shipped", train, hold, up, featuresShipped);
+    reportFeat("regime-split", train, hold, up, featuresSplit);
+}
+
 int main()
 {
     printf("=== UP (fill) datasets ===\n");
@@ -937,5 +1103,17 @@ int main()
     evalTankDroop("up_corvette_v1", ds_up_corvette_v1, ds_up_corvette_v1_len);
     evalTankDroop("up_front_v2", ds_up_front_v2, ds_up_front_v2_len);
     evalTankDroop("up_rear_v2", ds_up_rear_v2, ds_up_rear_v2_len);
+
+    printf("\n=== overlapping vs regime-split features ===\n");
+    evalSplit("down_front_car2026", ds_down_front_car2026, ds_down_front_car2026_len, false);
+    evalSplit("down_rear_car2026", ds_down_rear_car2026, ds_down_rear_car2026_len, false);
+    evalSplit("down_corvette_v1", ds_down_corvette_v1, ds_down_corvette_v1_len, false);
+    evalSplit("down_rear_earl", ds_down_rear_earl, ds_down_rear_earl_len, false);
+    evalSplit("up_front_car2026", ds_up_front_car2026, ds_up_front_car2026_len, true);
+    evalSplit("up_rear_car2026", ds_up_rear_car2026, ds_up_rear_car2026_len, true);
+    evalSplit("up_front_corvette_v3", ds_up_front_corvette_v3, ds_up_front_corvette_v3_len, true);
+    evalSplit("up_corvette_v1", ds_up_corvette_v1, ds_up_corvette_v1_len, true);
+    evalSplit("up_front_v2", ds_up_front_v2, ds_up_front_v2_len, true);
+    evalSplit("up_rear_v2", ds_up_rear_v2, ds_up_rear_v2_len, true);
     return 0;
 }
