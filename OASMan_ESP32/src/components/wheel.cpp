@@ -7,10 +7,18 @@ std::atomic<bool> flagStartPressureGoalRoutine[NUM_WHEEL_THREADS];
 extern bool isVehicleParked(bool dontTrustEBrakeAlone = false, bool requireBothAccAndEbrake_or_GPS = false); // defined in airSuspensionUtil.cpp
 extern bool isAnyWheelActive();            // defined in airSuspensionUtil.cpp
 
-// This function can be updated in the future to use some better algorithm to decide how long to open the valves for to reach the desigred pressure
-int getValveTimingSimpleFit(int pressureDifferenceAbsolute)
+// Default hard coded fallback timing
+int getValveTimingSimpleFit(SOLENOID_AI_INDEX aiIndex, int pressureDifferenceAbsolute, double start_pressure, double end_pressure, double tank_pressure, double others_flowing)
 {
-    float valveTimingUntilWithin = 9.993f*pressureDifferenceAbsolute + 0.2189f; // very close to y = 10x, but our lookup table was just ever so slightly diverging from it
+    #if USE_DEFAULT_WEIGHTS_IN_FALLBACK_TIMING
+    double pred = getDefaultModelPredictionTime(aiIndex, start_pressure, end_pressure, tank_pressure, others_flowing);
+    if (pred > 0 && pred < 5000)
+    {
+        return (int)pred;
+    }
+    #endif
+
+    float valveTimingUntilWithin = 9.993f * pressureDifferenceAbsolute + 0.2189f; // very close to y = 10x, but our lookup table was just ever so slightly diverging from it
     if (valveTimingUntilWithin < 10) {
         return 10; // minimum time to open the valves for
     }
@@ -23,9 +31,9 @@ int getMinValveOpenPSI()
     return 0;
 }
 
-int calculateValveOpenTimeMS(int pressureDifferenceAbsolute)
+int calculateValveOpenTimeMS(SOLENOID_AI_INDEX aiIndex, int pressureDifferenceAbsolute, double start_pressure, double end_pressure, double tank_pressure, double others_flowing)
 {
-    return getheightSensorMode() ? 0 : (getValveTimingSimpleFit(pressureDifferenceAbsolute) * ((float)getbagVolumePercentage() / 100.0f)); // Note: Added 0 for height sensor mode but it is unused
+    return getValveTimingSimpleFit(aiIndex, pressureDifferenceAbsolute, start_pressure, end_pressure, tank_pressure, others_flowing) * ((float)getbagVolumePercentage() / 100.0f);
 }
 
 Wheel::Wheel() {}
@@ -401,18 +409,20 @@ void Wheel::goalRoutine() {
                     getInSolenoid()->close();
                 }
 
-                int valveTime = calculateValveOpenTimeMS(pressureDifABS);
                 double start_pressure = this->getSelectedInputValue();
                 double end_pressure = this->pressureGoal;
                 uint8_t othersFlowing = countOthersSameFlowIntent(this->thisWheelNum, intent);
+
+                int valveTime = calculateValveOpenTimeMS(valve->getAIIndex(), pressureDifABS, start_pressure, end_pressure, tank_pressure, othersFlowing);
 
                 if (canUseAiPrediction(valve->getAIIndex()))
                 {
                     int aiPredict = getAiPredictionTime(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, othersFlowing);
                     if (aiPredict < 5000 && aiPredict > 0)
                     {
-                        // Blend AI with the lookup table by how trained the model is (valveTime still holds
-                        // the table value here). Full AI once the model reaches AI_LEARN_RATIO_NUM samples.
+                        // Blend the learned AI with the default fallback time by how trained the
+                        // model is (valveTime still holds that bootstrap value here). Full AI once the
+                        // model reaches AI_LEARN_RATIO_NUM samples.
                         double aiWeight = getAiBlendWeight(valve->getAIIndex());
                         valveTime = (int)(aiPredict * aiWeight + valveTime * (1.0 - aiWeight));
                     }

@@ -52,5 +52,7 @@ void processLearnSampleQueues();
 double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure, double others_flowing);
 bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex);
 double getAiBlendWeight(SOLENOID_AI_INDEX aiIndex);
+void initDefaultAIModels();
+double getDefaultModelPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure, double others_flowing);
 void setupLEDs();
 #endif

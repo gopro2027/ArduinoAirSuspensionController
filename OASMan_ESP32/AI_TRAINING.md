@@ -210,16 +210,26 @@ bootstrap file and the model is re-batch-fit at each boot instead.
    non-finite errors, and the solvers check determinants and finiteness — a non-finite value can
    never reach the weights (which would be unrecoverable once committed to NVS).
 
+### Bootstrap timing (the non-AI term)
+
+The fallback timing — used before a vehicle-specific model has trained, and as the $(1-w)$ term of the
+blend below — is **not** a crude lookup table. `getValveTimingSimpleFit()` predicts from a set of
+**default pre-trained physics models**: the same 4-parameter model as the learner, one per corner, with
+hard-coded weights taken from a reference vehicle (`initDefaultAIModels()` /
+`getDefaultModelPredictionTime()`). Only if those weights produce an out-of-range value (≤0 or ≥5000 ms,
+e.g. tank at/below goal on a fill) does it fall back to the old linear estimate (~ $y = 10x$) as a
+safety net. So a brand-new vehicle already gets physics-shaped timing on its very first move.
+
 ### Blended prediction
 
-The AI does not switch on all-at-once. An accepted prediction is **blended** with the lookup-table
-time in proportion to how much data the model has been trained on, so improvement is visible and
-measurable well before a model is "done":
+The AI does not switch on all-at-once. An accepted prediction is **blended** with the bootstrap
+(default-model) time in proportion to how much data the model has been trained on, so improvement is
+visible and measurable well before a model is "done":
 
-$$t = t_{AI}\,w + t_{table}\,(1-w), \qquad w = \frac{\min(n,\ \texttt{AI\_LEARN\_RATIO\_NUM})}{\texttt{AI\_LEARN\_RATIO\_NUM}}$$
+$$t = t_{AI}\,w + t_{default}\,(1-w), \qquad w = \frac{\min(n,\ \texttt{AI\_LEARN\_RATIO\_NUM})}{\texttt{AI\_LEARN\_RATIO\_NUM}}$$
 
 where $n$ is the model's `trainedSampleCount` (`getAiBlendWeight()`). At $n=0$ the corner is pure
-table (and `canUseAiPrediction()` is false); the AI ramps in linearly as $n$ grows; at
+default model (and `canUseAiPrediction()` is false); the AI ramps in linearly as $n$ grows; at
 $n \ge$ `AI_LEARN_RATIO_NUM` (150) the table is no longer consulted. Because $w$ uses the count the
 model was *trained from* (fixed until the next boot re-fit), not the live stored count, the AI is
 never weighted beyond what it has actually learned. The 4-parameter fit needs `ML_FIT_MIN_SAMPLES`

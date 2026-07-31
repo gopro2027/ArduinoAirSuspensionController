@@ -107,6 +107,10 @@ void setupManifold()
         m6_solenoidChamberExhaustPin);
 
 #endif
+
+#if USE_DEFAULT_WEIGHTS_IN_FALLBACK_TIMING
+    initDefaultAIModels();
+#endif
 }
 
 #pragma endregion
@@ -810,6 +814,31 @@ double getAiBlendWeight(SOLENOID_AI_INDEX aiIndex)
     }
     return (double)n / (double)AI_LEARN_RATIO_NUM;
 }
+
+#if USE_DEFAULT_WEIGHTS_IN_FALLBACK_TIMING
+// Default pre-trained physics models with hard-coded per-corner weights from a reference vehicle. They
+// provide the bootstrap / fallback valve timing (via getValveTimingSimpleFit) 
+static AIModel defaultAIModels[4];
+
+void initDefaultAIModels()
+{
+    defaultAIModels[AI_MODEL_UP_FRONT].up = true;
+    defaultAIModels[AI_MODEL_UP_FRONT].loadWeights(0.08331, 0.06747, 0.04273, 0.00089);
+    defaultAIModels[AI_MODEL_UP_REAR].up = true;
+    defaultAIModels[AI_MODEL_UP_REAR].loadWeights(0.07399, -0.00848, 0.05950, -0.04194);
+    defaultAIModels[AI_MODEL_DOWN_FRONT].up = false;
+    defaultAIModels[AI_MODEL_DOWN_FRONT].loadWeights(0.28522, -0.09107, 0.03484, -0.02375);
+    defaultAIModels[AI_MODEL_DOWN_REAR].up = false;
+    defaultAIModels[AI_MODEL_DOWN_REAR].loadWeights(0.18998, -0.04530, 0.02301, -0.02886);
+}
+
+// Returns the default model's predicted valve-open time (ms), or 0 for out-of-range inputs
+// (e.g. tank at/below goal on a fill) - the caller falls back to the linear estimate in that case.
+double getDefaultModelPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure, double others_flowing)
+{
+    return defaultAIModels[aiIndex].predictDeNormalized(start_pressure, end_pressure, tank_pressure, others_flowing);
+}
+#endif
 
 #pragma endregion
 
