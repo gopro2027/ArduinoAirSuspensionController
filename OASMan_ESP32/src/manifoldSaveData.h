@@ -18,19 +18,20 @@ public:
 class AIModelPreference
 {
 public:
-    Preferencable weights[3];   // doubles
-    Preferencable isReadyToUse; // bool
+    Preferencable weights[ML_NUM_COEFF]; // doubles
+    Preferencable isReadyToUse;          // bool
     AIModel model;
     void loadModel()
     {
-        model.loadWeights(weights[0].get().d, weights[1].get().d, weights[2].get().d);
+        model.loadWeights(weights[0].get().d, weights[1].get().d, weights[2].get().d, weights[3].get().d);
         model.print_weights();
     }
     void saveWeights()
     {
         weights[0].setDouble(model.w1);
         weights[1].setDouble(model.w2);
-        weights[2].setDouble(model.b);
+        weights[2].setDouble(model.w3);
+        weights[3].setDouble(model.b);
     }
     void setReady(bool ready)
     {
@@ -39,9 +40,10 @@ public:
     void deletePreferences()
     {
         isReadyToUse.deletePreference();
-        weights[0].deletePreference();
-        weights[1].deletePreference();
-        weights[2].deletePreference();
+        for (int i = 0; i < ML_NUM_COEFF; i++)
+        {
+            weights[i].deletePreference();
+        }
     }
 };
 
@@ -119,6 +121,7 @@ public:
     Profile profile[MAX_PROFILE_COUNT];
     AIModelPreference aiModels[4];
     Preferencable mlModelSchema; // ML_MODEL_SCHEMA_VERSION the stored weights were trained with
+    Preferencable mlSampleRecord; // ML_SAMPLE_RECORD_VERSION the stored sample files were written in
 };
 
 struct PressureLearnSaveStruct
@@ -169,6 +172,9 @@ void clearPressureData();
 /** Clear one model's bootstrap samples (file + RAM) without touching its stored weights.
  * Used when the batch fit fails its quality gate and we want to re-collect. */
 void clearPressureDataSingle(SOLENOID_AI_INDEX index);
+/** Drop every model's stored weights and ready flag but keep the bootstrap sample files, so the
+ * models refit from the samples already on the device instead of the vehicle re-collecting. */
+void clearAIWeightsOnly();
 
 struct LearnSampleQueue
 {

@@ -146,6 +146,69 @@ static Metrics score(const std::vector<EvalSample> &set, PredFn pred)
     return m;
 }
 
+// ---------------------------------------------------------------------------------------------
+// Compatibility shims for the experiments below, which all predate others_flowing.
+//
+// The production model now takes a contention count. Forwarding zero reproduces exactly what those
+// experiments originally measured: with an all-zero third column the normal equations reduce to the
+// old three-parameter system (ridge alone occupies that diagonal, so its weight solves to zero).
+// New work should use AIModel/AIFitter directly and pass the real count - see evalContention.
+// ---------------------------------------------------------------------------------------------
+struct AIModelNC : AIModel
+{
+    using AIModel::computeFeatures;
+    using AIModel::predictDeNormalized;
+    double predictDeNormalized(double s, double e, double tank)
+    {
+        return AIModel::predictDeNormalized(s, e, tank, 0);
+    }
+    void computeFeatures(double s, double e, double tank, double f[ML_NUM_COEFF])
+    {
+        AIModel::computeFeatures(s, e, tank, 0, f);
+    }
+    using AIModel::trainOnline;
+    bool trainOnline(double s, double e, double tank, double ms)
+    {
+        return AIModel::trainOnline(s, e, tank, 0, ms);
+    }
+    using AIModel::loadWeights;
+    void loadWeights(double a, double b_, double c) { AIModel::loadWeights(a, b_, 0, c); }
+};
+
+struct AIFitterNC : AIFitter
+{
+    using AIFitter::add;
+    void add(AIModelNC &m, double s, double e, double tank, double ms)
+    {
+        AIFitter::add(m, s, e, tank, 0, ms);
+    }
+};
+
+// Production dropped its 3x3 helpers when the model widened to four coefficients; the historical
+// hand-rolled fits below still need one.
+static bool solve3(const double M[9], const double r[3], double x[3])
+{
+    double d = M[0] * (M[4] * M[8] - M[5] * M[7]) -
+               M[1] * (M[3] * M[8] - M[5] * M[6]) +
+               M[2] * (M[3] * M[7] - M[4] * M[6]);
+    if (!isfinite(d) || fabs(d) < 1e-12)
+        return false;
+    double T[9];
+    for (int col = 0; col < 3; col++)
+    {
+        for (int i = 0; i < 9; i++)
+            T[i] = M[i];
+        T[col] = r[0];
+        T[col + 3] = r[1];
+        T[col + 6] = r[2];
+        double dt = T[0] * (T[4] * T[8] - T[5] * T[7]) -
+                    T[1] * (T[3] * T[8] - T[5] * T[6]) +
+                    T[2] * (T[3] * T[7] - T[4] * T[6]);
+        x[col] = dt / d;
+    }
+    return isfinite(x[0]) && isfinite(x[1]) && isfinite(x[2]);
+}
+
 // Scores a fixed set of shipped (old-firmware) weights against a full dataset, and a fresh v2
 // batch fit on the same data for reference. Used to check the user's in-car observation that the
 // old model's predictions ran too long.
@@ -160,9 +223,9 @@ static void evalShippedWeights(const char *name, const EvalSample *ds, int len, 
     shipped.b = b;
     Metrics s = score(all, [&](const EvalSample &x) { return shipped.predictDeNormalized(x.s, x.e, x.tank); });
 
-    AIModel v2;
+    AIModelNC v2;
     v2.up = up;
-    AIFitter fitter;
+    AIFitterNC fitter;
     for (const EvalSample &x : all)
         fitter.add(v2, x.s, x.e, x.tank, x.ms);
     if (!fitter.solveInto(v2))
@@ -278,9 +341,9 @@ static void evalDataset(const char *name, const EvalSample *ds, int len, bool up
     }
 
     // C) new physics features, exact least squares (the production v2 path)
-    AIModel newModel;
+    AIModelNC newModel;
     newModel.up = up;
-    AIFitter fitter;
+    AIFitterNC fitter;
     for (const EvalSample &x : trainAll)
         fitter.add(newModel, x.s, x.e, x.tank, x.ms);
     if (!fitter.solveInto(newModel))
@@ -294,7 +357,7 @@ static void evalDataset(const char *name, const EvalSample *ds, int len, bool up
            c.mae, c.rmse, cTrain.rmse, newModel.w1, newModel.w2, newModel.b);
 
     // C2) single-feature variant (f1 forced to 0) - checks whether the second feature earns its keep
-    AIModel single;
+    AIModelNC single;
     single.up = up;
     {
         double A[9] = {0}, v[3] = {0};
@@ -353,9 +416,9 @@ static void evalDataset(const char *name, const EvalSample *ds, int len, bool up
     }
 
     // D) production two-phase flow: batch fit on 60%, then stream 20% through RLS
-    AIModel rlsModel;
+    AIModelNC rlsModel;
     rlsModel.up = up;
-    AIFitter batchFitter;
+    AIFitterNC batchFitter;
     for (const EvalSample &x : batch)
         batchFitter.add(rlsModel, x.s, x.e, x.tank, x.ms);
     if (batchFitter.solveInto(rlsModel))
@@ -383,9 +446,9 @@ static void evalDataset(const char *name, const EvalSample *ds, int len, bool up
                before.rmse, after.rmse, applied, (int)stream.size());
 
         // corruption test: same stream but every 4th sample's time is multiplied by 5
-        AIModel dirty;
+        AIModelNC dirty;
         dirty.up = up;
-        AIFitter dirtyFitter;
+        AIFitterNC dirtyFitter;
         for (const EvalSample &x : batch)
             dirtyFitter.add(dirty, x.s, x.e, x.tank, x.ms);
         dirtyFitter.solveInto(dirty);
@@ -412,9 +475,9 @@ static void evalDataset(const char *name, const EvalSample *ds, int len, bool up
             int N = sizes[si];
             if (N > (int)trainAll.size())
                 continue;
-            AIModel sub;
+            AIModelNC sub;
             sub.up = up;
-            AIFitter subFit;
+            AIFitterNC subFit;
             for (int j = 0; j < N; j++)
                 subFit.add(sub, trainAll[j].s, trainAll[j].e, trainAll[j].tank, trainAll[j].ms);
             if (!subFit.solveInto(sub))
@@ -428,7 +491,7 @@ static void evalDataset(const char *name, const EvalSample *ds, int len, bool up
     // E) cold-start pure online: no batch fit, no stored pool - stream every train sample through
     // RLS from default weights and watch holdout RMSE converge
     {
-        AIModel cold;
+        AIModelNC cold;
         cold.up = up;
         printf("  E cold-start RLS          holdout RMSE:");
         int seen = 0;
@@ -572,7 +635,7 @@ static void solveNonNegative(const double *A, const double *v, double *w)
     }
 }
 
-static bool fitWeighted(AIModel &m, const std::vector<EvalSample> &set, bool weightByTime, bool forceZeroBias,
+static bool fitWeighted(AIModelNC &m, const std::vector<EvalSample> &set, bool weightByTime, bool forceZeroBias,
                         bool nonNeg = false, double dither = 0)
 {
     double A[9] = {0}, v[3] = {0};
@@ -632,7 +695,7 @@ static bool fitWeighted(AIModel &m, const std::vector<EvalSample> &set, bool wei
 
 // Mean absolute percentage error - the metric that matches "did the valve open roughly the right
 // fraction of the needed time", which is what causes visible overshoot/undershoot in the car.
-static double mape(const std::vector<EvalSample> &set, AIModel &m)
+static double mape(const std::vector<EvalSample> &set, AIModelNC &m)
 {
     double sum = 0;
     int n = 0;
@@ -645,7 +708,7 @@ static double mape(const std::vector<EvalSample> &set, AIModel &m)
     return n ? 100.0 * sum / n : 0;
 }
 
-static void reportVariant(const char *label, AIModel &m, const std::vector<EvalSample> &hold)
+static void reportVariant(const char *label, AIModelNC &m, const std::vector<EvalSample> &hold)
 {
     std::vector<EvalSample> small, large;
     for (const EvalSample &x : hold)
@@ -675,7 +738,7 @@ static void evalWeighting(const char *name, const EvalSample *ds, int len, bool 
     std::vector<EvalSample> hold(all.end() - nHold, all.end());
 
     printf("  %s\n", name);
-    AIModel a, b, c, d, e;
+    AIModelNC a, b, c, d, e;
     a.up = b.up = c.up = d.up = e.up = up;
     if (fitWeighted(a, train, false, false))
         reportVariant("absolute error (now)", a, hold);
@@ -702,7 +765,7 @@ static void evalQuantization(const char *name, const EvalSample *ds, int len, bo
     for (int t = 0; t < trials; t++)
     {
         rngState = 0x1234567 + t * 7919ull;
-        AIModel m;
+        AIModelNC m;
         m.up = up;
         if (!fitWeighted(m, all, false, false, false, 0.5))
         {
@@ -748,7 +811,7 @@ static void evalCarScenarios()
         {
             if ((i < 2) != sc.up)
                 continue;
-            AIModel m;
+            AIModelNC m;
             m.up = sc.up;
             m.loadWeights(W[i][0], W[i][1], W[i][2]);
             printf("  model%d %6.0f ms", i, m.predictDeNormalized(sc.s, sc.e, sc.tank));
@@ -938,7 +1001,7 @@ typedef bool (*FeatFn)(double, double, double, bool, double *);
 
 static bool featuresShipped(double s, double e, double tank, bool up, double f[3])
 {
-    AIModel m;
+    AIModelNC m;
     m.up = up;
     if (!m.isSampleValid(s, e, tank))
         return false;
@@ -1051,6 +1114,179 @@ static void evalSplit(const char *name, const EvalSample *ds, int len, bool up)
     reportFeat("regime-split", train, hold, up, featuresSplit);
 }
 
+// ---------------------------------------------------------------------------------------------
+// Does contention explain what the model is missing?
+//
+// Two tests. First: fit the shipped 3-parameter model, then group the holdout residuals by how many
+// other corners were flowing. If the model is blind to a real contention effect, the residuals will
+// trend with the count - pulses that ran alone finishing sooner than predicted, pulses that ran
+// against three others finishing later. Second: refit with others_flowing as an actual fourth
+// input and see whether holdout error drops enough to justify a 4x4 fitter and RLS covariance.
+// ---------------------------------------------------------------------------------------------
+static bool fitWithOthers(const std::vector<EvalSample> &set, bool up, double *w)
+{
+    double A[16] = {0}, v[4] = {0};
+    int n = 0;
+    for (const EvalSample &x : set)
+    {
+        double f3[3];
+        if (!featuresShipped(x.s, x.e, x.tank, up, f3))
+            continue;
+        double f[4] = {f3[0], f3[1], x.others, 1.0};
+        double y = x.ms / ML_TIME_NORM_MS;
+        for (int r = 0; r < 4; r++)
+        {
+            for (int c = 0; c < 4; c++)
+                A[r * 4 + c] += f[r] * f[c];
+            v[r] += f[r] * y;
+        }
+        n++;
+    }
+    if (n < ML_FIT_MIN_SAMPLES)
+        return false;
+    double ridge = ML_FIT_RIDGE * n;
+    for (int i = 0; i < 4; i++)
+        A[i * 4 + i] += ridge;
+    double M[16], rhs[4];
+    for (int i = 0; i < 16; i++)
+        M[i] = A[i];
+    for (int i = 0; i < 4; i++)
+        rhs[i] = v[i];
+    return solveK(M, rhs, w, 4);
+}
+
+static void evalContention(const char *name, const EvalSample *ds, int len, bool up)
+{
+    std::vector<EvalSample> all = filterLikeFirmware(ds, len, up);
+    if ((int)all.size() < 50)
+        return;
+    rngState = 0x9E3779B97F4A7C15ull;
+    for (int i = (int)all.size() - 1; i > 0; i--)
+    {
+        int j = (int)(nextRand() % (uint64_t)(i + 1));
+        EvalSample tmp = all[i];
+        all[i] = all[j];
+        all[j] = tmp;
+    }
+    int nHold = (int)all.size() / 5;
+    std::vector<EvalSample> train(all.begin(), all.end() - nHold);
+    std::vector<EvalSample> hold(all.end() - nHold, all.end());
+
+    double w3[3];
+    if (!fitFeat(train, up, featuresShipped, w3))
+        return;
+
+    printf("  %s\n", name);
+    // residual by contention bucket, over everything (more samples per bucket than holdout alone)
+    for (int k = 0; k <= 3; k++)
+    {
+        double sum = 0;
+        int n = 0;
+        for (const EvalSample &x : all)
+        {
+            if ((int)x.others != k)
+                continue;
+            double f[3];
+            if (!featuresShipped(x.s, x.e, x.tank, up, f))
+                continue;
+            sum += (w3[0] * f[0] + w3[1] * f[1] + w3[2]) * ML_TIME_NORM_MS - x.ms;
+            n++;
+        }
+        if (n >= 5)
+            printf("      others=%d  n=%3d  mean residual %+8.1f ms\n", k, n, sum / n);
+    }
+
+    double rmse3 = 0, rmse4 = 0;
+    int n3 = 0, n4 = 0;
+    for (const EvalSample &x : hold)
+    {
+        double f[3];
+        if (!featuresShipped(x.s, x.e, x.tank, up, f))
+            continue;
+        double d = (w3[0] * f[0] + w3[1] * f[1] + w3[2]) * ML_TIME_NORM_MS - x.ms;
+        rmse3 += d * d;
+        n3++;
+    }
+    double w4[4];
+    if (fitWithOthers(train, up, w4))
+    {
+        for (const EvalSample &x : hold)
+        {
+            double f[3];
+            if (!featuresShipped(x.s, x.e, x.tank, up, f))
+                continue;
+            double d = (w4[0] * f[0] + w4[1] * f[1] + w4[2] * x.others + w4[3]) * ML_TIME_NORM_MS - x.ms;
+            rmse4 += d * d;
+            n4++;
+        }
+        printf("      holdout RMSE  3-param %6.1f   4-param (with others) %6.1f   others weight %+.4f\n",
+               n3 ? sqrt(rmse3 / n3) : 0, n4 ? sqrt(rmse4 / n4) : 0, w4[2]);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// End-to-end check of the shipping code path with the real contention count: AIFitter -> solveInto
+// -> initOnline -> onlineSeedGate -> trainOnline, exactly as trainSingleAIModel and
+// processLearnSampleQueues run it. Holdout RMSE here should land on the 4-param numbers that
+// evalContention derives independently; if it doesn't, solveN/invertN are wrong.
+// ---------------------------------------------------------------------------------------------
+static void evalProduction(const char *name, const EvalSample *ds, int len, bool up)
+{
+    std::vector<EvalSample> all = filterLikeFirmware(ds, len, up);
+    if ((int)all.size() < 50)
+        return;
+    rngState = 0x9E3779B97F4A7C15ull;
+    for (int i = (int)all.size() - 1; i > 0; i--)
+    {
+        int j = (int)(nextRand() % (uint64_t)(i + 1));
+        EvalSample tmp = all[i];
+        all[i] = all[j];
+        all[j] = tmp;
+    }
+    int nHold = (int)all.size() / 5;
+    std::vector<EvalSample> train(all.begin(), all.end() - nHold);
+    std::vector<EvalSample> hold(all.end() - nHold, all.end());
+
+    AIModel m;
+    m.up = up;
+    AIFitter fitter;
+    for (const EvalSample &x : train)
+        fitter.add(m, x.s, x.e, x.tank, x.others, x.ms);
+    if (!fitter.solveInto(m))
+    {
+        printf("  %-16s solve FAILED (%d valid samples)\n", name, fitter.sampleCount());
+        return;
+    }
+
+    // the rmse gate trainSingleAIModel applies to its own training data
+    double sumSq = 0;
+    int n = 0;
+    for (const EvalSample &x : train)
+    {
+        if (!m.isSampleValid(x.s, x.e, x.tank))
+            continue;
+        double d = m.predictDeNormalized(x.s, x.e, x.tank, x.others) - x.ms;
+        sumSq += d * d;
+        n++;
+    }
+    double trainRmse = n ? sqrt(sumSq / n) : 0;
+    Metrics h = score(hold, [&](const EvalSample &x) { return m.predictDeNormalized(x.s, x.e, x.tank, x.others); });
+
+    bool covOk = fitter.initOnline(m);
+    m.onlineSeedGate((sumSq / n) / (ML_TIME_NORM_MS * ML_TIME_NORM_MS));
+    int applied = 0;
+    for (const EvalSample &x : train)
+        if (m.trainOnline(x.s, x.e, x.tank, x.others, x.ms))
+            applied++;
+    Metrics after = score(hold, [&](const EvalSample &x) { return m.predictDeNormalized(x.s, x.e, x.tank, x.others); });
+
+    printf("  %-16s train RMSE %6.1f %s   holdout RMSE %6.1f  bias %+7.1f   after RLS %6.1f (%d/%d applied, cov %s)\n",
+           name, trainRmse, trainRmse <= ML_BATCH_RMSE_GATE_MS ? "PASS" : "FAIL",
+           h.rmse, h.bias, after.rmse, applied, (int)train.size(), covOk ? "ok" : "default");
+    printf("  %-16s w1=%.5f w2=%.5f w3=%.5f b=%.5f   (contention costs %.0f ms per corner)\n",
+           "", m.w1, m.w2, m.w3, m.b, m.w3 * ML_TIME_NORM_MS);
+}
+
 int main()
 {
     printf("=== UP (fill) datasets ===\n");
@@ -1115,5 +1351,33 @@ int main()
     evalSplit("up_corvette_v1", ds_up_corvette_v1, ds_up_corvette_v1_len, true);
     evalSplit("up_front_v2", ds_up_front_v2, ds_up_front_v2_len, true);
     evalSplit("up_rear_v2", ds_up_rear_v2, ds_up_rear_v2_len, true);
+
+    printf("\n=== schema 3 data (7/30 test 2) vs the schema 2 data it replaced ===\n");
+    evalWeighting("up_front OLD", ds_up_front_car2026, ds_up_front_car2026_len, true);
+    evalWeighting("up_front NEW", ds_up_front_s3, ds_up_front_s3_len, true);
+    evalWeighting("up_rear OLD", ds_up_rear_car2026, ds_up_rear_car2026_len, true);
+    evalWeighting("up_rear NEW", ds_up_rear_s3, ds_up_rear_s3_len, true);
+    evalWeighting("down_front OLD", ds_down_front_car2026, ds_down_front_car2026_len, false);
+    evalWeighting("down_front NEW", ds_down_front_s3, ds_down_front_s3_len, false);
+    evalWeighting("down_rear OLD", ds_down_rear_car2026, ds_down_rear_car2026_len, false);
+    evalWeighting("down_rear NEW", ds_down_rear_s3, ds_down_rear_s3_len, false);
+
+    printf("\n=== does others_flowing explain the residual? ===\n");
+    evalContention("up_front NEW", ds_up_front_s3, ds_up_front_s3_len, true);
+    evalContention("up_rear NEW", ds_up_rear_s3, ds_up_rear_s3_len, true);
+    evalContention("down_front NEW", ds_down_front_s3, ds_down_front_s3_len, false);
+    evalContention("down_rear NEW", ds_down_rear_s3, ds_down_rear_s3_len, false);
+
+    printf("\n=== shipping code path, 4 coefficients, real contention counts ===\n");
+    evalProduction("up_front", ds_up_front_s3, ds_up_front_s3_len, true);
+    evalProduction("up_rear", ds_up_rear_s3, ds_up_rear_s3_len, true);
+    evalProduction("down_front", ds_down_front_s3, ds_down_front_s3_len, false);
+    evalProduction("down_rear", ds_down_rear_s3, ds_down_rear_s3_len, false);
+
+    printf("\n=== regime-split on the new data ===\n");
+    evalSplit("up_front NEW", ds_up_front_s3, ds_up_front_s3_len, true);
+    evalSplit("up_rear NEW", ds_up_rear_s3, ds_up_rear_s3_len, true);
+    evalSplit("down_front NEW", ds_down_front_s3, ds_down_front_s3_len, false);
+    evalSplit("down_rear NEW", ds_down_rear_s3, ds_down_rear_s3_len, false);
     return 0;
 }

@@ -22,12 +22,13 @@ There are **4 models per vehicle**: up-front, up-rear, down-front, down-rear
 
 ## The model
 
-Each model is a 3-parameter linear regression on physics-derived features. Inputs are raw gauge
-psi; the output is valve-open time normalized by `ML_TIME_NORM_MS` (5000 ms).
+Each model is a 4-parameter linear regression (`ML_NUM_COEFF`) on physics-derived features. Inputs
+are raw gauge psi plus a contention count; the output is valve-open time normalized by
+`ML_TIME_NORM_MS` (5000 ms).
 
 ### Fill (up) model
 
-$$t = w_1 \ln\frac{P_{tank}-P_{start}}{P_{tank}-P_{end}} + w_2\frac{P_{end}-P_{start}}{P_{tank}+14.7} + b$$
+$$t = w_1 \ln\frac{P_{tank}-P_{start}}{P_{tank}-P_{end}} + w_2\frac{P_{end}-P_{start}}{P_{tank}+14.7} + w_3 N_{others} + b$$
 
 Filling a bag from a tank through an orifice has two regimes, and each feature covers one:
 
@@ -45,7 +46,7 @@ Invalid inputs make `predictDeNormalized()` return 0, which the caller treats as
 
 ### Dump (down) model
 
-$$t = w_1 \ln\frac{P_{start}+14.7}{P_{end}+14.7} + w_2 \ln\frac{\max(P_{start},1)}{\max(P_{end},1)} + b$$
+$$t = w_1 \ln\frac{P_{start}+14.7}{P_{end}+14.7} + w_2 \ln\frac{\max(P_{start},1)}{\max(P_{end},1)} + w_3 N_{others} + b$$
 
 Venting to atmosphere also has two regimes:
 
@@ -57,6 +58,29 @@ Venting to atmosphere also has two regimes:
 Note: fitted data tends to give the tail a *negative* weight. That is not a bug — bag volume
 shrinks as the suspension drops, so low-pressure dumps run faster than a fixed-volume model
 predicts, and the fit uses the tail term to express that.
+
+### Contention ($N_{others}$, both models)
+
+All four corners draw from one tank and vent through one exhaust, so an identical pressure move
+takes materially longer when other corners are moving with it. $N_{others}$ is how many of the other
+three are expected to have a same-direction valve open during this pulse.
+
+This was the single largest source of error in the model. Grouping the residuals of the previous
+three-parameter fit by contention gave a clean monotonic ladder — the model ran ~330 ms long on
+front fills that happened alone and ~170 ms short on the same fills against three others. Adding
+the term cut holdout RMSE on the 7/30 dataset by 12% (up front), 32% (up rear), 31% (down front)
+and 49% (down rear), and collapsed the small-move/large-move bias split that had survived every
+other feature parameterization tried. Fitted cost is roughly 240/305/155/110 ms per competing
+corner for up front / up rear / down front / down rear.
+
+**The count is an estimate of intent, not a measurement of state,** and it has to be: the model
+predicts before opening its valve, and at that moment every thread is parked at the barrier with its
+valve shut, so counting open valves would always return zero. `Wheel::estimateOtherCornersFlowing()`
+instead counts the other corners that are still in a goal routine and have a remaining move large
+enough to open the same-direction valve. A corner whose pulse turns out much shorter than ours stops
+competing partway through, so the estimate can run high — but it is the *same* estimate at training
+time and at prediction time, which is what actually matters. Training on a count measured during the
+pulse would leave the model predicting from a quantity it was never fitted on.
 
 ### Why these replaced the v1 features
 
@@ -81,13 +105,10 @@ it is the only place a tank reading reflects the tank rather than whatever was f
 `Compressor::getTankPressure()` is deliberately *not* used here — it is a 5-sample mean that refreshes
 only every 500 ms and is sampled regardless of valve state.
 
-Each sample also records `others_flowing`: how many of the other three corners had a same-direction
-valve open at the midpoint of the pulse. All four corners share one tank filling and one exhaust
-dumping, so the same pressure move runs at a different rate alone than it does with three others
-competing. **This field is logged but is not a model input** — it exists so we can measure whether
-contention explains the residual bias (predictions long on moves ≤15 psi, short on moves >15 psi)
-that survives every feature parameterization tried so far. Using it means widening the fitter and the
-RLS covariance from 3×3 to 4×4, which is deliberately deferred until the data justifies it.
+Each sample also records `others_flowing`: how many of the other three corners are expected to share
+the tank (or the exhaust) during this pulse. All four corners share one tank filling and one exhaust
+dumping, so the same pressure move runs at a materially different rate alone than it does with three
+others competing. It is the model's third input — see *Contention* below.
 
 `recordLearnSample()` routes each sample by model state:
 
@@ -107,10 +128,11 @@ quality gate, when the app sends a reset, or on a schema change.
 When a not-ready model has 150 samples, `trainSingleAIModel()` runs once (from `task_trainAI`):
 
 1. `AIFitter` accumulates the normal equations ($X^TX$, $X^Ty$) over all valid samples in one pass.
-2. A ridge-regularized 3×3 solve (Cramer's rule, `ML_FIT_RIDGE`) produces the **exact**
-   least-squares weights. The model is linear in $w_1, w_2, b$, so no epochs and no learning rate
-   are needed — this replaced the old 10,000-epoch SGD loop (~45 s → ~1 ms) and lands on the true
-   optimum instead of orbiting it.
+2. A ridge-regularized 4×4 solve (Gaussian elimination with partial pivoting, `ML_FIT_RIDGE`)
+   produces the **exact** least-squares weights. The model is linear in $w_1, w_2, w_3, b$, so no
+   epochs and no learning rate are needed — this replaced the old 10,000-epoch SGD loop (~45 s →
+   ~1 ms) and lands on the true optimum instead of orbiting it. Pivoting matters here: the two
+   physics features correlate around +0.95, and Cramer's rule on that is numerically fragile.
 3. **Quality gate:** RMSE of the fit over its own training data must be ≤ `ML_BATCH_RMSE_GATE_MS`
    (400 ms). A model that can't fit its own data never gets valve control. On failure (or a
    singular/underdetermined solve) the model is simply left untrained and the corner keeps using
@@ -138,7 +160,7 @@ Once ready, every new sample updates the model immediately. `processLearnSampleQ
   the running mean is clipped so a burst of garbage can't talk its way past the gate. One bump or
   sensor glitch cannot yank the weights.
 - **Anchor replay:** day-to-day driving is mostly small trim moves, and the forgetting window would
-  slowly wash out what the bootstrap taught about big lifts (catastrophic forgetting, 3-parameter
+  slowly wash out what the bootstrap taught about big lifts (catastrophic forgetting, small-model
   edition). Every `ML_ONLINE_ANCHOR_INTERVAL` (5th) online sample, one retained bootstrap sample is
   replayed through the same RLS update, cycling through the stored 150.
 - Weights are saved to NVS once per queue drain (not per sample); `Preferencable::setDouble` also
@@ -171,19 +193,28 @@ re-measures and re-decides every iteration.
 
 ## Schema migration (fielded devices)
 
-`ML_MODEL_SCHEMA_VERSION` (in `pressureMath.h`) identifies both the feature set the stored weights
-were trained with and the on-disk layout of `PressureLearnSaveStruct` — bump it for either. At boot,
-`beginSaveData()` compares it against the `mlModelSchema` NVS value (devices
-from before this mechanism default to 1). On mismatch it calls `clearPressureData()` — wiping
-weights, ready flags, bootstrap sample files, and the reported AI percentage — then stores the new
-version. The vehicle re-collects `LEARN_SAVE_COUNT` samples per model and falls back to lookup-table
-timing until it does.
+There are two version numbers in `pressureMath.h`, because the two kinds of change have very
+different costs to an owner. `beginSaveData()` checks both at boot.
 
-The check lives in `beginSaveData()` rather than in `loadAILearnedDataPreferences()` because
-`clearPressureData()` calls the latter itself, which would recurse.
-
-**Bump the schema version whenever `computeFeatures()` changes meaning.** Weights are not
+`ML_MODEL_SCHEMA_VERSION` identifies the **feature set** the stored weights were trained with. A
+mismatch only invalidates the weights — the recorded samples are still perfectly good input — so it
+calls `clearAIWeightsOnly()`, which drops the weights and ready flags but leaves the sample files
+alone. `trainAIModels()` then refits from those files on that same boot. **Nobody re-collects for a
+feature change.** Bump this whenever `computeFeatures()` changes meaning; weights are not
 transferable between feature sets.
+
+`ML_SAMPLE_RECORD_VERSION` identifies the **on-disk layout** of `PressureLearnSaveStruct`. A
+mismatch means the files can no longer be parsed, so this one calls `clearPressureData()` — wiping
+weights, ready flags, sample files, and the reported AI percentage — and the vehicle re-collects
+`LEARN_SAVE_COUNT` samples per model on lookup-table timing. Bump it *only* for a real size or field
+order change; it is the one version that costs an owner a collection cycle.
+
+Devices predating these keys default to schema 1. The record version defaults from the schema
+version (a device that already ran schema 3 wrote its files in the current layout, so it must not be
+told to wipe them).
+
+The checks live in `beginSaveData()` rather than in `loadAILearnedDataPreferences()` because the
+clear functions call the latter themselves, which would recurse.
 
 ---
 

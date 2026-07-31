@@ -49,7 +49,7 @@ namespace PressureSensorCalibration
 void trainAIModels();
 /** Phase 2: drain online sample queues for ready models (call from task_trainAI loop) */
 void processLearnSampleQueues();
-double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure);
+double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure, double others_flowing);
 bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex);
 void setupLEDs();
 #endif

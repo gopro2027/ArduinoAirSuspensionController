@@ -100,12 +100,14 @@ void loadAILearnedDataPreferences()
     {
         learnDataIndex[i] = readBytes(getLogFileName((SOLENOID_AI_INDEX)i), learnData[i], LEARN_SAVE_COUNT * sizeof(PressureLearnSaveStruct)) / sizeof(PressureLearnSaveStruct);
         char buf[15];
-        snprintf(buf, sizeof(buf), "model%i|%i", i, 0);
-        _SaveData.aiModels[i].weights[0].loadDouble(buf, 0.1);
-        snprintf(buf, sizeof(buf), "model%i|%i", i, 1);
-        _SaveData.aiModels[i].weights[1].loadDouble(buf, 0.1);
-        snprintf(buf, sizeof(buf), "model%i|%i", i, 2);
-        _SaveData.aiModels[i].weights[2].loadDouble(buf, 0.0);
+        // w1 and w2 default to a gentle non-zero so an untrained model still moves; the contention
+        // weight and the bias start at zero so they contribute nothing until they are fitted.
+        const double weightDefaults[ML_NUM_COEFF] = {0.1, 0.1, 0.0, 0.0};
+        for (int w = 0; w < ML_NUM_COEFF; w++)
+        {
+            snprintf(buf, sizeof(buf), "model%i|%i", i, w);
+            _SaveData.aiModels[i].weights[w].loadDouble(buf, weightDefaults[w]);
+        }
         snprintf(buf, sizeof(buf), "model%i|r", i);
         _SaveData.aiModels[i].isReadyToUse.load(buf, false);
         _SaveData.aiModels[i].loadModel(); // copy the values to the internal model
@@ -252,17 +254,34 @@ void beginSaveData()
     clearLearnSampleQueues();
     // downDataMutex = xSemaphoreCreateMutex();
 
-    // Weights trained on an older feature set are meaningless with the new math, and samples
-    // collected by the older firmware are not worth carrying into it either, so start the whole
-    // model over. Devices from before this check default to schema 1. This lives here rather than
-    // in loadAILearnedDataPreferences() because clearPressureData() calls that function itself.
+    // Two independent versions, because they have very different costs. A feature-set change only
+    // makes the stored *weights* meaningless - the samples are still valid input, so wiping the
+    // weights and refitting from the files already on disk gets the vehicle a correct model on this
+    // same boot with no re-collection. A record-layout change makes the files themselves
+    // unparseable, and that is the only case that justifies making an owner re-collect.
+    //
+    // This lives here rather than in loadAILearnedDataPreferences() because the clear functions
+    // call that function themselves.
     _SaveData.mlModelSchema.load("mlModelSchema", 1);
-    if (_SaveData.mlModelSchema.get().i != ML_MODEL_SCHEMA_VERSION)
+    // A device that already ran schema 3 wrote its files in the current record layout, so seed the
+    // record version from the feature version instead of assuming the oldest.
+    _SaveData.mlSampleRecord.load("mlSampleRec", _SaveData.mlModelSchema.get().i >= 3 ? 2 : 1);
+
+    if (_SaveData.mlSampleRecord.get().i != ML_SAMPLE_RECORD_VERSION)
     {
-        Serial.print("AI model schema changed to ");
-        Serial.print(ML_MODEL_SCHEMA_VERSION);
+        Serial.print("AI sample record layout changed to ");
+        Serial.print(ML_SAMPLE_RECORD_VERSION);
         Serial.println(", clearing stored weights and samples");
         clearPressureData();
+        _SaveData.mlSampleRecord.set(ML_SAMPLE_RECORD_VERSION);
+        _SaveData.mlModelSchema.set(ML_MODEL_SCHEMA_VERSION);
+    }
+    else if (_SaveData.mlModelSchema.get().i != ML_MODEL_SCHEMA_VERSION)
+    {
+        Serial.print("AI feature set changed to ");
+        Serial.print(ML_MODEL_SCHEMA_VERSION);
+        Serial.println(", clearing weights and refitting from the samples already on disk");
+        clearAIWeightsOnly();
         _SaveData.mlModelSchema.set(ML_MODEL_SCHEMA_VERSION);
     }
 
@@ -323,6 +342,20 @@ void clearPressureData()
     AIReadyBittset = 0;
     AIPercentage = 0;
     loadAILearnedDataPreferences();
+}
+
+void clearAIWeightsOnly()
+{
+    for (int i = 0; i < 4; i++)
+    {
+        _SaveData.aiModels[i].deletePreferences();
+    }
+    clearLearnSampleQueues();
+    AIReadyBittset = 0;
+    loadAILearnedDataPreferences();
+    // The sample files survived, so the percentage is whatever those files still hold - trainAIModels()
+    // refits from them on this boot rather than the vehicle collecting again
+    updateAIPercentage();
 }
 
 void clearPressureDataSingle(SOLENOID_AI_INDEX index)

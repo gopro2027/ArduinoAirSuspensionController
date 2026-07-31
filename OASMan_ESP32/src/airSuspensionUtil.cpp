@@ -583,7 +583,7 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
     int len = getLearnDataLength(index);
     for (int j = 0; j < len; j++)
     {
-        fitter.add(aiModelsTemp, pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].timeMS);
+        fitter.add(aiModelsTemp, pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].others_flowing, pls[j].timeMS);
     }
 
     if (!fitter.solveInto(aiModelsTemp))
@@ -604,7 +604,7 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
         {
             continue;
         }
-        double d = aiModelsTemp.predictDeNormalized(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure) - (double)pls[j].timeMS;
+        double d = aiModelsTemp.predictDeNormalized(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].others_flowing) - (double)pls[j].timeMS;
         sumSqMs += d * d;
         n++;
     }
@@ -627,7 +627,7 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
     Serial.print("Time for training: ");
     Serial.println(total);
 
-    pref->model.loadWeights(aiModelsTemp.w1, aiModelsTemp.w2, aiModelsTemp.b);
+    pref->model.loadWeights(aiModelsTemp.w1, aiModelsTemp.w2, aiModelsTemp.w3, aiModelsTemp.b);
     // Hand the batch fit's covariance + noise floor to the online learner so RLS updates start
     // appropriately small and the outlier gate is armed from sample one
     fitter.initOnline(pref->model);
@@ -648,7 +648,7 @@ static void initOnlineStateFromLearnData(SOLENOID_AI_INDEX index)
     AIFitter fitter;
     for (int j = 0; j < len; j++)
     {
-        fitter.add(pref->model, pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].timeMS);
+        fitter.add(pref->model, pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].others_flowing, pls[j].timeMS);
     }
     if (!fitter.initOnline(pref->model))
     {
@@ -664,7 +664,7 @@ static void initOnlineStateFromLearnData(SOLENOID_AI_INDEX index)
         {
             continue;
         }
-        double d = (pref->model.predictDeNormalized(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure) - (double)pls[j].timeMS) / ML_TIME_NORM_MS;
+        double d = (pref->model.predictDeNormalized(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].others_flowing) - (double)pls[j].timeMS) / ML_TIME_NORM_MS;
         sumSqNorm += d * d;
         n++;
     }
@@ -751,7 +751,7 @@ void processLearnSampleQueues()
         PressureLearnSaveStruct sample;
         while (dequeueLearnSample(index, &sample))
         {
-            if (pref->model.trainOnline(sample.start_pressure, sample.goal_pressure, sample.tank_pressure, sample.timeMS))
+            if (pref->model.trainOnline(sample.start_pressure, sample.goal_pressure, sample.tank_pressure, sample.others_flowing, sample.timeMS))
             {
                 trained = true;
             }
@@ -766,7 +766,7 @@ void processLearnSampleQueues()
                 samplesSinceAnchor[i] = 0;
                 PressureLearnSaveStruct *anchor = &getLearnData(index)[anchorCursor[i] % len];
                 anchorCursor[i] = (anchorCursor[i] + 1) % len;
-                if (pref->model.trainOnline(anchor->start_pressure, anchor->goal_pressure, anchor->tank_pressure, anchor->timeMS))
+                if (pref->model.trainOnline(anchor->start_pressure, anchor->goal_pressure, anchor->tank_pressure, anchor->others_flowing, anchor->timeMS))
                 {
                     trained = true;
                 }
@@ -781,9 +781,9 @@ void processLearnSampleQueues()
     }
 }
 
-double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure)
+double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure, double others_flowing)
 {
-    return getAIModel(aiIndex)->model.predictDeNormalized(start_pressure, end_pressure, tank_pressure);
+    return getAIModel(aiIndex)->model.predictDeNormalized(start_pressure, end_pressure, tank_pressure, others_flowing);
 }
 
 bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex)

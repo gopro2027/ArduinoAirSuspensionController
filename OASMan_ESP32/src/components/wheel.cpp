@@ -273,22 +273,42 @@ void custom_barrier_wait(int num_participants)
 }
 
 // All four corners share one tank when filling and one exhaust when dumping, so an identical
-// pressure move runs at a different rate depending on how many others are competing for the air.
-// Sampled at the midpoint of the pulse, since corners with shorter pulses drop out partway through.
-static uint8_t countOtherCornersFlowing(byte thisWheelNum, bool up)
+// pressure move runs at a materially different rate depending on how many others are competing for
+// the air. This count is a model input, which forces it to be something knowable *before* the valve
+// opens - a count of valves already open would be zero here, since every thread is sitting at the
+// barrier with its valve shut, and training on a count measured during the pulse would leave the
+// model predicting from a quantity it was never fitted on.
+//
+// So estimate intent rather than observe state: another corner will share the air with us if it is
+// still in its goal routine and its own remaining move is large enough to open the same-direction
+// valve. It is an estimate - a corner whose pulse is much shorter than ours stops competing partway
+// through - but it is the same estimate at training time and at prediction time, which is what
+// matters.
+uint8_t Wheel::estimateOtherCornersFlowing(bool up)
 {
     uint8_t count = 0;
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < NUM_WHEEL_THREADS; i++)
     {
-        if (i == (int)thisWheelNum)
+        if (i == (int)this->thisWheelNum || !flagStartPressureGoalRoutine[i].load())
         {
             continue;
         }
-        Solenoid *s = up ? getWheel(i)->getInSolenoid() : getWheel(i)->getOutSolenoid();
-        if (s->isOpen())
+        Wheel *other = getWheel(i);
+        int dif = (int)other->pressureGoal - (int)other->getSelectedInputValue();
+        if (abs(dif) <= getMinValveOpenPSI())
         {
-            count++;
+            continue; // already at its goal, it just hasn't dropped its flag yet
         }
+        bool otherUp = dif >= 0;
+        if (otherUp != up)
+        {
+            continue; // filling while we dump costs us nothing, the two don't share a path
+        }
+        if (!otherUp && other->onlyAirUp)
+        {
+            continue; // it will break out rather than dump
+        }
+        count++;
     }
     return count;
 }
@@ -364,11 +384,12 @@ void Wheel::goalRoutine() {
 
                     double start_pressure = this->getSelectedInputValue();
                     double end_pressure = this->pressureGoal;
+                    uint8_t othersFlowing = this->estimateOtherCornersFlowing(up);
 
                     if (canUseAiPrediction(valve->getAIIndex()))
                     {
 
-                        int aiPredict = getAiPredictionTime(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure);
+                        int aiPredict = getAiPredictionTime(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, othersFlowing);
 
                         // 0 means the model declined to predict (e.g. tank at/below the goal pressure)
                         if (aiPredict < 5000 && aiPredict > 0)
@@ -411,12 +432,9 @@ void Wheel::goalRoutine() {
                         #endif
 
                         if (canOpen) {
-                            // Open valve for calculated time. The delay is split so the contention
-                            // count lands mid-pulse; the two halves still add up to valveTime.
+                            // Open valve for calculated time
                             valve->open();
-                            delay(valveTime / 2);
-                            uint8_t othersFlowing = countOtherCornersFlowing(this->thisWheelNum, up);
-                            delay(valveTime - (valveTime / 2)); // integer division rounds down, so this is the second half of the valve time
+                            delay(valveTime);
                             valve->close();
 
                             // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit

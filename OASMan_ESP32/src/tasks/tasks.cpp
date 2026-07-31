@@ -184,7 +184,8 @@ void setup_tasks()
     xTaskCreate(
         task_trainAI,
         "trainAI",
-        512 * 8, // was: 512 * 4 -- the batch fitter/RLS matrix locals stack on top of an nvs write and overflowed it
+        512 * 10, // was: 512 * 8 (and 512 * 4 before that, which overflowed) -- the batch fitter/RLS
+                  // matrix locals stack on top of an nvs write, and they grew again at 4 coefficients
         NULL,
         1000,
         NULL);

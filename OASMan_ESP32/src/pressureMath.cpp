@@ -6,61 +6,155 @@
 #endif
 
 // ---------------------------------------------------------------------------
-// 3x3 linear algebra helpers (row-major)
+// N x N linear algebra helpers (row-major, N = ML_NUM_COEFF)
+//
+// Gauss-Jordan with partial pivoting rather than Cramer's rule: at 4x4 the determinant expansion
+// is both slower and worse conditioned, and pivoting is what keeps the near-collinear feature
+// columns (f0 and f1 correlate around +0.95) from producing garbage weights.
 // ---------------------------------------------------------------------------
 
-static double det3(const double M[9])
-{
-    return M[0] * (M[4] * M[8] - M[5] * M[7]) -
-           M[1] * (M[3] * M[8] - M[5] * M[6]) +
-           M[2] * (M[3] * M[7] - M[4] * M[6]);
-}
+#define ML_N ML_NUM_COEFF
 
-// Solve M * x = r by Cramer's rule. Returns false when M is (near) singular.
-static bool solve3(const double M[9], const double r[3], double x[3])
+// Solve M * x = r. Inputs are copied, so the caller's matrices survive.
+static bool solveN(const double *Min, const double *rin, double *x)
 {
-    double d = det3(M);
-    if (!isfinite(d) || fabs(d) < 1e-12)
+    double M[ML_N * ML_N];
+    double r[ML_N];
+    for (int i = 0; i < ML_N * ML_N; i++)
     {
-        return false;
+        M[i] = Min[i];
     }
-    double T[9];
-    for (int col = 0; col < 3; col++)
+    for (int i = 0; i < ML_N; i++)
     {
-        for (int i = 0; i < 9; i++)
+        r[i] = rin[i];
+    }
+
+    for (int col = 0; col < ML_N; col++)
+    {
+        int piv = col;
+        for (int row = col + 1; row < ML_N; row++)
         {
-            T[i] = M[i];
+            if (fabs(M[row * ML_N + col]) > fabs(M[piv * ML_N + col]))
+            {
+                piv = row;
+            }
         }
-        T[col] = r[0];
-        T[col + 3] = r[1];
-        T[col + 6] = r[2];
-        x[col] = det3(T) / d;
-    }
-    return isfinite(x[0]) && isfinite(x[1]) && isfinite(x[2]);
-}
-
-// Invert M via the adjugate. Returns false when M is (near) singular.
-static bool invert3(const double M[9], double out[9])
-{
-    double d = det3(M);
-    if (!isfinite(d) || fabs(d) < 1e-12)
-    {
-        return false;
-    }
-    out[0] = (M[4] * M[8] - M[5] * M[7]) / d;
-    out[1] = (M[2] * M[7] - M[1] * M[8]) / d;
-    out[2] = (M[1] * M[5] - M[2] * M[4]) / d;
-    out[3] = (M[5] * M[6] - M[3] * M[8]) / d;
-    out[4] = (M[0] * M[8] - M[2] * M[6]) / d;
-    out[5] = (M[2] * M[3] - M[0] * M[5]) / d;
-    out[6] = (M[3] * M[7] - M[4] * M[6]) / d;
-    out[7] = (M[1] * M[6] - M[0] * M[7]) / d;
-    out[8] = (M[0] * M[4] - M[1] * M[3]) / d;
-    for (int i = 0; i < 9; i++)
-    {
-        if (!isfinite(out[i]))
+        if (!isfinite(M[piv * ML_N + col]) || fabs(M[piv * ML_N + col]) < 1e-12)
         {
             return false;
+        }
+        if (piv != col)
+        {
+            for (int c = 0; c < ML_N; c++)
+            {
+                double t = M[col * ML_N + c];
+                M[col * ML_N + c] = M[piv * ML_N + c];
+                M[piv * ML_N + c] = t;
+            }
+            double t = r[col];
+            r[col] = r[piv];
+            r[piv] = t;
+        }
+        for (int row = col + 1; row < ML_N; row++)
+        {
+            double factor = M[row * ML_N + col] / M[col * ML_N + col];
+            for (int c = col; c < ML_N; c++)
+            {
+                M[row * ML_N + c] -= factor * M[col * ML_N + c];
+            }
+            r[row] -= factor * r[col];
+        }
+    }
+
+    for (int row = ML_N - 1; row >= 0; row--)
+    {
+        double sum = r[row];
+        for (int c = row + 1; c < ML_N; c++)
+        {
+            sum -= M[row * ML_N + c] * x[c];
+        }
+        x[row] = sum / M[row * ML_N + row];
+    }
+    for (int i = 0; i < ML_N; i++)
+    {
+        if (!isfinite(x[i]))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Invert M by reducing [M | I] to [I | M^-1].
+static bool invertN(const double *Min, double *out)
+{
+    double aug[ML_N * ML_N * 2];
+    for (int row = 0; row < ML_N; row++)
+    {
+        for (int c = 0; c < ML_N; c++)
+        {
+            aug[row * ML_N * 2 + c] = Min[row * ML_N + c];
+            aug[row * ML_N * 2 + ML_N + c] = (row == c) ? 1.0 : 0.0;
+        }
+    }
+
+    for (int col = 0; col < ML_N; col++)
+    {
+        int piv = col;
+        for (int row = col + 1; row < ML_N; row++)
+        {
+            if (fabs(aug[row * ML_N * 2 + col]) > fabs(aug[piv * ML_N * 2 + col]))
+            {
+                piv = row;
+            }
+        }
+        double p = aug[piv * ML_N * 2 + col];
+        if (!isfinite(p) || fabs(p) < 1e-12)
+        {
+            return false;
+        }
+        if (piv != col)
+        {
+            for (int c = 0; c < ML_N * 2; c++)
+            {
+                double t = aug[col * ML_N * 2 + c];
+                aug[col * ML_N * 2 + c] = aug[piv * ML_N * 2 + c];
+                aug[piv * ML_N * 2 + c] = t;
+            }
+            p = aug[col * ML_N * 2 + col];
+        }
+        for (int c = 0; c < ML_N * 2; c++)
+        {
+            aug[col * ML_N * 2 + c] /= p;
+        }
+        for (int row = 0; row < ML_N; row++)
+        {
+            if (row == col)
+            {
+                continue;
+            }
+            double factor = aug[row * ML_N * 2 + col];
+            if (factor == 0)
+            {
+                continue;
+            }
+            for (int c = 0; c < ML_N * 2; c++)
+            {
+                aug[row * ML_N * 2 + c] -= factor * aug[col * ML_N * 2 + c];
+            }
+        }
+    }
+
+    for (int row = 0; row < ML_N; row++)
+    {
+        for (int c = 0; c < ML_N; c++)
+        {
+            double val = aug[row * ML_N * 2 + ML_N + c];
+            if (!isfinite(val))
+            {
+                return false;
+            }
+            out[row * ML_N + c] = val;
         }
     }
     return true;
@@ -75,10 +169,11 @@ AIModel::AIModel()
     onlineInitDefault();
 }
 
-void AIModel::loadWeights(double _w1, double _w2, double _b)
+void AIModel::loadWeights(double _w1, double _w2, double _w3, double _b)
 {
     w1 = _w1;
     w2 = _w2;
+    w3 = _w3;
     b = _b;
 }
 
@@ -93,7 +188,8 @@ bool AIModel::isSampleValid(double start_pressure, double end_pressure, double t
     return (start_pressure >= 0) && (end_pressure >= 0);
 }
 
-void AIModel::computeFeatures(double start_pressure, double end_pressure, double tank_pressure, double f[3])
+void AIModel::computeFeatures(double start_pressure, double end_pressure, double tank_pressure,
+                              double others_flowing, double f[ML_NUM_COEFF])
 {
     if (this->up)
     {
@@ -115,30 +211,35 @@ void AIModel::computeFeatures(double start_pressure, double end_pressure, double
         double eg = end_pressure < 1 ? 1 : end_pressure;
         f[1] = log(sg / eg);
     }
-    f[2] = 1.0;
+    // Contention: all four corners share one tank filling and one exhaust dumping, so the same
+    // pressure move takes materially longer with others flowing than it does alone.
+    f[2] = others_flowing;
+    f[3] = 1.0;
 }
 
-double AIModel::predictDeNormalized(double start_pressure, double end_pressure, double tank_pressure)
+double AIModel::predictDeNormalized(double start_pressure, double end_pressure, double tank_pressure,
+                                    double others_flowing)
 {
     if (!isSampleValid(start_pressure, end_pressure, tank_pressure))
     {
         // 0 gets rejected by the aiPredict > 0 check in wheel.cpp, so the corner falls back to table timing
         return 0;
     }
-    double f[3];
-    computeFeatures(start_pressure, end_pressure, tank_pressure, f);
-    return (w1 * f[0] + w2 * f[1] + b) * ML_TIME_NORM_MS;
+    double f[ML_NUM_COEFF];
+    computeFeatures(start_pressure, end_pressure, tank_pressure, others_flowing, f);
+    return (w1 * f[0] + w2 * f[1] + w3 * f[2] + b) * ML_TIME_NORM_MS;
 }
 
 void AIModel::onlineInitDefault()
 {
-    for (int i = 0; i < 9; i++)
+    for (int i = 0; i < ML_N * ML_N; i++)
     {
         P[i] = 0;
     }
-    P[0] = ML_RLS_DEFAULT_PRIOR;
-    P[4] = ML_RLS_DEFAULT_PRIOR;
-    P[8] = ML_RLS_DEFAULT_PRIOR;
+    for (int i = 0; i < ML_N; i++)
+    {
+        P[i * ML_N + i] = ML_RLS_DEFAULT_PRIOR;
+    }
     errEma = 0;
     errCount = 0;
 }
@@ -151,16 +252,17 @@ void AIModel::onlineSeedGate(double meanSquaredNormError)
     errCount = ML_OUTLIER_GATE_WARMUP;
 }
 
-bool AIModel::trainOnline(double start_pressure, double end_pressure, double tank_pressure, double actual_time_ms)
+bool AIModel::trainOnline(double start_pressure, double end_pressure, double tank_pressure,
+                          double others_flowing, double actual_time_ms)
 {
     if (!isSampleValid(start_pressure, end_pressure, tank_pressure))
     {
         return false;
     }
-    double f[3];
-    computeFeatures(start_pressure, end_pressure, tank_pressure, f);
+    double f[ML_NUM_COEFF];
+    computeFeatures(start_pressure, end_pressure, tank_pressure, others_flowing, f);
     double y = actual_time_ms / ML_TIME_NORM_MS;
-    double err = y - (w1 * f[0] + w2 * f[1] + b);
+    double err = y - (w1 * f[0] + w2 * f[1] + w3 * f[2] + b);
     if (!isfinite(err))
     {
         // an inf/nan reaching the weights would be unrecoverable once saveWeights() commits it to nvs
@@ -181,28 +283,42 @@ bool AIModel::trainOnline(double start_pressure, double end_pressure, double tan
     }
 
     // Standard RLS with forgetting factor: exact least squares over an exponentially weighted window
-    double Pf[3];
-    for (int r = 0; r < 3; r++)
+    double Pf[ML_N];
+    double denom = ML_RLS_FORGETTING;
+    for (int r = 0; r < ML_N; r++)
     {
-        Pf[r] = P[r * 3] * f[0] + P[r * 3 + 1] * f[1] + P[r * 3 + 2] * f[2];
+        double sum = 0;
+        for (int c = 0; c < ML_N; c++)
+        {
+            sum += P[r * ML_N + c] * f[c];
+        }
+        Pf[r] = sum;
     }
-    double denom = ML_RLS_FORGETTING + f[0] * Pf[0] + f[1] * Pf[1] + f[2] * Pf[2];
+    for (int i = 0; i < ML_N; i++)
+    {
+        denom += f[i] * Pf[i];
+    }
     if (!isfinite(denom) || denom < 1e-9)
     {
         return false;
     }
-    double k[3] = {Pf[0] / denom, Pf[1] / denom, Pf[2] / denom};
+    double k[ML_N];
+    for (int i = 0; i < ML_N; i++)
+    {
+        k[i] = Pf[i] / denom;
+    }
 
     w1 += k[0] * err;
     w2 += k[1] * err;
-    b += k[2] * err;
+    w3 += k[2] * err;
+    b += k[3] * err;
 
     // P = (P - k * Pf^T) / lambda. k is Pf scaled, so the update is a symmetric outer product
-    for (int r = 0; r < 3; r++)
+    for (int r = 0; r < ML_N; r++)
     {
-        for (int c = 0; c < 3; c++)
+        for (int c = 0; c < ML_N; c++)
         {
-            P[r * 3 + c] = (P[r * 3 + c] - k[r] * Pf[c]) / ML_RLS_FORGETTING;
+            P[r * ML_N + c] = (P[r * ML_N + c] - k[r] * Pf[c]) / ML_RLS_FORGETTING;
         }
     }
     return true;
@@ -211,13 +327,16 @@ bool AIModel::trainOnline(double start_pressure, double end_pressure, double tan
 void AIModel::print_weights()
 {
 #ifdef test_run
-    std::cout << std::setprecision(5) << "Weights: w1=" << w1 << ", w2=" << w2 << ", b=" << b << std::endl;
+    std::cout << std::setprecision(5) << "Weights: w1=" << w1 << ", w2=" << w2 << ", w3=" << w3
+              << ", b=" << b << std::endl;
 #else
     Serial.print("Weights: ");
     Serial.print("w1=");
     Serial.print(w1, 5);
     Serial.print(" w2=");
     Serial.print(w2, 5);
+    Serial.print(" w3=");
+    Serial.print(w3, 5);
     Serial.print(" b=");
     Serial.print(b, 5);
     Serial.println();
@@ -226,6 +345,8 @@ void AIModel::print_weights()
     Serial.print(w1, 5);
     Serial.print(",");
     Serial.print(w2, 5);
+    Serial.print(",");
+    Serial.print(w3, 5);
     Serial.print(",");
     Serial.print(b, 5);
     Serial.println(");");
@@ -243,28 +364,32 @@ AIFitter::AIFitter()
 
 void AIFitter::reset()
 {
-    for (int i = 0; i < 9; i++)
+    for (int i = 0; i < ML_N * ML_N; i++)
     {
         A[i] = 0;
     }
-    v[0] = v[1] = v[2] = 0;
+    for (int i = 0; i < ML_N; i++)
+    {
+        v[i] = 0;
+    }
     n = 0;
 }
 
-void AIFitter::add(AIModel &m, double start_pressure, double end_pressure, double tank_pressure, double actual_time_ms)
+void AIFitter::add(AIModel &m, double start_pressure, double end_pressure, double tank_pressure,
+                   double others_flowing, double actual_time_ms)
 {
     if (!m.isSampleValid(start_pressure, end_pressure, tank_pressure))
     {
         return;
     }
-    double f[3];
-    m.computeFeatures(start_pressure, end_pressure, tank_pressure, f);
+    double f[ML_NUM_COEFF];
+    m.computeFeatures(start_pressure, end_pressure, tank_pressure, others_flowing, f);
     double y = actual_time_ms / ML_TIME_NORM_MS;
-    for (int r = 0; r < 3; r++)
+    for (int r = 0; r < ML_N; r++)
     {
-        for (int c = 0; c < 3; c++)
+        for (int c = 0; c < ML_N; c++)
         {
-            A[r * 3 + c] += f[r] * f[c];
+            A[r * ML_N + c] += f[r] * f[c];
         }
         v[r] += f[r] * y;
     }
@@ -276,30 +401,38 @@ int AIFitter::sampleCount()
     return n;
 }
 
+// Copy of the accumulated normal equations with ridge added to the diagonal.
+void AIFitter::ridged(double *out)
+{
+    double ridge = ML_FIT_RIDGE * n;
+    for (int i = 0; i < ML_N * ML_N; i++)
+    {
+        out[i] = A[i];
+    }
+    for (int i = 0; i < ML_N; i++)
+    {
+        out[i * ML_N + i] += ridge;
+    }
+}
+
 bool AIFitter::solveInto(AIModel &m)
 {
     if (n < ML_FIT_MIN_SAMPLES)
     {
         return false;
     }
-    double M[9];
-    double ridge = ML_FIT_RIDGE * n;
-    for (int i = 0; i < 9; i++)
-    {
-        M[i] = A[i];
-    }
-    M[0] += ridge;
-    M[4] += ridge;
-    M[8] += ridge;
+    double M[ML_N * ML_N];
+    ridged(M);
 
-    double w[3];
-    if (!solve3(M, v, w))
+    double w[ML_N];
+    if (!solveN(M, v, w))
     {
         return false;
     }
     m.w1 = w[0];
     m.w2 = w[1];
-    m.b = w[2];
+    m.w3 = w[2];
+    m.b = w[3];
     return true;
 }
 
@@ -310,22 +443,15 @@ bool AIFitter::initOnline(AIModel &m)
     {
         return false;
     }
-    double M[9];
-    double ridge = ML_FIT_RIDGE * n;
-    for (int i = 0; i < 9; i++)
-    {
-        M[i] = A[i];
-    }
-    M[0] += ridge;
-    M[4] += ridge;
-    M[8] += ridge;
+    double M[ML_N * ML_N];
+    ridged(M);
 
-    double Pinv[9];
-    if (!invert3(M, Pinv))
+    double Pinv[ML_N * ML_N];
+    if (!invertN(M, Pinv))
     {
         return false;
     }
-    for (int i = 0; i < 9; i++)
+    for (int i = 0; i < ML_N * ML_N; i++)
     {
         m.P[i] = Pinv[i];
     }
