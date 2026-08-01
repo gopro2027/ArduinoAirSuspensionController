@@ -78,6 +78,13 @@ void initializeADS()
         ADS1115D_exists = true;
     }
 
+    // Fast conversions (~1.16 ms vs the ~7.8 ms default 128 SPS) so the closed-loop pressure controller
+    // can read bag+tank every tick even with all 4 corners moving. Slightly noisier raw values, which the
+    // offset fit + control deadband absorb. ; was: RATE_ADS1115_128SPS (library default)
+    ADS1115A.setDataRate(RATE_ADS1115_860SPS);
+    ADS1115B.setDataRate(RATE_ADS1115_860SPS);
+    ADS1115C.setDataRate(RATE_ADS1115_860SPS);
+    ADS1115D.setDataRate(RATE_ADS1115_860SPS);
 }
 
 void setupManifold()
@@ -107,8 +114,6 @@ void setupManifold()
         m6_solenoidChamberExhaustPin);
 
 #endif
-
-    initDefaultAIModels();
 }
 
 #pragma endregion
@@ -580,18 +585,19 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
     int len = getLearnDataLength(index);
     for (int j = 0; j < len; j++)
     {
-        fitter.add(aiModelsTemp, pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].others_flowing, pls[j].timeMS);
+        double off = (double)pls[j].settled_bag - (double)pls[j].raw_bag;
+        fitter.add(aiModelsTemp, pls[j].raw_bag, pls[j].raw_tank, pls[j].others_open, off);
     }
 
     if (!fitter.solveInto(aiModelsTemp))
     {
-        Serial.print("AI fit failed (valid samples: ");
+        Serial.print("Offset fit failed (valid samples: ");
         Serial.print(fitter.sampleCount());
-        Serial.println(")");
+        Serial.println("); keeping physics-default weights for control");
         pref->setTrainedCount(0);
         // Enough samples to attempt a real fit but it still could not solve => the data is unusable
-        // (degenerate/singular), so wipe it and let the corner re-collect. Fewer than ML_FIT_MIN_SAMPLES
-        // is only not-enough-data-yet, not bad data, so those samples are kept.
+        // (degenerate/singular), so wipe it and re-collect. Below ML_FIT_MIN_SAMPLES is only
+        // not-enough-yet; keep those and keep using the physics-default weights meanwhile.
         if (fitter.sampleCount() >= ML_FIT_MIN_SAMPLES)
         {
             Serial.println("Wiping unusable samples for this model.");
@@ -600,42 +606,42 @@ void trainSingleAIModel(SOLENOID_AI_INDEX index)
         return;
     }
 
-    double sumSqMs = 0;
+    double sumSqPsi = 0;
     int n = 0;
     for (int j = 0; j < len; j++)
     {
-        if (!aiModelsTemp.isSampleValid(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure))
+        if (!aiModelsTemp.isSampleValid(pls[j].raw_bag, pls[j].raw_tank, pls[j].others_open))
         {
             continue;
         }
-        double d = aiModelsTemp.predictDeNormalized(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].others_flowing) - (double)pls[j].timeMS;
-        sumSqMs += d * d;
+        double off = (double)pls[j].settled_bag - (double)pls[j].raw_bag;
+        double d = aiModelsTemp.predictOffset(pls[j].raw_bag, pls[j].raw_tank, pls[j].others_open) - off;
+        sumSqPsi += d * d;
         n++;
     }
-    double rmseMs = n > 0 ? sqrt(sumSqMs / n) : 0;
-    if (n == 0 || rmseMs > ML_BATCH_RMSE_GATE_MS)
+    double rmsePsi = n > 0 ? sqrt(sumSqPsi / n) : 0;
+    if (n == 0 || rmsePsi > ML_BATCH_RMSE_GATE_PSI)
     {
-        Serial.print("AI fit rejected (data does not fit the model), RMSE ms: ");
-        Serial.println(rmseMs);
-        Serial.println("Wiping unusable samples for this model and re-collecting on table timing.");
+        Serial.print("Offset fit rejected (does not fit the model), RMSE psi: ");
+        Serial.println(rmsePsi);
+        Serial.println("Wiping unusable samples; keeping physics-default weights for control.");
         pref->setTrainedCount(0);
-        // Fit used >= ML_FIT_MIN_SAMPLES (solveInto passed) but the data does not fit the model - unusable.
         clearPressureDataSingle(index);
         return;
     }
 
     unsigned long total = millis() - t;
 
-    Serial.print("Ready ai model: ");
+    Serial.print("Trained offset model: ");
     Serial.println(index);
-    Serial.print("Fit RMSE ms: ");
-    Serial.println(rmseMs);
+    Serial.print("Fit RMSE psi: ");
+    Serial.println(rmsePsi);
     Serial.print("Time for training: ");
     Serial.println(total);
 
     pref->model.loadWeights(aiModelsTemp.w1, aiModelsTemp.w2, aiModelsTemp.w3, aiModelsTemp.b);
     fitter.initOnline(pref->model);
-    pref->model.onlineSeedGate((sumSqMs / n) / (ML_TIME_NORM_MS * ML_TIME_NORM_MS));
+    pref->model.onlineSeedGate((sumSqPsi / n) / (ML_OFFSET_NORM * ML_OFFSET_NORM));
     pref->saveWeights();
     pref->setTrainedCount(fitter.sampleCount());
 }
@@ -650,7 +656,8 @@ static void initOnlineStateFromLearnData(SOLENOID_AI_INDEX index)
     AIFitter fitter;
     for (int j = 0; j < len; j++)
     {
-        fitter.add(pref->model, pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].others_flowing, pls[j].timeMS);
+        double off = (double)pls[j].settled_bag - (double)pls[j].raw_bag;
+        fitter.add(pref->model, pls[j].raw_bag, pls[j].raw_tank, pls[j].others_open, off);
     }
     if (!fitter.initOnline(pref->model))
     {
@@ -662,11 +669,12 @@ static void initOnlineStateFromLearnData(SOLENOID_AI_INDEX index)
     int n = 0;
     for (int j = 0; j < len; j++)
     {
-        if (!pref->model.isSampleValid(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure))
+        if (!pref->model.isSampleValid(pls[j].raw_bag, pls[j].raw_tank, pls[j].others_open))
         {
             continue;
         }
-        double d = (pref->model.predictDeNormalized(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].others_flowing) - (double)pls[j].timeMS) / ML_TIME_NORM_MS;
+        double off = (double)pls[j].settled_bag - (double)pls[j].raw_bag;
+        double d = (pref->model.predictOffset(pls[j].raw_bag, pls[j].raw_tank, pls[j].others_open) - off) / ML_OFFSET_NORM;
         sumSqNorm += d * d;
         n++;
     }
@@ -756,7 +764,7 @@ void processLearnSampleQueues()
         PressureLearnSaveStruct sample;
         while (dequeueLearnSample(index, &sample))
         {
-            if (pref->model.trainOnline(sample.start_pressure, sample.goal_pressure, sample.tank_pressure, sample.others_flowing, sample.timeMS))
+            if (pref->model.trainOnline(sample.raw_bag, sample.raw_tank, sample.others_open, (double)sample.settled_bag - (double)sample.raw_bag))
             {
                 trained = true;
             }
@@ -768,7 +776,7 @@ void processLearnSampleQueues()
                 samplesSinceAnchor[i] = 0;
                 PressureLearnSaveStruct *anchor = &getLearnData(index)[anchorCursor[i] % len];
                 anchorCursor[i] = (anchorCursor[i] + 1) % len;
-                if (pref->model.trainOnline(anchor->start_pressure, anchor->goal_pressure, anchor->tank_pressure, anchor->others_flowing, anchor->timeMS))
+                if (pref->model.trainOnline(anchor->raw_bag, anchor->raw_tank, anchor->others_open, (double)anchor->settled_bag - (double)anchor->raw_bag))
                 {
                     trained = true;
                 }
@@ -782,67 +790,14 @@ void processLearnSampleQueues()
     }
 }
 
-double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure, double others_flowing)
+// The true bag pressure recovered from the live flowing readings while the valve is open:
+// actual = rawBag + learned/default offset. The closed-loop controller stops when this reaches goal.
+// The offset model is always applied (default physics weights until it has trained), because raw
+// flowing readings alone are wrong by ~10 psi. See AI_TRAINING.md.
+double getActualBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank, double others_open)
 {
-    return getAIModel(aiIndex)->model.predictDeNormalized(start_pressure, end_pressure, tank_pressure, others_flowing);
+    return raw_bag + getAIModel(aiIndex)->model.predictOffset(raw_bag, raw_tank, others_open);
 }
-
-bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex)
-{
-    if (!getaiEnabled())
-    {
-        return false;
-    }
-    return getAIModel(aiIndex)->trainedSampleCount.get().i > 0;
-}
-
-// Fraction the AI prediction should contribute to the final valve time, ramping the AI in as it
-// trains: 0 when untrained, n/AI_LEARN_RATIO_NUM while learning, 1.0 once fully trained. The caller
-// blends the remainder from the lookup table. See AI_TRAINING.md.
-double getAiBlendWeight(SOLENOID_AI_INDEX aiIndex)
-{
-    int n = getAIModel(aiIndex)->trainedSampleCount.get().i;
-    if (n <= 0)
-    {
-        return 0.0;
-    }
-    if (n >= AI_LEARN_RATIO_NUM)
-    {
-        return 1.0;
-    }
-    return (double)n / (double)AI_LEARN_RATIO_NUM;
-}
-
-#if USE_DEFAULT_WEIGHTS_IN_FALLBACK_TIMING
-// Default pre-trained physics models with hard-coded per-corner weights from a reference vehicle. They
-// provide the bootstrap / fallback valve timing (via getValveTimingSimpleFit) 
-static AIModel defaultAIModels[4];
-
-void initDefaultAIModels()
-{
-    defaultAIModels[AI_MODEL_UP_FRONT].up = true;
-    defaultAIModels[AI_MODEL_UP_FRONT].loadWeights(0.08331, 0.06747, 0.04273, 0.00089);
-    defaultAIModels[AI_MODEL_UP_REAR].up = true;
-    defaultAIModels[AI_MODEL_UP_REAR].loadWeights(0.07399, -0.00848, 0.05950, -0.04194);
-    defaultAIModels[AI_MODEL_DOWN_FRONT].up = false;
-    defaultAIModels[AI_MODEL_DOWN_FRONT].loadWeights(0.28522, -0.09107, 0.03484, -0.02375);
-    defaultAIModels[AI_MODEL_DOWN_REAR].up = false;
-    defaultAIModels[AI_MODEL_DOWN_REAR].loadWeights(0.18998, -0.04530, 0.02301, -0.02886);
-}
-
-// Returns the default model's predicted valve-open time (ms), or 0 for out-of-range inputs
-// (e.g. tank at/below goal on a fill) - the caller falls back to the linear estimate in that case.
-double getDefaultModelPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure, double others_flowing)
-{
-    return defaultAIModels[aiIndex].predictDeNormalized(start_pressure, end_pressure, tank_pressure, others_flowing);
-}
-#else
-void initDefaultAIModels() {}
-double getDefaultModelPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure, double others_flowing)
-{
-    return -1;
-}
-#endif
 
 #pragma endregion
 

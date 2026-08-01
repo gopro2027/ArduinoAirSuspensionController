@@ -168,44 +168,34 @@ void AIModel::loadWeights(double _w1, double _w2, double _w3, double _b)
     b = _b;
 }
 
-bool AIModel::isSampleValid(double start_pressure, double end_pressure, double tank_pressure)
+bool AIModel::isSampleValid(double raw_bag, double raw_tank, double others_open)
 {
-    if (this->up)
-    {
-        return (tank_pressure > start_pressure) && (tank_pressure > end_pressure);
-    }
-    return (start_pressure >= 0) && (end_pressure >= 0);
+    return isfinite(raw_bag) && isfinite(raw_tank) && isfinite(others_open) &&
+           raw_bag >= 0 && raw_tank >= 0;
 }
 
-void AIModel::computeFeatures(double start_pressure, double end_pressure, double tank_pressure,
-                              double others_flowing, double f[ML_NUM_COEFF])
+// Feature 0 is the flow-driving differential / 100 (scaled so the squared term stays O(1) and the fit
+// is well conditioned): fill is driven by tank->bag, dump is driven by bag->atmosphere(~0). See AI_TRAINING.md.
+void AIModel::computeFeatures(double raw_bag, double raw_tank, double others_open, double f[ML_NUM_COEFF])
 {
-    if (this->up)
-    {
-        f[0] = log((tank_pressure - start_pressure) / (tank_pressure - end_pressure));
-        f[1] = (end_pressure - start_pressure) / (tank_pressure + ML_PSI_ATMOSPHERE);
-    }
-    else
-    {
-        f[0] = log((start_pressure + ML_PSI_ATMOSPHERE) / (end_pressure + ML_PSI_ATMOSPHERE));
-        double sg = start_pressure < 1 ? 1 : start_pressure;
-        double eg = end_pressure < 1 ? 1 : end_pressure;
-        f[1] = log(sg / eg);
-    }
-    f[2] = others_flowing;
+    double differential = this->up ? (raw_tank - raw_bag) : raw_bag;
+    double d = differential / 100.0;
+    f[0] = d;
+    f[1] = d * d;
+    f[2] = others_open;
     f[3] = 1.0;
 }
 
-double AIModel::predictDeNormalized(double start_pressure, double end_pressure, double tank_pressure,
-                                    double others_flowing)
+// Sensor offset in psi (settled - flowing). Fill reads high (negative offset), dump reads low (positive).
+double AIModel::predictOffset(double raw_bag, double raw_tank, double others_open)
 {
-    if (!isSampleValid(start_pressure, end_pressure, tank_pressure))
+    if (!isSampleValid(raw_bag, raw_tank, others_open))
     {
         return 0;
     }
     double f[ML_NUM_COEFF];
-    computeFeatures(start_pressure, end_pressure, tank_pressure, others_flowing, f);
-    return (w1 * f[0] + w2 * f[1] + w3 * f[2] + b) * ML_TIME_NORM_MS;
+    computeFeatures(raw_bag, raw_tank, others_open, f);
+    return (w1 * f[0] + w2 * f[1] + w3 * f[2] + b) * ML_OFFSET_NORM;
 }
 
 void AIModel::onlineInitDefault()
@@ -229,16 +219,15 @@ void AIModel::onlineSeedGate(double meanSquaredNormError)
     errCount = ML_OUTLIER_GATE_WARMUP;
 }
 
-bool AIModel::trainOnline(double start_pressure, double end_pressure, double tank_pressure,
-                          double others_flowing, double actual_time_ms)
+bool AIModel::trainOnline(double raw_bag, double raw_tank, double others_open, double offset_psi)
 {
-    if (!isSampleValid(start_pressure, end_pressure, tank_pressure))
+    if (!isSampleValid(raw_bag, raw_tank, others_open))
     {
         return false;
     }
     double f[ML_NUM_COEFF];
-    computeFeatures(start_pressure, end_pressure, tank_pressure, others_flowing, f);
-    double y = actual_time_ms / ML_TIME_NORM_MS;
+    computeFeatures(raw_bag, raw_tank, others_open, f);
+    double y = offset_psi / ML_OFFSET_NORM;
     double err = y - (w1 * f[0] + w2 * f[1] + w3 * f[2] + b);
     if (!isfinite(err))
     {
@@ -346,16 +335,15 @@ void AIFitter::reset()
     n = 0;
 }
 
-void AIFitter::add(AIModel &m, double start_pressure, double end_pressure, double tank_pressure,
-                   double others_flowing, double actual_time_ms)
+void AIFitter::add(AIModel &m, double raw_bag, double raw_tank, double others_open, double offset_psi)
 {
-    if (!m.isSampleValid(start_pressure, end_pressure, tank_pressure))
+    if (!m.isSampleValid(raw_bag, raw_tank, others_open))
     {
         return;
     }
     double f[ML_NUM_COEFF];
-    m.computeFeatures(start_pressure, end_pressure, tank_pressure, others_flowing, f);
-    double y = actual_time_ms / ML_TIME_NORM_MS;
+    m.computeFeatures(raw_bag, raw_tank, others_open, f);
+    double y = offset_psi / ML_OFFSET_NORM;
     for (int r = 0; r < ML_N; r++)
     {
         for (int c = 0; c < ML_N; c++)

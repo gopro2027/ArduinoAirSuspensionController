@@ -22,15 +22,6 @@ static SemaphoreHandle_t learnDataMutex;
 
 extern void updateAIPercentage();
 
-static bool isLearnSampleDirectionValid(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure)
-{
-    if (aiIndex == SOLENOID_AI_INDEX::AI_MODEL_UP_FRONT || aiIndex == SOLENOID_AI_INDEX::AI_MODEL_UP_REAR)
-    {
-        return (int)goal_pressure - (int)start_pressure >= 0;
-    }
-    return (int)start_pressure - (int)goal_pressure >= 0;
-}
-
 PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX index)
 {
     return learnData[index];
@@ -114,7 +105,11 @@ void loadAILearnedDataPreferences()
         }
         learnDataIndex[i] = readBytes(getLogFileName((SOLENOID_AI_INDEX)i), learnData[i], LEARN_SAVE_COUNT * sizeof(PressureLearnSaveStruct)) / sizeof(PressureLearnSaveStruct);
         char buf[15];
-        const double weightDefaults[ML_NUM_COEFF] = {0.1, 0.1, 0.0, 0.0};
+        // Physics-seed offset weights: fill (up, models 0/1) reads high -> negative offset slope on the
+        // (tank-bag)/100 feature; dump (down, models 2/3) reads low -> positive slope on bag/100.
+        // The squared, others_open, and bias terms seed 0 and are learned. See AI_TRAINING.md.
+        const bool isUp = (i == AI_MODEL_UP_FRONT || i == AI_MODEL_UP_REAR);
+        const double weightDefaults[ML_NUM_COEFF] = {isUp ? -0.12 : 0.12, 0.0, 0.0, 0.0};
         for (int w = 0; w < ML_NUM_COEFF; w++)
         {
             snprintf(buf, sizeof(buf), "model%i|%i", i, w);
@@ -358,22 +353,11 @@ void clearPressureDataSingle(SOLENOID_AI_INDEX index)
     updateAIPercentage();
 }
 
-void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS, uint8_t others_flowing)
+void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank, uint8_t others_open)
 {
     int *size = &learnDataIndex[aiIndex];
 
-    if (abs((int)start_pressure - (int)goal_pressure) <= MIN_PRESSURE_CHANGE_LOG_PSI)
-    {
-        // Don't want to spam a ton of super low valve timings where the pressures basically didn't move. This happened to a tester and the result was a ton of useless repetitive data saved where we could have had more useful data.
-        return;
-    }
-
     if (*size >= LEARN_SAVE_COUNT)
-    {
-        return;
-    }
-
-    if (!isLearnSampleDirectionValid(aiIndex, start_pressure, goal_pressure))
     {
         return;
     }
@@ -391,11 +375,10 @@ void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure,
     if (*size < LEARN_SAVE_COUNT)
     {
         PressureLearnSaveStruct *pls = getLearnData(aiIndex);
-        pls[*size].start_pressure = start_pressure;
-        pls[*size].goal_pressure = goal_pressure;
-        pls[*size].tank_pressure = tank_pressure;
-        pls[*size].timeMS = timeMS;
-        pls[*size].others_flowing = others_flowing;
+        pls[*size].raw_bag = raw_bag;
+        pls[*size].settled_bag = settled_bag;
+        pls[*size].raw_tank = raw_tank;
+        pls[*size].others_open = others_open;
 
         writeBytes(getLogFileName(aiIndex), &pls[*size], sizeof(PressureLearnSaveStruct), "a");
 
@@ -412,29 +395,20 @@ AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex)
     return &_SaveData.aiModels[aiIndex];
 }
 
-void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS, uint8_t others_flowing)
+void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank, uint8_t others_open)
 {
     if (getLearnDataLength(aiIndex) >= LEARN_SAVE_COUNT)
     {
-        enqueueLearnSample(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS, others_flowing);
+        enqueueLearnSample(aiIndex, raw_bag, settled_bag, raw_tank, others_open);
     }
     else
     {
-        appendPressureDataToFile(aiIndex, start_pressure, goal_pressure, tank_pressure, timeMS, others_flowing);
+        appendPressureDataToFile(aiIndex, raw_bag, settled_bag, raw_tank, others_open);
     }
 }
 
-bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS, uint8_t others_flowing)
+bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank, uint8_t others_open)
 {
-    if (abs((int)start_pressure - (int)goal_pressure) <= MIN_PRESSURE_CHANGE_LOG_PSI)
-    {
-        return false;
-    }
-    if (!isLearnSampleDirectionValid(aiIndex, start_pressure, goal_pressure))
-    {
-        return false;
-    }
-
     if (learnDataMutex == NULL)
     {
         return false;
@@ -452,11 +426,10 @@ bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8
     }
 
     PressureLearnSaveStruct *slot = &q->buf[q->tail];
-    slot->start_pressure = start_pressure;
-    slot->goal_pressure = goal_pressure;
-    slot->tank_pressure = tank_pressure;
-    slot->timeMS = timeMS;
-    slot->others_flowing = others_flowing;
+    slot->raw_bag = raw_bag;
+    slot->settled_bag = settled_bag;
+    slot->raw_tank = raw_tank;
+    slot->others_open = others_open;
     q->tail = (q->tail + 1) % ML_IMMEDIATE_TRAIN_SAMPLE_QUE;
     q->count++;
 

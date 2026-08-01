@@ -124,25 +124,24 @@ public:
     Preferencable mlSampleRecord; // ML_SAMPLE_RECORD_VERSION
 };
 
+// One pressure-offset sample: the flowing sensor readings captured just before a valve closed, plus the
+// settled bag reading after it closed. The model learns offset = settled_bag - raw_bag. See AI_TRAINING.md.
 struct PressureLearnSaveStruct
 {
-    uint8_t start_pressure;
-    uint8_t goal_pressure;
-    uint16_t tank_pressure;
-    uint32_t timeMS;
-    uint8_t others_flowing; // AI contention input; see AI_TRAINING.md
+    uint8_t raw_bag;     // flowing bag reading captured just before the valve closed
+    uint8_t settled_bag; // settled bag reading after close (label)
+    uint8_t raw_tank;    // flowing tank reading at capture
+    uint8_t others_open; // number of other same-direction valves open during the flow
     void print()
     {
         Serial.print("{");
-        Serial.print((int)start_pressure);
+        Serial.print((int)raw_bag);
         Serial.print(", ");
-        Serial.print((int)goal_pressure);
+        Serial.print((int)settled_bag);
         Serial.print(", ");
-        Serial.print(tank_pressure);
+        Serial.print((int)raw_tank);
         Serial.print(", ");
-        Serial.print(timeMS);
-        Serial.print(", ");
-        Serial.print((int)others_flowing);
+        Serial.print((int)others_open);
         Serial.print("}");
     }
 };
@@ -177,9 +176,9 @@ struct LearnSampleQueue
 };
 
 void clearLearnSampleQueues();
-bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS, uint8_t others_flowing);
+bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank, uint8_t others_open);
 bool dequeueLearnSample(SOLENOID_AI_INDEX aiIndex, PressureLearnSaveStruct *out);
-void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS, uint8_t others_flowing);
+void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank, uint8_t others_open);
 
 AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex);
 

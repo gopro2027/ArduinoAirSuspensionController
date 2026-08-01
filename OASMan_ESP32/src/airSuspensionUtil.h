@@ -47,12 +47,9 @@ namespace PressureSensorCalibration
 }
 
 void trainAIModels();
-/** Phase 2: drain online sample queues for ready models (call from task_trainAI loop) */
+/** Drain online offset-sample queues for trained models (call from task_trainAI loop) */
 void processLearnSampleQueues();
-double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure, double others_flowing);
-bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex);
-double getAiBlendWeight(SOLENOID_AI_INDEX aiIndex);
-void initDefaultAIModels();
-double getDefaultModelPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure, double others_flowing);
+/** True bag pressure recovered from live flowing readings: rawBag + learned/default offset. */
+double getActualBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank, double others_open);
 void setupLEDs();
 #endif
