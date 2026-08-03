@@ -216,44 +216,93 @@ void wheelThreadUnlock()
     xSemaphoreGive(wheelLockSem);
 }
 
-// barrier code (for syncing wheel threads) generated from chat-gpt because I don't quite understand it but it seems to work fine lololol
-std::atomic<int> waiting_threads(0);
-std::atomic<int> generation(0);
+// Goal-routine sync barrier.
+//
+// Previous implementation waited on count_participants() from flagStartPressureGoalRoutine,
+// sampled independently by each thread. Mismatched counts (e.g. one thread waits for 3, another
+// for 2) could leave a wheel task spinning forever in the barrier — pressureValue stops updating
+// for that corner until another load-preset re-entered the barrier and unstuck it.
+//
+// Fix: threads explicitly join/leave a sync club around the control loop. The barrier only waits
+// for club members (threads that will actually arrive), and leave() releases waiters if the club
+// shrinks. A short timeout is a last-resort escape so a wheel task can never hang permanently.
+static int goalSyncClubSize = 0;
+static int goalSyncWaiting = 0;
+static int goalSyncGeneration = 0;
 
-int count_participants()
+#ifndef GOAL_SYNC_BARRIER_TIMEOUT_MS
+#define GOAL_SYNC_BARRIER_TIMEOUT_MS 100
+#endif
+
+static void goalSyncJoin()
 {
-    // Count how many threads are currently running
-    int currently_active = 0;
-    for (int i = 0; i < NUM_WHEEL_THREADS; ++i)
-    {
-        if (flagStartPressureGoalRoutine[i].load())
-        {
-            currently_active++;
-        }
-    }
-    return currently_active;
+    wheelThreadLock();
+    goalSyncClubSize++;
+    wheelThreadUnlock();
 }
 
-void custom_barrier_wait(int num_participants)
+static void goalSyncLeave()
 {
-    int gen = generation.load();
-    waiting_threads.fetch_add(1);
-
-    if (waiting_threads.load() == num_participants)
+    wheelThreadLock();
+    if (goalSyncClubSize > 0)
     {
-        // Last thread arrives, reset and let others go
-        wheelThreadLock();
-        waiting_threads.store(0);
-        generation.fetch_add(1);
-        wheelThreadUnlock();
+        goalSyncClubSize--;
     }
-    else
+    // Club shrank: if enough waiters remain for the new size (or club is empty), release them
+    // so nobody waits for a thread that has already left.
+    if (goalSyncWaiting > 0 && (goalSyncClubSize == 0 || goalSyncWaiting >= goalSyncClubSize))
     {
-        // Poll until generation changes
-        while (generation.load() == gen)
+        goalSyncWaiting = 0;
+        goalSyncGeneration++;
+    }
+    wheelThreadUnlock();
+}
+
+static void goalSyncBarrier()
+{
+    wheelThreadLock();
+    const int gen = goalSyncGeneration;
+    goalSyncWaiting++;
+    if (goalSyncClubSize > 0 && goalSyncWaiting >= goalSyncClubSize)
+    {
+        goalSyncWaiting = 0;
+        goalSyncGeneration++;
+        wheelThreadUnlock();
+        return;
+    }
+    wheelThreadUnlock();
+
+    const unsigned long startMs = millis();
+    for (;;)
+    {
+        wheelThreadLock();
+        bool done = (goalSyncGeneration != gen);
+        if (!done && goalSyncClubSize > 0 && goalSyncWaiting >= goalSyncClubSize)
         {
-            delay(1);
+            goalSyncWaiting = 0;
+            goalSyncGeneration++;
+            done = true;
         }
+        if (!done && goalSyncClubSize == 0)
+        {
+            // Should be unreachable if leave() always runs; release anyway.
+            goalSyncWaiting = 0;
+            goalSyncGeneration++;
+            done = true;
+        }
+        if (!done && (millis() - startMs) >= GOAL_SYNC_BARRIER_TIMEOUT_MS)
+        {
+            // Fail-open: never permanently freeze a wheel task (stale pressure reads).
+            goalSyncWaiting = 0;
+            goalSyncGeneration++;
+            done = true;
+        }
+        wheelThreadUnlock();
+        if (done)
+        {
+            return;
+        }
+        delay(1);
     }
 }
 
@@ -288,7 +337,11 @@ static uint8_t countOthersOpenSameDirection(byte selfWheelNum, bool up)
 void Wheel::goalRoutine() {
     if (flagStartPressureGoalRoutine[thisWheelNum].load())
     {
-        delay(100); // wait for all threads to sync on first call
+        delay(100); // wait for sibling wheels that were started together to reach join
+
+        // Join the sync club only after the startup delay — club size is "threads that will hit
+        // goalSyncBarrier", not "flags set" (flags can be true before the task enters here).
+        goalSyncJoin();
 
         int8_t dir = FLOW_NONE;                // committed move direction (pressure mode)
         Solenoid *valve = nullptr;
@@ -391,14 +444,15 @@ void Wheel::goalRoutine() {
             }
 
             delay(1);
-            custom_barrier_wait(count_participants());
+            goalSyncBarrier();
         }
 
         // goalRoutine blocks this thread, so reset sensorless baseline / instability manually.
         nullifySensorlessBaseline();
         markInstability(this->getSelectedInputValue());
 
-        custom_barrier_wait(count_participants()); // one final barrier so all exiting threads rendezvous
+        goalSyncBarrier(); // rendezvous with remaining club members before leave
+        goalSyncLeave();
 
         flagStartPressureGoalRoutine[thisWheelNum] = false;
         getInSolenoid()->close();
