@@ -569,119 +569,33 @@ namespace PressureSensorCalibration
 
 uint8_t AIPercentage = 0;
 
-void trainSingleAIModel(SOLENOID_AI_INDEX index)
+void updateAIPercentage(); // defined below in this region
+
+// Re-fit one model's weights from its stored samples (closed-form ridge least squares, ~1 ms). This is
+// the ONLY training path: no online learner, nothing persisted — more samples just means another refit.
+void refitModel(SOLENOID_AI_INDEX index)
 {
-    AIModelPreference *pref = getAIModel(index);
-
-    AIModel aiModelsTemp;
-    aiModelsTemp.up = pref->model.up;
-
-    Serial.print(F("Training AI "));
-    Serial.println((int)index);
-    unsigned long t = millis();
-
-    AIFitter fitter;
-    PressureLearnSaveStruct *pls = getLearnData(index);
-    int len = getLearnDataLength(index);
-    for (int j = 0; j < len; j++)
-    {
-        double off = (double)pls[j].settled_bag - (double)pls[j].raw_bag;
-        fitter.add(aiModelsTemp, pls[j].raw_bag, pls[j].raw_tank, pls[j].others_open, off);
-    }
-
-    if (!fitter.solveInto(aiModelsTemp))
-    {
-        Serial.print("Offset fit failed (valid samples: ");
-        Serial.print(fitter.sampleCount());
-        Serial.println("); keeping physics-default weights for control");
-        pref->setTrainedCount(0);
-        // Enough samples to attempt a real fit but it still could not solve => the data is unusable
-        // (degenerate/singular), so wipe it and re-collect. Below ML_FIT_MIN_SAMPLES is only
-        // not-enough-yet; keep those and keep using the physics-default weights meanwhile.
-        if (fitter.sampleCount() >= ML_FIT_MIN_SAMPLES)
-        {
-            Serial.println("Wiping unusable samples for this model.");
-            clearPressureDataSingle(index);
-        }
-        return;
-    }
-
-    double sumSqPsi = 0;
-    int n = 0;
-    for (int j = 0; j < len; j++)
-    {
-        if (!aiModelsTemp.isSampleValid(pls[j].raw_bag, pls[j].raw_tank, pls[j].others_open))
-        {
-            continue;
-        }
-        double off = (double)pls[j].settled_bag - (double)pls[j].raw_bag;
-        double d = aiModelsTemp.predictOffset(pls[j].raw_bag, pls[j].raw_tank, pls[j].others_open) - off;
-        sumSqPsi += d * d;
-        n++;
-    }
-    double rmsePsi = n > 0 ? sqrt(sumSqPsi / n) : 0;
-    if (n == 0 || rmsePsi > ML_BATCH_RMSE_GATE_PSI)
-    {
-        Serial.print("Offset fit rejected (does not fit the model), RMSE psi: ");
-        Serial.println(rmsePsi);
-        Serial.println("Wiping unusable samples; keeping physics-default weights for control.");
-        pref->setTrainedCount(0);
-        clearPressureDataSingle(index);
-        return;
-    }
-
-    unsigned long total = millis() - t;
-
-    Serial.print("Trained offset model: ");
-    Serial.println(index);
-    Serial.print("Fit RMSE psi: ");
-    Serial.println(rmsePsi);
-    Serial.print("Time for training: ");
-    Serial.println(total);
-
-    pref->model.loadWeights(aiModelsTemp.w1, aiModelsTemp.w2, aiModelsTemp.w3, aiModelsTemp.b);
-    fitter.initOnline(pref->model);
-    pref->model.onlineSeedGate((sumSqPsi / n) / (ML_OFFSET_NORM * ML_OFFSET_NORM));
-    pref->saveWeights();
-    pref->setTrainedCount(fitter.sampleCount());
+    OffsetModel *m = getOffsetModel(index);
+    int used = m->refit(getLearnData(index), getLearnDataLength(index));
+    Serial.printf("Refit model %i: %i samples, used %i  w=[%.4f %.4f %.4f %.4f]\n",
+                  (int)index, getLearnDataLength(index), used, m->w[0], m->w[1], m->w[2], m->w[3]);
 }
 
-// RLS covariance / outlier gate are RAM-only; rebuild from retained bootstrap samples at boot.
-static void initOnlineStateFromLearnData(SOLENOID_AI_INDEX index)
+// Refit any model whose stored sample count changed since the last call. Called once at boot (refits all,
+// since lastCount seeds to -1) and then every 100 ms from task_trainAI.
+void trainOffsetModels()
 {
-    AIModelPreference *pref = getAIModel(index);
-    PressureLearnSaveStruct *pls = getLearnData(index);
-    int len = getLearnDataLength(index);
-
-    AIFitter fitter;
-    for (int j = 0; j < len; j++)
+    static int lastCount[4] = {-1, -1, -1, -1};
+    for (int i = 0; i < 4; i++)
     {
-        double off = (double)pls[j].settled_bag - (double)pls[j].raw_bag;
-        fitter.add(pref->model, pls[j].raw_bag, pls[j].raw_tank, pls[j].others_open, off);
-    }
-    if (!fitter.initOnline(pref->model))
-    {
-        // no usable bootstrap data (initOnline already fell back to the default covariance)
-        return;
-    }
-
-    double sumSqNorm = 0;
-    int n = 0;
-    for (int j = 0; j < len; j++)
-    {
-        if (!pref->model.isSampleValid(pls[j].raw_bag, pls[j].raw_tank, pls[j].others_open))
+        int c = getLearnDataLength((SOLENOID_AI_INDEX)i);
+        if (c != lastCount[i])
         {
-            continue;
+            refitModel((SOLENOID_AI_INDEX)i);
+            lastCount[i] = c;
         }
-        double off = (double)pls[j].settled_bag - (double)pls[j].raw_bag;
-        double d = (pref->model.predictOffset(pls[j].raw_bag, pls[j].raw_tank, pls[j].others_open) - off) / ML_OFFSET_NORM;
-        sumSqNorm += d * d;
-        n++;
     }
-    if (n > 0)
-    {
-        pref->model.onlineSeedGate(sumSqNorm / n);
-    }
+    updateAIPercentage();
 }
 
 void updateAIPercentage()
@@ -697,106 +611,32 @@ void updateAIPercentage()
     AIPercentage = ((float)totalLen / ((float)AI_LEARN_RATIO_NUM * 4)) * 100;
 }
 
-// Measurement aid - drops the trained counts (keeping every stored sample) so the batch-fit path runs
-// again and the headroom print in task_trainAI measures the deepest path rather than the shallow
-// boot-time one. Leave this off; it re-fits and rewrites nvs on every boot.
-// #define FORCE_AI_RETRAIN_TEST
-
-void trainAIModels()
+// Fraction of the trained model to trust, ramping in with sample count: 0 below OFFSET_FADE_MIN, linearly
+// up to 1 at AI_LEARN_RATIO_NUM. Below the min, the flat constant default is used (-/+ OFFSET_DEFAULT_PSI
+// for up/down). Raw flowing readings alone are wrong by ~10 psi, so an offset is always applied.
+static double getOffset(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank, double others_open)
 {
-#ifdef FORCE_AI_RETRAIN_TEST
-    // The fit is deterministic, so a model whose data already passed the rmse gate passes it again -
-    // for those models clearPressureDataSingle() is not reached and the stored samples survive. A model
-    // whose data is unusable would be wiped by the batch path (see trainSingleAIModel).
-    Serial.println(F("!! FORCE_AI_RETRAIN_TEST is on - retraining every model. Disable this define. !!"));
-    for (int i = 0; i < 4; i++)
+    OffsetModel *m = getOffsetModel(aiIndex);
+    double def = m->up ? -(double)OFFSET_DEFAULT_PSI : (double)OFFSET_DEFAULT_PSI;
+    int count = getLearnDataLength(aiIndex);
+    if (count < OFFSET_FADE_MIN)
     {
-        getAIModel((SOLENOID_AI_INDEX)i)->setTrainedCount(0);
+        return def;
     }
-#endif
-
-    // First load some default values based off info I grabbed from some corvette testing
-    // I am using the first 4 weights because I think that makes the most logical sense to include all those. The 5th weight (ratio) I don't think is so great
-    // upModel.loadWeights(-0.34525, 0.45432, -0.076937, 0.40201, 0.1, -0.19555);
-    // downModel.loadWeights(0.76399, -0.66687, 0.070163, -0.5265, 0.1, 0.17787);
-    // upModel.useWeight4 = true;
-    // upModel.useWeight5 = false;
-    // downModel.useWeight4 = true;
-    // downModel.useWeight5 = false;
-
-    for (int i = 0; i < 4; i++)
+    double trained = m->predict(raw_bag, raw_tank, others_open);
+    double w = (double)(count - OFFSET_FADE_MIN) / (double)(AI_LEARN_RATIO_NUM - OFFSET_FADE_MIN);
+    if (w > 1.0)
     {
-        SOLENOID_AI_INDEX index = (SOLENOID_AI_INDEX)i;
-        // A model that has finished bootstrap collection (>= LEARN_SAVE_COUNT samples) and moved to
-        // online RLS keeps its NVS weights (which carry the online drift) - only rebuild the RAM-only
-        // RLS state. A model still collecting is (re)batch-fit from whatever it has stored, so the
-        // blend can ramp in long before the full set. No online drift exists below LEARN_SAVE_COUNT,
-        // so refitting there loses nothing. See AI_TRAINING.md.
-        if (getLearnDataLength(index) >= LEARN_SAVE_COUNT && getAIModel(index)->trainedSampleCount.get().i > 0)
-        {
-            initOnlineStateFromLearnData(index);
-        }
-        else
-        {
-            trainSingleAIModel(index);
-        }
+        w = 1.0;
     }
-
-    updateAIPercentage();
+    return def * (1.0 - w) + trained * w;
 }
 
-void processLearnSampleQueues()
-{
-    static int anchorCursor[4] = {0, 0, 0, 0};
-    static int samplesSinceAnchor[4] = {0, 0, 0, 0};
-
-    for (int i = 0; i < 4; i++)
-    {
-        SOLENOID_AI_INDEX index = (SOLENOID_AI_INDEX)i;
-        AIModelPreference *pref = getAIModel(index);
-
-        if (pref->trainedSampleCount.get().i <= 0)
-        {
-            continue;
-        }
-
-        bool trained = false;
-        PressureLearnSaveStruct sample;
-        while (dequeueLearnSample(index, &sample))
-        {
-            if (pref->model.trainOnline(sample.raw_bag, sample.raw_tank, sample.others_open, (double)sample.settled_bag - (double)sample.raw_bag))
-            {
-                trained = true;
-            }
-
-            samplesSinceAnchor[i]++;
-            int len = getLearnDataLength(index);
-            if (samplesSinceAnchor[i] >= ML_ONLINE_ANCHOR_INTERVAL && len > 0)
-            {
-                samplesSinceAnchor[i] = 0;
-                PressureLearnSaveStruct *anchor = &getLearnData(index)[anchorCursor[i] % len];
-                anchorCursor[i] = (anchorCursor[i] + 1) % len;
-                if (pref->model.trainOnline(anchor->raw_bag, anchor->raw_tank, anchor->others_open, (double)anchor->settled_bag - (double)anchor->raw_bag))
-                {
-                    trained = true;
-                }
-            }
-        }
-
-        if (trained)
-        {
-            pref->saveWeights();
-        }
-    }
-}
-
-// The true bag pressure recovered from the live flowing readings while the valve is open:
-// actual = rawBag + learned/default offset. The closed-loop controller stops when this reaches goal.
-// The offset model is always applied (default physics weights until it has trained), because raw
-// flowing readings alone are wrong by ~10 psi. See AI_TRAINING.md.
+// True bag pressure recovered from the live flowing readings while a valve is open. The closed-loop
+// controller stops when this reaches goal. See AI_TRAINING.md.
 double getActualBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank, double others_open)
 {
-    return raw_bag + getAIModel(aiIndex)->model.predictOffset(raw_bag, raw_tank, others_open);
+    return raw_bag + getOffset(aiIndex, raw_bag, raw_tank, others_open);
 }
 
 #pragma endregion

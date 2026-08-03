@@ -38,28 +38,12 @@
 #define AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE false
 #define AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE_TIME 3 * 1000
 
-// original full amount is 500
-#define LEARN_SAVE_COUNT 300 // ; was: 150
-
-// Sample count at which the AI prediction is trusted 100%. Below this the AI prediction is
-// blended with the lookup table proportionally (w = min(n, AI_LEARN_RATIO_NUM) / AI_LEARN_RATIO_NUM),
-// so AI phases in measurably before a model is fully trained. See OASMan_ESP32/AI_TRAINING.md.
-#define AI_LEARN_RATIO_NUM 150
-
-// Phase 2 online training: ring buffer depth per AI model (used once stored samples reach LEARN_SAVE_COUNT)
-// Online-learning tuning constants (RLS forgetting, outlier gate, anchor replay) live in
-// OASMan_ESP32/src/pressureMath.h next to the model they tune
-#define ML_IMMEDIATE_TRAIN_SAMPLE_QUE 20
-
-// Use the hardcoded default weights prediction in the fallback valve timing function
-#define USE_DEFAULT_WEIGHTS_IN_FALLBACK_TIMING true
-
-// Manual-move sample logging (old time-prediction data source). Disabled under the closed-loop offset
-// model: the closed-loop controller self-collects flowing->settled offset samples on every valve close.
-// Manual-move offset capture is a clean follow-up (drive it from Wheel::loop by valve state). See AI_TRAINING.md.
-#define USE_MANUAL_SAMPLE_LOGGING false
-#define MANUAL_SETTLE_MS 50
-#define MANUAL_MAX_HOLD_MS 6000
+// Offset-model AI (samples -> refit -> predict -> fade). See OASMan_ESP32/AI_TRAINING.md.
+#define LEARN_SAVE_COUNT 300      // per-model on-disk sample capacity (was 500)
+#define OFFSET_DEFAULT_PSI 5      // constant offset used before a model is trained: -5 air-up, +5 air-out
+#define OFFSET_FADE_MIN 25        // start fading the trained model in at this many samples (0% -> ...)
+#define AI_LEARN_RATIO_NUM 150    // ...reaching 100% trained at this many samples (also the AIPercentage bar)
+#define LOG_MANUAL_OFFSET_SAMPLES true // also collect offset samples from manual valve moves (Wheel::captureManualOffsetSample)
 
 // Closed-loop pressure control (see Wheel::goalRoutine / AI_TRAINING.md):
 #define PRESSURE_DEADBAND_PSI 2      // stop when the corrected actual pressure is within this many psi of goal

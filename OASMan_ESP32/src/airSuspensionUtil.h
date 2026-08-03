@@ -46,10 +46,9 @@ namespace PressureSensorCalibration
     void learnPressureSensorsRoutine();
 }
 
-void trainAIModels();
-/** Drain online offset-sample queues for trained models (call from task_trainAI loop) */
-void processLearnSampleQueues();
-/** True bag pressure recovered from live flowing readings: rawBag + learned/default offset. */
+/** Refit any offset model whose sample count changed. Call at boot and periodically from task_trainAI. */
+void trainOffsetModels();
+/** True bag pressure recovered from live flowing readings: rawBag + faded (default -> trained) offset. */
 double getActualBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank, double others_open);
 void setupLEDs();
 #endif

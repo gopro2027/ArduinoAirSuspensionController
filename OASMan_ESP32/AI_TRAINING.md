@@ -1,131 +1,98 @@
 # AI Pressure Correction — How It Works
 
-The manifold controls bag pressure **closed-loop**: it opens a valve and holds it open, re-reading the
-sensor each tick, and closes when the bag reaches the goal — exactly how height-sensor mode works. The
-problem this has to solve: **you cannot read a bag's true pressure while its valve is open.** Air flowing
-past the manifold-mounted sensor makes the bag read high on fill / low on dump (and the tank read low);
-the reading only settles to the truth once the valve closes.
+The manifold controls bag pressure **closed-loop**: it holds a valve open and re-reads the sensor each
+tick, closing when the bag reaches the goal — like height-sensor mode. The catch: **you can't read a
+bag's true pressure while its valve is open.** Air flowing past the manifold-mounted sensor makes the bag
+read high on fill / low on dump; the reading only settles to the truth once the valve closes.
 
-So the learned model is no longer a valve-*time* predictor. It is a **sensor-offset corrector**:
+So the learned model is a **sensor-offset corrector**:
 
-$$\text{actualBag} = \text{rawBag} + \text{offset},\qquad \text{offset} = f(\text{flowDifferential},\ \text{othersOpen})$$
+    actualBag = rawBag + offset,   offset = f(flowDifferential, othersOpen)
 
 The controller feeds the live flowing readings through `f` to recover the true pressure and stops at goal.
 
-Relevant code:
+## The ML layer is deliberately tiny: samples → refit → predict → fade
+
+There is **no online learner, no persisted weights, no schema/versioned model, no outlier gate, no anchor
+replay**. A batch least-squares fit is ~1 ms and every sample is kept, so "train" and "keep training" are
+the same operation — **re-fit** — and weights are re-derived from the samples on every boot.
 
 | File | Role |
 |---|---|
-| `src/pressureMath.h/.cpp` | The offset model (`AIModel`), batch fitter (`AIFitter`), online learner (RLS), constants |
-| `src/airSuspensionUtil.cpp` | Batch/online training, `getActualBagPressure()`, ADS data-rate setup |
-| `src/manifoldSaveData.cpp` | Offset-sample store (SPIFFS + RAM), online queues, weight persistence (NVS), migration |
-| `src/components/wheel.cpp` (`goalRoutine`) | The closed-loop controller; logs offset samples on close |
-| `src/tasks/tasks.cpp` (`task_trainAI`) | Batch-trains at boot, then loops the online learner |
+| `src/pressureMath.*` | `OffsetModel`: `computeFeatures`, `predict`, `refit` (ridge least squares) + `solveN` |
+| `src/manifoldSaveData.*` | sample files on SPIFFS (`learnData`, `recordLearnSample`), the 4 RAM-only models |
+| `src/airSuspensionUtil.cpp` | `refitModel`/`trainOffsetModels`, `getOffset` (fade), `getActualBagPressure` |
+| `src/components/wheel.cpp` | closed-loop `goalRoutine`; logs samples on close (auto + manual) |
+| `src/tasks/tasks.cpp` | `task_trainAI`: refit all at boot, then refit changed models every 100 ms |
 
-There are **4 models per vehicle** (up-front, up-rear, down-front, down-rear; both corners of an axle share).
+There are **4 models** — up-front, up-rear, down-front, down-rear (both corners of an axle share).
 
----
+### The model
 
-## The offset model
+`OffsetModel` is a 4-coefficient linear fit of the offset (psi). Features (`computeFeatures`, scaled by
+100 so the squared term stays well-conditioned): `[ differential/100, (differential/100)², othersOpen, 1 ]`,
+where differential = `rawTank − rawBag` (fill) or `rawBag` (dump). `predict` = `w·f × ML_OFFSET_NORM`.
+The offset vanishes as flow stops (`rawBag → rawTank` on fill, `→ 0` on dump), so the estimate converges
+to the truth right where the controller needs to stop; and because it's trained on
+flowing-before-close → settled-after-close, it inherently absorbs the valve-close overshoot.
 
-Each model is a 4-parameter linear regression predicting the offset in psi. The bag sensor sits on the
-manifold, upstream of the bag; during flow it reads a pressure drop that scales with flow, and flow scales
-with the differential driving it.
+`refit` accumulates the normal equations over all samples, adds ridge, and solves (Gaussian elimination).
+Below `ML_FIT_MIN_SAMPLES` (25) valid samples it leaves the weights alone.
 
-- **Fill (up):** differential = `rawTank − rawBag`; the sensor over-reads, so the offset is negative.
-- **Dump (down):** differential = `rawBag` (bag → atmosphere ≈ 0); the sensor under-reads, offset positive.
+### The fade / default
 
-Features (`computeFeatures`, scaled by 100 so the squared term stays well-conditioned):
-`f = [ differential/100, (differential/100)², othersOpen, 1 ]`. Predictions/labels are scaled by
-`ML_OFFSET_NORM` (100) to keep weights O(0.1).
+There is **no physics-default formula**. Before a model is trained, `getOffset` returns a flat constant —
+**−5 psi on air-up, +5 psi on air-out** (`OFFSET_DEFAULT_PSI`). As samples accumulate it fades the trained
+model in:
 
-Both corrections vanish as flow stops (`rawBag → rawTank` on fill, `rawBag → 0` on dump), so the estimate
-converges to the true pressure exactly where the controller needs to stop. Because the model is trained on
-**flowing-reading-before-close → settled-reading-after-close**, it inherently absorbs the valve-close /
-in-flight overshoot — no separate close-early margin is needed.
+    w = clamp((count − OFFSET_FADE_MIN) / (AI_LEARN_RATIO_NUM − OFFSET_FADE_MIN), 0, 1)
+    offset = default × (1 − w) + trained × w
 
-**Physics-default seed weights** (`loadAILearnedDataPreferences`): fill models seed `w1 = −0.12`, dump
-models `w1 = +0.12`, everything else 0 (≈10 psi at a big differential, a few psi near goal). Control works
-from first boot on these defaults; learning refines them per corner.
+Below `OFFSET_FADE_MIN` (25) → pure default; at `AI_LEARN_RATIO_NUM` (150) → pure trained. When a real
+trained model exists the constant is fully faded out.
 
-### Contention (`othersOpen`)
+### Sample collection
 
-All corners share one tank and one exhaust, so a same-direction move by other corners changes the flow and
-therefore the offset. Unlike the old time model, this is a **live measurement**, not a prediction: each tick
-the controller counts how many other corners currently have a same-direction valve open
-(`countOthersOpenSameDirection`, via `Solenoid::isOpen()`). No intent-sync, barriers, or guessing.
+Every valve close logs one sample: the last **flowing** readings while the valve was open, paired with the
+**settled** bag reading after close — `{ raw_bag, settled_bag, raw_tank, others_open }` (offset =
+`settled_bag − raw_bag`). Two triggers, one sink (`recordLearnSample` → SPIFFS + RAM):
 
----
+- **Preset / maintain moves** — `goalRoutine` logs on close (after `OFFSET_SAMPLE_SETTLE_MS`).
+- **Manual moves** (BLE valveControlBittset / gamepad) — `Wheel::captureManualOffsetSample`
+  (`LOG_MANUAL_OFFSET_SAMPLES`) watches this corner's valve state each `Wheel::loop` tick, caching the
+  flowing readings while open and logging on close.
+
+`othersOpen` (contention) is a **live measurement**, not a prediction — count of other same-direction
+valves currently open (`countOthersOpenSameDirection` via `Solenoid::isOpen()`). Closes happen near goal,
+so samples concentrate where stopping accuracy matters. The `BEGIN/END IMPORTANT DATA FOR PRO` serial dump
+prints every stored sample for offline analysis.
+
+### Training
+
+`task_trainAI` calls `trainOffsetModels()` at boot (refits all 4 from their loaded samples) then every
+100 ms (refits only a model whose sample count changed). Fast conversions help: `initializeADS()` sets the
+ADS1115 to `RATE_ADS1115_860SPS`.
 
 ## The closed-loop controller (`Wheel::goalRoutine`)
 
-Per corner, once a goal is set:
+Per corner: commit a direction from the raw reading; each tick read the flowing bag + tank, count
+`othersOpen`, compute `actual = getActualBagPressure(...)`, hold the valve open; stop and close within
+`PRESSURE_DEADBAND_PSI` (2) of goal — or immediately on the in-loop `getbagMaxPressure()` /
+`MAX_PRESSURE_SAFETY` ceiling (fill), the 10 s `ROUTINE_TIMEOUT_MS`, or an `onlyAirUp` block. Height-sensor
+mode uses the same loop with the level sensor and no offset.
 
-1. Commit a direction from the raw reading (far from goal the ~10 psi offset is small vs the distance;
-   near goal the deadband stops the move).
-2. Each tick: `readInputs()`, read the flowing tank, count `othersOpen`, compute
-   `actual = getActualBagPressure(...)`, and hold the valve open.
-3. Stop and close when `actual` is within `PRESSURE_DEADBAND_PSI` (2) of goal — or immediately if it hits the
-   in-loop `getbagMaxPressure()` / `MAX_PRESSURE_SAFETY` ceiling (fill), or the 10 s `ROUTINE_TIMEOUT_MS`
-   (covers tank-empty / stuck-sensor stalls), or `onlyAirUp` forbids a needed air-down.
+## Persistence / migration
 
-The four wheel threads run concurrently and rendezvous on the existing generation barrier
-(`custom_barrier_wait`) each tick. Height-sensor mode uses the same loop with the level sensor and no offset.
-
-**Reads are fast enough** because `initializeADS()` raises the ADS1115 data rate to `RATE_ADS1115_860SPS`
-(~1.16 ms/conversion vs the ~7.8 ms default); a bag+tank read per tick under 4-corner load stays ≤ ~1 psi of
-control lag.
-
----
-
-## Sample collection (self-collecting)
-
-On every valve close, `goalRoutine` logs one offset sample: the last **flowing** readings while the valve was
-open, paired with the **settled** bag reading taken `OFFSET_SAMPLE_SETTLE_MS` (250) after close:
-
-```
-{ raw_bag, settled_bag, raw_tank, others_open }   // label offset = settled_bag - raw_bag
-```
-
-Closes happen near goal, so samples concentrate exactly where stopping accuracy matters. `recordLearnSample`
-appends to the model's SPIFFS file (`learnData[4]`, heap-allocated, up to `LEARN_SAVE_COUNT`=300) until full,
-then feeds the online ring queue. (Manual-move offset capture is disabled for now —
-`USE_MANUAL_SAMPLE_LOGGING false` — and is a clean follow-up driven from `Wheel::loop` by valve state.)
-
----
-
-## Training (reused least-squares pipeline)
-
-- **Batch:** at boot `trainSingleAIModel` fits the offset with `AIFitter` (ridge normal equations, Gaussian
-  elimination) over stored samples. A self-fit RMSE over `ML_BATCH_RMSE_GATE_PSI` (8 psi) or a
-  singular/degenerate solve with ≥ `ML_FIT_MIN_SAMPLES` (25) samples is treated as unusable data and **wiped**;
-  fewer than 25 samples are kept and the physics-default weights keep driving control meanwhile.
-- **Online:** once trained, each new sample updates the model via RLS (forgetting factor `ML_RLS_FORGETTING`)
-  with an outlier gate and anchor replay, in `processLearnSampleQueues`. RLS state is RAM-only, rebuilt at boot.
-- Models still collecting (< `LEARN_SAVE_COUNT`) are re-batch-fit each boot; models past it that have trained
-  keep their drifted NVS weights (only RLS state is rebuilt). `getActualBagPressure` **always** applies the
-  correction (default or learned) — a raw flowing reading alone is wrong by ~10 psi.
-
----
-
-## Schema migration
-
-Two version numbers in `pressureMath.h`, checked at boot in `beginSaveData()`:
-
-| Key | Constant | On mismatch |
-|---|---|---|
-| `mlModelSchema` | `ML_MODEL_SCHEMA_VERSION` (6) | `clearAIWeightsOnly()` — drop weights, keep samples, refit |
-| `mlSampleRec` | `ML_SAMPLE_RECORD_VERSION` (3) | `clearPressureData()` — wipe samples + weights (layout changed) |
-
-The move from time prediction to the offset model bumped both, so a fielded device wipes the old (incompatible)
-time samples on first boot of this firmware and re-collects offset samples through normal use.
-
----
+Only the **sample files** are stored (SPIFFS); weights are never persisted. One version,
+`ML_SAMPLE_RECORD_VERSION` (`pressureMath.h`): if the stored `mlSampleRec` differs, `clearPressureData`
+wipes the sample files (`beginSaveData`). No model/feature version — a feature change just takes effect on
+the next refit.
 
 ## Tuning constants
 
-`pressureMath.h`: `ML_OFFSET_NORM` (100, label/prediction scale), `ML_FIT_RIDGE`, `ML_FIT_MIN_SAMPLES` (25),
-`ML_BATCH_RMSE_GATE_PSI` (8), RLS/gate/anchor constants. `user_defines.h`: `LEARN_SAVE_COUNT` (300),
-`PRESSURE_DEADBAND_PSI` (2), `OFFSET_SAMPLE_SETTLE_MS` (250), and the ADS data rate lives in `initializeADS()`.
+`pressureMath.h`: `ML_OFFSET_NORM` (100), `ML_FIT_RIDGE`, `ML_FIT_MIN_SAMPLES` (25), `ML_NUM_COEFF` (4),
+`ML_SAMPLE_RECORD_VERSION`. `user_defines.h`: `LEARN_SAVE_COUNT` (300), `OFFSET_DEFAULT_PSI` (5),
+`OFFSET_FADE_MIN` (25), `AI_LEARN_RATIO_NUM` (150), `PRESSURE_DEADBAND_PSI` (2), `OFFSET_SAMPLE_SETTLE_MS`
+(250), `LOG_MANUAL_OFFSET_SAMPLES`.
 
-Note: `eval/model_eval.cpp` targeted the old time model and is stale until ported to the offset model.
+Note: `eval/model_eval.cpp` targeted the old online-learning model and is stale until ported.

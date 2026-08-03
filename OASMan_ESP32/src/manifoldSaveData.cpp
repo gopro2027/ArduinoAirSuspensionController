@@ -11,16 +11,19 @@ void requestSendConfigBT()
 
 int learnDataIndex[4];
 // Heap-allocated lazily in loadAILearnedDataPreferences. beginSaveData() returns before that call
-// in OTA/update mode, so these ~14KB are never allocated during an OTA. Each row holds
-// LEARN_SAVE_COUNT samples. See AI_TRAINING.md.
+// in OTA/update mode, so this is never allocated during an OTA. Each row holds LEARN_SAVE_COUNT samples.
 PressureLearnSaveStruct *learnData[4] = {nullptr, nullptr, nullptr, nullptr};
-static LearnSampleQueue learnSampleQueues[4];
 static SemaphoreHandle_t learnDataMutex;
 
-// exclusive, pressure must be higher than this to log
-#define MIN_PRESSURE_CHANGE_LOG_PSI 1
+// The 4 offset models (RAM only). up=false for the two dump models is set in loadAILearnedDataPreferences.
+static OffsetModel offsetModels[4];
 
 extern void updateAIPercentage();
+
+OffsetModel *getOffsetModel(SOLENOID_AI_INDEX index)
+{
+    return &offsetModels[index];
+}
 
 PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX index)
 {
@@ -104,25 +107,12 @@ void loadAILearnedDataPreferences()
             }
         }
         learnDataIndex[i] = readBytes(getLogFileName((SOLENOID_AI_INDEX)i), learnData[i], LEARN_SAVE_COUNT * sizeof(PressureLearnSaveStruct)) / sizeof(PressureLearnSaveStruct);
-        char buf[15];
-        // Physics-seed offset weights: fill (up, models 0/1) reads high -> negative offset slope on the
-        // (tank-bag)/100 feature; dump (down, models 2/3) reads low -> positive slope on bag/100.
-        // The squared, others_open, and bias terms seed 0 and are learned. See AI_TRAINING.md.
-        const bool isUp = (i == AI_MODEL_UP_FRONT || i == AI_MODEL_UP_REAR);
-        const double weightDefaults[ML_NUM_COEFF] = {isUp ? -0.12 : 0.12, 0.0, 0.0, 0.0};
-        for (int w = 0; w < ML_NUM_COEFF; w++)
-        {
-            snprintf(buf, sizeof(buf), "model%i|%i", i, w);
-            _SaveData.aiModels[i].weights[w].loadDouble(buf, weightDefaults[w]);
-        }
-        snprintf(buf, sizeof(buf), "model%i|n", i);
-        _SaveData.aiModels[i].trainedSampleCount.load(buf, 0);
-        _SaveData.aiModels[i].loadModel(); // copy the values to the internal model
-        // Serial.println(getAIModel((SOLENOID_AI_INDEX)i)->trainedSampleCount.get().i);
+        // Weights are not persisted; they start at zero and the training task re-fits them from these
+        // samples (getOffset uses the constant default until there are enough samples). See AI_TRAINING.md.
     }
 
-    _SaveData.aiModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT].model.up = false;
-    _SaveData.aiModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR].model.up = false;
+    offsetModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT].up = false;
+    offsetModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR].up = false;
 
     for (int i = 0; i < 10; i++)
         Serial.println("");
@@ -258,81 +248,32 @@ void beginSaveData()
     loadAILearnedDataPreferences();
 
     learnDataMutex = xSemaphoreCreateMutex();
-    clearLearnSampleQueues();
-    // downDataMutex = xSemaphoreCreateMutex();
 
-    // Dual AI versioning — see "Schema migration" in AI_TRAINING.md.
-    // Lives here (not in loadAILearnedDataPreferences) because the clear functions call that.
-    _SaveData.mlModelSchema.load("mlModelSchema", 1);
-    // Schema >= 3 already wrote the current record layout; seed record version from that.
-    _SaveData.mlSampleRecord.load("mlSampleRec", _SaveData.mlModelSchema.get().i >= 3 ? 2 : 1);
-
+    // One AI version: the on-disk sample layout. A change wipes samples (weights are never persisted;
+    // they are re-fit from the samples each boot). See "Schema migration" in AI_TRAINING.md.
+    _SaveData.mlSampleRecord.load("mlSampleRec", 0);
     if (_SaveData.mlSampleRecord.get().i != ML_SAMPLE_RECORD_VERSION)
     {
         Serial.print("AI sample record layout changed to ");
         Serial.print(ML_SAMPLE_RECORD_VERSION);
-        Serial.println(", clearing stored weights and samples");
+        Serial.println(", clearing stored samples");
         clearPressureData();
         _SaveData.mlSampleRecord.set(ML_SAMPLE_RECORD_VERSION);
-        _SaveData.mlModelSchema.set(ML_MODEL_SCHEMA_VERSION);
-    }
-    else if (_SaveData.mlModelSchema.get().i != ML_MODEL_SCHEMA_VERSION)
-    {
-        Serial.print("AI feature set changed to ");
-        Serial.print(ML_MODEL_SCHEMA_VERSION);
-        Serial.println(", clearing weights and refitting from samples on disk");
-        clearAIWeightsOnly();
-        _SaveData.mlModelSchema.set(ML_MODEL_SCHEMA_VERSION);
     }
 }
 
 extern uint8_t AIPercentage;
-void clearLearnSampleQueues()
-{
-    if (learnDataMutex != NULL)
-    {
-        while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
-        {
-            delay(1);
-        }
-    }
-    for (int i = 0; i < 4; i++)
-    {
-        learnSampleQueues[i].head = 0;
-        learnSampleQueues[i].tail = 0;
-        learnSampleQueues[i].count = 0;
-    }
-    if (learnDataMutex != NULL)
-    {
-        xSemaphoreGive(learnDataMutex);
-    }
-}
 
 void clearPressureData()
 {
     for (int i = 0; i < 4; i++)
     {
-        // reset the file
         deleteFile(getLogFileName((SOLENOID_AI_INDEX)i));
         learnDataIndex[i] = 0;
-
-        // reset the models too
-        _SaveData.aiModels[i].deletePreferences();
+        offsetModels[i].w[0] = offsetModels[i].w[1] = offsetModels[i].w[2] = offsetModels[i].w[3] = 0;
     }
-    clearLearnSampleQueues();
     AIPercentage = 0;
     loadAILearnedDataPreferences();
-}
-
-void clearAIWeightsOnly()
-{
-    for (int i = 0; i < 4; i++)
-    {
-        _SaveData.aiModels[i].deletePreferences();
-    }
-    clearLearnSampleQueues();
-    loadAILearnedDataPreferences();
-    updateAIPercentage();
 }
 
 void clearPressureDataSingle(SOLENOID_AI_INDEX index)
@@ -390,77 +331,10 @@ void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_
     updateAIPercentage();
 }
 
-AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex)
-{
-    return &_SaveData.aiModels[aiIndex];
-}
-
+// Once a model's file is full we simply stop collecting (the fit from LEARN_SAVE_COUNT samples is plenty).
 void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank, uint8_t others_open)
 {
-    if (getLearnDataLength(aiIndex) >= LEARN_SAVE_COUNT)
-    {
-        enqueueLearnSample(aiIndex, raw_bag, settled_bag, raw_tank, others_open);
-    }
-    else
-    {
-        appendPressureDataToFile(aiIndex, raw_bag, settled_bag, raw_tank, others_open);
-    }
-}
-
-bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank, uint8_t others_open)
-{
-    if (learnDataMutex == NULL)
-    {
-        return false;
-    }
-    while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
-    {
-        delay(1);
-    }
-
-    LearnSampleQueue *q = &learnSampleQueues[(int)aiIndex];
-    if (q->count >= ML_IMMEDIATE_TRAIN_SAMPLE_QUE)
-    {
-        q->head = (q->head + 1) % ML_IMMEDIATE_TRAIN_SAMPLE_QUE;
-        q->count--;
-    }
-
-    PressureLearnSaveStruct *slot = &q->buf[q->tail];
-    slot->raw_bag = raw_bag;
-    slot->settled_bag = settled_bag;
-    slot->raw_tank = raw_tank;
-    slot->others_open = others_open;
-    q->tail = (q->tail + 1) % ML_IMMEDIATE_TRAIN_SAMPLE_QUE;
-    q->count++;
-
-    xSemaphoreGive(learnDataMutex);
-    return true;
-}
-
-bool dequeueLearnSample(SOLENOID_AI_INDEX aiIndex, PressureLearnSaveStruct *out)
-{
-    if (out == NULL || learnDataMutex == NULL)
-    {
-        return false;
-    }
-    while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
-    {
-        delay(1);
-    }
-
-    LearnSampleQueue *q = &learnSampleQueues[(int)aiIndex];
-    if (q->count == 0)
-    {
-        xSemaphoreGive(learnDataMutex);
-        return false;
-    }
-
-    *out = q->buf[q->head];
-    q->head = (q->head + 1) % ML_IMMEDIATE_TRAIN_SAMPLE_QUE;
-    q->count--;
-
-    xSemaphoreGive(learnDataMutex);
-    return true;
+    appendPressureDataToFile(aiIndex, raw_bag, settled_bag, raw_tank, others_open);
 }
 
 ProfileRaw readProfile(byte profileIndex)

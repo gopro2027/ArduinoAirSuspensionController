@@ -42,6 +42,11 @@ private:
     byte directlySetPressure = 0; // This is the 'real' pressure that is read after any valve movement. This is our 'expected' pressure in a sense. This is tracked by the sensorlessCaptureBaseline and is only usable when slBaselineCaptured is true.
 
     void goalRoutine();
+    // Log an offset sample from a manual valve move (watched by valve state each Wheel::loop tick).
+    void captureManualOffsetSample();
+    bool manualValveWasOpen = false;
+    uint8_t manualFlowBag = 0, manualFlowTank = 0, manualOthers = 0;
+    SOLENOID_AI_INDEX manualAiIndex = AI_MODEL_UNDEFINED;
     void maintainPressure();
     void heightsensorlessLevelling();
     void pressureCaptureBaseline();

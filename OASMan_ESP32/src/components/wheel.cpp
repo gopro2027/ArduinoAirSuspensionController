@@ -1,6 +1,5 @@
 #include "wheel.h"
 #include "manifold.h"
-#include "manualSampleLog.h"
 
 #define NUM_WHEEL_THREADS 4
 std::atomic<bool> flagStartPressureGoalRoutine[NUM_WHEEL_THREADS];
@@ -593,5 +592,45 @@ void Wheel::loop()
     this->pressureCaptureBaseline();
     this->maintainPressure();
     this->heightsensorlessLevelling();
-    manualSampleServiceWheel(this->thisWheelNum); // deferred settle-read + log for manual moves
+    this->captureManualOffsetSample();
 }
+
+#if LOG_MANUAL_OFFSET_SAMPLES
+// Log an offset sample from a MANUAL valve move (BLE valveControlBittset / gamepad). goalRoutine
+// self-collects its own samples, so only track when no goal routine is running (and never in
+// height-sensor mode). While a manual valve is open we cache the flowing readings; when it closes we
+// read the settled bag and log {flowing bag/tank, settled bag, others open}. Runs on the wheel task, so
+// the ADC reads / SPIFFS write are safe. See AI_TRAINING.md.
+void Wheel::captureManualOffsetSample()
+{
+    if (getheightSensorMode() || flagStartPressureGoalRoutine[thisWheelNum].load())
+    {
+        manualValveWasOpen = false;
+        return;
+    }
+
+    bool upOpen = getInSolenoid()->isOpen();
+    bool downOpen = getOutSolenoid()->isOpen();
+
+    if (upOpen || downOpen)
+    {
+        bool up = upOpen; // if somehow both are open, treat as fill
+        this->readInputs();
+        manualFlowBag = (uint8_t)lround(this->getSelectedInputValue());
+        manualFlowTank = (uint8_t)lround(getCompressor()->readTankPressureNow());
+        manualOthers = countOthersOpenSameDirection(this->thisWheelNum, up);
+        manualAiIndex = up ? getInSolenoid()->getAIIndex() : getOutSolenoid()->getAIIndex();
+        manualValveWasOpen = true;
+    }
+    else if (manualValveWasOpen)
+    {
+        // Valve just closed: the flow-induced offset is gone, so the current reading is the settled truth.
+        this->readInputs();
+        uint8_t settledBag = (uint8_t)lround(this->getSelectedInputValue());
+        recordLearnSample(manualAiIndex, manualFlowBag, settledBag, manualFlowTank, manualOthers);
+        manualValveWasOpen = false;
+    }
+}
+#else
+void Wheel::captureManualOffsetSample() {}
+#endif

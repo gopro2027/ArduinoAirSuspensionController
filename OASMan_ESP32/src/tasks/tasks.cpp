@@ -103,16 +103,15 @@ void task_wheel(void *parameters)
 
 void task_trainAI(void *parameters)
 {
-    trainAIModels();
+    trainOffsetModels(); // boot: refit all 4 from stored samples
 
-    // Batch training is the deepest this task ever gets, so this is the number to watch if the
-    // fitter or the nvs write ever grows again
+    // The refit is the deepest this task gets; watch this if the fit ever grows.
     Serial.print("trainAI stack headroom (bytes): ");
     Serial.println(uxTaskGetStackHighWaterMark(NULL));
 
     for (;;)
     {
-        processLearnSampleQueues();
+        trainOffsetModels(); // refit only models whose sample count changed
         delay(100);
     }
 }

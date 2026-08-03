@@ -15,37 +15,8 @@ public:
     Preferencable pressure[4]; // byte
 };
 
-class AIModelPreference
-{
-public:
-    Preferencable weights[ML_NUM_COEFF]; // doubles
-    Preferencable trainedSampleCount;    // int: valid samples the live weights were batch-fit from (0 = untrained). Replaces isReadyToUse; drives blend + routing. See AI_TRAINING.md
-    AIModel model;
-    void loadModel()
-    {
-        model.loadWeights(weights[0].get().d, weights[1].get().d, weights[2].get().d, weights[3].get().d);
-        model.print_weights();
-    }
-    void saveWeights()
-    {
-        weights[0].setDouble(model.w1);
-        weights[1].setDouble(model.w2);
-        weights[2].setDouble(model.w3);
-        weights[3].setDouble(model.b);
-    }
-    void setTrainedCount(int count)
-    {
-        trainedSampleCount.set(count);
-    }
-    void deletePreferences()
-    {
-        trainedSampleCount.deletePreference();
-        for (int i = 0; i < ML_NUM_COEFF; i++)
-        {
-            weights[i].deletePreference();
-        }
-    }
-};
+// The 4 offset models are RAM-only and re-fit from the stored samples every boot (nothing persisted).
+// Accessor: getOffsetModel(aiIndex). Defined in manifoldSaveData.cpp.
 
 class AuxillaryOutputPreference {
     public:
@@ -119,9 +90,7 @@ public:
     AuxillaryOutputPreference auxillaryOutputPreference;
 
     Profile profile[MAX_PROFILE_COUNT];
-    AIModelPreference aiModels[4];
-    Preferencable mlModelSchema;  // ML_MODEL_SCHEMA_VERSION
-    Preferencable mlSampleRecord; // ML_SAMPLE_RECORD_VERSION
+    Preferencable mlSampleRecord; // ML_SAMPLE_RECORD_VERSION (only version — weights are never persisted)
 };
 
 // One pressure-offset sample: the flowing sensor readings captured just before a valve closed, plus the
@@ -164,23 +133,11 @@ int getLearnDataLength(SOLENOID_AI_INDEX aiIndex);
 
 void clearPressureData();
 void clearPressureDataSingle(SOLENOID_AI_INDEX index);
-// Drop weights + ready flags but keep sample files so trainAIModels() refits this boot.
-void clearAIWeightsOnly();
 
-struct LearnSampleQueue
-{
-    PressureLearnSaveStruct buf[ML_IMMEDIATE_TRAIN_SAMPLE_QUE];
-    uint8_t head;
-    uint8_t tail;
-    uint8_t count;
-};
-
-void clearLearnSampleQueues();
-bool enqueueLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank, uint8_t others_open);
-bool dequeueLearnSample(SOLENOID_AI_INDEX aiIndex, PressureLearnSaveStruct *out);
+// Append one offset sample to the model's SPIFFS file + RAM mirror (the training task re-fits from it).
 void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank, uint8_t others_open);
 
-AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex);
+OffsetModel *getOffsetModel(SOLENOID_AI_INDEX aiIndex);
 
 headerDefineSaveFunc(riseOnStart, bool);
 headerDefineSaveFunc(maintainPressure, bool);
