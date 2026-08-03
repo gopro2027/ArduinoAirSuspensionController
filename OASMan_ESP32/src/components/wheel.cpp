@@ -235,9 +235,28 @@ static int goalSyncClubSize = 0;
 static int goalSyncWaiting = 0;
 static int goalSyncGeneration = 0;
 
-#ifndef GOAL_SYNC_BARRIER_TIMEOUT_MS
-#define GOAL_SYNC_BARRIER_TIMEOUT_MS 100
+// Barrier wait cap (backstop only; normal release happens when the club gathers or a
+// wheel leaves). The correct value depends on the valve state while a wheel waits:
+//   - Pressure mode: the valve is already CLOSED at the barrier (open + settle happen
+//     earlier in the iteration), so waiting is harmless. The cap MUST exceed a full
+//     iteration or the fast wheel times out before the slow wheel arrives and sync is
+//     lost. A single valve-open can be up to ~5000ms (AI cap / smooth air-out) + settle,
+//     so 6000ms holds sync and only fires on a genuine stall (routine itself caps at
+//     ROUTINE_TIMEOUT_MS = 10s).
+//   - Height mode: the valve is still OPEN while waiting, so a long wait would keep
+//     inflating/deflating that corner. Iterations are ~1ms here, so a short cap is both
+//     safe and sufficient.
+#ifndef GOAL_SYNC_BARRIER_TIMEOUT_PRESSURE_MS
+#define GOAL_SYNC_BARRIER_TIMEOUT_PRESSURE_MS 6000 // was: shared 100ms (too short: < one pressure-mode iteration, so the barrier timed out before slow wheels arrived and sync was effectively lost). It should technically be 6000 to ensure strict coupling (ie if one hit the max of 5000, and another was only 100ms long, the 100ms would wait 4900ms), but we could set this to 2000 so if pulses are way off we will allow them to desync.
 #endif
+#ifndef GOAL_SYNC_BARRIER_TIMEOUT_HEIGHT_MS
+#define GOAL_SYNC_BARRIER_TIMEOUT_HEIGHT_MS 100 // was: shared GOAL_SYNC_BARRIER_TIMEOUT_MS 100 (fine for height mode: valve is open while waiting, keep short)
+#endif
+
+static unsigned long goalSyncBarrierTimeoutMs()
+{
+    return getheightSensorMode() ? GOAL_SYNC_BARRIER_TIMEOUT_HEIGHT_MS : GOAL_SYNC_BARRIER_TIMEOUT_PRESSURE_MS;
+}
 
 static void goalSyncJoin()
 {
@@ -261,7 +280,7 @@ static void goalSyncLeave()
     wheelThreadUnlock();
 }
 
-static void goalSyncBarrier()
+static void goalSyncBarrier(unsigned long timeoutMs)
 {
     wheelThreadLock();
     const int gen = goalSyncGeneration;
@@ -292,7 +311,7 @@ static void goalSyncBarrier()
             goalSyncGeneration++;
             done = true;
         }
-        if (!done && (millis() - startMs) >= GOAL_SYNC_BARRIER_TIMEOUT_MS)
+        if (!done && (millis() - startMs) >= timeoutMs)
         {
             goalSyncWaiting = 0;
             goalSyncGeneration++;
@@ -457,14 +476,17 @@ void Wheel::goalRoutine() {
             }
             iteration++;
 
-            goalSyncBarrier(); // TODO: test and see if this should be removed during height sensor mode, as im not sure if it may hold up threads with the 1ms delay. id worry that under some edge cases this may hold up a thread and cause us to air out for too long and overshoot our minimum ride height at times
+            // Sync all active wheels at the end of each iteration so the next round of
+            // valve opens happens together. Timeout is mode-aware: generous in pressure
+            // mode (valves closed while waiting), short in height mode (valve still open).
+            goalSyncBarrier(goalSyncBarrierTimeoutMs());
         }
 
         // since this function (goalRoutine) is blocking the same thread, we must manually reset sensorless baseline and mark instability. If we had trackPressureStability() and pressureCaptureBaseline() in a different thread, we wouldn't need to do this.
         nullifySensorlessBaseline();
         markInstability(this->getSelectedInputValue());
 
-        goalSyncBarrier();
+        goalSyncBarrier(goalSyncBarrierTimeoutMs());
         goalSyncLeave();
 
         flagStartPressureGoalRoutine[thisWheelNum] = false;
