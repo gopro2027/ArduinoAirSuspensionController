@@ -231,44 +231,98 @@ void wheelThreadUnlock()
     xSemaphoreGive(wheelLockSem);
 }
 
-// barrier code (for syncing wheel threads) generated from chat-gpt because I don't quite understand it but it seems to work fine lololol
-std::atomic<int> waiting_threads(0);
-std::atomic<int> generation(0);
+static int goalSyncClubSize = 0;
+static int goalSyncWaiting = 0;
+static int goalSyncGeneration = 0;
 
-int count_participants()
+// Barrier wait cap (backstop only; normal release happens when the club gathers or a
+// wheel leaves). The correct value depends on the valve state while a wheel waits:
+//   - Pressure mode: the valve is already CLOSED at the barrier (open + settle happen
+//     earlier in the iteration), so waiting is harmless. The cap MUST exceed a full
+//     iteration or the fast wheel times out before the slow wheel arrives and sync is
+//     lost. A single valve-open can be up to ~5000ms (AI cap / smooth air-out) + settle,
+//     so 6000ms holds sync and only fires on a genuine stall (routine itself caps at
+//     ROUTINE_TIMEOUT_MS = 10s).
+//   - Height mode: the valve is still OPEN while waiting, so a long wait would keep
+//     inflating/deflating that corner. Iterations are ~1ms here, so a short cap is both
+//     safe and sufficient.
+#ifndef GOAL_SYNC_BARRIER_TIMEOUT_PRESSURE_MS
+#define GOAL_SYNC_BARRIER_TIMEOUT_PRESSURE_MS 6000 // was: shared 100ms (too short: < one pressure-mode iteration, so the barrier timed out before slow wheels arrived and sync was effectively lost). It should technically be 6000 to ensure strict coupling (ie if one hit the max of 5000, and another was only 100ms long, the 100ms would wait 4900ms), but we could set this to 2000 so if pulses are way off we will allow them to desync.
+#endif
+#ifndef GOAL_SYNC_BARRIER_TIMEOUT_HEIGHT_MS
+#define GOAL_SYNC_BARRIER_TIMEOUT_HEIGHT_MS 100 // was: shared GOAL_SYNC_BARRIER_TIMEOUT_MS 100 (fine for height mode: valve is open while waiting, keep short)
+#endif
+
+static unsigned long goalSyncBarrierTimeoutMs()
 {
-    // Count how many threads are currently running
-    int currently_active = 0;
-    for (int i = 0; i < NUM_WHEEL_THREADS; ++i)
-    {
-        if (flagStartPressureGoalRoutine[i].load())
-        {
-            currently_active++;
-        }
-    }
-    return currently_active;
+    return getheightSensorMode() ? GOAL_SYNC_BARRIER_TIMEOUT_HEIGHT_MS : GOAL_SYNC_BARRIER_TIMEOUT_PRESSURE_MS;
 }
 
-void custom_barrier_wait(int num_participants)
+static void goalSyncJoin()
 {
-    int gen = generation.load();
-    waiting_threads.fetch_add(1);
+    wheelThreadLock();
+    goalSyncClubSize++;
+    wheelThreadUnlock();
+}
 
-    if (waiting_threads.load() == num_participants)
+static void goalSyncLeave()
+{
+    wheelThreadLock();
+    if (goalSyncClubSize > 0)
     {
-        // Last thread arrives, reset and let others go
-        wheelThreadLock();
-        waiting_threads.store(0);
-        generation.fetch_add(1);
-        wheelThreadUnlock();
+        goalSyncClubSize--;
     }
-    else
+    if (goalSyncWaiting > 0 && (goalSyncClubSize == 0 || goalSyncWaiting >= goalSyncClubSize))
     {
-        // Poll until generation changes
-        while (generation.load() == gen)
+        goalSyncWaiting = 0;
+        goalSyncGeneration++;
+    }
+    wheelThreadUnlock();
+}
+
+static void goalSyncBarrier(unsigned long timeoutMs)
+{
+    wheelThreadLock();
+    const int gen = goalSyncGeneration;
+    goalSyncWaiting++;
+    if (goalSyncClubSize > 0 && goalSyncWaiting >= goalSyncClubSize)
+    {
+        goalSyncWaiting = 0;
+        goalSyncGeneration++;
+        wheelThreadUnlock();
+        return;
+    }
+    wheelThreadUnlock();
+
+    const unsigned long startMs = millis();
+    for (;;)
+    {
+        wheelThreadLock();
+        bool done = (goalSyncGeneration != gen);
+        if (!done && goalSyncClubSize > 0 && goalSyncWaiting >= goalSyncClubSize)
         {
-            delay(1);
+            goalSyncWaiting = 0;
+            goalSyncGeneration++;
+            done = true;
         }
+        if (!done && goalSyncClubSize == 0)
+        {
+            goalSyncWaiting = 0;
+            goalSyncGeneration++;
+            done = true;
+        }
+        if (!done && (millis() - startMs) >= timeoutMs)
+        {
+            goalSyncWaiting = 0;
+            goalSyncGeneration++;
+            done = true;
+        }
+        wheelThreadUnlock();
+        if (done)
+        {
+            return;
+        }
+        delay(1);
     }
 }
 
@@ -277,6 +331,8 @@ void Wheel::goalRoutine() {
     if (flagStartPressureGoalRoutine[thisWheelNum].load())
     {
         delay(100); // wait for all threads to sync on first call. 6-19-2025: I actually have no clue if this is required. The 100 is the same as the delay in the task.
+
+        goalSyncJoin();
 
         // const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
         // const double oscillation = 1.75;
@@ -420,14 +476,18 @@ void Wheel::goalRoutine() {
             }
             iteration++;
 
-            custom_barrier_wait(count_participants()); // TODO: test and see if this should be removed during height sensor mode, as im not sure if it may hold up threads with the 1ms delay. id worry that under some edge cases this may hold up a thread and cause us to air out for too long and overshoot our minimum ride height at times
+            // Sync all active wheels at the end of each iteration so the next round of
+            // valve opens happens together. Timeout is mode-aware: generous in pressure
+            // mode (valves closed while waiting), short in height mode (valve still open).
+            goalSyncBarrier(goalSyncBarrierTimeoutMs());
         }
 
         // since this function (goalRoutine) is blocking the same thread, we must manually reset sensorless baseline and mark instability. If we had trackPressureStability() and pressureCaptureBaseline() in a different thread, we wouldn't need to do this.
         nullifySensorlessBaseline();
         markInstability(this->getSelectedInputValue());
 
-        custom_barrier_wait(count_participants()); // needed here because when it breaks out of the loop it needs to hit it one last time.
+        goalSyncBarrier(goalSyncBarrierTimeoutMs());
+        goalSyncLeave();
 
         flagStartPressureGoalRoutine[thisWheelNum] = false;
         // close both after (only applies for level sensor logic)
