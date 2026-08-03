@@ -80,6 +80,6 @@ float readPinPressure(InputType *pin, bool heightMode);
 
 void setupWheelLockSem();
 
-extern double getActualBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank, double others_open);
+extern double getPredictedBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank, double others_open);
 extern Manifold *getManifold(); // defined in airSuspensionUtil.h
 #endif

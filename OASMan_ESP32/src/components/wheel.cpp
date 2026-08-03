@@ -331,8 +331,11 @@ void Wheel::goalRoutine() {
 
                 if (dir == FLOW_NONE)
                 {
-                    // Commit a direction from the raw reading. Far from goal the ~10 psi offset is small
-                    // versus the distance, so the direction is reliable; near goal the deadband stops us.
+                    // First tick: this corner's valve is still closed, so there is no flow through its
+                    // sensor and rawBag is the true settled pressure (no offset to correct). We also can't
+                    // use the predictor yet - the offset is direction-specific and we haven't picked a
+                    // direction. So commit the direction here from raw; every later tick uses the predicted
+                    // pressure for the stop test below.
                     int rawDif = this->pressureGoal - (int)lround(rawBag);
                     if (abs(rawDif) <= PRESSURE_DEADBAND_PSI)
                     {
@@ -356,7 +359,7 @@ void Wheel::goalRoutine() {
                 }
 
                 uint8_t othersOpen = countOthersOpenSameDirection(this->thisWheelNum, dir == FLOW_UP);
-                double actual = getActualBagPressure(aiIndex, rawBag, rawTank, othersOpen);
+                double actual = getPredictedBagPressure(aiIndex, rawBag, rawTank, othersOpen);
 
                 bool reached = (dir == FLOW_UP) ? (actual >= this->pressureGoal - PRESSURE_DEADBAND_PSI)
                                                 : (actual <= this->pressureGoal + PRESSURE_DEADBAND_PSI);

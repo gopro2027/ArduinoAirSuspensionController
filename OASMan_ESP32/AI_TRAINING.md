@@ -21,7 +21,7 @@ the same operation — **re-fit** — and weights are re-derived from the sample
 |---|---|
 | `src/pressureMath.*` | `OffsetModel`: `computeFeatures`, `predict`, `refit` (ridge least squares) + `solveN` |
 | `src/manifoldSaveData.*` | sample files on SPIFFS (`learnData`, `recordLearnSample`), the 4 RAM-only models |
-| `src/airSuspensionUtil.cpp` | `refitModel`/`trainOffsetModels`, `getOffset` (fade), `getActualBagPressure` |
+| `src/airSuspensionUtil.cpp` | `refitModel`/`trainOffsetModels`, `getPredictionOffset` (fade), `getPredictedBagPressure` |
 | `src/components/wheel.cpp` | closed-loop `goalRoutine`; logs samples on close (auto + manual) |
 | `src/tasks/tasks.cpp` | `task_trainAI`: refit all at boot, then refit changed models every 100 ms |
 
@@ -41,7 +41,7 @@ Below `ML_FIT_MIN_SAMPLES` (25) valid samples it leaves the weights alone.
 
 ### The fade / default
 
-There is **no physics-default formula**. Before a model is trained, `getOffset` returns a flat constant —
+There is **no physics-default formula**. Before a model is trained, `getPredictionOffset` returns a flat constant —
 **−5 psi on air-up, +5 psi on air-out** (`OFFSET_DEFAULT_PSI`). As samples accumulate it fades the trained
 model in:
 
@@ -76,7 +76,7 @@ ADS1115 to `RATE_ADS1115_860SPS`.
 ## The closed-loop controller (`Wheel::goalRoutine`)
 
 Per corner: commit a direction from the raw reading; each tick read the flowing bag + tank, count
-`othersOpen`, compute `actual = getActualBagPressure(...)`, hold the valve open; stop and close within
+`othersOpen`, compute `actual = getPredictedBagPressure(...)`, hold the valve open; stop and close within
 `PRESSURE_DEADBAND_PSI` (2) of goal — or immediately on the in-loop `getbagMaxPressure()` /
 `MAX_PRESSURE_SAFETY` ceiling (fill), the 10 s `ROUTINE_TIMEOUT_MS`, or an `onlyAirUp` block. Height-sensor
 mode uses the same loop with the level sensor and no offset.

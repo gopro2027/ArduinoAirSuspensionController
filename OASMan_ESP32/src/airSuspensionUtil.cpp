@@ -614,7 +614,7 @@ void updateAIPercentage()
 // Fraction of the trained model to trust, ramping in with sample count: 0 below OFFSET_FADE_MIN, linearly
 // up to 1 at AI_LEARN_RATIO_NUM. Below the min, the flat constant default is used (-/+ OFFSET_DEFAULT_PSI
 // for up/down). Raw flowing readings alone are wrong by ~10 psi, so an offset is always applied.
-static double getOffset(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank, double others_open)
+static double getPredictionOffset(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank, double others_open)
 {
     OffsetModel *m = getOffsetModel(aiIndex);
     double def = m->up ? -(double)OFFSET_DEFAULT_PSI : (double)OFFSET_DEFAULT_PSI;
@@ -632,11 +632,11 @@ static double getOffset(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_ta
     return def * (1.0 - w) + trained * w;
 }
 
-// True bag pressure recovered from the live flowing readings while a valve is open. The closed-loop
-// controller stops when this reaches goal. See AI_TRAINING.md.
-double getActualBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank, double others_open)
+// Predicted true bag pressure recovered from the live flowing readings while a valve is open. The
+// closed-loop controller stops when this reaches goal. See AI_TRAINING.md.
+double getPredictedBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank, double others_open)
 {
-    return raw_bag + getOffset(aiIndex, raw_bag, raw_tank, others_open);
+    return raw_bag + getPredictionOffset(aiIndex, raw_bag, raw_tank, others_open);
 }
 
 #pragma endregion
