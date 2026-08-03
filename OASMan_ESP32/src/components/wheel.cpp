@@ -231,44 +231,79 @@ void wheelThreadUnlock()
     xSemaphoreGive(wheelLockSem);
 }
 
-// barrier code (for syncing wheel threads) generated from chat-gpt because I don't quite understand it but it seems to work fine lololol
-std::atomic<int> waiting_threads(0);
-std::atomic<int> generation(0);
+static int goalSyncClubSize = 0;
+static int goalSyncWaiting = 0;
+static int goalSyncGeneration = 0;
 
-int count_participants()
+#ifndef GOAL_SYNC_BARRIER_TIMEOUT_MS
+#define GOAL_SYNC_BARRIER_TIMEOUT_MS 100
+#endif
+
+static void goalSyncJoin()
 {
-    // Count how many threads are currently running
-    int currently_active = 0;
-    for (int i = 0; i < NUM_WHEEL_THREADS; ++i)
-    {
-        if (flagStartPressureGoalRoutine[i].load())
-        {
-            currently_active++;
-        }
-    }
-    return currently_active;
+    wheelThreadLock();
+    goalSyncClubSize++;
+    wheelThreadUnlock();
 }
 
-void custom_barrier_wait(int num_participants)
+static void goalSyncLeave()
 {
-    int gen = generation.load();
-    waiting_threads.fetch_add(1);
-
-    if (waiting_threads.load() == num_participants)
+    wheelThreadLock();
+    if (goalSyncClubSize > 0)
     {
-        // Last thread arrives, reset and let others go
-        wheelThreadLock();
-        waiting_threads.store(0);
-        generation.fetch_add(1);
-        wheelThreadUnlock();
+        goalSyncClubSize--;
     }
-    else
+    if (goalSyncWaiting > 0 && (goalSyncClubSize == 0 || goalSyncWaiting >= goalSyncClubSize))
     {
-        // Poll until generation changes
-        while (generation.load() == gen)
+        goalSyncWaiting = 0;
+        goalSyncGeneration++;
+    }
+    wheelThreadUnlock();
+}
+
+static void goalSyncBarrier()
+{
+    wheelThreadLock();
+    const int gen = goalSyncGeneration;
+    goalSyncWaiting++;
+    if (goalSyncClubSize > 0 && goalSyncWaiting >= goalSyncClubSize)
+    {
+        goalSyncWaiting = 0;
+        goalSyncGeneration++;
+        wheelThreadUnlock();
+        return;
+    }
+    wheelThreadUnlock();
+
+    const unsigned long startMs = millis();
+    for (;;)
+    {
+        wheelThreadLock();
+        bool done = (goalSyncGeneration != gen);
+        if (!done && goalSyncClubSize > 0 && goalSyncWaiting >= goalSyncClubSize)
         {
-            delay(1);
+            goalSyncWaiting = 0;
+            goalSyncGeneration++;
+            done = true;
         }
+        if (!done && goalSyncClubSize == 0)
+        {
+            goalSyncWaiting = 0;
+            goalSyncGeneration++;
+            done = true;
+        }
+        if (!done && (millis() - startMs) >= GOAL_SYNC_BARRIER_TIMEOUT_MS)
+        {
+            goalSyncWaiting = 0;
+            goalSyncGeneration++;
+            done = true;
+        }
+        wheelThreadUnlock();
+        if (done)
+        {
+            return;
+        }
+        delay(1);
     }
 }
 
@@ -277,6 +312,8 @@ void Wheel::goalRoutine() {
     if (flagStartPressureGoalRoutine[thisWheelNum].load())
     {
         delay(100); // wait for all threads to sync on first call. 6-19-2025: I actually have no clue if this is required. The 100 is the same as the delay in the task.
+
+        goalSyncJoin();
 
         // const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
         // const double oscillation = 1.75;
@@ -420,14 +457,15 @@ void Wheel::goalRoutine() {
             }
             iteration++;
 
-            custom_barrier_wait(count_participants()); // TODO: test and see if this should be removed during height sensor mode, as im not sure if it may hold up threads with the 1ms delay. id worry that under some edge cases this may hold up a thread and cause us to air out for too long and overshoot our minimum ride height at times
+            goalSyncBarrier(); // TODO: test and see if this should be removed during height sensor mode, as im not sure if it may hold up threads with the 1ms delay. id worry that under some edge cases this may hold up a thread and cause us to air out for too long and overshoot our minimum ride height at times
         }
 
         // since this function (goalRoutine) is blocking the same thread, we must manually reset sensorless baseline and mark instability. If we had trackPressureStability() and pressureCaptureBaseline() in a different thread, we wouldn't need to do this.
         nullifySensorlessBaseline();
         markInstability(this->getSelectedInputValue());
 
-        custom_barrier_wait(count_participants()); // needed here because when it breaks out of the loop it needs to hit it one last time.
+        goalSyncBarrier();
+        goalSyncLeave();
 
         flagStartPressureGoalRoutine[thisWheelNum] = false;
         // close both after (only applies for level sensor logic)
