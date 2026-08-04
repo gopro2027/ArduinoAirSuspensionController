@@ -151,7 +151,6 @@ void beginSaveData()
     _SaveData.internalReboot.load("internalReboot", false);
     _SaveData.learnPressureSensors.load("learnPressureSensors", false);
     _SaveData.safetyMode.load("safetyMode", true);
-    _SaveData.aiEnabled.load("aiEnabled", true);
 
     // pressure sensor values
     _SaveData.pressureInputFrontPassenger.load("PIFP", 0);
@@ -292,6 +291,7 @@ static void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag,
     updateAIPercentage();
 }
 
+// TODO: get rid of this function since it's just a wrapper for another ??
 // Once a model's file is full we simply stop collecting (the fit from LEARN_SAVE_COUNT samples is plenty).
 void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank)
 {
@@ -327,7 +327,6 @@ createSaveFuncInt(raiseOnPressure, bool);
 createSaveFuncInt(internalReboot, bool);
 createSaveFuncInt(learnPressureSensors, bool);
 createSaveFuncInt(safetyMode, bool);
-createSaveFuncInt(aiEnabled, bool);
 createSaveFuncInt(updateMode, bool);
 
 createSaveFuncString(wifiSSID);

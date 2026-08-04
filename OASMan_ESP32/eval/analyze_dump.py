@@ -118,7 +118,7 @@ def analyze(name, up, rows):
 
 def main():
     path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
-        os.path.dirname(__file__), "..", "ai weights for corvette 7.30.2026 SCEMA_VERSION 2.txt")
+        os.path.dirname(__file__), "samples", "ai weights for corvette 7.30.2026 SCEMA_VERSION 2.txt")
     print(f"Analyzing {os.path.basename(path)}")
     for name, up, rows in load(path):
         analyze(name, up, rows)

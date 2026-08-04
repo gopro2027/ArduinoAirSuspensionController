@@ -51,7 +51,6 @@ public:
     Preferencable internalReboot;  // byte
     Preferencable learnPressureSensors;
     Preferencable safetyMode;
-    Preferencable aiEnabled;
     Preferencable updateMode;
     Preferencable wifiSSID;
     Preferencable wifiPassword;
@@ -146,7 +145,6 @@ headerDefineSaveFunc(raiseOnPressure, bool);
 headerDefineSaveFunc(internalReboot, bool);
 headerDefineSaveFunc(learnPressureSensors, bool);
 headerDefineSaveFunc(safetyMode, bool);
-headerDefineSaveFunc(aiEnabled, bool);
 headerDefineSaveFunc(updateMode, bool);
 headerDefineSaveFunc(wifiSSID, String);
 headerDefineSaveFunc(wifiPassword, String);

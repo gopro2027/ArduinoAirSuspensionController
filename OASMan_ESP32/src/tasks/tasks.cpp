@@ -183,8 +183,9 @@ void setup_tasks()
     xTaskCreate(
         task_trainAI,
         "trainAI",
-        512 * 10, // generous headroom for the batch least-squares refit's stack matrices + Serial.printf;
+        512 * 4, // generous headroom for the batch least-squares refit's stack matrices + Serial.printf;
                   // the boot high-water-mark print in task_trainAI is how to right-size this
+                  // TODO: check the size on this task. It may need to be larger.
         NULL,
         1000,
         NULL);

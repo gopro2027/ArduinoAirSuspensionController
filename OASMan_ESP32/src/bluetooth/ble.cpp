@@ -526,8 +526,6 @@ ConfigValuesPacket buildCurrentConfigValuesPacket()
         configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE);
     if (getsafetyMode())
         configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE);
-    if (getaiEnabled())
-        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED);
     if (getsensorlessLeveling())
         configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING);
 
@@ -704,7 +702,6 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
 #endif
             setheightSensorMode((flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0);
             setsafetyMode((flags & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0);
-            setaiEnabled((flags & (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED)) != 0);
             saveAuxillaryOutputPreference(*recpkt->_auxillaryOutputConfig());
 
 
