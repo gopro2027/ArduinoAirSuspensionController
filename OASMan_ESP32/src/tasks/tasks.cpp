@@ -183,8 +183,8 @@ void setup_tasks()
     xTaskCreate(
         task_trainAI,
         "trainAI",
-        512 * 10, // was: 512 * 8 (and 512 * 4 before that, which overflowed) -- the batch fitter/RLS
-                  // matrix locals stack on top of an nvs write, and they grew again at 4 coefficients
+        512 * 10, // generous headroom for the batch least-squares refit's stack matrices + Serial.printf;
+                  // the boot high-water-mark print in task_trainAI is how to right-size this
         NULL,
         1000,
         NULL);

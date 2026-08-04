@@ -203,48 +203,6 @@ void beginSaveData()
         _SaveData.heightSensorCalMinRide[j].loadDouble(buf, 0.0);
     }
 
-    // _SaveData.upModel.weights[0].loadDouble("upmod0", 0.1);
-    // _SaveData.upModel.weights[1].loadDouble("upmod1", 0.1);
-    // _SaveData.upModel.weights[2].loadDouble("upmod2", -0.1);
-    // _SaveData.upModel.weights[3].loadDouble("upmod3", 0.1);
-    // _SaveData.upModel.weights[4].loadDouble("upmod4", 0.1);
-    // _SaveData.upModel.weights[5].loadDouble("upmod5", 0.0);
-    // _SaveData.upModel.count.load("upmodcount",0);
-
-    // _SaveData.downModel.weights[0].loadDouble("downmod0", 0.1);
-    // _SaveData.downModel.weights[1].loadDouble("downmod1", 0.1);
-    // _SaveData.downModel.weights[2].loadDouble("downmod2", 0.0);
-    // _SaveData.downModel.weights[3].loadDouble("downmod3", 0.0);
-    // _SaveData.downModel.weights[4].loadDouble("downmod4", 0.1);
-    // _SaveData.downModel.weights[5].loadDouble("downmod5", 0.0);
-    // _SaveData.downModel.count.load("downmodcount",0);
-
-    // _SaveData.upModel.loadModel();
-    // _SaveData.downModel.loadModel();
-
-    // temporary override based on corvette data:
-    // Training data on all 5 weights... seems to be lackluster with some occelation
-    // _SaveData.upModel.model.loadWeights(-0.037828, 0.49027, -0.24911, 0.34766, -0.26119, -0.032774);
-    // _SaveData.downModel.model.loadWeights(1.0217, -0.63391, -0.057, -0.57535, -0.22858, 0.30494);
-    // _SaveData.upModel.model.useWeight4 = true;
-    // _SaveData.upModel.model.useWeight5 = true;
-
-    // training data on just 3 base weights seem to work good.
-    // _SaveData.upModel.model.loadWeights(-0.54644, 0.65552, -0.077218, 0.70383, -4.1894, 0.0057034);
-    // _SaveData.downModel.model.loadWeights(1.0276, -0.93082, 0.069306, -0.9215, -1.4924, -0.084615);
-    // _SaveData.upModel.model.useWeight4 = false;
-    // _SaveData.upModel.model.useWeight5 = false;
-    // _SaveData.downModel.model.useWeight4 = false;
-    // _SaveData.downModel.model.useWeight5 = false;
-
-    // // training data on just 3 base weights seem to work good.
-    // _SaveData.upModel.model.loadWeights(-0.34525, 0.45432, -0.076937, 0.40201, 0.1, -0.19555);
-    // _SaveData.downModel.model.loadWeights(0.76399, -0.66687, 0.070163, -0.5265, 0.1, 0.17787);
-    // _SaveData.upModel.model.useWeight4 = true;
-    // _SaveData.upModel.model.useWeight5 = false;
-    // _SaveData.downModel.model.useWeight4 = true;
-    // _SaveData.downModel.model.useWeight5 = false;
-
     loadAILearnedDataPreferences();
 
     learnDataMutex = xSemaphoreCreateMutex();
@@ -297,7 +255,8 @@ void clearPressureDataSingle(SOLENOID_AI_INDEX index)
     updateAIPercentage();
 }
 
-void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank)
+// Internal helper for recordLearnSample; not part of the public header.
+static void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank)
 {
     int *size = &learnDataIndex[aiIndex];
 

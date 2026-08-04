@@ -576,9 +576,10 @@ void updateAIPercentage(); // defined below in this region
 void refitModel(SOLENOID_AI_INDEX index)
 {
     OffsetModel *m = getOffsetModel(index);
-    int used = m->refit(getLearnData(index), getLearnDataLength(index));
+    int len = getLearnDataLength(index);
+    int used = m->refit(getLearnData(index), len);
     Serial.printf("Refit model %i: %i samples, used %i  w=[%.4f %.4f %.4f]\n",
-                  (int)index, getLearnDataLength(index), used, m->w[0], m->w[1], m->w[2]);
+                  (int)index, len, used, m->w[0], m->w[1], m->w[2]);
 }
 
 // Refit any model whose stored sample count changed since the last call. Called once at boot (refits all,
