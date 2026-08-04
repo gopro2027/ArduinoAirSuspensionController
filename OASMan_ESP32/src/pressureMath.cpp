@@ -82,12 +82,12 @@ static bool solveN(const double *Min, const double *rin, double *x)
 // well conditioned): fill is driven by tank->bag, dump is driven by bag->atmosphere(~0). See AI_TRAINING.md.
 void OffsetModel::computeFeatures(double raw_bag, double raw_tank, double others_open, double f[ML_NUM_COEFF])
 {
+    (void)others_open; // dropped as a feature: redundant with raw_tank via the differential, contributed ~0 to the fit
     double differential = this->up ? (raw_tank - raw_bag) : raw_bag;
     double d = differential / 100.0;
     f[0] = d;
     f[1] = d * d;
-    f[2] = others_open;
-    f[3] = 1.0;
+    f[2] = 1.0; // bias
 }
 
 // Predicted sensor offset in psi (settled - flowing). Fill reads high (negative offset), dump reads low.
@@ -99,7 +99,7 @@ double OffsetModel::predict(double raw_bag, double raw_tank, double others_open)
     }
     double f[ML_NUM_COEFF];
     computeFeatures(raw_bag, raw_tank, others_open, f);
-    return (w[0] * f[0] + w[1] * f[1] + w[2] * f[2] + w[3] * f[3]) * ML_OFFSET_NORM;
+    return (w[0] * f[0] + w[1] * f[1] + w[2] * f[2]) * ML_OFFSET_NORM;
 }
 
 int OffsetModel::refit(const PressureLearnSaveStruct *samples, int count)

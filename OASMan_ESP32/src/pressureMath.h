@@ -17,7 +17,7 @@
 #define ML_OFFSET_NORM 100.0   // label/prediction scale, keeps weights O(0.1)
 #define ML_FIT_RIDGE 0.001     // ridge added to the normal-equations diagonal (per sample)
 #define ML_FIT_MIN_SAMPLES 25  // minimum valid samples for a stable 4-coeff fit
-#define ML_NUM_COEFF 4         // features: differential/100, (differential/100)^2, others_open, bias
+#define ML_NUM_COEFF 3         // features: differential/100, (differential/100)^2, bias (others_open dropped: redundant with raw_tank via the differential, contributed ~0)
 
 struct PressureLearnSaveStruct; // defined in manifoldSaveData.h
 
@@ -27,7 +27,7 @@ struct PressureLearnSaveStruct; // defined in manifoldSaveData.h
 class OffsetModel
 {
 public:
-    double w[ML_NUM_COEFF] = {0, 0, 0, 0};
+    double w[ML_NUM_COEFF] = {0, 0, 0};
     bool up = true; // fill (differential = tank - bag) vs dump (differential = bag - atmosphere ~ bag)
 
     void computeFeatures(double raw_bag, double raw_tank, double others_open, double f[ML_NUM_COEFF]);

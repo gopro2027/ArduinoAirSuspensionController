@@ -29,9 +29,12 @@ There are **4 models** — up-front, up-rear, down-front, down-rear (both corner
 
 ### The model
 
-`OffsetModel` is a 4-coefficient linear fit of the offset (psi). Features (`computeFeatures`, scaled by
-100 so the squared term stays well-conditioned): `[ differential/100, (differential/100)², othersOpen, 1 ]`,
+`OffsetModel` is a 3-coefficient linear fit of the offset (psi). Features (`computeFeatures`, scaled by
+100 so the squared term stays well-conditioned): `[ differential/100, (differential/100)², 1 ]`,
 where differential = `rawTank − rawBag` (fill) or `rawBag` (dump). `predict` = `w·f × ML_OFFSET_NORM`.
+(`othersOpen` was dropped as a feature — tank sag from other open valves already shows up in `rawTank`,
+which the differential captures, so it added ~0 to the fit on real data. It is still recorded in each
+sample, unused, in case a future feature wants it.)
 The offset vanishes as flow stops (`rawBag → rawTank` on fill, `→ 0` on dump), so the estimate converges
 to the truth right where the controller needs to stop; and because it's trained on
 flowing-before-close → settled-after-close, it inherently absorbs the valve-close overshoot.
@@ -76,10 +79,16 @@ ADS1115 to `RATE_ADS1115_860SPS`.
 ## The closed-loop controller (`Wheel::goalRoutine`)
 
 Per corner: commit a direction from the raw reading; each tick read the flowing bag + tank, count
-`othersOpen`, compute `actual = getPredictedBagPressure(...)`, hold the valve open; stop and close within
-`PRESSURE_DEADBAND_PSI` (2) of goal — or immediately on the in-loop `getbagMaxPressure()` /
-`MAX_PRESSURE_SAFETY` ceiling (fill), the 10 s `ROUTINE_TIMEOUT_MS`, or an `onlyAirUp` block. Height-sensor
-mode uses the same loop with the level sensor and no offset.
+`othersOpen`, compute `actual = getPredictedBagPressure(...)`, hold the valve open; when `actual` reaches
+goal, close and **verify**: wait for the bag to settle (`OFFSET_SAMPLE_SETTLE_MS` air-up /
+`OFFSET_SAMPLE_SETTLE_DOWN_MS` air-out — venting settles slower), read the true settled pressure, then drop
+the committed direction and re-run the top-of-loop check against that reading. This makes the verify
+**bidirectional**: it finishes within `PRESSURE_DEADBAND_PSI` (1) of goal, keeps going the same way if it
+fell short, or reverses if it overshot — all inside one `goalRoutine` call. While settling, the corner keeps
+ticking the sync barrier with its valve closed, so it never stalls or overshoots the other three corners.
+Hard stops still bypass the verify: the in-loop `getbagMaxPressure()` / `MAX_PRESSURE_SAFETY` ceiling (fill),
+the 10 s `ROUTINE_TIMEOUT_MS`, or an `onlyAirUp` block (which accepts an overshoot rather than venting).
+Height-sensor mode uses the same loop with the level sensor and no offset.
 
 ## Persistence / migration
 
@@ -90,9 +99,9 @@ the next refit.
 
 ## Tuning constants
 
-`pressureMath.h`: `ML_OFFSET_NORM` (100), `ML_FIT_RIDGE`, `ML_FIT_MIN_SAMPLES` (25), `ML_NUM_COEFF` (4),
+`pressureMath.h`: `ML_OFFSET_NORM` (100), `ML_FIT_RIDGE`, `ML_FIT_MIN_SAMPLES` (25), `ML_NUM_COEFF` (3),
 `ML_SAMPLE_RECORD_VERSION`. `user_defines.h`: `LEARN_SAVE_COUNT` (300), `OFFSET_DEFAULT_PSI` (5),
-`OFFSET_FADE_MIN` (25), `AI_LEARN_RATIO_NUM` (150), `PRESSURE_DEADBAND_PSI` (2), `OFFSET_SAMPLE_SETTLE_MS`
-(250), `LOG_MANUAL_OFFSET_SAMPLES`.
+`OFFSET_FADE_MIN` (25), `AI_LEARN_RATIO_NUM` (150), `PRESSURE_DEADBAND_PSI` (1), `OFFSET_SAMPLE_SETTLE_MS`
+(250), `OFFSET_SAMPLE_SETTLE_DOWN_MS` (500), `LOG_MANUAL_OFFSET_SAMPLES`.
 
 Note: `eval/model_eval.cpp` targeted the old online-learning model and is stale until ported.

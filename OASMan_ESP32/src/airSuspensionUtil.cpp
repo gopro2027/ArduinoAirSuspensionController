@@ -577,8 +577,8 @@ void refitModel(SOLENOID_AI_INDEX index)
 {
     OffsetModel *m = getOffsetModel(index);
     int used = m->refit(getLearnData(index), getLearnDataLength(index));
-    Serial.printf("Refit model %i: %i samples, used %i  w=[%.4f %.4f %.4f %.4f]\n",
-                  (int)index, getLearnDataLength(index), used, m->w[0], m->w[1], m->w[2], m->w[3]);
+    Serial.printf("Refit model %i: %i samples, used %i  w=[%.4f %.4f %.4f]\n",
+                  (int)index, getLearnDataLength(index), used, m->w[0], m->w[1], m->w[2]);
 }
 
 // Refit any model whose stored sample count changed since the last call. Called once at boot (refits all,

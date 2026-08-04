@@ -329,8 +329,9 @@ void Wheel::goalRoutine() {
                 if (settleUntil != 0)
                 {
                     // The predicted pressure reached goal, so the valve is closed while the bag settles.
-                    // Once settled we check the TRUE pressure and only finish if it actually hit the goal;
-                    // if it fell short we keep the same direction and fill/vent more (all in this routine).
+                    // Once settled, drop the committed direction and let the control block below re-check
+                    // against the TRUE (valve-closed) settled pressure: it finishes if within the deadband,
+                    // continues the same way if we fell short, or REVERSES if we overshot. Bidirectional verify.
                     if (millis() >= settleUntil)
                     {
                         double settled = this->getSelectedInputValue();
@@ -340,13 +341,7 @@ void Wheel::goalRoutine() {
                             valveWasOpened = false;
                         }
                         settleUntil = 0;
-                        bool hitGoal = (dir == FLOW_UP) ? (settled >= this->pressureGoal)
-                                                        : (settled <= this->pressureGoal);
-                        if (hitGoal)
-                        {
-                            break; // settled pressure reached goal — done
-                        }
-                        // else: undershoot. dir stays committed; the control block below re-opens the valve.
+                        dir = FLOW_NONE; // re-evaluate from the settled reading (top-of-loop check breaks out or corrects)
                     }
                 }
 
@@ -402,7 +397,9 @@ void Wheel::goalRoutine() {
                         {
                             break; // safety: stop now, no settle/verify
                         }
-                        settleUntil = millis() + OFFSET_SAMPLE_SETTLE_MS; // verify the settled pressure next
+                        // air-out settles slower than air-up, so give it longer before the verify read
+                        uint32_t settleMs = (dir == FLOW_DOWN) ? OFFSET_SAMPLE_SETTLE_DOWN_MS : OFFSET_SAMPLE_SETTLE_MS;
+                        settleUntil = millis() + settleMs; // verify the settled pressure next
                     }
                     else
                     {
@@ -627,6 +624,7 @@ void Wheel::captureManualOffsetSample()
     if (getheightSensorMode() || flagStartPressureGoalRoutine[thisWheelNum].load())
     {
         manualValveWasOpen = false;
+        manualSettleUntil = 0;
         return;
     }
 
@@ -641,15 +639,23 @@ void Wheel::captureManualOffsetSample()
         manualFlowTank = (uint8_t)lround(getCompressor()->readTankPressureNow());
         manualOthers = countOthersOpenSameDirection(this->thisWheelNum, up);
         manualAiIndex = up ? getInSolenoid()->getAIIndex() : getOutSolenoid()->getAIIndex();
+        manualUp = up;
         manualValveWasOpen = true;
+        manualSettleUntil = 0; // a (re)opened valve cancels any pending settle read
     }
     else if (manualValveWasOpen)
     {
-        // Valve just closed: the flow-induced offset is gone, so the current reading is the settled truth.
+        // Valve just closed: wait for the bag to settle (air-out settles slower) before the settled read.
+        manualValveWasOpen = false;
+        manualSettleUntil = millis() + (manualUp ? OFFSET_SAMPLE_SETTLE_MS : OFFSET_SAMPLE_SETTLE_DOWN_MS);
+    }
+    else if (manualSettleUntil != 0 && millis() >= manualSettleUntil)
+    {
+        // Settled: the flow-induced offset is gone, so the current reading is the settled truth.
         this->readInputs();
         uint8_t settledBag = (uint8_t)lround(this->getSelectedInputValue());
         recordLearnSample(manualAiIndex, manualFlowBag, settledBag, manualFlowTank, manualOthers);
-        manualValveWasOpen = false;
+        manualSettleUntil = 0;
     }
 }
 #else

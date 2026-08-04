@@ -270,7 +270,10 @@ void clearPressureData()
     {
         deleteFile(getLogFileName((SOLENOID_AI_INDEX)i));
         learnDataIndex[i] = 0;
-        offsetModels[i].w[0] = offsetModels[i].w[1] = offsetModels[i].w[2] = offsetModels[i].w[3] = 0;
+        for (int c = 0; c < ML_NUM_COEFF; c++)
+        {
+            offsetModels[i].w[c] = 0;
+        }
     }
     AIPercentage = 0;
     loadAILearnedDataPreferences();

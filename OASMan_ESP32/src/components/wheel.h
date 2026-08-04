@@ -45,6 +45,8 @@ private:
     // Log an offset sample from a manual valve move (watched by valve state each Wheel::loop tick).
     void captureManualOffsetSample();
     bool manualValveWasOpen = false;
+    bool manualUp = false;                // direction of the tracked manual move (picks the settle time)
+    uint32_t manualSettleUntil = 0;       // while non-zero: valve closed, waiting to read the settled bag
     uint8_t manualFlowBag = 0, manualFlowTank = 0, manualOthers = 0;
     SOLENOID_AI_INDEX manualAiIndex = AI_MODEL_UNDEFINED;
     void maintainPressure();
