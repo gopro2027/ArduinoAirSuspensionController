@@ -265,14 +265,14 @@ static void initPressureGoalWithStretch(byte wheelNum, int goal)
     int belowP = getAirUpBagStretchTriggerBelowPressure();
     int unroll = getAirUpBagStretchPressure();
     // the functionality of this feature was changed a bit from the original idea. I've kind of deemed the original idea of 'going past the pressure' kind of useless on it's own, as it's just going to make almost every time you go to a preset be inaccurate.
-    // instead what this function will do is check if the current pressure is below the AirUpBagStretchTriggerBelowPressure, which by default is 40psi, and if it is, it will go to the AirUpBagStretchPressure pressure first in order to stretch the bag out.
+    // instead what this function will do is check if the current pressure is below the AirUpBagStretchTriggerBelowPressure, which by default is 40psi, and if it is, it will go to the AirUpBagStretchPressure pressure + goal first in order to stretch the bag out.
     if (!getheightSensorMode() && // don't do this feature if height sensor mode is enabled
         unroll > 0 && // unroll being 0 is functionally disabled
-        goal < unroll && // only run if the goal pressure is below stretch pressure, otherwise no need to stretch if it's already going past it
+        //goal < unroll && // only run if the goal pressure is below stretch pressure, otherwise no need to stretch if it's already going past it // UPDATE: unroll is now just an addition to goal, so this check is unnecessary
         goal > w->getSelectedInputValue() && // only run if we are airing up
         w->getSelectedInputValue() < belowP) // only run if the current pressure is below the AirUpBagStretchTriggerBelowPressure
     {
-        w->initPressureGoal(unroll, true, [w, goal]()
+        w->initPressureGoal(goal + unroll, true, [w, goal]()
                             { w->initPressureGoal(goal); }); //this could technically be initPressureGoalWithStretch (recursive) but with a chance of an infinite loop, so we will go straight to initPressureGoal for now unless we want to add more functionality and failsafe checks to initPressureGoalWithStretch in the future
     }
     else

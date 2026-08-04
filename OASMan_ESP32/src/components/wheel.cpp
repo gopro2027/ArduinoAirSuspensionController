@@ -215,44 +215,88 @@ void wheelThreadUnlock()
     xSemaphoreGive(wheelLockSem);
 }
 
-// barrier code (for syncing wheel threads) generated from chat-gpt because I don't quite understand it but it seems to work fine lololol
-std::atomic<int> waiting_threads(0);
-std::atomic<int> generation(0);
+static int goalSyncClubSize = 0;
+static int goalSyncWaiting = 0;
+static int goalSyncGeneration = 0;
 
-int count_participants()
+// Barrier wait cap (backstop only; normal release happens when the club gathers or a
+// wheel leaves). INVARIANT: a wheel only ever waits at the barrier with its valve CLOSED
+// (goalRoutine skips the barrier while it is flowing, and closes both valves before the
+// exit rendezvous), so waiting is always harmless regardless of how long it lasts. The
+// cap must exceed the longest a slow corner can stay open before it closes and reaches
+// the barrier -- a single fill can run up to ~5000ms -- so 6000ms lets a fast corner wait
+// for the slowest before rendezvous while still firing on a genuine stall (the routine
+// itself caps at ROUTINE_TIMEOUT_MS = 10s). Mode-independent: pressure and height flow
+// the same way and both close their valve before waiting.
+#ifndef GOAL_SYNC_BARRIER_TIMEOUT_MS
+#define GOAL_SYNC_BARRIER_TIMEOUT_MS 6000 // was: split 6000 (pressure) / 100 (height); collapsed once the never-wait-with-valve-open invariant made the short height cap unnecessary
+#endif
+
+static void goalSyncJoin()
 {
-    // Count how many threads are currently running
-    int currently_active = 0;
-    for (int i = 0; i < NUM_WHEEL_THREADS; ++i)
-    {
-        if (flagStartPressureGoalRoutine[i].load())
-        {
-            currently_active++;
-        }
-    }
-    return currently_active;
+    wheelThreadLock();
+    goalSyncClubSize++;
+    wheelThreadUnlock();
 }
 
-void custom_barrier_wait(int num_participants)
+static void goalSyncLeave()
 {
-    int gen = generation.load();
-    waiting_threads.fetch_add(1);
-
-    if (waiting_threads.load() == num_participants)
+    wheelThreadLock();
+    if (goalSyncClubSize > 0)
     {
-        // Last thread arrives, reset and let others go
-        wheelThreadLock();
-        waiting_threads.store(0);
-        generation.fetch_add(1);
-        wheelThreadUnlock();
+        goalSyncClubSize--;
     }
-    else
+    if (goalSyncWaiting > 0 && (goalSyncClubSize == 0 || goalSyncWaiting >= goalSyncClubSize))
     {
-        // Poll until generation changes
-        while (generation.load() == gen)
+        goalSyncWaiting = 0;
+        goalSyncGeneration++;
+    }
+    wheelThreadUnlock();
+}
+
+static void goalSyncBarrier(unsigned long timeoutMs)
+{
+    wheelThreadLock();
+    const int gen = goalSyncGeneration;
+    goalSyncWaiting++;
+    if (goalSyncClubSize > 0 && goalSyncWaiting >= goalSyncClubSize)
+    {
+        goalSyncWaiting = 0;
+        goalSyncGeneration++;
+        wheelThreadUnlock();
+        return;
+    }
+    wheelThreadUnlock();
+
+    const unsigned long startMs = millis();
+    for (;;)
+    {
+        wheelThreadLock();
+        bool done = (goalSyncGeneration != gen);
+        if (!done && goalSyncClubSize > 0 && goalSyncWaiting >= goalSyncClubSize)
         {
-            delay(1);
+            goalSyncWaiting = 0;
+            goalSyncGeneration++;
+            done = true;
         }
+        if (!done && goalSyncClubSize == 0)
+        {
+            goalSyncWaiting = 0;
+            goalSyncGeneration++;
+            done = true;
+        }
+        if (!done && (millis() - startMs) >= timeoutMs)
+        {
+            goalSyncWaiting = 0;
+            goalSyncGeneration++;
+            done = true;
+        }
+        wheelThreadUnlock();
+        if (done)
+        {
+            return;
+        }
+        delay(1);
     }
 }
 
@@ -277,6 +321,8 @@ void Wheel::goalRoutine() {
         bool valveWasOpened = false;
         uint8_t sampleRawBag = 0, sampleRawTank = 0; // flowing readings captured at close
         uint32_t settleUntil = 0; // while non-zero: valve closed, waiting to verify the settled pressure
+
+        goalSyncJoin();
 
         for (;;)
         {
@@ -368,6 +414,14 @@ void Wheel::goalRoutine() {
                     // air-out settles slower than air-up, so give it longer before the verify read
                     uint32_t settleMs = (dir == FLOW_DOWN) ? OFFSET_SAMPLE_SETTLE_DOWN_MS : OFFSET_SAMPLE_SETTLE_MS;
                     settleUntil = millis() + settleMs; // verify the settled value next
+
+                    // Rendezvous: the valve was just closed after reaching target, so this is the one
+                    // point we wait at the barrier with the valve GUARANTEED closed (INVARIANT: never
+                    // wait with a valve open). A corner that finishes early blocks here -- valve closed,
+                    // so harmless -- until every other active corner has also closed, keeping the
+                    // group's completion in sync. Corners still flowing haven't reached this line, so a
+                    // flowing corner never holds the group up.
+                    goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS);
                 }
                 else
                 {
@@ -383,19 +437,23 @@ void Wheel::goalRoutine() {
                 }
             }
 
+            // Always yield the CPU each tick (the flow-based loop has no other built-in delay).
             delay(1);
-            custom_barrier_wait(count_participants());
         }
+
+        // Close both valves before the exit rendezvous so this thread never waits at the
+        // barrier with a valve open (the routine-timeout break above can fire mid-fill).
+        getInSolenoid()->close();
+        getOutSolenoid()->close();
 
         // goalRoutine blocks this thread, so reset sensorless baseline / instability manually.
         nullifySensorlessBaseline();
         markInstability(this->getSelectedInputValue());
 
-        custom_barrier_wait(count_participants()); // one final barrier so all exiting threads rendezvous
+        goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS); // one final barrier so all exiting threads rendezvous
+        goalSyncLeave();
 
         flagStartPressureGoalRoutine[thisWheelNum] = false;
-        getInSolenoid()->close();
-        getOutSolenoid()->close();
 
         if (this->onPressureGoalComplete)
         {
