@@ -75,17 +75,20 @@ ADS1115 to `RATE_ADS1115_860SPS`.
 
 ## The closed-loop controller (`Wheel::goalRoutine`)
 
-Per corner: commit a direction from the raw reading; each tick read the flowing bag + tank,
-compute `actual = getPredictedBagPressure(...)`, hold the valve open; when `actual` reaches
-goal, close and **verify**: wait for the bag to settle (`OFFSET_SAMPLE_SETTLE_MS` air-up /
-`OFFSET_SAMPLE_SETTLE_DOWN_MS` air-out — venting settles slower), read the true settled pressure, then drop
+**Both modes share one loop** — the only difference is the predictor seam. Per corner: commit a direction
+from the raw reading; each tick read the live value and compute `actual` (pressure mode:
+`getPredictedBagPressure(...)` = raw + learned offset; height mode: `getPredictedBagHeight(...)`, an
+identity stub since the level sensor reads true even during flow), hold the valve open; when `actual`
+reaches goal, close and **verify**: wait for the bag to settle (`OFFSET_SAMPLE_SETTLE_MS` air-up /
+`OFFSET_SAMPLE_SETTLE_DOWN_MS` air-out — venting settles slower), read the true settled value, then drop
 the committed direction and re-run the top-of-loop check against that reading. This makes the verify
-**bidirectional**: it finishes within `PRESSURE_DEADBAND_PSI` (1) of goal, keeps going the same way if it
-fell short, or reverses if it overshot — all inside one `goalRoutine` call. While settling, the corner keeps
-ticking the sync barrier with its valve closed, so it never stalls or overshoots the other three corners.
-Hard stops still bypass the verify: the in-loop `getbagMaxPressure()` / `MAX_PRESSURE_SAFETY` ceiling (fill),
-the 10 s `ROUTINE_TIMEOUT_MS`, or an `onlyAirUp` block (which accepts an overshoot rather than venting).
-Height-sensor mode uses the same loop with the level sensor and no offset.
+**bidirectional**: it finishes within the deadband of goal (pressure `PRESSURE_DEADBAND_PSI` = 1; height
+`getMinValveOpenPSI()` = 0), keeps going the same way if it fell short, or reverses if it overshot — all
+inside one `goalRoutine` call. While settling, the corner keeps ticking the sync barrier with its valve
+closed, so it never stalls or overshoots the other three corners. Mode-specific bits: pressure mode logs a
+flowing→settled sample on each close and enforces the in-loop `getbagMaxPressure()` / `MAX_PRESSURE_SAFETY`
+ceiling (fill); height mode does neither (no model, and no in-loop pressure ceiling). Other hard stops: the
+10 s `ROUTINE_TIMEOUT_MS`, or an `onlyAirUp` block (which accepts an overshoot rather than venting).
 
 ## Persistence / migration
 

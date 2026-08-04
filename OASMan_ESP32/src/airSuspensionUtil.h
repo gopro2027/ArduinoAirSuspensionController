@@ -50,5 +50,6 @@ namespace PressureSensorCalibration
 void trainOffsetModels();
 /** Predicted true bag pressure from live flowing readings: rawBag + faded (default -> trained) offset. */
 double getPredictedBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank);
+double getPredictedBagHeight(double raw_level);
 void setupLEDs();
 #endif

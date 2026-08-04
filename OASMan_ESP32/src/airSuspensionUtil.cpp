@@ -639,6 +639,21 @@ double getPredictedBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double
     return raw_bag + getPredictionOffset(aiIndex, raw_bag, raw_tank);
 }
 
+// Height-mode counterpart to getPredictedBagPressure. The level sensor is a mechanical arm that reads the
+// true ride height even while a valve is open (unlike the pressure sensor, whose reading is skewed by
+// flow), so there is nothing to correct — this is an identity stub. It exists purely so the closed-loop
+// controller can treat both modes through one predictor seam. See AI_TRAINING.md.
+// TODO: Potential improvement, needs to be backed by data:
+// This can be updated in the future to use an AI model just like bag pressure. Theoretically, this would predict the height valve after the valve is closed since it takes a moment to close the valve.
+// For example, lets say we are airing up and goal percentage is 50%
+// Well, if we close the valve at exactly 50%, by the time the valve fully closes it might be at 51% now.
+// So a well trained model might instead have us close the valve at 49% knowing ahead of time that by the time the valve closes it will be 50%.
+// It's such a small difference but could be worth looking into and implementing in the future. So that is why this function is here for now.
+double getPredictedBagHeight(double raw_level)
+{
+    return raw_level;
+}
+
 #pragma endregion
 
 #pragma region LED_functions

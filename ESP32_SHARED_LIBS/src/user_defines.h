@@ -47,6 +47,7 @@
 
 // Closed-loop pressure control (see Wheel::goalRoutine / AI_TRAINING.md):
 #define PRESSURE_DEADBAND_PSI 1          // ; was: 0. verify is bidirectional (corrects over/undershoot); 1 psi = sensor resolution and bounds oscillation around goal
+#define LEVEL_DEADBAND_PERCENTAGE 1
 #define OFFSET_SAMPLE_SETTLE_MS 250      // air-up: wait after the valve closes before reading the settled bag (verify + offset sample)
 #define OFFSET_SAMPLE_SETTLE_DOWN_MS 500 // air-out settles slower (bag rises back to true after venting), so wait longer before the settled read
 
