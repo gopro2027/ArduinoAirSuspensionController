@@ -46,8 +46,8 @@
 #define LOG_MANUAL_OFFSET_SAMPLES true // also collect offset samples from manual valve moves (Wheel::captureManualOffsetSample)
 
 // Closed-loop pressure control (see Wheel::goalRoutine / AI_TRAINING.md):
-#define PRESSURE_DEADBAND_PSI 2      // stop when the corrected actual pressure is within this many psi of goal
-#define OFFSET_SAMPLE_SETTLE_MS 250  // wait after the valve closes before reading the settled bag for the offset sample
+#define PRESSURE_DEADBAND_PSI 0      // stop exactly at goal; after closing we settle and verify the true pressure, correcting undershoot
+#define OFFSET_SAMPLE_SETTLE_MS 250  // wait after the valve closes before reading the settled bag (verify + offset sample)
 
 /* Bags generally do not like to sit at exactly 0psi. Please choose which pressure is desired for air out */
 /* Not really used anymore, just using presets! Only kept here as legacy for og app */
