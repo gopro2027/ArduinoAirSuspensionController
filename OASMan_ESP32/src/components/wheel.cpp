@@ -352,6 +352,7 @@ void Wheel::goalRoutine() {
                 bool reached = (dir == FLOW_UP) ? (actual >= this->pressureGoal - deadband)
                                                 : (actual <= this->pressureGoal + deadband);
                 // In-loop safety ceiling (pressure mode only): never fill past the bag max.
+                // TODO: Have this bag pressure check for height mode too. Future improvement.
                 bool overCeiling = !heightMode && (dir == FLOW_UP) && (actual >= (double)getbagMaxPressure());
 
                 if (reached || overCeiling)
