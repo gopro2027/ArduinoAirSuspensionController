@@ -71,7 +71,7 @@ class ConfigFlagsBit {
   static const int CONFIG_AIR_OUT_ON_SHUTOFF = 2;
   static const int CONFIG_HEIGHT_SENSOR_MODE = 3;
   static const int CONFIG_SAFETY_MODE = 4;
-  static const int CONFIG_AI_STATUS_ENABLED = 5;
+  static const int CONFIG_AI_STATUS_ENABLED = 5; // retired: reserved on the wire, no longer used by app/manifold. Do not reuse.
   static const int CONFIG_SENSORLESS_LEVELING = 6;
 }
 
@@ -194,7 +194,6 @@ class BLEManager extends ChangeNotifier {
   bool sensorlessLeveling = false;
   bool airOutOnShutoff = false;
   bool safetyMode = true;
-  bool aiStatusEnabled = false;
   /// Mirrors ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE (preserved on save).
   bool heightSensorMode = false;
   String bleBroadcastName = '';
@@ -757,9 +756,6 @@ class BLEManager extends ChangeNotifier {
               0;
           safetyMode =
               (configFlagsBits & (1 << ConfigFlagsBit.CONFIG_SAFETY_MODE)) != 0;
-          aiStatusEnabled = (configFlagsBits &
-                  (1 << ConfigFlagsBit.CONFIG_AI_STATUS_ENABLED)) !=
-              0;
           heightSensorMode = (configFlagsBits &
                   (1 << ConfigFlagsBit.CONFIG_HEIGHT_SENSOR_MODE)) !=
               0;
@@ -941,7 +937,6 @@ class BLEManager extends ChangeNotifier {
     if (airOutOnShutoff)
       bits |= (1 << ConfigFlagsBit.CONFIG_AIR_OUT_ON_SHUTOFF);
     if (safetyMode) bits |= (1 << ConfigFlagsBit.CONFIG_SAFETY_MODE);
-    if (aiStatusEnabled) bits |= (1 << ConfigFlagsBit.CONFIG_AI_STATUS_ENABLED);
     if (heightSensorMode) {
       bits |= (1 << ConfigFlagsBit.CONFIG_HEIGHT_SENSOR_MODE);
     }

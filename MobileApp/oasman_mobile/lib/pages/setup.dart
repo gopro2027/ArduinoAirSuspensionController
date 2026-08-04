@@ -799,12 +799,11 @@ class SettingsPageState extends State<SettingsPage> {
             ),
           ),
           const SizedBox(height: 16),
-          Selector<BLEManager, (int, int, bool)>(
-            selector: (_, m) =>
-                (m.aiLearnPercent, m.aiReadyBittset, m.aiStatusEnabled),
+          Selector<BLEManager, (int, int)>(
+            selector: (_, m) => (m.aiLearnPercent, m.aiReadyBittset),
             builder: (context, ai, _) {
               final bm = context.read<BLEManager>();
-              final (learnPct, trainedBits, aiEnabled) = ai;
+              final (learnPct, trainedBits) = ai;
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 decoration: const BoxDecoration(
@@ -839,24 +838,6 @@ class SettingsPageState extends State<SettingsPage> {
                           ),
                         ],
                       ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Enabled:',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                        Switch(
-                          value: aiEnabled,
-                          onChanged: (value) {
-                            bm.aiStatusEnabled = value;
-                            bm.refreshFromUi();
-                            _saveManifoldConfigNow();
-                          },
-                          activeColor: const Color(0xFFBB86FC),
-                        ),
-                      ],
                     ),
                     const SizedBox(height: 8),
                     TextButton(
