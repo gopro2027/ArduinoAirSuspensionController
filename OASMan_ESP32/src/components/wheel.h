@@ -47,7 +47,7 @@ private:
     bool manualValveWasOpen = false;
     bool manualUp = false;                // direction of the tracked manual move (picks the settle time)
     uint32_t manualSettleUntil = 0;       // while non-zero: valve closed, waiting to read the settled bag
-    uint8_t manualFlowBag = 0, manualFlowTank = 0, manualOthers = 0;
+    uint8_t manualFlowBag = 0, manualFlowTank = 0;
     SOLENOID_AI_INDEX manualAiIndex = AI_MODEL_UNDEFINED;
     void maintainPressure();
     void heightsensorlessLevelling();
@@ -82,6 +82,6 @@ float readPinPressure(InputType *pin, bool heightMode);
 
 void setupWheelLockSem();
 
-extern double getPredictedBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank, double others_open);
+extern double getPredictedBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank);
 extern Manifold *getManifold(); // defined in airSuspensionUtil.h
 #endif

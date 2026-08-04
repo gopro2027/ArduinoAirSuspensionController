@@ -260,26 +260,6 @@ static const int8_t FLOW_NONE = 0;
 static const int8_t FLOW_UP = 1;
 static const int8_t FLOW_DOWN = -1;
 
-// Live contention measurement for the offset model: how many OTHER corners currently have a
-// same-direction valve open. IN valves (fill) are even solenoid indices, OUT (dump) are odd.
-static uint8_t countOthersOpenSameDirection(byte selfWheelNum, bool up)
-{
-    uint8_t count = 0;
-    for (int w = 0; w < NUM_WHEEL_THREADS; w++)
-    {
-        if (w == (int)selfWheelNum)
-        {
-            continue;
-        }
-        int sol = up ? (2 * w) : (2 * w + 1);
-        if (getManifold()->get(sol)->isOpen())
-        {
-            count++;
-        }
-    }
-    return count;
-}
-
 // Closed-loop control. Height mode compares the level sensor to goal; pressure mode recovers the true bag
 // pressure from the live flowing readings (rawBag + learned/default offset) and stops when it reaches goal.
 // The valve is held open across ticks until goal; on close a flowing->settled offset sample is logged so
@@ -293,7 +273,7 @@ void Wheel::goalRoutine() {
         Solenoid *valve = nullptr;
         SOLENOID_AI_INDEX aiIndex = AI_MODEL_UNDEFINED;
         bool valveWasOpened = false;
-        uint8_t sampleRawBag = 0, sampleRawTank = 0, sampleOthers = 0; // flowing readings captured at close
+        uint8_t sampleRawBag = 0, sampleRawTank = 0; // flowing readings captured at close
         uint32_t settleUntil = 0; // while non-zero: valve closed, waiting to verify the settled pressure
 
         for (;;)
@@ -337,7 +317,7 @@ void Wheel::goalRoutine() {
                         double settled = this->getSelectedInputValue();
                         if (valveWasOpened)
                         {
-                            recordLearnSample(aiIndex, sampleRawBag, (uint8_t)lround(settled), sampleRawTank, sampleOthers);
+                            recordLearnSample(aiIndex, sampleRawBag, (uint8_t)lround(settled), sampleRawTank);
                             valveWasOpened = false;
                         }
                         settleUntil = 0;
@@ -378,8 +358,7 @@ void Wheel::goalRoutine() {
                         aiIndex = valve->getAIIndex();
                     }
 
-                    uint8_t othersOpen = countOthersOpenSameDirection(this->thisWheelNum, dir == FLOW_UP);
-                    double actual = getPredictedBagPressure(aiIndex, rawBag, rawTank, othersOpen);
+                    double actual = getPredictedBagPressure(aiIndex, rawBag, rawTank);
 
                     bool reached = (dir == FLOW_UP) ? (actual >= this->pressureGoal - PRESSURE_DEADBAND_PSI)
                                                     : (actual <= this->pressureGoal + PRESSURE_DEADBAND_PSI);
@@ -392,7 +371,6 @@ void Wheel::goalRoutine() {
                         // remember the flowing readings for the offset sample logged after the settle
                         sampleRawBag = (uint8_t)lround(rawBag);
                         sampleRawTank = (uint8_t)lround(rawTank);
-                        sampleOthers = othersOpen;
                         if (overCeiling)
                         {
                             break; // safety: stop now, no settle/verify
@@ -617,7 +595,7 @@ void Wheel::loop()
 // Log an offset sample from a MANUAL valve move (BLE valveControlBittset / gamepad). goalRoutine
 // self-collects its own samples, so only track when no goal routine is running (and never in
 // height-sensor mode). While a manual valve is open we cache the flowing readings; when it closes we
-// read the settled bag and log {flowing bag/tank, settled bag, others open}. Runs on the wheel task, so
+// read the settled bag and log {flowing bag/tank, settled bag}. Runs on the wheel task, so
 // the ADC reads / SPIFFS write are safe. See AI_TRAINING.md.
 void Wheel::captureManualOffsetSample()
 {
@@ -637,7 +615,6 @@ void Wheel::captureManualOffsetSample()
         this->readInputs();
         manualFlowBag = (uint8_t)lround(this->getSelectedInputValue());
         manualFlowTank = (uint8_t)lround(getCompressor()->readTankPressureNow());
-        manualOthers = countOthersOpenSameDirection(this->thisWheelNum, up);
         manualAiIndex = up ? getInSolenoid()->getAIIndex() : getOutSolenoid()->getAIIndex();
         manualUp = up;
         manualValveWasOpen = true;
@@ -654,7 +631,7 @@ void Wheel::captureManualOffsetSample()
         // Settled: the flow-induced offset is gone, so the current reading is the settled truth.
         this->readInputs();
         uint8_t settledBag = (uint8_t)lround(this->getSelectedInputValue());
-        recordLearnSample(manualAiIndex, manualFlowBag, settledBag, manualFlowTank, manualOthers);
+        recordLearnSample(manualAiIndex, manualFlowBag, settledBag, manualFlowTank);
         manualSettleUntil = 0;
     }
 }

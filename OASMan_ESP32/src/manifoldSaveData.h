@@ -100,7 +100,6 @@ struct PressureLearnSaveStruct
     uint8_t raw_bag;     // flowing bag reading captured just before the valve closed
     uint8_t settled_bag; // settled bag reading after close (label)
     uint8_t raw_tank;    // flowing tank reading at capture
-    uint8_t others_open; // number of other same-direction valves open during the flow
     void print()
     {
         Serial.print("{");
@@ -109,8 +108,6 @@ struct PressureLearnSaveStruct
         Serial.print((int)settled_bag);
         Serial.print(", ");
         Serial.print((int)raw_tank);
-        Serial.print(", ");
-        Serial.print((int)others_open);
         Serial.print("}");
     }
 };
@@ -135,7 +132,7 @@ void clearPressureData();
 void clearPressureDataSingle(SOLENOID_AI_INDEX index);
 
 // Append one offset sample to the model's SPIFFS file + RAM mirror (the training task re-fits from it).
-void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank, uint8_t others_open);
+void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank);
 
 OffsetModel *getOffsetModel(SOLENOID_AI_INDEX aiIndex);
 

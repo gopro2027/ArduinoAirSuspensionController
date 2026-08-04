@@ -12,12 +12,12 @@
 // On-disk PressureLearnSaveStruct layout version. Bump only when the sample struct changes (forces a wipe).
 // There is no separate model/feature version: weights are never persisted, they are re-fit from the
 // samples every boot, so a feature change just takes effect on the next refit. See AI_TRAINING.md.
-#define ML_SAMPLE_RECORD_VERSION 3
+#define ML_SAMPLE_RECORD_VERSION 1
 
 #define ML_OFFSET_NORM 100.0   // label/prediction scale, keeps weights O(0.1)
 #define ML_FIT_RIDGE 0.001     // ridge added to the normal-equations diagonal (per sample)
 #define ML_FIT_MIN_SAMPLES 25  // minimum valid samples for a stable 4-coeff fit
-#define ML_NUM_COEFF 3         // features: differential/100, (differential/100)^2, bias (others_open dropped: redundant with raw_tank via the differential, contributed ~0)
+#define ML_NUM_COEFF 3         // features: differential/100, (differential/100)^2, bias
 
 struct PressureLearnSaveStruct; // defined in manifoldSaveData.h
 
@@ -30,8 +30,8 @@ public:
     double w[ML_NUM_COEFF] = {0, 0, 0};
     bool up = true; // fill (differential = tank - bag) vs dump (differential = bag - atmosphere ~ bag)
 
-    void computeFeatures(double raw_bag, double raw_tank, double others_open, double f[ML_NUM_COEFF]);
-    double predict(double raw_bag, double raw_tank, double others_open);
+    void computeFeatures(double raw_bag, double raw_tank, double f[ML_NUM_COEFF]);
+    double predict(double raw_bag, double raw_tank);
     // Ridge least-squares fit over the samples. Returns the valid-sample count used (0 = too few /
     // singular, in which case the weights are left unchanged).
     int refit(const PressureLearnSaveStruct *samples, int count);

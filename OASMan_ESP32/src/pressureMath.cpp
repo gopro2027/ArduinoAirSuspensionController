@@ -80,9 +80,8 @@ static bool solveN(const double *Min, const double *rin, double *x)
 
 // Feature 0 is the flow-driving differential / 100 (scaled so the squared term stays O(1) and the fit is
 // well conditioned): fill is driven by tank->bag, dump is driven by bag->atmosphere(~0). See AI_TRAINING.md.
-void OffsetModel::computeFeatures(double raw_bag, double raw_tank, double others_open, double f[ML_NUM_COEFF])
+void OffsetModel::computeFeatures(double raw_bag, double raw_tank, double f[ML_NUM_COEFF])
 {
-    (void)others_open; // dropped as a feature: redundant with raw_tank via the differential, contributed ~0 to the fit
     double differential = this->up ? (raw_tank - raw_bag) : raw_bag;
     double d = differential / 100.0;
     f[0] = d;
@@ -91,14 +90,14 @@ void OffsetModel::computeFeatures(double raw_bag, double raw_tank, double others
 }
 
 // Predicted sensor offset in psi (settled - flowing). Fill reads high (negative offset), dump reads low.
-double OffsetModel::predict(double raw_bag, double raw_tank, double others_open)
+double OffsetModel::predict(double raw_bag, double raw_tank)
 {
     if (!isfinite(raw_bag) || !isfinite(raw_tank) || raw_bag < 0 || raw_tank < 0)
     {
         return 0;
     }
     double f[ML_NUM_COEFF];
-    computeFeatures(raw_bag, raw_tank, others_open, f);
+    computeFeatures(raw_bag, raw_tank, f);
     return (w[0] * f[0] + w[1] * f[1] + w[2] * f[2]) * ML_OFFSET_NORM;
 }
 
@@ -112,9 +111,8 @@ int OffsetModel::refit(const PressureLearnSaveStruct *samples, int count)
     {
         double raw = samples[i].raw_bag;
         double tank = samples[i].raw_tank;
-        double others = samples[i].others_open;
         double f[ML_NUM_COEFF];
-        computeFeatures(raw, tank, others, f);
+        computeFeatures(raw, tank, f);
         double y = ((double)samples[i].settled_bag - raw) / ML_OFFSET_NORM;
         for (int r = 0; r < ML_NUM_COEFF; r++)
         {

@@ -7,7 +7,7 @@ read high on fill / low on dump; the reading only settles to the truth once the 
 
 So the learned model is a **sensor-offset corrector**:
 
-    actualBag = rawBag + offset,   offset = f(flowDifferential, othersOpen)
+    actualBag = rawBag + offset,   offset = f(flowDifferential)
 
 The controller feeds the live flowing readings through `f` to recover the true pressure and stops at goal.
 
@@ -32,9 +32,8 @@ There are **4 models** — up-front, up-rear, down-front, down-rear (both corner
 `OffsetModel` is a 3-coefficient linear fit of the offset (psi). Features (`computeFeatures`, scaled by
 100 so the squared term stays well-conditioned): `[ differential/100, (differential/100)², 1 ]`,
 where differential = `rawTank − rawBag` (fill) or `rawBag` (dump). `predict` = `w·f × ML_OFFSET_NORM`.
-(`othersOpen` was dropped as a feature — tank sag from other open valves already shows up in `rawTank`,
-which the differential captures, so it added ~0 to the fit on real data. It is still recorded in each
-sample, unused, in case a future feature wants it.)
+(A prior `othersOpen`/contention feature was removed — tank sag from other open valves already shows up in
+`rawTank`, which the differential captures, so it added ~0 to the fit on real data.)
 The offset vanishes as flow stops (`rawBag → rawTank` on fill, `→ 0` on dump), so the estimate converges
 to the truth right where the controller needs to stop; and because it's trained on
 flowing-before-close → settled-after-close, it inherently absorbs the valve-close overshoot.
@@ -57,18 +56,16 @@ trained model exists the constant is fully faded out.
 ### Sample collection
 
 Every valve close logs one sample: the last **flowing** readings while the valve was open, paired with the
-**settled** bag reading after close — `{ raw_bag, settled_bag, raw_tank, others_open }` (offset =
+**settled** bag reading after close — `{ raw_bag, settled_bag, raw_tank }` (offset =
 `settled_bag − raw_bag`). Two triggers, one sink (`recordLearnSample` → SPIFFS + RAM):
 
-- **Preset / maintain moves** — `goalRoutine` logs on close (after `OFFSET_SAMPLE_SETTLE_MS`).
+- **Preset / maintain moves** — `goalRoutine` logs on close (after the direction's settle time).
 - **Manual moves** (BLE valveControlBittset / gamepad) — `Wheel::captureManualOffsetSample`
   (`LOG_MANUAL_OFFSET_SAMPLES`) watches this corner's valve state each `Wheel::loop` tick, caching the
-  flowing readings while open and logging on close.
+  flowing readings while open and logging after the settle on close.
 
-`othersOpen` (contention) is a **live measurement**, not a prediction — count of other same-direction
-valves currently open (`countOthersOpenSameDirection` via `Solenoid::isOpen()`). Closes happen near goal,
-so samples concentrate where stopping accuracy matters. The `BEGIN/END IMPORTANT DATA FOR PRO` serial dump
-prints every stored sample for offline analysis.
+Closes happen near goal, so samples concentrate where stopping accuracy matters. The
+`BEGIN/END IMPORTANT DATA FOR PRO` serial dump prints every stored sample for offline analysis.
 
 ### Training
 
@@ -78,8 +75,8 @@ ADS1115 to `RATE_ADS1115_860SPS`.
 
 ## The closed-loop controller (`Wheel::goalRoutine`)
 
-Per corner: commit a direction from the raw reading; each tick read the flowing bag + tank, count
-`othersOpen`, compute `actual = getPredictedBagPressure(...)`, hold the valve open; when `actual` reaches
+Per corner: commit a direction from the raw reading; each tick read the flowing bag + tank,
+compute `actual = getPredictedBagPressure(...)`, hold the valve open; when `actual` reaches
 goal, close and **verify**: wait for the bag to settle (`OFFSET_SAMPLE_SETTLE_MS` air-up /
 `OFFSET_SAMPLE_SETTLE_DOWN_MS` air-out — venting settles slower), read the true settled pressure, then drop
 the committed direction and re-run the top-of-loop check against that reading. This makes the verify

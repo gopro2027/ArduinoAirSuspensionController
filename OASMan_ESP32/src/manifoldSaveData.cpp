@@ -297,7 +297,7 @@ void clearPressureDataSingle(SOLENOID_AI_INDEX index)
     updateAIPercentage();
 }
 
-void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank, uint8_t others_open)
+void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank)
 {
     int *size = &learnDataIndex[aiIndex];
 
@@ -322,7 +322,6 @@ void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_
         pls[*size].raw_bag = raw_bag;
         pls[*size].settled_bag = settled_bag;
         pls[*size].raw_tank = raw_tank;
-        pls[*size].others_open = others_open;
 
         writeBytes(getLogFileName(aiIndex), &pls[*size], sizeof(PressureLearnSaveStruct), "a");
 
@@ -335,9 +334,9 @@ void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_
 }
 
 // Once a model's file is full we simply stop collecting (the fit from LEARN_SAVE_COUNT samples is plenty).
-void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank, uint8_t others_open)
+void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank)
 {
-    appendPressureDataToFile(aiIndex, raw_bag, settled_bag, raw_tank, others_open);
+    appendPressureDataToFile(aiIndex, raw_bag, settled_bag, raw_tank);
 }
 
 ProfileRaw readProfile(byte profileIndex)
