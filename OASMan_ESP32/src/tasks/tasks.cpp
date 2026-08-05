@@ -183,9 +183,15 @@ void setup_tasks()
     xTaskCreate(
         task_trainAI,
         "trainAI",
-        512 * 4, // generous headroom for the batch least-squares refit's stack matrices + Serial.printf;
+        512 * 6, // generous headroom for the batch least-squares refit's stack matrices + Serial.printf;
                   // the boot high-water-mark print in task_trainAI is how to right-size this
                   // TODO: check the size on this task. It may need to be larger.
+                  // 4 technically has headroom with no data in it.
+                    // Refit model 0: 0 samples, used 0  w=[0.0000 0.0000 0.0000]
+                    // Refit model 1: 0 samples, used 0  w=[0.0000 0.0000 0.0000]
+                    // Refit model 2: 0 samples, used 0  w=[0.0000 0.0000 0.0000]
+                    // Refit model 3: 0 samples, used 0  w=[0.0000 0.0000 0.0000]
+                    // trainAI stack headroom (bytes): 224
         NULL,
         1000,
         NULL);
