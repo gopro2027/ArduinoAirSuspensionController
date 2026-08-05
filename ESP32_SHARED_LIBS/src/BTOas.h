@@ -56,7 +56,7 @@ enum ConfigFlagsBit
     CONFIG_AIR_OUT_ON_SHUTOFF = 2,
     CONFIG_HEIGHT_SENSOR_MODE = 3,
     CONFIG_SAFETY_MODE = 4,
-    CONFIG_AI_STATUS_ENABLED = 5,
+    CONFIG_AI_STATUS_ENABLED = 5, // retired: manifold/controller no longer use it; bit reserved (mobile app may still read it). Do not reuse.
     CONFIG_SENSORLESS_LEVELING = 6
 };
 
@@ -171,7 +171,7 @@ struct BTOasPacket
 // Outgoing packets
 struct StatusPacket : BTOasPacket
 {
-    StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage, uint8_t AIReadyBittset);
+    StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage);
 };
 
 struct PresetPacket : BTOasPacket

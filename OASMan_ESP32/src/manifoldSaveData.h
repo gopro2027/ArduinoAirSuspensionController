@@ -15,35 +15,8 @@ public:
     Preferencable pressure[4]; // byte
 };
 
-class AIModelPreference
-{
-public:
-    Preferencable weights[3];   // doubles
-    Preferencable isReadyToUse; // bool
-    AIModel model;
-    void loadModel()
-    {
-        model.loadWeights(weights[0].get().d, weights[1].get().d, weights[2].get().d);
-        model.print_weights();
-    }
-    void saveWeights()
-    {
-        weights[0].setDouble(model.w1);
-        weights[1].setDouble(model.w2);
-        weights[2].setDouble(model.b);
-    }
-    void setReady(bool ready)
-    {
-        isReadyToUse.set(ready);
-    }
-    void deletePreferences()
-    {
-        isReadyToUse.deletePreference();
-        weights[0].deletePreference();
-        weights[1].deletePreference();
-        weights[2].deletePreference();
-    }
-};
+// The 4 offset models are RAM-only and re-fit from the stored samples every boot (nothing persisted).
+// Accessor: getOffsetModel(aiIndex). Defined in manifoldSaveData.cpp.
 
 class AuxillaryOutputPreference {
     public:
@@ -78,7 +51,6 @@ public:
     Preferencable internalReboot;  // byte
     Preferencable learnPressureSensors;
     Preferencable safetyMode;
-    Preferencable aiEnabled;
     Preferencable updateMode;
     Preferencable wifiSSID;
     Preferencable wifiPassword;
@@ -117,26 +89,24 @@ public:
     AuxillaryOutputPreference auxillaryOutputPreference;
 
     Profile profile[MAX_PROFILE_COUNT];
-    AIModelPreference aiModels[4];
+    Preferencable mlSampleRecord; // ML_SAMPLE_RECORD_VERSION (only version — weights are never persisted)
 };
 
+// One pressure-offset sample: the flowing sensor readings captured just before a valve closed, plus the
+// settled bag reading after it closed. The model learns offset = settled_bag - raw_bag. See AI_TRAINING.md.
 struct PressureLearnSaveStruct
 {
-    uint8_t start_pressure;
-    uint8_t goal_pressure;
-    uint16_t tank_pressure;
-    uint32_t timeMS;
+    uint8_t raw_bag;     // flowing bag reading captured just before the valve closed
+    uint8_t settled_bag; // settled bag reading after close (label)
+    uint8_t raw_tank;    // flowing tank reading at capture
     void print()
     {
-        // Serial.printf("{0x%X, 0x%X, 0x%X, 0x%X}", start_pressure, goal_pressure, tank_pressure, timeMS);
         Serial.print("{");
-        Serial.print((int)start_pressure);
+        Serial.print((int)raw_bag);
         Serial.print(", ");
-        Serial.print((int)goal_pressure);
+        Serial.print((int)settled_bag);
         Serial.print(", ");
-        Serial.print(tank_pressure);
-        Serial.print(", ");
-        Serial.print(timeMS);
+        Serial.print((int)raw_tank);
         Serial.print("}");
     }
 };
@@ -158,10 +128,12 @@ PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX aiIndex);
 int getLearnDataLength(SOLENOID_AI_INDEX aiIndex);
 
 void clearPressureData();
+void clearPressureDataSingle(SOLENOID_AI_INDEX index);
 
-void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t start_pressure, uint8_t goal_pressure, uint16_t tank_pressure, uint32_t timeMS);
+// Append one offset sample to the model's SPIFFS file + RAM mirror (the training task re-fits from it).
+void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank);
 
-AIModelPreference *getAIModel(SOLENOID_AI_INDEX aiIndex);
+OffsetModel *getOffsetModel(SOLENOID_AI_INDEX aiIndex);
 
 headerDefineSaveFunc(riseOnStart, bool);
 headerDefineSaveFunc(maintainPressure, bool);
@@ -173,7 +145,6 @@ headerDefineSaveFunc(raiseOnPressure, bool);
 headerDefineSaveFunc(internalReboot, bool);
 headerDefineSaveFunc(learnPressureSensors, bool);
 headerDefineSaveFunc(safetyMode, bool);
-headerDefineSaveFunc(aiEnabled, bool);
 headerDefineSaveFunc(updateMode, bool);
 headerDefineSaveFunc(wifiSSID, String);
 headerDefineSaveFunc(wifiPassword, String);

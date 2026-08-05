@@ -38,8 +38,18 @@
 #define AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE false
 #define AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE_TIME 3 * 1000
 
-// original full amount is 500
-#define LEARN_SAVE_COUNT 250
+// Offset-model AI (samples -> refit -> predict -> fade). See OASMan_ESP32/AI_TRAINING.md.
+#define LEARN_SAVE_COUNT 300      // per-model on-disk sample capacity (was 500)
+#define OFFSET_DEFAULT_PSI 5      // constant offset used before a model is trained: -5 air-up, +5 air-out
+#define OFFSET_FADE_MIN 25        // start fading the trained model in at this many samples (0% -> ...)
+#define AI_LEARN_RATIO_NUM 150    // ...reaching 100% trained at this many samples (also the AIPercentage bar)
+#define LOG_MANUAL_OFFSET_SAMPLES true // also collect offset samples from manual valve moves (Wheel::captureManualOffsetSample)
+
+// Closed-loop pressure control (see Wheel::goalRoutine / AI_TRAINING.md):
+#define PRESSURE_DEADBAND_PSI 1          // ; was: 0. verify is bidirectional (corrects over/undershoot); 1 psi = sensor resolution and bounds oscillation around goal
+#define LEVEL_DEADBAND_PERCENTAGE 1
+#define OFFSET_SAMPLE_SETTLE_MS 250      // air-up: wait after the valve closes before reading the settled bag (verify + offset sample)
+#define OFFSET_SAMPLE_SETTLE_DOWN_MS 500 // air-out settles slower (bag rises back to true after venting), so wait longer before the settled read
 
 /* Bags generally do not like to sit at exactly 0psi. Please choose which pressure is desired for air out */
 /* Not really used anymore, just using presets! Only kept here as legacy for og app */

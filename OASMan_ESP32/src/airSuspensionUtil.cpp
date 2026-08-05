@@ -78,6 +78,13 @@ void initializeADS()
         ADS1115D_exists = true;
     }
 
+    // Fast conversions (~1.16 ms vs the ~7.8 ms default 128 SPS) so the closed-loop pressure controller
+    // can read bag+tank every tick even with all 4 corners moving. Slightly noisier raw values, which the
+    // offset fit + control deadband absorb. ; was: RATE_ADS1115_128SPS (library default)
+    ADS1115A.setDataRate(RATE_ADS1115_860SPS);
+    ADS1115B.setDataRate(RATE_ADS1115_860SPS);
+    ADS1115C.setDataRate(RATE_ADS1115_860SPS);
+    ADS1115D.setDataRate(RATE_ADS1115_860SPS);
 }
 
 void setupManifold()
@@ -560,101 +567,92 @@ namespace PressureSensorCalibration
 
 #pragma region training
 
-uint8_t AIReadyBittset = 0;
 uint8_t AIPercentage = 0;
 
-void trainSingleAIModel(SOLENOID_AI_INDEX index)
+void updateAIPercentage(); // defined below in this region
+
+// Re-fit one model's weights from its stored samples (closed-form ridge least squares, ~1 ms). This is
+// the ONLY training path: no online learner, nothing persisted — more samples just means another refit.
+void refitModel(SOLENOID_AI_INDEX index)
 {
-    AIModel aiModelsTemp;
+    OffsetModel *m = getOffsetModel(index);
+    int len = getLearnDataLength(index);
+    int used = m->refit(getLearnData(index), len);
+    Serial.printf("Refit model %i: %i samples, used %i  w=[%.4f %.4f %.4f]\n",
+                  (int)index, len, used, m->w[0], m->w[1], m->w[2]);
+}
 
-    if (index == SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT || index == SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR)
+// Refit any model whose stored sample count changed since the last call. Called once at boot (refits all,
+// since lastCount seeds to -1) and then every 100 ms from task_trainAI.
+void trainOffsetModels()
+{
+    static int lastCount[4] = {-1, -1, -1, -1};
+    for (int i = 0; i < 4; i++)
     {
-        aiModelsTemp.up = false;
-    }
-
-    Serial.print(F("Training AI "));
-    Serial.println((int)index);
-    unsigned long t = millis();
-    for (int epoch = 0; epoch < 1000 * 10; ++epoch)
-    {
-        for (int j = 0; j < getLearnDataLength(index); j++)
+        int c = getLearnDataLength((SOLENOID_AI_INDEX)i);
+        if (c != lastCount[i])
         {
-            PressureLearnSaveStruct *pls = getLearnData(index);
-            aiModelsTemp.train(pls[j].start_pressure, pls[j].goal_pressure, pls[j].tank_pressure, pls[j].timeMS);
-        }
-        if (epoch % 10 == 0)
-        {
-            delay(1); // inside a task, delay 1 so it doesn't block other things i guess. Should take about 4.5ms per loop
+            refitModel((SOLENOID_AI_INDEX)i);
+            lastCount[i] = c;
         }
     }
-    unsigned long total = millis() - t;
-
-    Serial.print("Ready ai model: ");
-    Serial.println(index);
-    Serial.print("Time for training: ");
-    Serial.println(total);
-
-    getAIModel(index)->model.loadWeights(aiModelsTemp.w1, aiModelsTemp.w2, aiModelsTemp.b);
-    getAIModel(index)->saveWeights();
-    getAIModel(index)->setReady(true); // set to not train again and let it know it's ready to use
-    AIReadyBittset = AIReadyBittset | (1 << index);
+    updateAIPercentage();
 }
 
 void updateAIPercentage()
 {
+    // Progress toward full AI weighting (100% == every model at AI_LEARN_RATIO_NUM samples, i.e.
+    // AI fully driving), not toward the LEARN_SAVE_COUNT collection ceiling. See AI_TRAINING.md.
     int totalLen = 0;
     for (int i = 0; i < 4; i++)
     {
         int len = getLearnDataLength((SOLENOID_AI_INDEX)i);
-        totalLen += len;
+        totalLen += len < AI_LEARN_RATIO_NUM ? len : AI_LEARN_RATIO_NUM;
     }
-    AIPercentage = ((float)totalLen / ((float)LEARN_SAVE_COUNT * 4)) * 100;
+    AIPercentage = ((float)totalLen / ((float)AI_LEARN_RATIO_NUM * 4)) * 100;
 }
 
-void trainAIModels()
+// Fraction of the trained model to trust, ramping in with sample count: 0 below OFFSET_FADE_MIN, linearly
+// up to 1 at AI_LEARN_RATIO_NUM. Below the min, the flat constant default is used (-/+ OFFSET_DEFAULT_PSI
+// for up/down). Raw flowing readings alone are wrong by ~10 psi, so an offset is always applied.
+static double getPredictionOffset(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank)
 {
-
-    // First load some default values based off info I grabbed from some corvette testing
-    // I am using the first 4 weights because I think that makes the most logical sense to include all those. The 5th weight (ratio) I don't think is so great
-    // upModel.loadWeights(-0.34525, 0.45432, -0.076937, 0.40201, 0.1, -0.19555);
-    // downModel.loadWeights(0.76399, -0.66687, 0.070163, -0.5265, 0.1, 0.17787);
-    // upModel.useWeight4 = true;
-    // upModel.useWeight5 = false;
-    // downModel.useWeight4 = true;
-    // downModel.useWeight5 = false;
-
-    for (int i = 0; i < 4; i++)
+    OffsetModel *m = getOffsetModel(aiIndex);
+    double def = m->up ? -(double)OFFSET_DEFAULT_PSI : (double)OFFSET_DEFAULT_PSI;
+    int count = getLearnDataLength(aiIndex);
+    if (count < OFFSET_FADE_MIN)
     {
-        if (getAIModel((SOLENOID_AI_INDEX)i)->isReadyToUse.get().i == false)
-        {
-            if (getLearnDataLength((SOLENOID_AI_INDEX)i) >= LEARN_SAVE_COUNT)
-            {
-                trainSingleAIModel((SOLENOID_AI_INDEX)i);
-            }
-        }
-        else
-        {
-            AIReadyBittset = AIReadyBittset | (1 << i);
-        }
+        return def;
     }
-
-    Serial.print("AI training bittset: ");
-    Serial.println(AIReadyBittset);
-    updateAIPercentage();
-}
-
-double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure)
-{
-    return getAIModel(aiIndex)->model.predictDeNormalized(start_pressure, end_pressure, tank_pressure);
-}
-
-bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex)
-{
-    if (!getaiEnabled())
+    double trained = m->predict(raw_bag, raw_tank);
+    double w = (double)(count - OFFSET_FADE_MIN) / (double)(AI_LEARN_RATIO_NUM - OFFSET_FADE_MIN);
+    if (w > 1.0)
     {
-        return false;
+        w = 1.0;
     }
-    return getAIModel(aiIndex)->isReadyToUse.get().i;
+    return def * (1.0 - w) + trained * w;
+}
+
+// Predicted true bag pressure recovered from the live flowing readings while a valve is open. The
+// closed-loop controller stops when this reaches goal. See AI_TRAINING.md.
+double getPredictedBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank)
+{
+    return raw_bag + getPredictionOffset(aiIndex, raw_bag, raw_tank);
+}
+
+// Height-mode counterpart to getPredictedBagPressure. The level sensor is a mechanical arm that reads the
+// true ride height even while a valve is open (unlike the pressure sensor, whose reading is skewed by
+// flow), so there is nothing to correct — this is an identity stub. It exists purely so the closed-loop
+// controller can treat both modes through one predictor seam. See AI_TRAINING.md.
+// TODO: Potential improvement, needs to be backed by data:
+// This can be updated in the future to use an AI model just like bag pressure. Theoretically, this would predict the height valve after the valve is closed since it takes a moment to close the valve.
+// For example, lets say we are airing up and goal percentage is 50%
+// Well, if we close the valve at exactly 50%, by the time the valve fully closes it might be at 51% now.
+// So a well trained model might instead have us close the valve at 49% knowing ahead of time that by the time the valve closes it will be 50%.
+// It's such a small difference but could be worth looking into and implementing in the future. So that is why this function is here for now.
+double getPredictedBagHeight(double raw_level)
+{
+    return raw_level;
 }
 
 #pragma endregion

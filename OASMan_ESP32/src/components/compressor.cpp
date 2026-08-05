@@ -47,6 +47,16 @@ float Compressor::getTankPressure()
 #endif
 }
 
+float Compressor::readTankPressureNow()
+{
+#if TANK_PRESSURE_MOCK == true
+    return 200;
+#else
+    float p = this->readPressure();
+    return p < 0 ? 0 : p;
+#endif
+}
+
 bool Compressor::isFrozen()
 {
     return (millis() < this->pauseExecutionUntilTime);

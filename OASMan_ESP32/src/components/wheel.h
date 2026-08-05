@@ -42,6 +42,13 @@ private:
     byte directlySetPressure = 0; // This is the 'real' pressure that is read after any valve movement. This is our 'expected' pressure in a sense. This is tracked by the sensorlessCaptureBaseline and is only usable when slBaselineCaptured is true.
 
     void goalRoutine();
+    // Log an offset sample from a manual valve move (watched by valve state each Wheel::loop tick).
+    void captureManualOffsetSample();
+    bool manualValveWasOpen = false;
+    bool manualUp = false;                // direction of the tracked manual move (picks the settle time)
+    uint32_t manualSettleUntil = 0;       // while non-zero: valve closed, waiting to read the settled bag
+    uint8_t manualFlowBag = 0, manualFlowTank = 0;
+    SOLENOID_AI_INDEX manualAiIndex = AI_MODEL_UNDEFINED;
     void maintainPressure();
     void heightsensorlessLevelling();
     void pressureCaptureBaseline();
@@ -75,7 +82,7 @@ float readPinPressure(InputType *pin, bool heightMode);
 
 void setupWheelLockSem();
 
-extern bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex);
-extern double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure);
+extern double getPredictedBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank);
+extern double getPredictedBagHeight(double raw_level);
 extern Manifold *getManifold(); // defined in airSuspensionUtil.h
 #endif

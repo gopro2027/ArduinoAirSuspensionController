@@ -46,8 +46,10 @@ namespace PressureSensorCalibration
     void learnPressureSensorsRoutine();
 }
 
-void trainAIModels();
-double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure);
-bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex);
+/** Refit any offset model whose sample count changed. Call at boot and periodically from task_trainAI. */
+void trainOffsetModels();
+/** Predicted true bag pressure from live flowing readings: rawBag + faded (default -> trained) offset. */
+double getPredictedBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank);
+double getPredictedBagHeight(double raw_level);
 void setupLEDs();
 #endif

@@ -130,13 +130,6 @@ static void compressor_status_handler(void *data)
     log_i("Pressed compressor status %i", value);
 }
 
-static void ai_status_handler(void *data)
-{
-    bool value = (bool)data;
-    setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED, value);
-    log_i("Pressed ai status %i", value);
-}
-
 static void maintain_pressure_handler(void *data)
 {
     bool value = (bool)data;
@@ -457,8 +450,6 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_t *ml_ai_page = this->addSettingsPage(pages_container, true);
 
     this->ui_aiPercentage = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Learn Progress:", {.STRING = test});
-    this->ui_aiReady = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Trained:", {.STRING = test});
-    this->ui_aiEnabled = new Option(ml_ai_page, OptionType::ON_OFF, "Enabled:", {.INT = 0}, ai_status_handler);
 
     allOptions.push_back(new Option(ml_ai_page, OptionType::BUTTON, "Reset Learned Data", {.STRING = test}, [](void *data)
     {
@@ -1112,14 +1103,6 @@ void ScrSettings::loop()
     snprintf(buf, sizeof(buf), "%i%%", AIPercentage);
     this->ui_aiPercentage->setRightHandText(buf);
 
-    snprintf(buf, sizeof(buf), "UF:  %c UR:  %c\nDF: %c DR: %c",
-        (AIReadyBittset & 0b1) ? 'Y' : 'n',
-        (AIReadyBittset & 0b10 >> 1) ? 'Y' : 'n',
-        (AIReadyBittset & 0b100 >> 2) ? 'Y' : 'n',
-        (AIReadyBittset & 0b1000 >> 3) ? 'Y' : 'n');
-
-    this->ui_aiReady->setRightHandText(buf);
-
     this->ui_mac->setRightHandText(ble_getMAC());
     this->ui_volts->setRightHandText(getBatteryVoltageString());
 
@@ -1149,7 +1132,6 @@ void ScrSettings::loop()
         this->ui_airoutonshutoff->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF)) != 0, false);
 #endif
         this->ui_safetymode->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0, false);
-        this->ui_aiEnabled->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED)) != 0, false);
         bool heightSensorMode = (flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0;
         this->ui_heightsensormode->setSelectedOption(heightSensorMode ? 1 : 0);
         this->updateLevelModeOptionsVisibility(heightSensorMode);
@@ -1188,9 +1170,7 @@ void ScrSettings::cleanup()
     delete ui_s3;
     delete ui_ebrakeStatus;
     delete ui_rebootbutton;
-    delete ui_aiReady;
     delete ui_aiPercentage;
-    delete ui_aiEnabled;
     delete ui_maintainprssure;
     delete ui_sensorlessleveling;
     delete ui_riseonstart;
