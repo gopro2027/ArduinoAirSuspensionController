@@ -558,11 +558,35 @@ void Wheel::goalRoutine() {
         getInSolenoid()->close();
         getOutSolenoid()->close();
 
+        // Rendezvous: every active corner has finished the main routine and closed its valves -> all idle.
+        goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS);
+
+        // Final cross-corner re-check (pressure mode): corners that finished at slightly different times can
+        // nudge an already-done corner through the shared manifold, leaving it a few psi off. With everyone
+        // now idle, re-read the settled pressure and re-correct for FINAL_RECHECK_ROUNDS synchronized rounds --
+        // each round bracketed by a barrier so the next read happens with all corners idle again, catching a
+        // correction that disturbed a neighbor. getheightSensorMode() is global, so every corner runs the same
+        // number of barriers here (no club mismatch). Fine bursts inside achieveFineGoal take no barriers, and
+        // the explicit close keeps the never-wait-with-valve-open invariant at the round barrier.
+        if (!getheightSensorMode())
+        {
+            for (int rc = 0; rc < FINAL_RECHECK_ROUNDS; rc++)
+            {
+                double trueVal = this->waitForStableReading(SETTLE_STABLE_BAND_PSI);
+                if (abs(this->pressureGoal - (int)lround(trueVal)) > PRESSURE_DEADBAND_PSI)
+                {
+                    this->achieveFineGoal();
+                }
+                getInSolenoid()->close();
+                getOutSolenoid()->close();
+                goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS); // re-sync (all idle) before the next round's read
+            }
+        }
+
         // goalRoutine blocks this thread, so reset sensorless baseline / instability manually.
         nullifySensorlessBaseline();
         markInstability(this->getSelectedInputValue());
 
-        goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS); // one final barrier so all exiting threads rendezvous
         goalSyncLeave();
 
         flagStartPressureGoalRoutine[thisWheelNum] = false;

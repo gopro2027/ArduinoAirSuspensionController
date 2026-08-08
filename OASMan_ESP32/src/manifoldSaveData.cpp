@@ -277,6 +277,17 @@ static void appendPressureDataToFile(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag,
     if (*size < LEARN_SAVE_COUNT)
     {
         PressureLearnSaveStruct *pls = getLearnData(aiIndex);
+        // De-duplicate: goalRoutine closes the valve many times per preset move, which would otherwise log a
+        // long run of near-identical samples (redundant, budget-burning, distribution-skewing -- esp. air-out,
+        // which takes more coarse closes). Skip one within SAMPLE_DEDUP_PSI of the previous stored sample on
+        // both flowing and settled; distinct pressures across a move (and repeats from a separate move) are kept.
+        if (*size > 0 &&
+            abs((int)raw_bag - (int)pls[*size - 1].raw_bag) <= SAMPLE_DEDUP_PSI &&
+            abs((int)settled_bag - (int)pls[*size - 1].settled_bag) <= SAMPLE_DEDUP_PSI)
+        {
+            xSemaphoreGive(learnDataMutex);
+            return; // near-duplicate of the last stored sample -> don't log
+        }
         pls[*size].raw_bag = raw_bag;
         pls[*size].settled_bag = settled_bag;
         pls[*size].raw_tank = raw_tank;

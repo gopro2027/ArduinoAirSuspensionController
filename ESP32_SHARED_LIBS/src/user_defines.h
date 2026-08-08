@@ -44,6 +44,7 @@
 #define OFFSET_FADE_MIN 25        // start fading the trained model in at this many samples (0% -> ...)
 #define AI_LEARN_RATIO_NUM 150    // ...reaching 100% trained at this many samples (also the AIPercentage bar)
 #define LOG_MANUAL_OFFSET_SAMPLES true // also collect offset samples from manual valve moves (Wheel::captureManualOffsetSample)
+#define SAMPLE_DEDUP_PSI 1        // drop a new sample within this many psi (flowing AND settled) of the previous one for that model: one preset move closes the valve many times, so this kills the long runs of near-identical samples (redundant, budget-burning, distribution-skewing) while keeping distinct pressures
 
 // Closed-loop pressure control (see Wheel::goalRoutine / AI_TRAINING.md):
 #define PRESSURE_DEADBAND_PSI 0          // ; was: 1. target the exact psi; the fine-pulse phase + FINE_PULSE_MAX_TRIES bound the near-goal behavior that the deadband used to guard
@@ -71,6 +72,12 @@
 #define FINE_PULSE_MAX_MS 100         // cap on the initial burst size
 #define FINE_PULSE_OVERSHOOT_SHRINK 0.5 // fractional multiplier applied to the burst each time it crosses the goal (< 1 = damp; -> give up when burst < 1 ms)
 #define FINE_PULSE_MAX_TRIES 8        // give up after this many bursts with the reading not moving at all (stuck: tank/bag exhausted)
+
+// Final cross-corner re-check (pressure mode, end of Wheel::goalRoutine). Corners finishing at slightly
+// different times can nudge an already-done corner through the shared manifold. After all corners sync up
+// idle, re-read the settled pressure and re-correct for this many synchronized rounds (each round barriered
+// so the next read happens with all corners idle again). 0 disables. See AI_TRAINING.md.
+#define FINAL_RECHECK_ROUNDS 2
 
 /* This is the private passcode you need to access your system from the app. Set the same value in the app settings after launching the app. */
 /* This is legacy bt, and ota but ota is only enabled when chosen so we can leave it as is */

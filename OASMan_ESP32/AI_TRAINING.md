@@ -104,11 +104,24 @@ crossing (hardware can't resolve finer — give up); the reading not moving for 
 with blind near-goal samples). Height skips fine — its coarse loop already reads true and lands within
 `LEVEL_DEADBAND_PERCENTAGE`.
 
+**Final cross-corner re-check (pressure only).** Corners finish at slightly different times, and a sibling
+still moving can nudge an already-done corner through the shared manifold, leaving it a few psi off. After
+the main loop all corners rendezvous idle, then run `FINAL_RECHECK_ROUNDS` synchronized rounds: re-read the
+settled pressure and, if off, re-correct with `achieveFineGoal`. Each round is bracketed by a barrier so the
+next read happens with all corners idle again, catching a correction that disturbed a neighbor. Height skips
+it (its level sensor reads true and isn't coupled through manifold pressure). `getheightSensorMode()` is
+global, so every corner runs the same barrier count (no club mismatch).
+
 **Sync / safety.** `achieveFineGoal` takes no barriers (the valve is only open during a burst, never
 waiting), so the never-wait-with-valve-open invariant holds and a fine corner rendezvouses only at
 `goalRoutine`'s exit barrier. Pressure mode enforces the in-loop `getbagMaxPressure()` /
 `MAX_PRESSURE_SAFETY` ceiling (coarse fill); height mode has no in-loop pressure ceiling. Other hard stops:
 the 10 s `ROUTINE_TIMEOUT_MS`, or an `onlyAirUp` block (which accepts an overshoot rather than venting).
+
+**Sample logging / de-dup.** A preset move closes the valve many times (each coarse close logs a
+flowing→settled sample), so `appendPressureDataToFile` drops any sample within `SAMPLE_DEDUP_PSI` of the
+previous stored one for that model — killing long runs of near-identical samples while keeping distinct
+pressures. The four models are independent, so an uneven up/down sample count is harmless.
 
 ## Persistence / migration
 
@@ -122,7 +135,8 @@ the next refit.
 `pressureMath.h`: `ML_OFFSET_NORM` (100), `ML_FIT_RIDGE`, `ML_FIT_MIN_SAMPLES` (25), `ML_NUM_COEFF` (3),
 `ML_SAMPLE_RECORD_VERSION`. `user_defines.h`: `LEARN_SAVE_COUNT` (300), `OFFSET_DEFAULT_PSI` (5),
 `OFFSET_FADE_MIN` (25), `AI_LEARN_RATIO_NUM` (150), `PRESSURE_DEADBAND_PSI` (0), `LEVEL_DEADBAND_PERCENTAGE`
-(1), `LOG_MANUAL_OFFSET_SAMPLES`. Settled read: `SETTLE_STABLE_MS` (100), `SETTLE_STABLE_BAND_PSI` (1),
+(1), `LOG_MANUAL_OFFSET_SAMPLES`, `SAMPLE_DEDUP_PSI` (1), `FINAL_RECHECK_ROUNDS` (2). Settled read:
+`SETTLE_STABLE_MS` (100), `SETTLE_STABLE_BAND_PSI` (1),
 `SETTLE_STABLE_BAND_LEVEL` (2), `SETTLE_MAX_WAIT_MS` (1500); `OFFSET_SAMPLE_SETTLE_MS`/`_DOWN_MS` are now
 only for the manual-move capture. Fine phase: `FINE_PULSE_THRESHOLD_PSI` (5), `FINE_PULSE_MS_PER_PSI` (5),
 `FINE_PULSE_MIN_MS` (5), `FINE_PULSE_MAX_MS` (100), `FINE_PULSE_OVERSHOOT_SHRINK` (0.5), `FINE_PULSE_MAX_TRIES`
