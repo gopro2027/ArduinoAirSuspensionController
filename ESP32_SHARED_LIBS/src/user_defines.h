@@ -214,8 +214,8 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 #define pressureZeroAnalogValue (float)((pressuretransducerVoltageZeroPSI / pressuretransducerRunningVoltage) * microcontrollerMaxAnalogReading) // analog reading of pressure transducer at 0psi.
 #define pressureMaxAnalogValue (float)((pressuretransducerVoltageMaxPSI / pressuretransducerRunningVoltage) * microcontrollerMaxAnalogReading)   // analog reading of pressure transducer at max psi.
 
-/* The amount of time the pressure routine will try to reach the goal pressure before 'giving up' (usually due to lower pressure in tank or something) Default is 10 seconds. */
-#define ROUTINE_TIMEOUT_MS 10 * 1000
+/* The amount of time the pressure routine will try to reach the goal pressure before 'giving up' (usually due to lower pressure in tank or something) Default is 15 seconds. */
+#define ROUTINE_TIMEOUT_MS 15 * 1000
 
 #define AIR_OUT_AFTER_SHUTDOWN_MS 5000
 
