@@ -509,7 +509,7 @@ uint8_t att_server_notify_SAFE(hci_con_handle_t con_handle, uint16_t attribute_h
     return att_server_notify(con_handle, attribute_handle, value, value_len);
 }
 
-extern uint8_t AIPercentage;   // 7
+extern uint8_t AIPercentage;
 
 ConfigValuesPacket buildCurrentConfigValuesPacket()
 {
@@ -594,6 +594,10 @@ void ble_notify()
         if (isEBrakeOn())
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::EBRAKE_STATUS_ON);
+        }
+        if (isAnyWheelActive())
+        {
+            statusBittset = statusBittset | (1 << StatusPacketBittset::ADJUSTMENT_IN_PROGRESS);
         }
         if (isKeepAliveTimerExpired())
         {

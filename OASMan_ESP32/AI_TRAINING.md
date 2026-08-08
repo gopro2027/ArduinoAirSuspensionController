@@ -119,7 +119,7 @@ waiting), so the never-wait-with-valve-open invariant holds and a fine corner re
 the 10 s `ROUTINE_TIMEOUT_MS`, or an `onlyAirUp` block (which accepts an overshoot rather than venting).
 
 **Sample logging / de-dup.** A preset move closes the valve many times (each coarse close logs a
-flowing→settled sample), so `appendPressureDataToFile` drops any sample within `SAMPLE_DEDUP_PSI` of the
+flowing→settled sample), so `recordLearnSample` drops any sample within `SAMPLE_DEDUP_PSI` of the
 previous stored one for that model — killing long runs of near-identical samples while keeping distinct
 pressures. The four models are independent, so an uneven up/down sample count is harmless.
 
@@ -135,11 +135,20 @@ the next refit.
 `pressureMath.h`: `ML_OFFSET_NORM` (100), `ML_FIT_RIDGE`, `ML_FIT_MIN_SAMPLES` (25), `ML_NUM_COEFF` (3),
 `ML_SAMPLE_RECORD_VERSION`. `user_defines.h`: `LEARN_SAVE_COUNT` (300), `OFFSET_DEFAULT_PSI` (5),
 `OFFSET_FADE_MIN` (25), `AI_LEARN_RATIO_NUM` (150), `PRESSURE_DEADBAND_PSI` (0), `LEVEL_DEADBAND_PERCENTAGE`
-(1), `LOG_MANUAL_OFFSET_SAMPLES`, `SAMPLE_DEDUP_PSI` (1), `FINAL_RECHECK_ROUNDS` (2). Settled read:
+(1), `LOG_MANUAL_OFFSET_SAMPLES`, `SAMPLE_DEDUP_PSI` (1), `FINAL_RECHECK_ROUNDS` (4). Settled read:
 `SETTLE_STABLE_MS` (100), `SETTLE_STABLE_BAND_PSI` (1),
 `SETTLE_STABLE_BAND_LEVEL` (2), `SETTLE_MAX_WAIT_MS` (1500); `OFFSET_SAMPLE_SETTLE_MS`/`_DOWN_MS` are now
 only for the manual-move capture. Fine phase: `FINE_PULSE_THRESHOLD_PSI` (5), `FINE_PULSE_MS_PER_PSI` (5),
 `FINE_PULSE_MIN_MS` (5), `FINE_PULSE_MAX_MS` (100), `FINE_PULSE_OVERSHOOT_SHRINK` (0.5), `FINE_PULSE_MAX_TRIES`
 (8) — the on-car tuning knobs (`FINE_PULSE_MIN_MS` + `FINE_PULSE_OVERSHOOT_SHRINK` govern the finest step).
+
+## Future improvements
+
+- **Height-mode valve-close-lag model** (`getPredictedBagHeight` is currently an identity stub): a trained
+  model could predict the height *after* the valve finishes closing, since closing takes a moment. E.g.
+  airing up to a 50% goal — closing at exactly 50% may land at 51% once the valve fully shuts, so a trained
+  model might close at 49% knowing it settles to 50%. Small difference; needs to be backed by data.
+- Average the flowing reading over the last few pre-close ticks to denoise the model feature.
+- The manual-move capture still uses fixed `OFFSET_SAMPLE_SETTLE_*` waits rather than `waitForStableReading`.
 
 Note: `eval/model_eval.cpp` targeted the old online-learning model and is stale until ported.

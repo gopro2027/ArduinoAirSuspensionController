@@ -656,6 +656,7 @@ RfCommandPacket packet(RF_COMMAND_BUTTON_ASSIGN, RF_BUTTON_A, 2); // Assign butt
 - Bit 3: `TIMER_STATUS_EXPIRED` - Keep-alive timer expired (StatusPacketBittset::TIMER_STATUS_EXPIRED = 3)
 - Bit 4: `CLOCK` - Toggles every 250ms (StatusPacketBittset::CLOCK = 4)
 - Bit 5: `EBRAKE_STATUS_ON` - Emergency brake is on (StatusPacketBittset::EBRAKE_STATUS_ON = 5)
+- Bit 6: `ADJUSTMENT_IN_PROGRESS` - A corner is actively filling/dumping to a target, i.e. `isAnyWheelActive()` (StatusPacketBittset::ADJUSTMENT_IN_PROGRESS = 6)
 
 **Parsing Example**:
 
@@ -1047,7 +1048,8 @@ enum StatusPacketBittset {
     ACC_STATUS_ON = 2,
     TIMER_STATUS_EXPIRED = 3,
     CLOCK = 4,
-    EBRAKE_STATUS_ON = 5
+    EBRAKE_STATUS_ON = 5,
+    ADJUSTMENT_IN_PROGRESS = 6
 };
 
 enum ConfigFlagsBit {

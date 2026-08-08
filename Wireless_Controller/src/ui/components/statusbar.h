@@ -15,6 +15,7 @@ public:
     lv_obj_t* batteryIcon;        // Battery symbol
     lv_obj_t* batteryLabel;       // Battery percentage text
     lv_obj_t* alertIcon;          // Alert warning icon (left side)
+    lv_obj_t* adjustmentLabel;    // "Adjustment in progress" text (shown while a corner is actively adjusting)
 
     // Pull-down panel elements
     lv_obj_t* overlay;            // Dark overlay behind panel

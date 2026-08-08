@@ -16,7 +16,7 @@
 
 #define ML_OFFSET_NORM 100.0   // label/prediction scale, keeps weights O(0.1)
 #define ML_FIT_RIDGE 0.001     // ridge added to the normal-equations diagonal (per sample)
-#define ML_FIT_MIN_SAMPLES 25  // minimum valid samples for a stable 4-coeff fit
+#define ML_FIT_MIN_SAMPLES 25  // minimum samples for a stable fit
 #define ML_NUM_COEFF 3         // features: differential/100, (differential/100)^2, bias
 
 struct PressureLearnSaveStruct; // defined in manifoldSaveData.h

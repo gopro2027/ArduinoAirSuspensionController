@@ -71,7 +71,7 @@ static lv_obj_t *current_page = NULL;
 static int saved_page_index = 0;  // Remember page selection across reinits
 static lv_obj_t *menu_container = NULL;
 static const char *section_names[] = {
-    "Status", "Game Controller", "ML/AI", "Basic settings",
+    "Status", "Game Controller", "Basic settings",
     "Levelling Mode", "Auxillary Output", "Units", "Screen Settings", "Config", "Wifi / Update"
 };
 static constexpr int kSettingsSectionNameCount = sizeof(section_names) / sizeof(section_names[0]);
@@ -446,12 +446,13 @@ void ScrSettings::init(lv_obj_t *parent)
             []() -> void {}, false);
     }));
 
-    // --- ML/AI page ---
-    lv_obj_t *ml_ai_page = this->addSettingsPage(pages_container, true);
+    // --- Basic settings page ---
+    lv_obj_t *basic_settings_page = this->addSettingsPage(pages_container, true);
 
-    this->ui_aiPercentage = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Learn Progress:", {.STRING = test});
+    // ML/AI rows (moved here from the retired ML/AI page)
+    this->ui_aiPercentage = new Option(basic_settings_page, OptionType::TEXT_WITH_VALUE, "Learn Progress:", {.STRING = test});
 
-    allOptions.push_back(new Option(ml_ai_page, OptionType::BUTTON, "Reset Learned Data", {.STRING = test}, [](void *data)
+    allOptions.push_back(new Option(basic_settings_page, OptionType::BUTTON, "Reset Learned Data", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Reset Learned AI data?", "Run this if ai has completed training and you are getting innacurate presets.",
             "Confirm", "Cancel",
@@ -463,9 +464,6 @@ void ScrSettings::init(lv_obj_t *parent)
             },
             []() -> void {}, false);
     }));
-
-    // --- Basic settings page ---
-    lv_obj_t *basic_settings_page = this->addSettingsPage(pages_container, true);
 
     this->ui_maintainprssure = new Option(basic_settings_page, OptionType::ON_OFF, "Maintain Pressure", {.INT = 0}, maintain_pressure_handler);
     this->ui_sensorlessleveling = new Option(basic_settings_page, OptionType::ON_OFF, "Height levelling", {.INT = 0}, sensorless_leveling_handler);

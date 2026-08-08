@@ -1,11 +1,6 @@
 #include "pressureMath.h"
 #include "manifoldSaveData.h" // PressureLearnSaveStruct (for refit)
 
-#ifdef test_run
-#include <iostream>
-#include <iomanip>
-#endif
-
 #define ML_N ML_NUM_COEFF
 
 // Solve M * x = r (Gaussian elimination with partial pivoting). Copies inputs; false on singular/non-finite.
@@ -103,16 +98,18 @@ double OffsetModel::predict(double raw_bag, double raw_tank)
 
 int OffsetModel::refit(const PressureLearnSaveStruct *samples, int count)
 {
+    if (count < ML_FIT_MIN_SAMPLES)
+    {
+        return 0; // not enough to fit; leave weights (the fade uses the constant default until then)
+    }
+
     double A[ML_NUM_COEFF * ML_NUM_COEFF] = {0};
     double v[ML_NUM_COEFF] = {0};
-    int n = 0;
-
     for (int i = 0; i < count; i++)
     {
         double raw = samples[i].raw_bag;
-        double tank = samples[i].raw_tank;
         double f[ML_NUM_COEFF];
-        computeFeatures(raw, tank, f);
+        computeFeatures(raw, samples[i].raw_tank, f);
         double y = ((double)samples[i].settled_bag - raw) / ML_OFFSET_NORM;
         for (int r = 0; r < ML_NUM_COEFF; r++)
         {
@@ -122,16 +119,11 @@ int OffsetModel::refit(const PressureLearnSaveStruct *samples, int count)
             }
             v[r] += f[r] * y;
         }
-        n++;
     }
 
-    if (n < ML_FIT_MIN_SAMPLES)
-    {
-        return 0; // not enough to fit; leave weights (the fade uses the constant default until then)
-    }
     for (int i = 0; i < ML_NUM_COEFF; i++)
     {
-        A[i * ML_NUM_COEFF + i] += ML_FIT_RIDGE * n;
+        A[i * ML_NUM_COEFF + i] += ML_FIT_RIDGE * count;
     }
     double sol[ML_NUM_COEFF];
     if (!solveN(A, v, sol))
@@ -142,5 +134,5 @@ int OffsetModel::refit(const PressureLearnSaveStruct *samples, int count)
     {
         w[i] = sol[i];
     }
-    return n;
+    return count;
 }

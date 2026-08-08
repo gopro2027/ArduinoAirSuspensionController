@@ -219,17 +219,11 @@ static int goalSyncClubSize = 0;
 static int goalSyncWaiting = 0;
 static int goalSyncGeneration = 0;
 
-// Barrier wait cap (backstop only; normal release happens when the club gathers or a
-// wheel leaves). INVARIANT: a wheel only ever waits at the barrier with its valve CLOSED
-// (goalRoutine skips the barrier while it is flowing, and closes both valves before the
-// exit rendezvous), so waiting is always harmless regardless of how long it lasts. The
-// cap must exceed the longest a slow corner can stay open before it closes and reaches
-// the barrier -- a single fill can run up to ~5000ms -- so 6000ms lets a fast corner wait
-// for the slowest before rendezvous while still firing on a genuine stall (the routine
-// itself caps at ROUTINE_TIMEOUT_MS = 10s). Mode-independent: pressure and height flow
-// the same way and both close their valve before waiting.
+// Barrier wait cap (backstop only). INVARIANT: a wheel only ever waits at the barrier with its valve
+// CLOSED, so waiting is always harmless; the cap just exceeds the slowest single fill (~5000ms).
+// Full rationale: docs/goal-sync-barrier.md.
 #ifndef GOAL_SYNC_BARRIER_TIMEOUT_MS
-#define GOAL_SYNC_BARRIER_TIMEOUT_MS 6000 // was: split 6000 (pressure) / 100 (height); collapsed once the never-wait-with-valve-open invariant made the short height cap unnecessary
+#define GOAL_SYNC_BARRIER_TIMEOUT_MS 6000 // was: split 6000 (pressure) / 100 (height)
 #endif
 
 static void goalSyncJoin()
@@ -304,10 +298,8 @@ static const int8_t FLOW_NONE = 0;
 static const int8_t FLOW_UP = 1;
 static const int8_t FLOW_DOWN = -1;
 
-// Block until the selected input reading holds within `band` (units of the active mode) for SETTLE_STABLE_MS,
-// or SETTLE_MAX_WAIT_MS elapses as a backstop; returns the final reading. The valve(s) must already be closed.
-// Replaces a fixed settle wait: air-out (which settles slowly) waits exactly as long as it needs, and no
-// longer, before we trust the reading as the TRUE settled value.
+// Block until the selected input reading holds within `band` for SETTLE_STABLE_MS (SETTLE_MAX_WAIT_MS
+// backstop); returns the final reading. Valve(s) must already be closed -- this IS the true settled value.
 double Wheel::waitForStableReading(int band)
 {
     const uint32_t start = millis();
@@ -335,26 +327,18 @@ double Wheel::waitForStableReading(int band)
     }
 }
 
-// Open `valve` for `ms`, then close it (cooperative busy-wait). Used by the fine phase; carries no thread-sync
-// barrier -- the valve is only ever open here, never waiting, so the never-wait-with-valve-open invariant holds.
+// Open `valve` for `ms`, then close it. Used by the fine phase.
 void Wheel::openValveForMs(Solenoid *valve, uint32_t ms)
 {
     valve->open();
-    const uint32_t start = millis();
-    while (millis() - start < ms)
-    {
-        delay(1);
-    }
+    delay(ms);
     valve->close();
 }
 
 // Precision (fine) phase, pressure only: hone in on the EXACT goal with short valve bursts read off the
-// accurate valve-closed pressure (waitForStableReading). No thread sync -- fine bursts are quick and local,
-// and this corner rendezvouses only at goalRoutine's exit barrier. Anti-oscillation (mirrors the old logic):
-// the burst starts sized to the remaining error, and each time the reading crosses the goal we shrink it by
-// FINE_PULSE_OVERSHOOT_SHRINK. It exits when the reading lands exactly on goal (success), when the burst
-// shrinks below 1 ms while still crossing (can't resolve finer -> give up), when the reading stops moving for
-// FINE_PULSE_MAX_TRIES bursts (stuck: tank/bag exhausted), or on the routine timeout. See AI_TRAINING.md.
+// accurate valve-closed pressure. Bursts start sized to the error and shrink by FINE_PULSE_OVERSHOOT_SHRINK
+// each time the reading crosses the goal (anti-oscillation). No thread sync (bursts are quick and local).
+// Exit conditions + full design: AI_TRAINING.md.
 bool Wheel::achieveFineGoal()
 {
     int8_t prevDir = FLOW_NONE;
@@ -432,12 +416,10 @@ bool Wheel::achieveFineGoal()
     }
 }
 
-// Coarse closed-loop control shared by pressure and height modes: commit a fill/dump direction from the true
-// (valve-closed) reading, hold the valve open while the live reading is run through a predictor to recover the
-// true bag value, stop when it reaches goal, rendezvous (valve closed), settle to a stable true reading, and
-// re-decide (bidirectional). Near goal (pressure only) it hands off to achieveFineGoal for the exact landing.
-// Pressure mode logs a flowing->settled sample on each coarse close; the level sensor reads true even during
-// flow, so height mode's predictor is an identity stub and never hands off to fine. See AI_TRAINING.md.
+// Coarse closed-loop control shared by pressure and height modes: commit a direction from the true
+// (valve-closed) reading, hold the valve open while a predictor recovers the true bag value from the flowing
+// reading, close at goal, settle, and re-decide (bidirectional). Near goal (pressure only) it hands off to
+// achieveFineGoal for the exact landing. Full design: AI_TRAINING.md.
 void Wheel::goalRoutine() {
     if (flagStartPressureGoalRoutine[thisWheelNum].load())
     {
@@ -473,9 +455,8 @@ void Wheel::goalRoutine() {
                 {
                     break; // at goal
                 }
-                // Pressure only: within the fine window the flowing prediction is too blind to land precisely,
-                // so hand off to the burst routine, which drives to the exact psi and returns. (Height reads
-                // true even while flowing, so its coarse loop already lands accurately -- no fine phase.)
+                // Pressure only: near goal the flowing prediction is too blind to land precisely, so hand
+                // off to the fine burst routine. (Height reads true even while flowing -- no fine phase.)
                 if (!heightMode && abs(rawDif) <= FINE_PULSE_THRESHOLD_PSI)
                 {
                     this->achieveFineGoal();
@@ -561,13 +542,9 @@ void Wheel::goalRoutine() {
         // Rendezvous: every active corner has finished the main routine and closed its valves -> all idle.
         goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS);
 
-        // Final cross-corner re-check (pressure mode): corners that finished at slightly different times can
-        // nudge an already-done corner through the shared manifold, leaving it a few psi off. With everyone
-        // now idle, re-read the settled pressure and re-correct for FINAL_RECHECK_ROUNDS synchronized rounds --
-        // each round bracketed by a barrier so the next read happens with all corners idle again, catching a
-        // correction that disturbed a neighbor. getheightSensorMode() is global, so every corner runs the same
-        // number of barriers here (no club mismatch). Fine bursts inside achieveFineGoal take no barriers, and
-        // the explicit close keeps the never-wait-with-valve-open invariant at the round barrier.
+        // Final cross-corner re-check (pressure mode): a sibling finishing later can nudge an already-done
+        // corner through the shared manifold, so with everyone idle, re-read and re-correct for
+        // FINAL_RECHECK_ROUNDS synchronized rounds (a barrier per round keeps the reads clean). See AI_TRAINING.md.
         if (!getheightSensorMode())
         {
             for (int rc = 0; rc < FINAL_RECHECK_ROUNDS; rc++)
@@ -775,11 +752,9 @@ void Wheel::loop()
 }
 
 #if LOG_MANUAL_OFFSET_SAMPLES
-// Log an offset sample from a MANUAL valve move (BLE valveControlBittset / gamepad). goalRoutine
-// self-collects its own samples, so only track when no goal routine is running (and never in
-// height-sensor mode). While a manual valve is open we cache the flowing readings; when it closes we
-// read the settled bag and log {flowing bag/tank, settled bag}. Runs on the wheel task, so
-// the ADC reads / SPIFFS write are safe. See AI_TRAINING.md.
+// Log an offset sample from a MANUAL valve move (BLE valveControlBittset / gamepad): cache the flowing
+// readings while the valve is open, then log the settled bag after it closes. Only runs when no goal
+// routine is active and never in height mode. See AI_TRAINING.md.
 void Wheel::captureManualOffsetSample()
 {
     if (getheightSensorMode() || flagStartPressureGoalRoutine[thisWheelNum].load())

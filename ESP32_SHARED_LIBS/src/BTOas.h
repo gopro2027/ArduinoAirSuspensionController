@@ -45,7 +45,8 @@ enum StatusPacketBittset
     ACC_STATUS_ON,
     TIMER_STATUS_EXPIRED, // not really used
     CLOCK,                // not really used
-    EBRAKE_STATUS_ON
+    EBRAKE_STATUS_ON,
+    ADJUSTMENT_IN_PROGRESS // isAnyWheelActive() on the manifold: a corner is actively filling/dumping to a target
 };
 
 // User-config flags carried in ConfigValuesPacket (not live status). Single bit / on off config variables can go in here instead of getting a full byte of data
