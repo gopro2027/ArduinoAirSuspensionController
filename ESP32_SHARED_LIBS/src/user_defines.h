@@ -77,7 +77,7 @@
 // different times can nudge an already-done corner through the shared manifold. After all corners sync up
 // idle, re-read the settled pressure and re-correct for this many synchronized rounds (each round barriered
 // so the next read happens with all corners idle again). 0 disables. See AI_TRAINING.md.
-#define FINAL_RECHECK_ROUNDS 2
+#define FINAL_RECHECK_ROUNDS 4
 
 /* This is the private passcode you need to access your system from the app. Set the same value in the app settings after launching the app. */
 /* This is legacy bt, and ota but ota is only enabled when chosen so we can leave it as is */
