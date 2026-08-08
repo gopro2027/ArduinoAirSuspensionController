@@ -85,7 +85,7 @@ void Statusbar::create(lv_obj_t* parent) {
 
     // "Adjustment in progress" text (left side, after the alert icon slot; hidden by default)
     adjustmentLabel = lv_label_create(container);
-    lv_label_set_text(adjustmentLabel, "Adjustment in progress");
+    lv_label_set_text(adjustmentLabel, "Adjusting");
     lv_obj_set_style_text_color(adjustmentLabel, lv_color_hex(0x4ADE80), 0);
     lv_obj_set_style_text_font(adjustmentLabel, getScaledFont(10), 0);
     lv_obj_align(adjustmentLabel, LV_ALIGN_LEFT_MID, padding + scaledX(18), 0);
