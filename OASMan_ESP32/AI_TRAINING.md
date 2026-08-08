@@ -1,5 +1,8 @@
 # AI Pressure Correction — How It Works
 
+> Full control-loop design, decision history, and tuning guide:
+> [docs/pressure-goal-routine.md](docs/pressure-goal-routine.md). This file covers the ML layer.
+
 The manifold controls bag pressure **closed-loop**: it holds a valve open and re-reads the sensor each
 tick, closing when the bag reaches the goal — like height-sensor mode. The catch: **you can't read a
 bag's true pressure while its valve is open.** Air flowing past the manifold-mounted sensor makes the bag
