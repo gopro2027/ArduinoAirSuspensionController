@@ -42,6 +42,14 @@ private:
     byte directlySetPressure = 0; // This is the 'real' pressure that is read after any valve movement. This is our 'expected' pressure in a sense. This is tracked by the sensorlessCaptureBaseline and is only usable when slBaselineCaptured is true.
 
     void goalRoutine();
+    // Precision phase: hone in on the exact pressure with short valve bursts (pressure mode). Returns true
+    // if it landed on goal, false if it gave up (can't resolve finer / stuck / timeout). See goalRoutine.
+    bool achieveFineGoal();
+    // Block until the selected input holds within `band` for SETTLE_STABLE_MS (or SETTLE_MAX_WAIT_MS), then
+    // return it. Valve(s) must be closed. Replaces a fixed settle wait with a settled-to-stable read.
+    double waitForStableReading(int band);
+    // Open `valve` for `ms` (cooperative busy-wait), then close it. Used by the fine phase.
+    void openValveForMs(Solenoid *valve, uint32_t ms);
     // Log an offset sample from a manual valve move (watched by valve state each Wheel::loop tick).
     void captureManualOffsetSample();
     bool manualValveWasOpen = false;

@@ -46,14 +46,31 @@
 #define LOG_MANUAL_OFFSET_SAMPLES true // also collect offset samples from manual valve moves (Wheel::captureManualOffsetSample)
 
 // Closed-loop pressure control (see Wheel::goalRoutine / AI_TRAINING.md):
-#define PRESSURE_DEADBAND_PSI 1          // ; was: 0. verify is bidirectional (corrects over/undershoot); 1 psi = sensor resolution and bounds oscillation around goal
+#define PRESSURE_DEADBAND_PSI 0          // ; was: 1. target the exact psi; the fine-pulse phase + FINE_PULSE_MAX_TRIES bound the near-goal behavior that the deadband used to guard
 #define LEVEL_DEADBAND_PERCENTAGE 1
-#define OFFSET_SAMPLE_SETTLE_MS 250      // air-up: wait after the valve closes before reading the settled bag (verify + offset sample)
-#define OFFSET_SAMPLE_SETTLE_DOWN_MS 500 // air-out settles slower (bag rises back to true after venting), so wait longer before the settled read
+// Settled-to-stable read (Wheel::waitForStableReading), used for every true (valve-closed) reading in
+// goalRoutine + the fine phase: block until the reading holds within the band for SETTLE_STABLE_MS, or
+// SETTLE_MAX_WAIT_MS elapses. Replaces a fixed settle wait, so air-out (which settles slowly) waits exactly
+// as long as it needs and no longer. (OFFSET_SAMPLE_SETTLE_* below are now only used by the manual-move capture.)
+#define SETTLE_STABLE_MS 100          // reading must hold steady this long to count as settled
+#define SETTLE_STABLE_BAND_PSI 1      // max psi wobble allowed while "stable"
+#define SETTLE_STABLE_BAND_LEVEL 2    // max height-% wobble allowed while "stable"
+#define SETTLE_MAX_WAIT_MS 1500       // backstop: never block on a settle longer than this
+#define OFFSET_SAMPLE_SETTLE_MS 250      // manual-capture air-up: wait after the valve closes before reading the settled bag
+#define OFFSET_SAMPLE_SETTLE_DOWN_MS 500 // manual-capture air-out settles slower, so wait longer before the settled read
 
-/* Bags generally do not like to sit at exactly 0psi. Please choose which pressure is desired for air out */
-/* Not really used anymore, just using presets! Only kept here as legacy for og app */
-#define AIR_OUT_PRESSURE_PSI 30
+// Fine-pulse precision phase (pressure mode, see Wheel::achieveFineGoal / AI_TRAINING.md). The flowing sensor
+// reading is a blind/low-saturating proxy for true pressure during air-out, so it can't land precisely.
+// Once within FINE_PULSE_THRESHOLD_PSI of goal (on the accurate valve-closed reading) we stop trusting the
+// prediction and hone in with short bursts: start sized to the remaining error, and each time the reading
+// crosses the goal shrink the burst by FINE_PULSE_OVERSHOOT_SHRINK (anti-oscillation) until it lands exact or
+// the burst shrinks below 1 ms. On-car tuning knobs; fine bursts are NOT logged (they'd pollute the model).
+#define FINE_PULSE_THRESHOLD_PSI 5    // switch coarse -> fine within this many psi of goal
+#define FINE_PULSE_MS_PER_PSI 5       // initial burst length per psi of remaining error
+#define FINE_PULSE_MIN_MS 5           // floor on the INITIAL burst size (the crossing-shrink can go below this)
+#define FINE_PULSE_MAX_MS 100         // cap on the initial burst size
+#define FINE_PULSE_OVERSHOOT_SHRINK 0.5 // fractional multiplier applied to the burst each time it crosses the goal (< 1 = damp; -> give up when burst < 1 ms)
+#define FINE_PULSE_MAX_TRIES 8        // give up after this many bursts with the reading not moving at all (stuck: tank/bag exhausted)
 
 /* This is the private passcode you need to access your system from the app. Set the same value in the app settings after launching the app. */
 /* This is legacy bt, and ota but ota is only enabled when chosen so we can leave it as is */

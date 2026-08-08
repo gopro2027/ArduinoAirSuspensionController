@@ -75,20 +75,40 @@ ADS1115 to `RATE_ADS1115_860SPS`.
 
 ## The closed-loop controller (`Wheel::goalRoutine`)
 
-**Both modes share one loop** — the only difference is the predictor seam. Per corner: commit a direction
-from the raw reading; each tick read the live value and compute `actual` (pressure mode:
-`getPredictedBagPressure(...)` = raw + learned offset; height mode: `getPredictedBagHeight(...)`, an
-identity stub since the level sensor reads true even during flow), hold the valve open; when `actual`
-reaches goal, close and **verify**: wait for the bag to settle (`OFFSET_SAMPLE_SETTLE_MS` air-up /
-`OFFSET_SAMPLE_SETTLE_DOWN_MS` air-out — venting settles slower), read the true settled value, then drop
-the committed direction and re-run the top-of-loop check against that reading. This makes the verify
-**bidirectional**: it finishes within the deadband of goal (pressure `PRESSURE_DEADBAND_PSI` = 1; height
-`getMinValveOpenPSI()` = 0), keeps going the same way if it fell short, or reverses if it overshot — all
-inside one `goalRoutine` call. While settling, the corner keeps ticking the sync barrier with its valve
-closed, so it never stalls or overshoots the other three corners. Mode-specific bits: pressure mode logs a
-flowing→settled sample on each close and enforces the in-loop `getbagMaxPressure()` / `MAX_PRESSURE_SAFETY`
-ceiling (fill); height mode does neither (no model, and no in-loop pressure ceiling). Other hard stops: the
-10 s `ROUTINE_TIMEOUT_MS`, or an `onlyAirUp` block (which accepts an overshoot rather than venting).
+Decoupled into small pieces: the `goalRoutine` **coarse** loop, plus three helpers —
+`waitForStableReading` (settled read), `achieveFineGoal` (**fine** phase), and `openValveForMs` (a burst).
+The only per-mode difference is the predictor seam.
+
+**Coarse phase (`goalRoutine`).** Commit a direction from the true (valve-closed) reading; each tick read the
+live value and compute `actual` (pressure: `getPredictedBagPressure(...)` = raw + learned offset; height:
+`getPredictedBagHeight(...)`, an identity stub since the level sensor reads true even during flow), hold the
+valve open; when `actual` reaches goal, close, rendezvous at the barrier (valve closed), then
+`waitForStableReading` for the true settled value, log the sample, and re-decide against it
+(**bidirectional**: continue, reverse, or hand off to fine). Pressure mode logs a flowing→settled sample on
+each coarse close.
+
+**Settled read (`waitForStableReading`).** Instead of a fixed settle wait, block until the reading holds
+within a band (`SETTLE_STABLE_BAND_PSI` / `_LEVEL`) for `SETTLE_STABLE_MS` (100 ms), with a
+`SETTLE_MAX_WAIT_MS` backstop. Air-out (which rises back to true slowly) waits exactly as long as it needs.
+
+**Fine phase (`achieveFineGoal`, pressure only).** The flowing reading is a blind, low-saturating proxy for
+true pressure during air-out — measured, the true settled pressure scatters ±7–15 psi for a fixed flowing
+reading in the mid range — so the coarse prediction cannot land precisely and tends to hunt near goal. Once
+the true reading is within `FINE_PULSE_THRESHOLD_PSI` of goal, `goalRoutine` calls `achieveFineGoal`, which
+hones in with short **bursts** off the accurate `waitForStableReading`. The burst starts sized to the
+remaining error (`clamp(err × FINE_PULSE_MS_PER_PSI, FINE_PULSE_MIN_MS, FINE_PULSE_MAX_MS)`); **each time the
+reading crosses the goal it shrinks the burst by `FINE_PULSE_OVERSHOOT_SHRINK`** (anti-oscillation, mirroring
+the old logic). It exits on: landing exactly on goal (success); the burst shrinking below 1 ms while still
+crossing (hardware can't resolve finer — give up); the reading not moving for `FINE_PULSE_MAX_TRIES` bursts
+(stuck: tank/bag exhausted); or the routine timeout. Fine bursts are **not** logged (they'd pollute the model
+with blind near-goal samples). Height skips fine — its coarse loop already reads true and lands within
+`LEVEL_DEADBAND_PERCENTAGE`.
+
+**Sync / safety.** `achieveFineGoal` takes no barriers (the valve is only open during a burst, never
+waiting), so the never-wait-with-valve-open invariant holds and a fine corner rendezvouses only at
+`goalRoutine`'s exit barrier. Pressure mode enforces the in-loop `getbagMaxPressure()` /
+`MAX_PRESSURE_SAFETY` ceiling (coarse fill); height mode has no in-loop pressure ceiling. Other hard stops:
+the 10 s `ROUTINE_TIMEOUT_MS`, or an `onlyAirUp` block (which accepts an overshoot rather than venting).
 
 ## Persistence / migration
 
@@ -101,7 +121,11 @@ the next refit.
 
 `pressureMath.h`: `ML_OFFSET_NORM` (100), `ML_FIT_RIDGE`, `ML_FIT_MIN_SAMPLES` (25), `ML_NUM_COEFF` (3),
 `ML_SAMPLE_RECORD_VERSION`. `user_defines.h`: `LEARN_SAVE_COUNT` (300), `OFFSET_DEFAULT_PSI` (5),
-`OFFSET_FADE_MIN` (25), `AI_LEARN_RATIO_NUM` (150), `PRESSURE_DEADBAND_PSI` (1), `OFFSET_SAMPLE_SETTLE_MS`
-(250), `OFFSET_SAMPLE_SETTLE_DOWN_MS` (500), `LOG_MANUAL_OFFSET_SAMPLES`.
+`OFFSET_FADE_MIN` (25), `AI_LEARN_RATIO_NUM` (150), `PRESSURE_DEADBAND_PSI` (0), `LEVEL_DEADBAND_PERCENTAGE`
+(1), `LOG_MANUAL_OFFSET_SAMPLES`. Settled read: `SETTLE_STABLE_MS` (100), `SETTLE_STABLE_BAND_PSI` (1),
+`SETTLE_STABLE_BAND_LEVEL` (2), `SETTLE_MAX_WAIT_MS` (1500); `OFFSET_SAMPLE_SETTLE_MS`/`_DOWN_MS` are now
+only for the manual-move capture. Fine phase: `FINE_PULSE_THRESHOLD_PSI` (5), `FINE_PULSE_MS_PER_PSI` (5),
+`FINE_PULSE_MIN_MS` (5), `FINE_PULSE_MAX_MS` (100), `FINE_PULSE_OVERSHOOT_SHRINK` (0.5), `FINE_PULSE_MAX_TRIES`
+(8) — the on-car tuning knobs (`FINE_PULSE_MIN_MS` + `FINE_PULSE_OVERSHOOT_SHRINK` govern the finest step).
 
 Note: `eval/model_eval.cpp` targeted the old online-learning model and is stale until ported.
