@@ -1,4 +1,5 @@
 #include "manifoldSaveData.h"
+#include "sampleLoggingUtil.h" // AIPercentage / updateAIPercentage (refit layer over these samples)
 
 SaveData _SaveData;
 // Set by background tasks (e.g. sensorless levelling auto-disable) to ask the BLE task to
@@ -18,7 +19,6 @@ static SemaphoreHandle_t learnDataMutex;
 // The 4 offset models (RAM only). up=false for the two dump models is set in loadAILearnedDataPreferences.
 static OffsetModel offsetModels[4];
 
-extern void updateAIPercentage();
 
 OffsetModel *getOffsetModel(SOLENOID_AI_INDEX index)
 {
@@ -218,8 +218,6 @@ void beginSaveData()
         _SaveData.mlSampleRecord.set(ML_SAMPLE_RECORD_VERSION);
     }
 }
-
-extern uint8_t AIPercentage;
 
 void clearPressureData()
 {

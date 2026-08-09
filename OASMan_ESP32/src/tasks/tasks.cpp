@@ -1,6 +1,7 @@
 #include "tasks.h"
 #include "airSuspensionUtil.h"
 #include "manifoldSaveData.h"
+#include "sampleLoggingUtil.h"
 
 bool bp32ServiceStarted = false;
 
