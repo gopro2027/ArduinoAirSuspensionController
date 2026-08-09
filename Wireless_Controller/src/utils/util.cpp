@@ -289,6 +289,7 @@ void beginSaveData()
     _SaveData.themeColorDark.load("themeColorDark", THEME_COLOR_OCEAN_BLUE_DARK);
     _SaveData.themeColorMedium.load("themeColorMedium", THEME_COLOR_OCEAN_BLUE_MEDIUM);
     _SaveData.swipeNavigation.load("swipeNav", false);
+    _SaveData.showBattery.load("showBattery", true);
 }
 
 createSaveFuncInt(unitsMode, int);
@@ -311,6 +312,7 @@ createSaveFuncInt(themeColorLight, uint32_t);
 createSaveFuncInt(themeColorDark, uint32_t);
 createSaveFuncInt(themeColorMedium, uint32_t);
 createSaveFuncInt(swipeNavigation, bool);
+createSaveFuncInt(showBattery, bool);
 
 float getBrightnessFloat()
 {

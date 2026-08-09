@@ -49,6 +49,10 @@ public:
     void show();
     void hide();
 
+    // Show/hide just the battery icon + percentage on the top bar ("Show Battery" setting).
+    // The pull-down panel's battery section is unaffected.
+    void setBatteryVisible(bool batteryVisible);
+
     // Panel methods
     void openPanel();
     void closePanel();

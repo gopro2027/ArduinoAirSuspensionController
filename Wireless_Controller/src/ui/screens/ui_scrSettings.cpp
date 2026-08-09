@@ -4,8 +4,11 @@
 
 #ifndef SCREEN_MODE_CIRCLE
 #include "ui/components/navbar.h"
+#include "ui/components/statusbar.h"
 #include "custom_car_storage.h"
 #include "serial_image_upload.h"
+#else
+#include "ui_circle/components/circle_statusbar.h"
 #endif
 
 ScrSettings scrSettings(false);
@@ -666,6 +669,18 @@ void ScrSettings::init(lv_obj_t *parent)
         set_brightness(getBrightnessFloat());
     });
     ((Option *)this->ui_brightnessSlider)->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
+
+    allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Status Bar", {.STRING = ""}));
+    allOptions.push_back(new Option(screen_settings_page, OptionType::ON_OFF, "Show Battery", {.INT = getshowBattery() ? 1 : 0}, [](void *data)
+    {
+        bool enabled = (bool)data;
+        setshowBattery(enabled);
+#ifdef SCREEN_MODE_CIRCLE
+        circleStatusbarMini.setBatteryVisible(enabled);
+#else
+        globalStatusbar.setBatteryVisible(enabled);
+#endif
+    }));
 
 #ifndef SCREEN_MODE_CIRCLE
     allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Navigation", {.STRING = ""}));

@@ -215,6 +215,8 @@ public:
     Preferencable themeColorMedium;
     // Navigation
     Preferencable swipeNavigation;
+    // Status bar
+    Preferencable showBattery;
 };
 
 extern SaveData _SaveData;
@@ -233,6 +235,7 @@ headerDefineSaveFunc(themeColorLight, uint32_t);
 headerDefineSaveFunc(themeColorDark, uint32_t);
 headerDefineSaveFunc(themeColorMedium, uint32_t);
 headerDefineSaveFunc(swipeNavigation, bool);
+headerDefineSaveFunc(showBattery, bool);
 
 // Theme presets enum
 enum ThemePreset {

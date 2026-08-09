@@ -105,6 +105,9 @@ void Statusbar::create(lv_obj_t* parent) {
     lv_obj_set_style_text_font(batteryLabel, getScaledFont(10), 0);
     lv_obj_align(batteryLabel, LV_ALIGN_RIGHT_MID, -padding, 0);
 
+    // Apply the saved "Show Battery" setting
+    setBatteryVisible(getshowBattery());
+
     // Center line marker (pull indicator)
     lv_obj_t* centerLine = lv_obj_create(container);
     lv_obj_remove_style_all(centerLine);
@@ -569,6 +572,23 @@ void Statusbar::hide() {
         lv_obj_add_flag(container, LV_OBJ_FLAG_HIDDEN);
     }
     visible = false;
+}
+
+void Statusbar::setBatteryVisible(bool batteryVisible) {
+    if (batteryIcon) {
+        if (batteryVisible) {
+            lv_obj_remove_flag(batteryIcon, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(batteryIcon, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+    if (batteryLabel) {
+        if (batteryVisible) {
+            lv_obj_remove_flag(batteryLabel, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(batteryLabel, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
 }
 
 void Statusbar::cleanup() {
