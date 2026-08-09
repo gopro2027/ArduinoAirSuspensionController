@@ -16,8 +16,6 @@
 
 extern bool ADS1115D_exists;
 
-void setupSpiffsLog();
-void writeToSpiffsLog(char *text);
 // #define FORCE_UPDATE_TEST
 void setup()
 {
@@ -48,8 +46,6 @@ void setup()
     delay(100);
     ESP.restart();
 #endif
-
-    setupSpiffsLog();
 
     // clearPressureData();
 
@@ -112,17 +108,6 @@ void setup()
     setupLEDs();
 
     Serial.println(F("Startup Complete"));
-
-    // for (int i = 0; i < 200; i++) {
-    //     for (int j = 0; j < 2; j++) {
-    //         appendPressureDataToFile((SOLENOID_AI_INDEX)j, 0,1,2,3);
-    //         delay(2);
-    //     }
-    //     for (int j = 2; j < 4; j++) {
-    //         appendPressureDataToFile((SOLENOID_AI_INDEX)j, 2,1,3,3);
-    //         delay(2);
-    //     }
-    // }
 }
 
 void loop()

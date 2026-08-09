@@ -11,6 +11,7 @@
 #include "solenoid.h"
 #include "compressor.h"
 #include "manifoldSaveData.h"
+#include "../aiPressureUtil.h" // getPredictedBagPressure / getPredictedBagHeight
 
 class Manifold; // from manifold.h, forward reference
 
@@ -42,6 +43,19 @@ private:
     byte directlySetPressure = 0; // This is the 'real' pressure that is read after any valve movement. This is our 'expected' pressure in a sense. This is tracked by the sensorlessCaptureBaseline and is only usable when slBaselineCaptured is true.
 
     void goalRoutine();
+    // Fine precision phase: short valve bursts to the exact pressure. True = landed on goal.
+    bool achieveFineGoal();
+    // Block until the reading holds within `band` for SETTLE_STABLE_MS, then return it (valves closed).
+    double waitForStableReading(int band);
+    // Open `valve` for `ms`, then close it. Used by the fine phase.
+    void openValveForMs(Solenoid *valve, uint32_t ms);
+    // Log an offset sample from a manual valve move (watched by valve state each Wheel::loop tick).
+    void captureManualOffsetSample();
+    bool manualValveWasOpen = false;
+    bool manualUp = false;                // direction of the tracked manual move (picks the settle time)
+    uint32_t manualSettleUntil = 0;       // while non-zero: valve closed, waiting to read the settled bag
+    uint8_t manualFlowBag = 0, manualFlowTank = 0;
+    SOLENOID_AI_INDEX manualAiIndex = AI_MODEL_UNDEFINED;
     void maintainPressure();
     void heightsensorlessLevelling();
     void pressureCaptureBaseline();
@@ -75,7 +89,5 @@ float readPinPressure(InputType *pin, bool heightMode);
 
 void setupWheelLockSem();
 
-extern bool canUseAiPrediction(SOLENOID_AI_INDEX aiIndex);
-extern double getAiPredictionTime(SOLENOID_AI_INDEX aiIndex, double start_pressure, double end_pressure, double tank_pressure);
 extern Manifold *getManifold(); // defined in airSuspensionUtil.h
 #endif

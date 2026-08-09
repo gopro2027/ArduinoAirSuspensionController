@@ -32,6 +32,7 @@ public:
     void loop();
     float readPressure();
     float getTankPressure();
+    float readTankPressureNow();
     InputType *getReadPin();
     bool isFrozen();
     bool isOn();

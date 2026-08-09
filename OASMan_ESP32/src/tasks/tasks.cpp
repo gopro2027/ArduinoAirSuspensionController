@@ -1,9 +1,9 @@
 #include "tasks.h"
+#include "airSuspensionUtil.h"
 #include "manifoldSaveData.h"
+#include "aiPressureUtil.h"
 
 bool bp32ServiceStarted = false;
-
-void writeToSpiffsLog(char *text);
 
 void task_bluetooth(void *parameters)
 {
@@ -102,8 +102,17 @@ void task_wheel(void *parameters)
 
 void task_trainAI(void *parameters)
 {
-    trainAIModels();
-    vTaskDelete(NULL);
+    trainOffsetModels(); // boot: refit all 4 from stored samples
+
+    // The refit is the deepest this task gets; watch this if the fit ever grows.
+    Serial.print("trainAI stack headroom (bytes): ");
+    Serial.println(uxTaskGetStackHighWaterMark(NULL));
+
+    for (;;)
+    {
+        trainOffsetModels(); // refit only models whose sample count changed
+        delay(100);
+    }
 }
 
 void setup_tasks()
@@ -173,7 +182,7 @@ void setup_tasks()
     xTaskCreate(
         task_trainAI,
         "trainAI",
-        512 * 4,
+        512 * 6, // was: 512*4 (measured only 224 bytes headroom at boot); right-size via the boot high-water-mark print in task_trainAI
         NULL,
         1000,
         NULL);
