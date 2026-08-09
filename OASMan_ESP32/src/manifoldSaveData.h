@@ -70,6 +70,7 @@ public:
     Preferencable systemShutoffTimeM;
     Preferencable compressorOnPSI;
     Preferencable compressorOffPSI;
+    Preferencable compressorCrankOffset;
     Preferencable pressureSensorMax;
     Preferencable bagVolumePercentage;
     Preferencable AirUpBagStretchTriggerBelowPressure;
@@ -132,6 +133,7 @@ headerDefineSaveFunc(oledI2cAddr, uint8_t);
 headerDefineSaveFunc(systemShutoffTimeM, uint32_t); // may have to change
 headerDefineSaveFunc(compressorOnPSI, uint8_t);
 headerDefineSaveFunc(compressorOffPSI, uint8_t);
+headerDefineSaveFunc(compressorCrankOffset, uint8_t); // seconds to hold the compressor off after power up / accessory power
 headerDefineSaveFunc(pressureSensorMax, uint16_t);
 headerDefineSaveFunc(bagVolumePercentage, uint16_t);
 headerDefineSaveFunc(AirUpBagStretchTriggerBelowPressure, uint8_t);

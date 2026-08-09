@@ -209,6 +209,9 @@ class BLEManager extends ChangeNotifier {
   int AirUpBagStretchTriggerBelowPressure = 0;
   int AirUpBagStretchPressure = 0;
 
+  /// Seconds the manifold holds the compressor off after accessory power arrives.
+  int compressorCrankOffset = 5;
+
   /// From STATUSREPORT args (AI learning UI).
   int aiLearnPercent = 0;
   int aiReadyBittset = 0;
@@ -768,6 +771,7 @@ class BLEManager extends ChangeNotifier {
           rfButtonDPreset = data[23] & 0xFF;
           AirUpBagStretchTriggerBelowPressure = data[24] & 0xFF;
           AirUpBagStretchPressure = data[25] & 0xFF;
+          compressorCrankOffset = data[26] & 0xFF;
 
           auxModeByte = data[28] & 0xFF;
           final tu = data[29] & 0xFF;
@@ -962,6 +966,7 @@ class BLEManager extends ChangeNotifier {
     args[19] = rfButtonDPreset.clamp(0, 255);
     args[20] = AirUpBagStretchTriggerBelowPressure.clamp(0, 255);
     args[21] = AirUpBagStretchPressure.clamp(0, 255);
+    args[22] = compressorCrankOffset.clamp(0, 255);
     args[24] = auxModeByte.clamp(0, 255);
     args[25] = auxTimeUnit.clamp(0, 3);
     args[26] = auxPulseDuration.clamp(0, 255);

@@ -75,6 +75,7 @@ class SettingsPageState extends State<SettingsPage> {
   late TextEditingController bagMaxController;
   late TextEditingController pressureSensorRatingController;
   late TextEditingController bagVolumeController;
+  late TextEditingController compressorCrankOffsetController;
   late TextEditingController wifiSsidController;
   late TextEditingController wifiPassController;
   late TextEditingController auxPulseDurationController;
@@ -107,6 +108,7 @@ class SettingsPageState extends State<SettingsPage> {
     bagMaxController.text = bm.bagMaxPressure.toString();
     pressureSensorRatingController.text = bm.pressureSensorMax.toString();
     bagVolumeController.text = bm.bagVolumePercentage.toString();
+    compressorCrankOffsetController.text = bm.compressorCrankOffset.toString();
     auxPulseDurationController.text = bm.auxPulseDuration.toString();
     auxIntervalCyclesController.text = bm.auxIntervalCycles.toString();
     setState(() => _lastUnits = null);
@@ -125,6 +127,7 @@ class SettingsPageState extends State<SettingsPage> {
     bagMaxController.dispose();
     pressureSensorRatingController.dispose();
     bagVolumeController.dispose();
+    compressorCrankOffsetController.dispose();
     wifiSsidController.dispose();
     wifiPassController.dispose();
     auxPulseDurationController.dispose();
@@ -227,6 +230,11 @@ class SettingsPageState extends State<SettingsPage> {
       final bagVol = int.tryParse(bagVolumeController.text.trim());
       if (bagVol != null) {
         bm.bagVolumePercentage = bagVol.clamp(10, 600);
+      }
+      final crankOffset =
+          int.tryParse(compressorCrankOffsetController.text.trim());
+      if (crankOffset != null) {
+        bm.compressorCrankOffset = crankOffset.clamp(0, 255);
       }
 
       final auxPulse = int.tryParse(auxPulseDurationController.text.trim());
@@ -468,6 +476,7 @@ class SettingsPageState extends State<SettingsPage> {
     bagMaxController = TextEditingController();
     pressureSensorRatingController = TextEditingController();
     bagVolumeController = TextEditingController();
+    compressorCrankOffsetController = TextEditingController();
     wifiSsidController =
         TextEditingController(text: prefs.getString('_wifiSsid') ?? '');
     wifiPassController =
@@ -488,6 +497,7 @@ class SettingsPageState extends State<SettingsPage> {
       bagMaxController.text = bm.bagMaxPressure.toString();
       pressureSensorRatingController.text = bm.pressureSensorMax.toString();
       bagVolumeController.text = bm.bagVolumePercentage.toString();
+      compressorCrankOffsetController.text = bm.compressorCrankOffset.toString();
       print("Manifold's settings loaded");
     }
     _settingsLoaded = true;
@@ -981,6 +991,16 @@ class SettingsPageState extends State<SettingsPage> {
                                   tooltipTitle: 'Compressor Off PSI',
                                   tooltip:
                                       'Compressor stops when pressure is above this. Respect tank and compressor ratings.',
+                                  saveWhenKeyboardDone: true,
+                                ),
+                                _buildKeyboardInputRow(
+                                  'Compressor Crank Offset (Seconds)',
+                                  compressorCrankOffsetController,
+                                  isNumberInput: true,
+                                  limitChar: 3,
+                                  tooltipTitle: 'Compressor Crank Offset',
+                                  tooltip:
+                                      'Seconds the compressor stays off after accessory power comes on, so it does not load the electrical system while the engine is cranking (0–255).',
                                   saveWhenKeyboardDone: true,
                                 ),
                                 _buildKeyboardInputRow(

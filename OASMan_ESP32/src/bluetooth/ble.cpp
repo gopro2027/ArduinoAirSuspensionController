@@ -532,7 +532,7 @@ ConfigValuesPacket buildCurrentConfigValuesPacket()
     auxillaryOutputConfig.timeUnit = (AuxillaryOutputModeTimeUnit)getauxillaryOutputModeTimeUnit();
     auxillaryOutputConfig.time = getauxillaryOutputTime();
     auxillaryOutputConfig.interval = getauxillaryOutputInterval();
-    return ConfigValuesPacket(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getAirUpBagStretchTriggerBelowPressure(), getAirUpBagStretchPressure(), configFlagsBits, auxillaryOutputConfig);
+    return ConfigValuesPacket(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getAirUpBagStretchTriggerBelowPressure(), getAirUpBagStretchPressure(), getcompressorCrankOffset(), configFlagsBits, auxillaryOutputConfig);
 }
 
 void ble_notify()
@@ -697,6 +697,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             setbagVolumePercentage(*recpkt->_bagVolumePercentage());
             setAirUpBagStretchTriggerBelowPressure(*recpkt->_AirUpBagStretchTriggerBelowPressure());
             setAirUpBagStretchPressure(*recpkt->_AirUpBagStretchPressure());
+            setcompressorCrankOffset(*recpkt->_compressorCrankOffset());
             uint32_t flags = *recpkt->_configFlagsBits();
             setriseOnStart((flags & (1 << ConfigFlagsBit::CONFIG_RISE_ON_START)) != 0);
 #if ENABLE_AIR_OUT_ON_SHUTOFF

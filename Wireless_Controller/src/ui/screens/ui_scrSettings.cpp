@@ -814,6 +814,17 @@ void ScrSettings::init(lv_obj_t *parent)
         alertValueUpdated();
     });
 
+    this->ui_config9 = new Option(config_page, OptionType::KEYBOARD_INPUT_NUMBER, "Compressor Crank Offset (Seconds)", {.INT = 0}, [](void *data)
+    {
+        log_i("Pressed %i", ((uint32_t)data));
+        uint32_t v = (uint32_t)data;
+        if (v > 255U)
+            v = 255U;
+        *util_configValues._compressorCrankOffset() = (uint8_t)v;
+        sendConfigValuesPacket(true);
+        alertValueUpdated();
+    });
+
     this->ui_config5 = new Option(config_page, OptionType::KEYBOARD_INPUT_NUMBER, "Pressure Sensor Rating PSI", {.INT = 0}, [](void *data)
     {
         log_i("Pressed %i", ((uint32_t)data));
@@ -1131,6 +1142,7 @@ void ScrSettings::loop()
         this->ui_config6->setRightHandText(itoa(*util_configValues._bagVolumePercentage(), buf, 10));
         this->ui_config7->setRightHandText(itoa(*util_configValues._AirUpBagStretchTriggerBelowPressure(), buf, 10));
         this->ui_config8->setRightHandText(itoa(*util_configValues._AirUpBagStretchPressure(), buf, 10));
+        this->ui_config9->setRightHandText(itoa(*util_configValues._compressorCrankOffset(), buf, 10));
 
         this->ui_rfbuttonA->setRightHandText(itoa(*util_configValues._rfButtonA() + 1, buf, 10));
         this->ui_rfbuttonB->setRightHandText(itoa(*util_configValues._rfButtonB() + 1, buf, 10));
@@ -1201,6 +1213,9 @@ void ScrSettings::cleanup()
     delete ui_config4;
     delete ui_config5;
     delete ui_config6;
+    delete ui_config7;
+    delete ui_config8;
+    delete ui_config9;
     delete ui_updateBtn;
     delete ui_manifoldUpdateStatus;
     delete ui_mac;

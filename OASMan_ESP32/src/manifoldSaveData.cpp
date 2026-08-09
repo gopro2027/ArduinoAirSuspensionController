@@ -56,6 +56,7 @@ void beginSaveData()
     _SaveData.systemShutoffTimeM.load("systemShutoffTimeM", SYSTEM_SHUTOFF_TIME_M);
     _SaveData.compressorOnPSI.load("compressorOnPSI", COMPRESSOR_ON_BELOW_PSI);
     _SaveData.compressorOffPSI.load("compressorOffPSI", COMPRESSOR_MAX_PSI);
+    _SaveData.compressorCrankOffset.load("compCrankOff", COMPRESSOR_CRANK_OFFSET_S); // key kept under 15 chars (Preferencable::name limit)
     _SaveData.pressureSensorMax.load("pressureSensorMax", pressuretransducermaxPSI);
     _SaveData.bagVolumePercentage.load("bagVolumePercentage", 100);
     _SaveData.AirUpBagStretchTriggerBelowPressure.load("bagStretchTrig", 40); // if bag is currently below 40 psi...
@@ -138,6 +139,7 @@ createSaveFuncInt(oledI2cAddr, uint8_t);
 createSaveFuncInt(systemShutoffTimeM, uint32_t); // may have to change
 createSaveFuncInt(compressorOnPSI, uint8_t);
 createSaveFuncInt(compressorOffPSI, uint8_t);
+createSaveFuncInt(compressorCrankOffset, uint8_t);
 createSaveFuncInt(pressureSensorMax, uint16_t);
 createSaveFuncInt(bagVolumePercentage, uint16_t);
 createSaveFuncInt(AirUpBagStretchTriggerBelowPressure, uint8_t);

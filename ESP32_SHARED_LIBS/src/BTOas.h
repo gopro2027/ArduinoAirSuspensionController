@@ -256,7 +256,7 @@ struct StartwebPacket : BTOasPacket
 };
 struct ConfigValuesPacket : BTOasPacket
 {
-    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t AirUpBagStretchTriggerBelowPressure, uint8_t AirUpBagStretchPressure, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig);
+    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t AirUpBagStretchTriggerBelowPressure, uint8_t AirUpBagStretchPressure, uint8_t compressorCrankOffset, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig);
     bool *_setValues();
     uint8_t *_bagMaxPressure();
     uint32_t *_systemShutoffTimeM();
@@ -270,6 +270,7 @@ struct ConfigValuesPacket : BTOasPacket
     uint8_t *_rfButtonD();
     uint8_t *_AirUpBagStretchTriggerBelowPressure();
     uint8_t *_AirUpBagStretchPressure();
+    uint8_t *_compressorCrankOffset(); // seconds to hold the compressor off after power up / accessory power
     uint32_t *_configFlagsBits();
     AuxillaryOutputModePayload *_auxillaryOutputConfig();
 };

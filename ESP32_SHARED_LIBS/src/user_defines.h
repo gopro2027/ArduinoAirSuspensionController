@@ -186,6 +186,10 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 #define COMPRESSOR_ON_BELOW_PSI 140
 #define COMPRESSOR_MAX_PSI 180
 
+// Seconds the compressor stays held off after the board powers up / accessory power arrives,
+// so it isn't loading the electrical system while the engine is cranking.
+#define COMPRESSOR_CRANK_OFFSET_S 3
+
 /* Level sensor pins */
 #define levelInputFrontPassenger new InputType(0, &ADS1115B) // ADSB/0
 #define levelInputRearPassenger new InputType(3, &ADS1115B)  // ADSB/3
