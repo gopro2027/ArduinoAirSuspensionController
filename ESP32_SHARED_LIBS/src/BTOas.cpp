@@ -38,7 +38,7 @@ void BTOasPacket::dump()
 }
 
 // Outgoing packets
-StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage, uint8_t AIReadyBittset)
+StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage)
 {
     this->cmd = STATUSREPORT;
     // 0 through 4
@@ -48,7 +48,7 @@ StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REA
     this->args16()[WHEEL_REAR_DRIVER].i = WHEEL_REAR_DRIVER_PRESSURE;         // getWheel(WHEEL_REAR_DRIVER)->getPressure();
     this->args16()[_TANK_INDEX].i = TANK_PRESSURE;                            // getCompressor()->getTankPressure();
     this->args8()[10].i = AIPercentage;
-    this->args8()[11].i = AIReadyBittset;
+    this->args8()[11].i = 0; // reserved (formerly AIReadyBittset); kept written so the wire layout is unchanged for the mobile app
     this->args32()[3].i = bittset;
 
     // doesn't matter for this because it is generic broadcasted for everyone
@@ -168,7 +168,7 @@ bool BooleanPacket::getBoolean()
     return this->args32()[0].i != 0;
 }
 
-ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t AirUpBagStretchTriggerBelowPressure, uint8_t AirUpBagStretchPressure, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig)
+ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t AirUpBagStretchTriggerBelowPressure, uint8_t AirUpBagStretchPressure, uint8_t compressorCrankOffset, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig)
 {
     this->cmd = GETCONFIGVALUES;
     *this->_systemShutoffTimeM() = systemShutoffTimeM;
@@ -184,6 +184,7 @@ ConfigValuesPacket::ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, u
     *this->_rfButtonD() = rfButtonD;
     *this->_AirUpBagStretchTriggerBelowPressure() = AirUpBagStretchTriggerBelowPressure;
     *this->_AirUpBagStretchPressure() = AirUpBagStretchPressure;
+    *this->_compressorCrankOffset() = compressorCrankOffset;
     *this->_configFlagsBits() = configFlagsBits;
     this->_auxillaryOutputConfig()->mode = auxillaryOutputConfig.mode;
     this->_auxillaryOutputConfig()->timeUnit = auxillaryOutputConfig.timeUnit;
@@ -247,10 +248,10 @@ uint8_t *ConfigValuesPacket::_AirUpBagStretchPressure()
 {
     return (uint8_t *)&(this->args8()[12 + 9].i);
 }
-// uint8_t *ConfigValuesPacket::unused2()
-// {
-//     return (uint8_t *)&(this->args8()[12 + 10].i);
-// }
+uint8_t *ConfigValuesPacket::_compressorCrankOffset()
+{
+    return (uint8_t *)&(this->args8()[12 + 10].i);
+}
 // uint8_t *ConfigValuesPacket::unused3()
 // {
 //     return (uint8_t *)&(this->args8()[12 + 11].i);

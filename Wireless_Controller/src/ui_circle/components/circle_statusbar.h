@@ -16,6 +16,9 @@ public:
     void update();
     void cleanup();
 
+    /** Show/hide the battery icon + percentage ("Show Battery" setting). */
+    void setBatteryVisible(bool batteryVisible);
+
 private:
     void refreshBattery();
 };

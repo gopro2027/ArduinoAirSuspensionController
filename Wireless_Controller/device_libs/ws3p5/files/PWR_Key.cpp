@@ -5,6 +5,7 @@
 
 #include "PMU_AXP2101.h"     // unified PMIC facade
 #include "axp2101_pmic.h"    // pmic::set_power_key_handlers(), pmic::poll()
+#include "i2c_guard.h"       // shared bus mutex - the PWR key is read over I2C
 
 // From your board driver (already used elsewhere)
 void set_brightness(float level);
@@ -31,6 +32,11 @@ void set_brightness(float level);
 static bool  s_pmic_ok          = false;
 static bool  s_pmic_inited      = false;
 
+// The PWR button is only visible through the expander (EXIO6), so keep a
+// long-lived handle for the 10 Hz polling done by PWR_Loop().
+static TCA9554 s_key_tca(TCA_ADDR);
+static bool    s_key_tca_ok     = false;
+
 #if defined(WAVESHARE_PMIC_DEFAULT_ACTIONS)
 static bool  s_blanked          = false;
 static float s_brightness_on    = 0.80f;  // adjust to taste
@@ -38,6 +44,14 @@ static float s_brightness_blank = 0.01f;  // "off" but keep LEDC alive
 #endif
 
 // ----------------- Helper: drive latch pin if present -----------------
+
+// This board has no latch FET, so write_latch() must always take the early-out
+// below and Shutdown()'s power_latch_off() must stay a no-op. Enforced at build
+// time because the old value here was `-0`, which passes `< 0` as a *negation of
+// zero* -- it read as "disabled" but compiled to GPIO0, the BOOT pin.
+static_assert(PWR_LATCH_PIN < 0,
+              "3.5/3.5b have no power latch GPIO; power is held by the AXP2101. "
+              "Use power_hard_shutdown() to drop the rails.");
 
 static inline void write_latch(bool on)
 {
@@ -53,9 +67,38 @@ static inline void write_latch(bool on)
     );
 }
 
-// Convenience wrappers for public API
+// Convenience wrappers for public API.
+// Both are no-ops here (PWR_LATCH_PIN < 0): this board has no latch FET, the
+// AXP2101 holds the rails up. Real power-off is power_hard_shutdown() below --
+// do not move it in here, PWR_Init() calls power_latch_off() on every boot.
 void power_latch_on()  { write_latch(true); }
 void power_latch_off() { write_latch(false); }
+
+// ----------------- Hard power-off via the PMIC -----------------
+
+void power_hard_shutdown()
+{
+    if (!s_pmic_ok) {
+        Serial.println("[PWR] No PMIC; cannot hard power off");
+        return;
+    }
+
+    Serial.println("[PWR] AXP2101 shutdown");
+    Serial.flush();
+
+    if (!i2c_lock(50)) {
+        Serial.println("[PWR] I2C busy; cannot hard power off");
+        return;
+    }
+    pmic::handle().shutdown();
+    i2c_unlock();
+
+    // Rails should be gone by now. If we are still executing, the PMIC refused
+    // (VBUS present, for example) -- return and let the caller fall back to its
+    // deep-sleep shutdown so the device never ends up in a wedged state.
+    delay(200);
+    Serial.println("[PWR] Still alive after AXP2101 shutdown; falling back");
+}
 
 // ----------------- LCD reset via TCA9554 -----------------
 
@@ -136,6 +179,18 @@ static void pmic_init_once()
     // Clean LCD reset via TCA expander (rails should now be up)
     reset_panel_via_tca();
 
+    // Claim EXIO6 as an input so the PWR button stays readable even if the
+    // panel driver re-inits the expander later. Touch only that bit -- a full
+    // begin() would knock LCD_RST (EXIO1) back to an input.
+    if (i2c_lock(20)) {
+        s_key_tca_ok = s_key_tca.isConnected() &&
+                       s_key_tca.pinMode1(PWR_KEY_EXIO_BIT, INPUT);
+        i2c_unlock();
+    }
+    if (!s_key_tca_ok) {
+        Serial.println("[PWR] TCA9554 unavailable; PWR button will not be readable");
+    }
+
     Serial.println("[PWR] PMIC initialized (via PMU_AXP2101) and power-key handlers registered");
 }
 
@@ -144,11 +199,13 @@ static void pmic_init_once()
 static void configure_ext0_wakeup()
 {
 #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S2
-    // ext0 wakeup uses RTC-capable GPIO; ensure PWR_KEY_PIN is such a pin.
+    // ext0 wakeup needs an RTC-capable GPIO, so it can only ever watch the BOOT
+    // button: the PWR button lives behind the I2C expander, which is dead while
+    // the SoC sleeps.
     // Level: 0 for active-low buttons, 1 for active-high.
     esp_sleep_enable_ext0_wakeup(
-        static_cast<gpio_num_t>(PWR_KEY_PIN),
-        PWR_KEY_ACTIVE_LOW ? 0 : 1
+        static_cast<gpio_num_t>(PWR_WAKE_GPIO),
+        PWR_WAKE_ACTIVE_LOW ? 0 : 1
     );
 #endif
 }
@@ -157,25 +214,47 @@ static void configure_ext0_wakeup()
 
 void power_key_setup()
 {
-#if PWR_KEY_ACTIVE_LOW
-    pinMode(PWR_KEY_PIN, INPUT_PULLUP);
+#if PWR_WAKE_ACTIVE_LOW
+    pinMode(PWR_WAKE_GPIO, INPUT_PULLUP);
 #else
-    pinMode(PWR_KEY_PIN, INPUT);
+    pinMode(PWR_WAKE_GPIO, INPUT);
 #endif
 
     // Default: keep the board latched ON after boot
     write_latch(true);
 
-    // Initialize PMIC + LCD power/reset for Waveshare 3.5B
+    // Initialize PMIC + LCD power/reset (also claims EXIO6 for the PWR button)
     pmic_init_once();
 }
 
 bool power_key_pressed()
 {
+    // BOOT button: on an MCU pin, so it is what actually wakes us from sleep.
+    // onWakeup() re-checks this right after esp_light_sleep_start() returns.
+    if (digitalRead(PWR_WAKE_GPIO) == (PWR_WAKE_ACTIVE_LOW ? LOW : HIGH)) {
+        return true;
+    }
+
+    // PWR button: readable only through the expander.
+    if (!s_key_tca_ok) {
+        return false;
+    }
+    if (!i2c_lock(5)) {
+        return false;   // bus busy - report "not pressed" rather than stall the UI
+    }
+    const uint8_t lvl = s_key_tca.read1(PWR_KEY_EXIO_BIT);
+    const bool    ok  = (s_key_tca.lastError() == TCA9554_OK);
+    i2c_unlock();
+
+    // A bus glitch must never look like a press - that would sleep/shut down the device.
+    if (!ok) {
+        return false;
+    }
+
 #if PWR_KEY_ACTIVE_LOW
-    return digitalRead(PWR_KEY_PIN) == LOW;
+    return lvl == LOW;
 #else
-    return digitalRead(PWR_KEY_PIN) == HIGH;
+    return lvl == HIGH;
 #endif
 }
 

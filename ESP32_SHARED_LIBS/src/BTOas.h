@@ -45,7 +45,8 @@ enum StatusPacketBittset
     ACC_STATUS_ON,
     TIMER_STATUS_EXPIRED, // not really used
     CLOCK,                // not really used
-    EBRAKE_STATUS_ON
+    EBRAKE_STATUS_ON,
+    ADJUSTMENT_IN_PROGRESS // isAnyWheelActive() on the manifold: a corner is actively filling/dumping to a target
 };
 
 // User-config flags carried in ConfigValuesPacket (not live status). Single bit / on off config variables can go in here instead of getting a full byte of data
@@ -56,7 +57,7 @@ enum ConfigFlagsBit
     CONFIG_AIR_OUT_ON_SHUTOFF = 2,
     CONFIG_HEIGHT_SENSOR_MODE = 3,
     CONFIG_SAFETY_MODE = 4,
-    CONFIG_AI_STATUS_ENABLED = 5,
+    CONFIG_AI_STATUS_ENABLED = 5, // retired: manifold/controller no longer use it; bit reserved (mobile app may still read it). Do not reuse.
     CONFIG_SENSORLESS_LEVELING = 6
 };
 
@@ -171,7 +172,7 @@ struct BTOasPacket
 // Outgoing packets
 struct StatusPacket : BTOasPacket
 {
-    StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage, uint8_t AIReadyBittset);
+    StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage);
 };
 
 struct PresetPacket : BTOasPacket
@@ -255,7 +256,7 @@ struct StartwebPacket : BTOasPacket
 };
 struct ConfigValuesPacket : BTOasPacket
 {
-    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t AirUpBagStretchTriggerBelowPressure, uint8_t AirUpBagStretchPressure, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig);
+    ConfigValuesPacket(bool setValues, uint8_t bagMaxPressure, uint32_t systemShutoffTimeM, uint8_t compressorOnPSI, uint8_t compressorOffPSI, uint16_t pressureSensorMax, uint16_t bagVolumePercentage, uint8_t rfButtonA, uint8_t rfButtonB, uint8_t rfButtonC, uint8_t rfButtonD, uint8_t AirUpBagStretchTriggerBelowPressure, uint8_t AirUpBagStretchPressure, uint8_t compressorCrankOffset, uint32_t configFlagsBits, AuxillaryOutputModePayload auxillaryOutputConfig);
     bool *_setValues();
     uint8_t *_bagMaxPressure();
     uint32_t *_systemShutoffTimeM();
@@ -269,6 +270,7 @@ struct ConfigValuesPacket : BTOasPacket
     uint8_t *_rfButtonD();
     uint8_t *_AirUpBagStretchTriggerBelowPressure();
     uint8_t *_AirUpBagStretchPressure();
+    uint8_t *_compressorCrankOffset(); // seconds to hold the compressor off after power up / accessory power
     uint32_t *_configFlagsBits();
     AuxillaryOutputModePayload *_auxillaryOutputConfig();
 };

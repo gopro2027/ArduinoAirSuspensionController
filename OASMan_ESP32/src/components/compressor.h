@@ -25,6 +25,7 @@ private:
     float freezeTimerLastReadValue;
     unsigned long lastFreezeTime;
     unsigned long pauseExecutionUntilTime;
+    unsigned long accessoryOnTime; // millis() when accessory power was first seen (0 = not seen yet / acc currently off)
     Solenoid s_trigger; // Not a solenoid, but works the same way
 public:
     Compressor();
@@ -32,9 +33,11 @@ public:
     void loop();
     float readPressure();
     float getTankPressure();
+    float readTankPressureNow();
     InputType *getReadPin();
     bool isFrozen();
     bool isOn();
+    bool isWaitingOnCrankOffset();
     void enableDisableOverride(bool enable);
     void updateFreezeTimer(unsigned long curTime);
     Solenoid *getOverrideSolenoid();

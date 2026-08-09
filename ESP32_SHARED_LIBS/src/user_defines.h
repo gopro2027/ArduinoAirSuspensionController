@@ -38,12 +38,38 @@
 #define AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE false
 #define AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE_TIME 3 * 1000
 
-// original full amount is 500
-#define LEARN_SAVE_COUNT 250
+// Offset-model AI (samples -> refit -> predict -> fade). See OASMan_ESP32/AI_TRAINING.md.
+#define LEARN_SAVE_COUNT 300      // per-model on-disk sample capacity (was 500)
+#define OFFSET_DEFAULT_PSI 5      // constant offset used before a model is trained: -5 air-up, +5 air-out
+#define OFFSET_FADE_MIN 25        // start fading the trained model in at this many samples (0% -> ...)
+#define AI_LEARN_RATIO_NUM 150    // ...reaching 100% trained at this many samples (also the AIPercentage bar)
+#define SAMPLE_DEDUP_PSI 1        // drop a sample within this many psi (flowing AND settled) of the previous stored one
 
-/* Bags generally do not like to sit at exactly 0psi. Please choose which pressure is desired for air out */
-/* Not really used anymore, just using presets! Only kept here as legacy for og app */
-#define AIR_OUT_PRESSURE_PSI 30
+// Closed-loop pressure control (see Wheel::goalRoutine / AI_TRAINING.md):
+#define PRESSURE_DEADBAND_PSI 0          // target the exact psi (the fine-pulse phase makes 0 safe); was: 1
+#define LEVEL_DEADBAND_PERCENTAGE 1
+
+// Settled-to-stable read (Wheel::waitForStableReading): block until the reading holds within the band for
+// SETTLE_STABLE_MS (SETTLE_MAX_WAIT_MS backstop). Used for every true valve-closed reading.
+#define SETTLE_STABLE_MS 100          // reading must hold steady this long to count as settled
+#define SETTLE_STABLE_BAND_PSI 1      // max psi wobble allowed while "stable"
+#define SETTLE_STABLE_BAND_LEVEL 2    // max height-% wobble allowed while "stable"
+#define SETTLE_MAX_WAIT_MS 1500       // backstop: never block on a settle longer than this
+#define OFFSET_SAMPLE_SETTLE_MS 250      // manual-capture air-up: wait after the valve closes before reading the settled bag
+#define OFFSET_SAMPLE_SETTLE_DOWN_MS 500 // manual-capture air-out settles slower, so wait longer before the settled read
+
+// Fine-pulse precision phase (Wheel::achieveFineGoal): near-goal bursts that hone in on the exact psi,
+// shrinking on each goal crossing (anti-oscillation). On-car tuning knobs; design in AI_TRAINING.md.
+#define FINE_PULSE_THRESHOLD_PSI 5    // switch coarse -> fine within this many psi of goal
+#define FINE_PULSE_MS_PER_PSI 5       // initial burst length per psi of remaining error
+#define FINE_PULSE_MIN_MS 5           // floor on the INITIAL burst size (the crossing-shrink can go below this)
+#define FINE_PULSE_MAX_MS 100         // cap on the initial burst size
+#define FINE_PULSE_OVERSHOOT_SHRINK 0.5 // burst multiplier on each goal crossing (< 1 = damp; give up when burst < 1 ms)
+#define FINE_PULSE_MAX_TRIES 8        // give up after this many bursts with the reading not moving (stuck: tank/bag exhausted)
+
+// Final cross-corner re-check (end of Wheel::goalRoutine): synchronized re-read + re-correct rounds after
+// all corners finish, fixing a done corner nudged by a later-finishing sibling. 0 disables. See AI_TRAINING.md.
+#define FINAL_RECHECK_ROUNDS 4
 
 /* This is the private passcode you need to access your system from the app. Set the same value in the app settings after launching the app. */
 /* This is legacy bt, and ota but ota is only enabled when chosen so we can leave it as is */
@@ -160,6 +186,10 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 #define COMPRESSOR_ON_BELOW_PSI 140
 #define COMPRESSOR_MAX_PSI 180
 
+// Seconds the compressor stays held off after the board powers up / accessory power arrives,
+// so it isn't loading the electrical system while the engine is cranking.
+#define COMPRESSOR_CRANK_OFFSET_S 3
+
 /* Level sensor pins */
 #define levelInputFrontPassenger new InputType(0, &ADS1115B) // ADSB/0
 #define levelInputRearPassenger new InputType(3, &ADS1115B)  // ADSB/3
@@ -187,8 +217,8 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 #define pressureZeroAnalogValue (float)((pressuretransducerVoltageZeroPSI / pressuretransducerRunningVoltage) * microcontrollerMaxAnalogReading) // analog reading of pressure transducer at 0psi.
 #define pressureMaxAnalogValue (float)((pressuretransducerVoltageMaxPSI / pressuretransducerRunningVoltage) * microcontrollerMaxAnalogReading)   // analog reading of pressure transducer at max psi.
 
-/* The amount of time the pressure routine will try to reach the goal pressure before 'giving up' (usually due to lower pressure in tank or something) Default is 10 seconds. */
-#define ROUTINE_TIMEOUT_MS 10 * 1000
+/* The amount of time the pressure routine will try to reach the goal pressure before 'giving up' (usually due to lower pressure in tank or something) Default is 15 seconds. */
+#define ROUTINE_TIMEOUT_MS 15 * 1000
 
 #define AIR_OUT_AFTER_SHUTDOWN_MS 5000
 

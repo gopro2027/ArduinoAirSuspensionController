@@ -157,7 +157,6 @@ void handleFunctionRunOnNextFrame();
 extern int currentPressures[5];
 extern uint32_t statusBittset;
 extern uint8_t AIPercentage;
-extern uint8_t AIReadyBittset;
 extern int profilePressures[5][4];
 extern bool profileUpdated;
 extern int currentPreset;
@@ -216,6 +215,8 @@ public:
     Preferencable themeColorMedium;
     // Navigation
     Preferencable swipeNavigation;
+    // Status bar
+    Preferencable showBattery;
 };
 
 extern SaveData _SaveData;
@@ -234,6 +235,7 @@ headerDefineSaveFunc(themeColorLight, uint32_t);
 headerDefineSaveFunc(themeColorDark, uint32_t);
 headerDefineSaveFunc(themeColorMedium, uint32_t);
 headerDefineSaveFunc(swipeNavigation, bool);
+headerDefineSaveFunc(showBattery, bool);
 
 // Theme presets enum
 enum ThemePreset {

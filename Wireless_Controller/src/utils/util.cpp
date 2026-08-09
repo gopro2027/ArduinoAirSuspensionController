@@ -80,7 +80,6 @@ void scale_img(lv_obj_t *obj, lv_image_dsc_t img) {
 int currentPressures[5];
 uint32_t statusBittset = 0;
 uint8_t AIPercentage = 0;
-uint8_t AIReadyBittset = 0;
 int profilePressures[5][4];
 bool profileUpdated = false;
 int currentPreset = -1;
@@ -90,7 +89,7 @@ void requestPreset()
     sendRestPacket(&pkt);
 }
 
-ConfigValuesPacket util_configValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+ConfigValuesPacket util_configValues(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     {AUX_MODE_NONE, AUX_MODE_TIME_DECISECONDS, 1, 0});
 
 void sendConfigValuesPacket(bool saveToManifold)
@@ -290,6 +289,7 @@ void beginSaveData()
     _SaveData.themeColorDark.load("themeColorDark", THEME_COLOR_OCEAN_BLUE_DARK);
     _SaveData.themeColorMedium.load("themeColorMedium", THEME_COLOR_OCEAN_BLUE_MEDIUM);
     _SaveData.swipeNavigation.load("swipeNav", false);
+    _SaveData.showBattery.load("showBattery", true);
 }
 
 createSaveFuncInt(unitsMode, int);
@@ -312,6 +312,7 @@ createSaveFuncInt(themeColorLight, uint32_t);
 createSaveFuncInt(themeColorDark, uint32_t);
 createSaveFuncInt(themeColorMedium, uint32_t);
 createSaveFuncInt(swipeNavigation, bool);
+createSaveFuncInt(showBattery, bool);
 
 float getBrightnessFloat()
 {

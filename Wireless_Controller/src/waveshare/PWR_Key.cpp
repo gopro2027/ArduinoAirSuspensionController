@@ -12,6 +12,18 @@
 #include "esp_sleep.h"
 
 
+// Boards that can't wake themselves from light sleep opt out of it entirely
+// (see the 3.5 / 3.5b device_lib_exports.h). Latch-based boards keep sleeping.
+#ifndef DEVICE_SUPPORTS_LIGHT_SLEEP
+#define DEVICE_SUPPORTS_LIGHT_SLEEP 1
+#endif
+
+// Boards with a PMIC that can actually cut the rails define this and provide
+// power_hard_shutdown(). Everyone else fakes shutdown with deep sleep.
+#ifndef DEVICE_HAS_HARD_SHUTDOWN
+#define DEVICE_HAS_HARD_SHUTDOWN 0
+#endif
+
 // Internal state
 static uint8_t Booted_From_State = 0; // 0:no power, 1:key held at boot, 2:booted from usb plugged in
 static uint8_t Device_State = 0;      // 0:none, 1:sleep, 2:shutdown
@@ -68,7 +80,14 @@ void PWR_Loop(void)
         woke_up = false;
 
         if (Device_State == 1)
+        {
+#if DEVICE_SUPPORTS_LIGHT_SLEEP
             Fall_Asleep();
+#else
+            // No wake source for the PWR button on this board, so a short press
+            // does nothing rather than sleeping with no way back out of it.
+#endif
+        }
         else if (Device_State == 2)
             Shutdown();
 
@@ -118,6 +137,14 @@ void Shutdown(void)
     set_brightness(0);
     power_latch_off();
     vTaskDelay(pdMS_TO_TICKS(50));
+
+#if DEVICE_HAS_HARD_SHUTDOWN
+    // Where the hardware can really cut power, do that instead of faking it:
+    // the PMIC drops the rails and a PWR press powers the board back up on its
+    // own. This only returns if the PMIC refused (VBUS present, I2C wedged), in
+    // which case we fall through to the deep-sleep shutdown below.
+    power_hard_shutdown();
+#endif
 
     // If USB is still powering the board, do this fake shutdown sequence by going into deep sleep where pressing the button will wake it up (deep sleep naturally causes reboot upon waking)
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);

@@ -12,6 +12,7 @@ Compressor::Compressor(InputType *triggerPin, InputType *readPin)
     this->freezeTimerLastReadValue = 0;
     this->lastFreezeTime = 0;
     this->pauseExecutionUntilTime = 0;
+    this->accessoryOnTime = 0;
 }
 
 InputType *Compressor::getReadPin()
@@ -47,6 +48,16 @@ float Compressor::getTankPressure()
 #endif
 }
 
+float Compressor::readTankPressureNow()
+{
+#if TANK_PRESSURE_MOCK == true
+    return 200;
+#else
+    float p = this->readPressure();
+    return p < 0 ? 0 : p;
+#endif
+}
+
 bool Compressor::isFrozen()
 {
     return (millis() < this->pauseExecutionUntilTime);
@@ -55,6 +66,17 @@ bool Compressor::isFrozen()
 bool Compressor::isOn()
 {
     return this->s_trigger.isOpen();
+}
+
+// True while we are still inside the crank offset window, ie the board has had accessory power
+// for less than the configured number of seconds and the compressor must stay off.
+bool Compressor::isWaitingOnCrankOffset()
+{
+    if (this->accessoryOnTime == 0)
+    {
+        return getcompressorCrankOffset() > 0;
+    }
+    return (millis() - this->accessoryOnTime) < ((unsigned long)getcompressorCrankOffset() * 1000UL);
 }
 
 void Compressor::enableDisableOverride(bool enable)
@@ -153,6 +175,21 @@ void Compressor::loop()
 
     // if vehicle is off disable compressor
     if (!isVehicleOn())
+    {
+        this->accessoryOnTime = 0; // acc dropped, so the crank offset starts over next time it comes back
+        this->s_trigger.close();
+        return;
+    }
+
+    // first loop with accessory power (which on a fresh boot is right after power up), start the crank offset window
+    if (this->accessoryOnTime == 0)
+    {
+        this->accessoryOnTime = curTime == 0 ? 1 : curTime; // 0 is the "not seen yet" sentinel
+    }
+
+    // hold the compressor off for the configured number of seconds after accessory power arrives so we
+    // aren't loading the electrical system while the engine is cranking
+    if (this->isWaitingOnCrankOffset())
     {
         this->s_trigger.close();
         return;

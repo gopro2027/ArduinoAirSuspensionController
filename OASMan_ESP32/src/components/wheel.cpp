@@ -7,25 +7,9 @@ std::atomic<bool> flagStartPressureGoalRoutine[NUM_WHEEL_THREADS];
 extern bool isVehicleParked(bool dontTrustEBrakeAlone = false, bool requireBothAccAndEbrake_or_GPS = false); // defined in airSuspensionUtil.cpp
 extern bool isAnyWheelActive();            // defined in airSuspensionUtil.cpp
 
-// This function can be updated in the future to use some better algorithm to decide how long to open the valves for to reach the desigred pressure
-int getValveTimingSimpleFit(int pressureDifferenceAbsolute)
-{
-    float valveTimingUntilWithin = 9.993f*pressureDifferenceAbsolute + 0.2189f; // very close to y = 10x, but our lookup table was just ever so slightly diverging from it
-    if (valveTimingUntilWithin < 10) {
-        return 10; // minimum time to open the valves for
-    }
-    return valveTimingUntilWithin;
-}
-
 int getMinValveOpenPSI()
 {
-    //return getheightSensorMode() ? 0 : getValveTimingSimpleFit(0)->pressureDelta; // old forumla, would always return 0 (yes, always)
     return 0;
-}
-
-int calculateValveOpenTimeMS(int pressureDifferenceAbsolute)
-{
-    return getheightSensorMode() ? 0 : (getValveTimingSimpleFit(pressureDifferenceAbsolute) * ((float)getbagVolumePercentage() / 100.0f)); // Note: Added 0 for height sensor mode but it is unused
 }
 
 Wheel::Wheel() {}
@@ -235,28 +219,12 @@ static int goalSyncClubSize = 0;
 static int goalSyncWaiting = 0;
 static int goalSyncGeneration = 0;
 
-// Barrier wait cap (backstop only; normal release happens when the club gathers or a
-// wheel leaves). The correct value depends on the valve state while a wheel waits:
-//   - Pressure mode: the valve is already CLOSED at the barrier (open + settle happen
-//     earlier in the iteration), so waiting is harmless. The cap MUST exceed a full
-//     iteration or the fast wheel times out before the slow wheel arrives and sync is
-//     lost. A single valve-open can be up to ~5000ms (AI cap / smooth air-out) + settle,
-//     so 6000ms holds sync and only fires on a genuine stall (routine itself caps at
-//     ROUTINE_TIMEOUT_MS = 10s).
-//   - Height mode: the valve is still OPEN while waiting, so a long wait would keep
-//     inflating/deflating that corner. Iterations are ~1ms here, so a short cap is both
-//     safe and sufficient.
-#ifndef GOAL_SYNC_BARRIER_TIMEOUT_PRESSURE_MS
-#define GOAL_SYNC_BARRIER_TIMEOUT_PRESSURE_MS 6000 // was: shared 100ms (too short: < one pressure-mode iteration, so the barrier timed out before slow wheels arrived and sync was effectively lost). It should technically be 6000 to ensure strict coupling (ie if one hit the max of 5000, and another was only 100ms long, the 100ms would wait 4900ms), but we could set this to 2000 so if pulses are way off we will allow them to desync.
+// Barrier wait cap (backstop only). INVARIANT: a wheel only ever waits at the barrier with its valve
+// CLOSED, so waiting is always harmless; the cap just exceeds the slowest single fill (~5000ms).
+// Full rationale: docs/goal-sync-barrier.md.
+#ifndef GOAL_SYNC_BARRIER_TIMEOUT_MS
+#define GOAL_SYNC_BARRIER_TIMEOUT_MS 6000 // was: split 6000 (pressure) / 100 (height)
 #endif
-#ifndef GOAL_SYNC_BARRIER_TIMEOUT_HEIGHT_MS
-#define GOAL_SYNC_BARRIER_TIMEOUT_HEIGHT_MS 100 // was: shared GOAL_SYNC_BARRIER_TIMEOUT_MS 100 (fine for height mode: valve is open while waiting, keep short)
-#endif
-
-static unsigned long goalSyncBarrierTimeoutMs()
-{
-    return getheightSensorMode() ? GOAL_SYNC_BARRIER_TIMEOUT_HEIGHT_MS : GOAL_SYNC_BARRIER_TIMEOUT_PRESSURE_MS;
-}
 
 static void goalSyncJoin()
 {
@@ -326,173 +294,279 @@ static void goalSyncBarrier(unsigned long timeoutMs)
     }
 }
 
-// logic https://www.figma.com/board/YOKnd1caeojOlEjpdfY5NF/Untitled?node-id=0-1&node-type=canvas&t=p1SyY3R7azjm1PKs-0
+static const int8_t FLOW_NONE = 0;
+static const int8_t FLOW_UP = 1;
+static const int8_t FLOW_DOWN = -1;
+
+// Block until the selected input reading holds within `band` for SETTLE_STABLE_MS (SETTLE_MAX_WAIT_MS
+// backstop); returns the final reading. Valve(s) must already be closed -- this IS the true settled value.
+double Wheel::waitForStableReading(int band)
+{
+    const uint32_t start = millis();
+    this->readInputs();
+    double reference = this->getSelectedInputValue();
+    uint32_t stableSince = millis();
+    for (;;)
+    {
+        delay(1);
+        this->readInputs();
+        double v = this->getSelectedInputValue();
+        if (fabs(v - reference) > (double)band)
+        {
+            reference = v; // still moving -> restart the stability window
+            stableSince = millis();
+        }
+        if (millis() - stableSince >= SETTLE_STABLE_MS)
+        {
+            return v; // held steady long enough -> settled
+        }
+        if (millis() - start >= SETTLE_MAX_WAIT_MS)
+        {
+            return v; // backstop: never block on a settle forever
+        }
+    }
+}
+
+// Open `valve` for `ms`, then close it. Used by the fine phase.
+void Wheel::openValveForMs(Solenoid *valve, uint32_t ms)
+{
+    valve->open();
+    delay(ms);
+    valve->close();
+}
+
+// Precision (fine) phase, pressure only: hone in on the EXACT goal with short valve bursts read off the
+// accurate valve-closed pressure. Bursts start sized to the error and shrink by FINE_PULSE_OVERSHOOT_SHRINK
+// each time the reading crosses the goal (anti-oscillation). No thread sync (bursts are quick and local).
+// Exit conditions + full design: AI_TRAINING.md.
+bool Wheel::achieveFineGoal()
+{
+    int8_t prevDir = FLOW_NONE;
+    double burstMs = 0.0;
+    bool sized = false;
+    int stallCount = 0;
+    int lastErr = 0;
+
+    for (;;)
+    {
+        if (millis() > this->routineStartTime + ROUTINE_TIMEOUT_MS)
+        {
+            return false;
+        }
+
+        double trueVal = this->waitForStableReading(SETTLE_STABLE_BAND_PSI);
+        int err = this->pressureGoal - (int)lround(trueVal);
+        if (abs(err) <= PRESSURE_DEADBAND_PSI)
+        {
+            return true; // landed on goal (deadband 0 -> exact psi)
+        }
+
+        int8_t dir = (err > 0) ? FLOW_UP : FLOW_DOWN;
+        if (dir == FLOW_DOWN && this->onlyAirUp)
+        {
+            return true; // maintain-pressure never vents; accept where we are
+        }
+
+        // Stuck detector: the true reading isn't moving between bursts (tank/bag exhausted) -> give up rather
+        // than pulse to the routine timeout. Reset whenever it does move (normal convergence / crossings).
+        if (sized && err == lastErr)
+        {
+            if (++stallCount >= FINE_PULSE_MAX_TRIES)
+            {
+                return false;
+            }
+        }
+        else
+        {
+            stallCount = 0;
+        }
+        lastErr = err;
+
+        if (!sized)
+        {
+            burstMs = (double)abs(err) * FINE_PULSE_MS_PER_PSI; // start proportional to the remaining error
+            if (burstMs < FINE_PULSE_MIN_MS) burstMs = FINE_PULSE_MIN_MS;
+            if (burstMs > FINE_PULSE_MAX_MS) burstMs = FINE_PULSE_MAX_MS;
+            sized = true;
+        }
+        else if (dir != prevDir)
+        {
+            burstMs *= FINE_PULSE_OVERSHOOT_SHRINK; // crossed the goal -> damp the oscillation
+            if (burstMs < 1.0)
+            {
+                return false; // can't resolve any finer than this
+            }
+        }
+        prevDir = dir;
+
+        Solenoid *valve = (dir == FLOW_UP) ? getInSolenoid() : getOutSolenoid();
+        (dir == FLOW_UP ? getOutSolenoid() : getInSolenoid())->close();
+        bool canOpen = true;
+#if SIX_VALVE_MANIFOLD == true
+        canOpen = getManifold()->canOpenDirectionSixValveThreadSafe(valve);
+#endif
+        if (canOpen)
+        {
+            this->openValveForMs(valve, (uint32_t)burstMs);
+        }
+        else
+        {
+            delay(1); // couldn't open (six-valve contention) -> yield and retry
+        }
+    }
+}
+
+// Coarse closed-loop control shared by pressure and height modes: commit a direction from the true
+// (valve-closed) reading, hold the valve open while a predictor recovers the true bag value from the flowing
+// reading, close at goal, settle, and re-decide (bidirectional). Near goal (pressure only) it hands off to
+// achieveFineGoal for the exact landing. Full design: AI_TRAINING.md.
 void Wheel::goalRoutine() {
     if (flagStartPressureGoalRoutine[thisWheelNum].load())
     {
-        delay(100); // wait for all threads to sync on first call. 6-19-2025: I actually have no clue if this is required. The 100 is the same as the delay in the task.
+        delay(100); // wait for all threads to sync on first call
+
+        int8_t dir = FLOW_NONE;                // committed coarse move direction
+        Solenoid *valve = nullptr;
+        SOLENOID_AI_INDEX aiIndex = AI_MODEL_UNDEFINED;
+        bool valveWasOpened = false;
+        uint8_t sampleRawBag = 0, sampleRawTank = 0; // flowing readings captured at close
 
         goalSyncJoin();
 
-        // const double oscillation = 1.359142965358979; //e/2 seems like a decent value tbh
-        // const double oscillation = 1.75;
-        const double oscillation = 1.2;
-        int oscillationPow = 0;
-        const int startIteration = -1;
-        int iteration = startIteration; // - values make it skip the first generation. It won't start dividing until iteration = 1
-        const int fullAirOutTime = 5000;
-        bool previousDirection = false;
         for (;;)
         {
-            // 10 second timeout in case tank doesn't have a whole lot of air or something
+            const bool heightMode = getheightSensorMode();
+
+            // 10 second timeout in case the tank doesn't have enough air, a sensor is stuck, etc.
             if (millis() > this->routineStartTime + ROUTINE_TIMEOUT_MS)
             {
                 break;
             }
 
-            // Main routine
             this->readInputs();
-            int pressureDif = this->pressureGoal - this->getSelectedInputValue();
-            int pressureDifABS = abs(pressureDif);
+            const int deadband = heightMode ? LEVEL_DEADBAND_PERCENTAGE : PRESSURE_DEADBAND_PSI;
 
-            if (pressureDifABS > getMinValveOpenPSI())
+            if (dir == FLOW_NONE)
             {
-                // Decide which valve to use
-                Solenoid *valve;
-                bool up = pressureDif >= 0;
-                if (up)
+                // Valve is closed here, so the reading is the TRUE value. Decide: finish, hand off to the
+                // fine precision phase, or commit a coarse fill/dump direction.
+                int rawDif = this->pressureGoal - (int)lround(this->getSelectedInputValue());
+                if (abs(rawDif) <= deadband)
                 {
-                    valve = getInSolenoid();
-                    getOutSolenoid()->close();
+                    break; // at goal
+                }
+                // Pressure only: near goal the flowing prediction is too blind to land precisely, so hand
+                // off to the fine burst routine. (Height reads true even while flowing -- no fine phase.)
+                if (!heightMode && abs(rawDif) <= FINE_PULSE_THRESHOLD_PSI)
+                {
+                    this->achieveFineGoal();
+                    break;
+                }
+                if (rawDif > 0)
+                {
+                    dir = FLOW_UP;
+                }
+                else if (!this->onlyAirUp)
+                {
+                    dir = FLOW_DOWN;
                 }
                 else
                 {
-                    if (this->onlyAirUp) {
-                        // we are done, we don't want to air out
-                        break;
-                    }
-                    valve = getOutSolenoid();
-                    getInSolenoid()->close();
+                    break;
                 }
+                valve = (dir == FLOW_UP) ? getInSolenoid() : getOutSolenoid();
+                (dir == FLOW_UP ? getOutSolenoid() : getInSolenoid())->close();
+                aiIndex = valve->getAIIndex();
+            }
 
-                if (!getheightSensorMode())
+            // Coarse drive: hold the valve open and recover the true pressure from the flowing reading; stop
+            // when it reaches goal.
+            double raw = this->getSelectedInputValue();
+            double rawTank = heightMode ? 0.0 : getCompressor()->readTankPressureNow(); // pressure-model feature only
+            double actual = heightMode ? getPredictedBagHeight(raw)
+                                       : getPredictedBagPressure(aiIndex, raw, rawTank);
+
+            bool reached = (dir == FLOW_UP) ? (actual >= this->pressureGoal - deadband)
+                                            : (actual <= this->pressureGoal + deadband);
+            // In-loop safety ceiling (pressure mode only): never fill past the bag max.
+            // TODO: Have this bag pressure check for height mode too. Future improvement.
+            bool overCeiling = !heightMode && (dir == FLOW_UP) && (actual >= (double)getbagMaxPressure());
+
+            if (reached || overCeiling)
+            {
+                valve->close();
+                // remember the flowing readings for the offset sample logged after the settle (pressure mode)
+                sampleRawBag = (uint8_t)lround(raw);
+                sampleRawTank = (uint8_t)lround(rawTank);
+                if (overCeiling)
                 {
-                    // Pressure sensor logic. You can't read the pressure accurately with the valve open. Essentially must open the valve for a guesstimate amount of time, then close it, then you are able to read the pressure.
-
-                    // Choose time to open for
-                    int valveTime = calculateValveOpenTimeMS(pressureDifABS);
-
-                    // right now not going to use this because it doesn't seem to work super well up air up. Results in super low values. Need to do more testing
-                    // int valveTime = this->calculatePressureTimingReal(valve);
-
-                    double start_pressure = this->getSelectedInputValue();
-                    double end_pressure = this->pressureGoal;
-                    double tank_pressure = getCompressor()->getTankPressure();
-
-                    if (canUseAiPrediction(valve->getAIIndex()))
-                    {
-
-                        // conversion float to int eliminates inf and nan
-                        int aiPredict = getAiPredictionTime(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure);
-
-                        // There are some valid scenarios where we can get inf or nan if say the tank pressure is lower than the end pressure
-                        if (aiPredict < 5000 && aiPredict > 0)
-                        {
-                            valveTime = aiPredict;
-                        }
-                    }
-
-                    // To help prevent ocellations, check if previous direction is different than new direction. Ex: was going up, but suddently now is going down. It must have jumped over goal. Go ahead and start dividing valve time by (oscillation ^ oscillationPow)
-                    if (iteration > startIteration)
-                    {
-                        if (previousDirection != up)
-                        {
-                            oscillationPow++;
-                        }
-                    }
-                    valveTime = valveTime / std::pow(oscillation, oscillationPow);
-
-                    // save previous direction.
-                    previousDirection = up;
-
-                    // If the goal pressure is 0 or 1psi, go ahead and just open the valve for a long time to ensure a smooth air out
-                    bool specialSmoothAirOut = false;
-                    if (!up && pressureGoal < 2 && valveTime < fullAirOutTime)
-                    {
-                        valveTime = fullAirOutTime;
-                        specialSmoothAirOut = true;
-                    }
-
-                    if (valveTime > 0)
-                    {
-                        const int valveSettleTime = 250; // ms to wait after closing valve to allow pressure to stabilize a bit before reading again
-                        bool canOpen = true;
-                        #if SIX_VALVE_MANIFOLD == true
-                        if (!getManifold()->canOpenDirectionSixValveThreadSafe(valve)) {
-                            canOpen = false;
-                            iteration--;// don't count this as an iteration since we decided at last moment to skip it due to the other chamber being in use
-                            delay(valveSettleTime); // delay 250 to at least get some resemblence of matching the other valves that are opening
-                        }
-                        #endif
-
-                        if (canOpen) {
-                            // Open valve for calculated time
-                            valve->open();
-                            delay(valveTime);
-                            valve->close();
-
-                            // Sleep 150ms to allow time for valve to fully close and pressure to equalize a bit
-                            delay(valveSettleTime); // Changed to 250. 150 was... confusing
-
-                            // only bother saving data for first 2 iterations AND when the valve was opened for more than 10ms AND it wasn't just set to do a special low value full smooth air out AND if the pressure change is greater than 3psi
-                            if (iteration < startIteration + 2 && valveTime > 10 && !specialSmoothAirOut)
-                            {
-                                this->readInputs();
-                                end_pressure = this->getSelectedInputValue(); // gonna be slightly different than the pressureGoal
-                                if (abs(start_pressure - end_pressure) > 3)
-                                {
-                                    appendPressureDataToFile(valve->getAIIndex(), start_pressure, end_pressure, tank_pressure, valveTime);
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // calculated valve time is 0 so just break out of loop
-                        break;
-                    }
+                    break; // safety: stop now, no settle/verify
                 }
-                else
+                // Rendezvous with the valve GUARANTEED closed (INVARIANT: never wait at the barrier with a
+                // valve open). A corner that reaches goal early blocks here -- valve closed, harmless -- until
+                // every other active corner has also closed; corners still flowing haven't reached this line.
+                goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS);
+
+                // Settle to a stable true reading, log the offset sample, then re-decide (bidirectional:
+                // continue, reverse, or -- next iteration -- hand off to the fine phase).
+                double settled = this->waitForStableReading(heightMode ? SETTLE_STABLE_BAND_LEVEL : SETTLE_STABLE_BAND_PSI);
+                if (!heightMode && valveWasOpened)
                 {
-                    // for level sensors, just open the valve and read level sensors while valves are open since it doesn't affect the reading
-                    valve->open();
-                    delay(1);
+                    recordLearnSample(aiIndex, sampleRawBag, (uint8_t)lround(settled), sampleRawTank);
                 }
+                valveWasOpened = false;
+                dir = FLOW_NONE;
             }
             else
             {
-                // Completed
-                break;
+                bool canOpen = true;
+#if SIX_VALVE_MANIFOLD == true
+                canOpen = getManifold()->canOpenDirectionSixValveThreadSafe(valve);
+#endif
+                if (canOpen)
+                {
+                    valve->open();
+                    valveWasOpened = true;
+                }
             }
-            iteration++;
 
-            // Sync all active wheels at the end of each iteration so the next round of
-            // valve opens happens together. Timeout is mode-aware: generous in pressure
-            // mode (valves closed while waiting), short in height mode (valve still open).
-            goalSyncBarrier(goalSyncBarrierTimeoutMs());
+            // Always yield the CPU each tick (the flow-based loop has no other built-in delay).
+            delay(1);
         }
 
-        // since this function (goalRoutine) is blocking the same thread, we must manually reset sensorless baseline and mark instability. If we had trackPressureStability() and pressureCaptureBaseline() in a different thread, we wouldn't need to do this.
+        // Close both valves before the exit rendezvous so this thread never waits at the
+        // barrier with a valve open (the routine-timeout break above can fire mid-fill).
+        getInSolenoid()->close();
+        getOutSolenoid()->close();
+
+        // Rendezvous: every active corner has finished the main routine and closed its valves -> all idle.
+        goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS);
+
+        // Final cross-corner re-check (pressure mode): a sibling finishing later can nudge an already-done
+        // corner through the shared manifold, so with everyone idle, re-read and re-correct for
+        // FINAL_RECHECK_ROUNDS synchronized rounds (a barrier per round keeps the reads clean). See AI_TRAINING.md.
+        if (!getheightSensorMode())
+        {
+            for (int rc = 0; rc < FINAL_RECHECK_ROUNDS; rc++)
+            {
+                double trueVal = this->waitForStableReading(SETTLE_STABLE_BAND_PSI);
+                if (abs(this->pressureGoal - (int)lround(trueVal)) > PRESSURE_DEADBAND_PSI)
+                {
+                    this->achieveFineGoal();
+                }
+                getInSolenoid()->close();
+                getOutSolenoid()->close();
+                goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS); // re-sync (all idle) before the next round's read
+            }
+        }
+
+        // goalRoutine blocks this thread, so reset sensorless baseline / instability manually.
         nullifySensorlessBaseline();
         markInstability(this->getSelectedInputValue());
 
-        goalSyncBarrier(goalSyncBarrierTimeoutMs());
         goalSyncLeave();
 
         flagStartPressureGoalRoutine[thisWheelNum] = false;
-        // close both after (only applies for level sensor logic)
-        getInSolenoid()->close();
-        getOutSolenoid()->close();
 
         if (this->onPressureGoalComplete)
         {
@@ -674,4 +748,47 @@ void Wheel::loop()
     this->pressureCaptureBaseline();
     this->maintainPressure();
     this->heightsensorlessLevelling();
+    this->captureManualOffsetSample();
+}
+
+// Log an offset sample from a MANUAL valve move (BLE valveControlBittset / gamepad): cache the flowing
+// readings while the valve is open, then log the settled bag after it closes. Only runs when no goal
+// routine is active and never in height mode. See AI_TRAINING.md.
+void Wheel::captureManualOffsetSample()
+{
+    if (getheightSensorMode() || flagStartPressureGoalRoutine[thisWheelNum].load())
+    {
+        manualValveWasOpen = false;
+        manualSettleUntil = 0;
+        return;
+    }
+
+    bool upOpen = getInSolenoid()->isOpen();
+    bool downOpen = getOutSolenoid()->isOpen();
+
+    if (upOpen || downOpen)
+    {
+        bool up = upOpen; // if somehow both are open, treat as fill
+        this->readInputs();
+        manualFlowBag = (uint8_t)lround(this->getSelectedInputValue());
+        manualFlowTank = (uint8_t)lround(getCompressor()->readTankPressureNow());
+        manualAiIndex = up ? getInSolenoid()->getAIIndex() : getOutSolenoid()->getAIIndex();
+        manualUp = up;
+        manualValveWasOpen = true;
+        manualSettleUntil = 0; // a (re)opened valve cancels any pending settle read
+    }
+    else if (manualValveWasOpen)
+    {
+        // Valve just closed: wait for the bag to settle (air-out settles slower) before the settled read.
+        manualValveWasOpen = false;
+        manualSettleUntil = millis() + (manualUp ? OFFSET_SAMPLE_SETTLE_MS : OFFSET_SAMPLE_SETTLE_DOWN_MS);
+    }
+    else if (manualSettleUntil != 0 && millis() >= manualSettleUntil)
+    {
+        // Settled: the flow-induced offset is gone, so the current reading is the settled truth.
+        this->readInputs();
+        uint8_t settledBag = (uint8_t)lround(this->getSelectedInputValue());
+        recordLearnSample(manualAiIndex, manualFlowBag, settledBag, manualFlowTank);
+        manualSettleUntil = 0;
+    }
 }

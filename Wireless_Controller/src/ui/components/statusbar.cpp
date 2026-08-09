@@ -33,6 +33,7 @@ Statusbar::Statusbar() {
     batteryIcon = nullptr;
     batteryLabel = nullptr;
     alertIcon = nullptr;
+    adjustmentLabel = nullptr;
     overlay = nullptr;
     pullDownPanel = nullptr;
     batterySection = nullptr;
@@ -82,6 +83,14 @@ void Statusbar::create(lv_obj_t* parent) {
     lv_obj_align(alertIcon, LV_ALIGN_LEFT_MID, padding, 0);
     lv_obj_add_flag(alertIcon, LV_OBJ_FLAG_HIDDEN);
 
+    // "Adjustment in progress" text (left side, after the alert icon slot; hidden by default)
+    adjustmentLabel = lv_label_create(container);
+    lv_label_set_text(adjustmentLabel, "Adjusting");
+    lv_obj_set_style_text_color(adjustmentLabel, lv_color_hex(0x4ADE80), 0);
+    lv_obj_set_style_text_font(adjustmentLabel, getScaledFont(10), 0);
+    lv_obj_align(adjustmentLabel, LV_ALIGN_LEFT_MID, padding + scaledX(18), 0);
+    lv_obj_add_flag(adjustmentLabel, LV_OBJ_FLAG_HIDDEN);
+
     // Battery icon (right side)
     batteryIcon = lv_label_create(container);
     lv_label_set_text(batteryIcon, LV_SYMBOL_BATTERY_FULL);
@@ -95,6 +104,9 @@ void Statusbar::create(lv_obj_t* parent) {
     lv_obj_set_style_text_color(batteryLabel, lv_color_hex(STATUSBAR_TEXT_COLOR), 0);
     lv_obj_set_style_text_font(batteryLabel, getScaledFont(10), 0);
     lv_obj_align(batteryLabel, LV_ALIGN_RIGHT_MID, -padding, 0);
+
+    // Apply the saved "Show Battery" setting
+    setBatteryVisible(getshowBattery());
 
     // Center line marker (pull indicator)
     lv_obj_t* centerLine = lv_obj_create(container);
@@ -477,6 +489,18 @@ void Statusbar::updateAlertStatus() {
 }
 
 void Statusbar::updateStatusSection() {
+    // "Adjustment in progress" text lives on the main bar, not the pull-down panel,
+    // so update it independently of statusSection existing.
+    if (adjustmentLabel) {
+        bool adjusting = statusBittset & (1 << StatusPacketBittset::ADJUSTMENT_IN_PROGRESS);
+        bool currentlyHidden = lv_obj_has_flag(adjustmentLabel, LV_OBJ_FLAG_HIDDEN);
+        if (adjusting && currentlyHidden) {
+            lv_obj_remove_flag(adjustmentLabel, LV_OBJ_FLAG_HIDDEN);
+        } else if (!adjusting && !currentlyHidden) {
+            lv_obj_add_flag(adjustmentLabel, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+
     if (!statusSection) return;
 
     // Skip entirely if nothing changed
@@ -550,11 +574,29 @@ void Statusbar::hide() {
     visible = false;
 }
 
+void Statusbar::setBatteryVisible(bool batteryVisible) {
+    if (batteryIcon) {
+        if (batteryVisible) {
+            lv_obj_remove_flag(batteryIcon, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(batteryIcon, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+    if (batteryLabel) {
+        if (batteryVisible) {
+            lv_obj_remove_flag(batteryLabel, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(batteryLabel, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+}
+
 void Statusbar::cleanup() {
     container = nullptr;
     batteryIcon = nullptr;
     batteryLabel = nullptr;
     alertIcon = nullptr;
+    adjustmentLabel = nullptr;
     overlay = nullptr;
     pullDownPanel = nullptr;
     batterySection = nullptr;

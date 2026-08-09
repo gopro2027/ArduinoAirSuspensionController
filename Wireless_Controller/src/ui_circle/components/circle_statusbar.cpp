@@ -39,6 +39,24 @@ void CircleStatusbarMini::create(lv_obj_t *parent)
     lv_label_set_text(batteryLabel, "--%");
     lv_obj_set_style_text_font(batteryLabel, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(batteryLabel, lv_color_hex(0xC0C0C0), 0);
+
+    setBatteryVisible(getshowBattery());
+}
+
+void CircleStatusbarMini::setBatteryVisible(bool batteryVisible)
+{
+    if (batteryIcon) {
+        if (batteryVisible)
+            lv_obj_remove_flag(batteryIcon, LV_OBJ_FLAG_HIDDEN);
+        else
+            lv_obj_add_flag(batteryIcon, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (batteryLabel) {
+        if (batteryVisible)
+            lv_obj_remove_flag(batteryLabel, LV_OBJ_FLAG_HIDDEN);
+        else
+            lv_obj_add_flag(batteryLabel, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 void CircleStatusbarMini::refreshBattery()

@@ -4,8 +4,11 @@
 
 #ifndef SCREEN_MODE_CIRCLE
 #include "ui/components/navbar.h"
+#include "ui/components/statusbar.h"
 #include "custom_car_storage.h"
 #include "serial_image_upload.h"
+#else
+#include "ui_circle/components/circle_statusbar.h"
 #endif
 
 ScrSettings scrSettings(false);
@@ -71,7 +74,7 @@ static lv_obj_t *current_page = NULL;
 static int saved_page_index = 0;  // Remember page selection across reinits
 static lv_obj_t *menu_container = NULL;
 static const char *section_names[] = {
-    "Status", "Game Controller", "ML/AI", "Basic settings",
+    "Status", "Game Controller", "Basic settings",
     "Levelling Mode", "Auxillary Output", "Units", "Screen Settings", "Config", "Wifi / Update"
 };
 static constexpr int kSettingsSectionNameCount = sizeof(section_names) / sizeof(section_names[0]);
@@ -128,13 +131,6 @@ static void compressor_status_handler(void *data)
     CompressorStatusPacket pkt(value);
     sendRestPacket(&pkt);
     log_i("Pressed compressor status %i", value);
-}
-
-static void ai_status_handler(void *data)
-{
-    bool value = (bool)data;
-    setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED, value);
-    log_i("Pressed ai status %i", value);
 }
 
 static void maintain_pressure_handler(void *data)
@@ -453,26 +449,6 @@ void ScrSettings::init(lv_obj_t *parent)
             []() -> void {}, false);
     }));
 
-    // --- ML/AI page ---
-    lv_obj_t *ml_ai_page = this->addSettingsPage(pages_container, true);
-
-    this->ui_aiPercentage = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Learn Progress:", {.STRING = test});
-    this->ui_aiReady = new Option(ml_ai_page, OptionType::TEXT_WITH_VALUE, "Trained:", {.STRING = test});
-    this->ui_aiEnabled = new Option(ml_ai_page, OptionType::ON_OFF, "Enabled:", {.INT = 0}, ai_status_handler);
-
-    allOptions.push_back(new Option(ml_ai_page, OptionType::BUTTON, "Reset Learned Data", {.STRING = test}, [](void *data)
-    {
-        currentScr->showMsgBox("Reset Learned AI data?", "Run this if ai has completed training and you are getting innacurate presets.",
-            "Confirm", "Cancel",
-            []() -> void
-            {
-                ResetAIPacket pkt;
-                sendRestPacket(&pkt);
-                log_i("Pressed reset ai");
-            },
-            []() -> void {}, false);
-    }));
-
     // --- Basic settings page ---
     lv_obj_t *basic_settings_page = this->addSettingsPage(pages_container, true);
 
@@ -558,6 +534,22 @@ void ScrSettings::init(lv_obj_t *parent)
         sendRestPacket(&pkt);
     });
     ((Option *)this->ui_rfbuttonD)->setSliderParams(1, 5, true, LV_EVENT_RELEASED);
+
+    // ML/AI rows (moved here from the retired ML/AI page; kept at the very end of Basic settings)
+    this->ui_aiPercentage = new Option(basic_settings_page, OptionType::TEXT_WITH_VALUE, "Sample Learn Progress:", {.STRING = test});
+
+    allOptions.push_back(new Option(basic_settings_page, OptionType::BUTTON, "Reset Learned Data", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Reset Learned AI data?", "Run this if ai has completed training and you are getting innacurate presets.",
+            "Confirm", "Cancel",
+            []() -> void
+            {
+                ResetAIPacket pkt;
+                sendRestPacket(&pkt);
+                log_i("Pressed reset ai");
+            },
+            []() -> void {}, false);
+    }));
 
     // --- Levelling Mode page ---
     lv_obj_t *levelling_page = this->addSettingsPage(pages_container, true);
@@ -677,6 +669,18 @@ void ScrSettings::init(lv_obj_t *parent)
         set_brightness(getBrightnessFloat());
     });
     ((Option *)this->ui_brightnessSlider)->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
+
+    allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Status Bar", {.STRING = ""}));
+    allOptions.push_back(new Option(screen_settings_page, OptionType::ON_OFF, "Show Battery", {.INT = getshowBattery() ? 1 : 0}, [](void *data)
+    {
+        bool enabled = (bool)data;
+        setshowBattery(enabled);
+#ifdef SCREEN_MODE_CIRCLE
+        circleStatusbarMini.setBatteryVisible(enabled);
+#else
+        globalStatusbar.setBatteryVisible(enabled);
+#endif
+    }));
 
 #ifndef SCREEN_MODE_CIRCLE
     allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Navigation", {.STRING = ""}));
@@ -806,6 +810,17 @@ void ScrSettings::init(lv_obj_t *parent)
     {
         log_i("Pressed %i", ((uint32_t)data));
         *util_configValues._compressorOffPSI() = (uint32_t)data;
+        sendConfigValuesPacket(true);
+        alertValueUpdated();
+    });
+
+    this->ui_config9 = new Option(config_page, OptionType::KEYBOARD_INPUT_NUMBER, "Compressor Crank Offset (Seconds)", {.INT = 0}, [](void *data)
+    {
+        log_i("Pressed %i", ((uint32_t)data));
+        uint32_t v = (uint32_t)data;
+        if (v > 255U)
+            v = 255U;
+        *util_configValues._compressorCrankOffset() = (uint8_t)v;
         sendConfigValuesPacket(true);
         alertValueUpdated();
     });
@@ -1112,14 +1127,6 @@ void ScrSettings::loop()
     snprintf(buf, sizeof(buf), "%i%%", AIPercentage);
     this->ui_aiPercentage->setRightHandText(buf);
 
-    snprintf(buf, sizeof(buf), "UF:  %c UR:  %c\nDF: %c DR: %c",
-        (AIReadyBittset & 0b1) ? 'Y' : 'n',
-        (AIReadyBittset & 0b10 >> 1) ? 'Y' : 'n',
-        (AIReadyBittset & 0b100 >> 2) ? 'Y' : 'n',
-        (AIReadyBittset & 0b1000 >> 3) ? 'Y' : 'n');
-
-    this->ui_aiReady->setRightHandText(buf);
-
     this->ui_mac->setRightHandText(ble_getMAC());
     this->ui_volts->setRightHandText(getBatteryVoltageString());
 
@@ -1135,6 +1142,7 @@ void ScrSettings::loop()
         this->ui_config6->setRightHandText(itoa(*util_configValues._bagVolumePercentage(), buf, 10));
         this->ui_config7->setRightHandText(itoa(*util_configValues._AirUpBagStretchTriggerBelowPressure(), buf, 10));
         this->ui_config8->setRightHandText(itoa(*util_configValues._AirUpBagStretchPressure(), buf, 10));
+        this->ui_config9->setRightHandText(itoa(*util_configValues._compressorCrankOffset(), buf, 10));
 
         this->ui_rfbuttonA->setRightHandText(itoa(*util_configValues._rfButtonA() + 1, buf, 10));
         this->ui_rfbuttonB->setRightHandText(itoa(*util_configValues._rfButtonB() + 1, buf, 10));
@@ -1149,7 +1157,6 @@ void ScrSettings::loop()
         this->ui_airoutonshutoff->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF)) != 0, false);
 #endif
         this->ui_safetymode->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0, false);
-        this->ui_aiEnabled->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED)) != 0, false);
         bool heightSensorMode = (flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0;
         this->ui_heightsensormode->setSelectedOption(heightSensorMode ? 1 : 0);
         this->updateLevelModeOptionsVisibility(heightSensorMode);
@@ -1188,9 +1195,7 @@ void ScrSettings::cleanup()
     delete ui_s3;
     delete ui_ebrakeStatus;
     delete ui_rebootbutton;
-    delete ui_aiReady;
     delete ui_aiPercentage;
-    delete ui_aiEnabled;
     delete ui_maintainprssure;
     delete ui_sensorlessleveling;
     delete ui_riseonstart;
@@ -1208,6 +1213,9 @@ void ScrSettings::cleanup()
     delete ui_config4;
     delete ui_config5;
     delete ui_config6;
+    delete ui_config7;
+    delete ui_config8;
+    delete ui_config9;
     delete ui_updateBtn;
     delete ui_manifoldUpdateStatus;
     delete ui_mac;

@@ -509,9 +509,6 @@ uint8_t att_server_notify_SAFE(hci_con_handle_t con_handle, uint16_t attribute_h
     return att_server_notify(con_handle, attribute_handle, value, value_len);
 }
 
-extern uint8_t AIReadyBittset; // 4
-extern uint8_t AIPercentage;   // 7
-
 ConfigValuesPacket buildCurrentConfigValuesPacket()
 {
     uint32_t configFlagsBits = 0;
@@ -527,8 +524,6 @@ ConfigValuesPacket buildCurrentConfigValuesPacket()
         configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE);
     if (getsafetyMode())
         configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE);
-    if (getaiEnabled())
-        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED);
     if (getsensorlessLeveling())
         configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING);
 
@@ -537,7 +532,7 @@ ConfigValuesPacket buildCurrentConfigValuesPacket()
     auxillaryOutputConfig.timeUnit = (AuxillaryOutputModeTimeUnit)getauxillaryOutputModeTimeUnit();
     auxillaryOutputConfig.time = getauxillaryOutputTime();
     auxillaryOutputConfig.interval = getauxillaryOutputInterval();
-    return ConfigValuesPacket(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getAirUpBagStretchTriggerBelowPressure(), getAirUpBagStretchPressure(), configFlagsBits, auxillaryOutputConfig);
+    return ConfigValuesPacket(false, getbagMaxPressure(), getsystemShutoffTimeM(), getcompressorOnPSI(), getcompressorOffPSI(), getpressureSensorMax(), getbagVolumePercentage(), getrfButtonAPreset(), getrfButtonBPreset(), getrfButtonCPreset(), getrfButtonDPreset(), getAirUpBagStretchTriggerBelowPressure(), getAirUpBagStretchPressure(), getcompressorCrankOffset(), configFlagsBits, auxillaryOutputConfig);
 }
 
 void ble_notify()
@@ -598,6 +593,10 @@ void ble_notify()
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::EBRAKE_STATUS_ON);
         }
+        if (isAnyWheelActive())
+        {
+            statusBittset = statusBittset | (1 << StatusPacketBittset::ADJUSTMENT_IN_PROGRESS);
+        }
         if (isKeepAliveTimerExpired())
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::TIMER_STATUS_EXPIRED);
@@ -607,11 +606,7 @@ void ble_notify()
             statusBittset = statusBittset | (1 << StatusPacketBittset::CLOCK);
         }
 
-        // // pack these 2 values together at the top of the statusBittset
-        // int aiDataPacked = (AIPercentage << 4) + AIReadyBittset; // combine at bottom
-        // aiDataPacked = (aiDataPacked << 21);                     // move to top end (4 + 7 = 11; 32-11 = 21)
-        // statusBittset = statusBittset | aiDataPacked;
-        StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue(), getCompressor()->getTankPressure(), statusBittset, AIPercentage, AIReadyBittset);
+        StatusPacket statusPacket(getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue(), getCompressor()->getTankPressure(), statusBittset, AIPercentage);
 
         memcpy(status_characteristic_data, statusPacket.tx(), BTOAS_PACKET_SIZE);
 
@@ -702,6 +697,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             setbagVolumePercentage(*recpkt->_bagVolumePercentage());
             setAirUpBagStretchTriggerBelowPressure(*recpkt->_AirUpBagStretchTriggerBelowPressure());
             setAirUpBagStretchPressure(*recpkt->_AirUpBagStretchPressure());
+            setcompressorCrankOffset(*recpkt->_compressorCrankOffset());
             uint32_t flags = *recpkt->_configFlagsBits();
             setriseOnStart((flags & (1 << ConfigFlagsBit::CONFIG_RISE_ON_START)) != 0);
 #if ENABLE_AIR_OUT_ON_SHUTOFF
@@ -709,7 +705,6 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
 #endif
             setheightSensorMode((flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0);
             setsafetyMode((flags & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0);
-            setaiEnabled((flags & (1 << ConfigFlagsBit::CONFIG_AI_STATUS_ENABLED)) != 0);
             saveAuxillaryOutputPreference(*recpkt->_auxillaryOutputConfig());
 
 

@@ -147,7 +147,7 @@ All responses arrive via characteristic notifications. Use a single callback fun
    - Extract wheel pressures from `args16()[0-3]` (Front Passenger, Rear Passenger, Front Driver, Rear Driver)
    - Extract tank pressure from `args16()[4]`
    - Extract AI percentage from `args8()[10]`
-   - Extract AI ready bitset from `args8()[11]`
+   - `args8()[11]` is reserved (formerly AI ready bitset; removed in manifold schema 5) and reads 0
    - Extract status bitset from `args32()[3]` and parse individual flags
 4. Update your application state/UI with the new values
 
@@ -485,7 +485,10 @@ StartwebPacket packet("MyWiFi", "password123");
 - `args8()[12+5]`: `uint8_t rfButtonB` - RF button B preset assignment (read-only)
 - `args8()[12+6]`: `uint8_t rfButtonC` - RF button C preset assignment (read-only)
 - `args8()[12+7]`: `uint8_t rfButtonD` - RF button D preset assignment (read-only)
-- `args8()[12+8]`: reserved (formerly `heightSensorInvertBits`) - unused; height sensor inversion is now auto-detected on the manifold. Byte kept reserved for compatibility with older firmware/app versions.
+- `args8()[12+8]`: `uint8_t AirUpBagStretchTriggerBelowPressure` - Air up bag stretch trigger pressure
+- `args8()[12+9]`: `uint8_t AirUpBagStretchPressure` - Air up bag stretch pressure
+- `args8()[12+10]`: `uint8_t compressorCrankOffset` - Seconds the compressor is held off after accessory power arrives (default 5)
+- `args32()[6]`: `AuxillaryOutputModePayload auxillaryOutputConfig` - Auxillary output mode/timeUnit/time/interval (4 bytes)
 
 **ConfigFlagsBit** (bits in `configFlagsBits`): Bit 0 = CONFIG_MAINTAIN_PRESSURE, 1 = CONFIG_RISE_ON_START, 2 = CONFIG_AIR_OUT_ON_SHUTOFF, 3 = CONFIG_HEIGHT_SENSOR_MODE, 4 = CONFIG_SAFETY_MODE, 5 = CONFIG_AI_STATUS_ENABLED.
 
@@ -644,8 +647,8 @@ RfCommandPacket packet(RF_COMMAND_BUTTON_ASSIGN, RF_BUTTON_A, 2); // Assign butt
 - `args16()[2]`: `uint16_t` - Front Driver pressure (PSI)
 - `args16()[3]`: `uint16_t` - Rear Driver pressure (PSI)
 - `args16()[4]`: `uint16_t` - Tank pressure (PSI)
-- `args8()[10]`: `uint8_t` - AI percentage
-- `args8()[11]`: `uint8_t` - AI ready bitset
+- `args8()[10]`: `uint8_t` - AI percentage (0-100). Progress toward full AI-weighted valve timing: 100% once every model has `AI_LEARN_RATIO_NUM` (150) samples, i.e. the AI is fully driving. Not progress toward the `LEARN_SAVE_COUNT` (300) collection ceiling. As of manifold schema 5.
+- `args8()[11]`: `uint8_t` - reserved, always 0 (formerly AI ready bitset; removed in manifold schema 5, which blends the AI in gradually by `trainedSampleCount` rather than exposing a per-model ready flag). Byte kept for wire compatibility.
 - `args32()[3]`: `uint32_t` - Status bitset (see below)
 
 **Status Bitset Flags** (bits in `args32()[3]`). Only live status flags; user-config toggles (maintain pressure, rise on start, etc.) are in `ConfigValuesPacket` as `configFlagsBits`.
@@ -656,6 +659,7 @@ RfCommandPacket packet(RF_COMMAND_BUTTON_ASSIGN, RF_BUTTON_A, 2); // Assign butt
 - Bit 3: `TIMER_STATUS_EXPIRED` - Keep-alive timer expired (StatusPacketBittset::TIMER_STATUS_EXPIRED = 3)
 - Bit 4: `CLOCK` - Toggles every 250ms (StatusPacketBittset::CLOCK = 4)
 - Bit 5: `EBRAKE_STATUS_ON` - Emergency brake is on (StatusPacketBittset::EBRAKE_STATUS_ON = 5)
+- Bit 6: `ADJUSTMENT_IN_PROGRESS` - A corner is actively filling/dumping to a target, i.e. `isAnyWheelActive()` (StatusPacketBittset::ADJUSTMENT_IN_PROGRESS = 6)
 
 **Parsing Example**:
 
@@ -895,7 +899,7 @@ void notifyCallback(BLERemoteCharacteristic* pBLERemoteCharacteristic,
         // Update status bits
         statusBittset = status->args32()[3].i;
         AIPercentage = status->args8()[10].i;
-        AIReadyBittset = status->args8()[11].i;
+        // args8()[11] is reserved (formerly AI ready bitset) and reads 0
 
         // Check individual status flags (live status only; user config from GETCONFIGVALUES)
         bool compressorOn = (statusBittset >> StatusPacketBittset::COMPRESSOR_STATUS_ON) & 1;
@@ -1047,7 +1051,8 @@ enum StatusPacketBittset {
     ACC_STATUS_ON = 2,
     TIMER_STATUS_EXPIRED = 3,
     CLOCK = 4,
-    EBRAKE_STATUS_ON = 5
+    EBRAKE_STATUS_ON = 5,
+    ADJUSTMENT_IN_PROGRESS = 6
 };
 
 enum ConfigFlagsBit {
