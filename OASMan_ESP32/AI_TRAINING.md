@@ -63,9 +63,9 @@ Every valve close logs one sample: the last **flowing** readings while the valve
 `settled_bag − raw_bag`). Two triggers, one sink (`recordLearnSample` → SPIFFS + RAM):
 
 - **Preset / maintain moves** — `goalRoutine` logs on close (after the direction's settle time).
-- **Manual moves** (BLE valveControlBittset / gamepad) — `Wheel::captureManualOffsetSample`
-  (`LOG_MANUAL_OFFSET_SAMPLES`) watches this corner's valve state each `Wheel::loop` tick, caching the
-  flowing readings while open and logging after the settle on close.
+- **Manual moves** (BLE valveControlBittset / gamepad) — `Wheel::captureManualOffsetSample` watches this
+  corner's valve state each `Wheel::loop` tick, caching the flowing readings while open and logging after
+  the settle on close. Always on (it only runs when no goal routine is active, and never in height mode).
 
 Closes happen near goal, so samples concentrate where stopping accuracy matters. The
 `BEGIN/END IMPORTANT DATA FOR PRO` serial dump prints every stored sample for offline analysis.
@@ -138,7 +138,7 @@ the next refit.
 `pressureMath.h`: `ML_OFFSET_NORM` (100), `ML_FIT_RIDGE`, `ML_FIT_MIN_SAMPLES` (25), `ML_NUM_COEFF` (3),
 `ML_SAMPLE_RECORD_VERSION`. `user_defines.h`: `LEARN_SAVE_COUNT` (300), `OFFSET_DEFAULT_PSI` (5),
 `OFFSET_FADE_MIN` (25), `AI_LEARN_RATIO_NUM` (150), `PRESSURE_DEADBAND_PSI` (0), `LEVEL_DEADBAND_PERCENTAGE`
-(1), `LOG_MANUAL_OFFSET_SAMPLES`, `SAMPLE_DEDUP_PSI` (1), `FINAL_RECHECK_ROUNDS` (4). Settled read:
+(1), `SAMPLE_DEDUP_PSI` (1), `FINAL_RECHECK_ROUNDS` (4). Settled read:
 `SETTLE_STABLE_MS` (100), `SETTLE_STABLE_BAND_PSI` (1),
 `SETTLE_STABLE_BAND_LEVEL` (2), `SETTLE_MAX_WAIT_MS` (1500); `OFFSET_SAMPLE_SETTLE_MS`/`_DOWN_MS` are now
 only for the manual-move capture. Fine phase: `FINE_PULSE_THRESHOLD_PSI` (5), `FINE_PULSE_MS_PER_PSI` (5),

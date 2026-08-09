@@ -172,8 +172,9 @@ faded linearly into the trained model between `OFFSET_FADE_MIN` (25) and `AI_LEA
 samples.
 
 **Sample collection:** every *coarse* close logs `{flowing bag, settled bag, flowing tank}` (the
-settled label comes from the stability-gated read). Manual up/down moves also log (via
-`captureManualOffsetSample`). **Fine bursts are deliberately NOT logged** — near-goal air-out samples
+settled label comes from the stability-gated read). Manual up/down moves also always log (via
+`captureManualOffsetSample`, which is skipped while a goal routine runs and in height mode — there is
+no on/off flag for it). **Fine bursts are deliberately NOT logged** — near-goal air-out samples
 are exactly the blind-spot data (±9 psi label scatter) that poisons the fit. `SAMPLE_DEDUP_PSI` (1)
 drops a sample within 1 psi (flowing AND settled) of the previous stored one, killing the long
 runs of near-identical samples a single preset move produces (measured: up to 18 in a row, 15–25% of
@@ -222,7 +223,7 @@ All in `user_defines.h`. What to touch for which symptom:
 | Fine phase too slow / too many bursts | `FINE_PULSE_MS_PER_PSI` up (aim: one burst ≈ half the gap) |
 | Coarse hands off too early/late | `FINE_PULSE_THRESHOLD_PSI` |
 | Verify reads look wrong on air-out | `SETTLE_STABLE_MS` up / `SETTLE_STABLE_BAND_PSI` down (`SETTLE_MAX_WAIT_MS` is the ceiling) |
-| Samples accumulate too slowly | `SAMPLE_DEDUP_PSI` down (min 0 = off), `LOG_MANUAL_OFFSET_SAMPLES` |
+| Samples accumulate too slowly | `SAMPLE_DEDUP_PSI` down (min 0 = off) |
 | Model trusted too soon/late | `OFFSET_FADE_MIN`, `AI_LEARN_RATIO_NUM` |
 | Untrained behavior off | `OFFSET_DEFAULT_PSI` (flat ±psi before training) |
 

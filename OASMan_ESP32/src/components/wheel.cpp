@@ -751,7 +751,6 @@ void Wheel::loop()
     this->captureManualOffsetSample();
 }
 
-#if LOG_MANUAL_OFFSET_SAMPLES
 // Log an offset sample from a MANUAL valve move (BLE valveControlBittset / gamepad): cache the flowing
 // readings while the valve is open, then log the settled bag after it closes. Only runs when no goal
 // routine is active and never in height mode. See AI_TRAINING.md.
@@ -793,6 +792,3 @@ void Wheel::captureManualOffsetSample()
         manualSettleUntil = 0;
     }
 }
-#else
-void Wheel::captureManualOffsetSample() {}
-#endif
