@@ -5,24 +5,35 @@
 
 // ---------- Board-specific config (adjust these as needed) ----------
 
-// GPIO used for the front-panel power button
-#ifndef PWR_KEY_PIN
-#define PWR_KEY_PIN 0    // TODO: set to real button pin for the 3.5" board
+// TCA9554 expander bit carrying the PWR button (schematic EXIO6 / SYS_OUT).
+// The PWR button is not on an MCU GPIO -- see device_lib_exports.h.
+#ifndef PWR_KEY_EXIO_BIT
+#define PWR_KEY_EXIO_BIT 6
+#endif
+
+// PWR button active level: EXIO6 reads HIGH while the button is held
+#ifndef PWR_KEY_ACTIVE_LOW
+#define PWR_KEY_ACTIVE_LOW 0
+#endif
+
+// BOOT button GPIO -- the only button on an MCU pin, and therefore the only
+// pin usable as an ext0 wake source out of light/deep sleep.
+#ifndef PWR_WAKE_GPIO
+#define PWR_WAKE_GPIO 0
+#endif
+
+#ifndef PWR_WAKE_ACTIVE_LOW
+#define PWR_WAKE_ACTIVE_LOW 1
 #endif
 
 // GPIO that controls the power latch (keeps the board on)
 #ifndef PWR_LATCH_PIN
-#define PWR_LATCH_PIN -1 // -1 = no latch pin / no-op
+#define PWR_LATCH_PIN -1 // -1 = no latch pin / no-op (this board latches via the AXP2101)
 #endif
 
 // Logic level that turns the latch "ON"
 #ifndef PWR_LATCH_ACTIVE_LEVEL
 #define PWR_LATCH_ACTIVE_LEVEL HIGH
-#endif
-
-// Button active level (most boards are active-low)
-#ifndef PWR_KEY_ACTIVE_LOW
-#define PWR_KEY_ACTIVE_LOW 1
 #endif
 
 // ---------- API used by src/waveshare/PWR_Key.cpp ----------
