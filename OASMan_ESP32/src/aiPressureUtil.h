@@ -1,5 +1,5 @@
-#ifndef sampleLoggingUtil_h
-#define sampleLoggingUtil_h
+#ifndef aiPressureUtil_h
+#define aiPressureUtil_h
 
 #include "manifoldSaveData.h"
 

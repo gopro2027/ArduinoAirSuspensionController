@@ -15,9 +15,6 @@ public:
     Preferencable pressure[4]; // byte
 };
 
-// The 4 offset models are RAM-only and re-fit from the stored samples every boot (nothing persisted).
-// Accessor: getOffsetModel(aiIndex). Defined in manifoldSaveData.cpp.
-
 class AuxillaryOutputPreference {
     public:
     Preferencable auxillaryOutputMode; // byte
@@ -128,11 +125,11 @@ PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX aiIndex);
 int getLearnDataLength(SOLENOID_AI_INDEX aiIndex);
 
 void clearPressureData();
-void clearPressureDataSingle(SOLENOID_AI_INDEX index);
 
 // Append one offset sample to the model's SPIFFS file + RAM mirror (the training task re-fits from it).
 void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank);
 
+// The 4 offset models are RAM-only, re-fit from the stored samples every boot (nothing persisted).
 OffsetModel *getOffsetModel(SOLENOID_AI_INDEX aiIndex);
 
 headerDefineSaveFunc(riseOnStart, bool);

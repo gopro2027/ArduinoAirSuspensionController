@@ -1,5 +1,5 @@
 #include "manifoldSaveData.h"
-#include "sampleLoggingUtil.h" // AIPercentage / updateAIPercentage (refit layer over these samples)
+#include "aiPressureUtil.h" // AIPercentage / updateAIPercentage (refit layer over these samples)
 
 SaveData _SaveData;
 // Set by background tasks (e.g. sensorless levelling auto-disable) to ask the BLE task to
@@ -234,24 +234,6 @@ void clearPressureData()
     loadAILearnedDataPreferences();
 }
 
-void clearPressureDataSingle(SOLENOID_AI_INDEX index)
-{
-    if (learnDataMutex != NULL)
-    {
-        while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
-        {
-            delay(1);
-        }
-    }
-    deleteFile(getLogFileName(index));
-    learnDataIndex[index] = 0;
-    if (learnDataMutex != NULL)
-    {
-        xSemaphoreGive(learnDataMutex);
-    }
-    updateAIPercentage();
-}
-
 // Once a model's file is full we simply stop collecting (the fit from LEARN_SAVE_COUNT samples is plenty).
 void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank)
 {
@@ -275,6 +257,11 @@ void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settl
     if (*size < LEARN_SAVE_COUNT)
     {
         PressureLearnSaveStruct *pls = getLearnData(aiIndex);
+        if (pls == nullptr)
+        {
+            xSemaphoreGive(learnDataMutex);
+            return; // row failed to allocate at boot; skip logging rather than dereference null
+        }
         // De-dup: skip a sample within SAMPLE_DEDUP_PSI of the previous stored one (a preset move closes
         // the valve many times, which would log long runs of near-identical samples). See AI_TRAINING.md.
         if (*size > 0 &&
