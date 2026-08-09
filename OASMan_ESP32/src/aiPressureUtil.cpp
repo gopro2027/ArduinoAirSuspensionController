@@ -1,4 +1,212 @@
 #include "aiPressureUtil.h"
+#include "manifoldSaveData.h" // _SaveData.mlSampleRecord (the on-disk sample layout version)
+#include "sampleReading.tcc"  // readBytes / writeBytes / deleteFile
+
+#pragma region sample_store
+
+static int learnDataIndex[4];
+// Heap-allocated lazily in loadSamples. beginSaveData() returns before setupPressureSamples() in
+// OTA/update mode, so this is never allocated during an OTA. Each row holds LEARN_SAVE_COUNT samples.
+static PressureLearnSaveStruct *learnData[4] = {nullptr, nullptr, nullptr, nullptr};
+static SemaphoreHandle_t learnDataMutex;
+
+// The 4 offset models (RAM only). up=false for the two dump models is set in loadSamples.
+static OffsetModel offsetModels[4];
+
+// Block until the learn-data lock is held (no-op if the mutex does not exist yet).
+static void learnDataLock()
+{
+    if (learnDataMutex == NULL)
+    {
+        return;
+    }
+    while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
+    {
+        delay(1);
+    }
+}
+
+static void learnDataUnlock()
+{
+    if (learnDataMutex != NULL)
+    {
+        xSemaphoreGive(learnDataMutex);
+    }
+}
+
+OffsetModel *getOffsetModel(SOLENOID_AI_INDEX index)
+{
+    return &offsetModels[index];
+}
+
+PressureLearnSaveStruct *getLearnData(SOLENOID_AI_INDEX index)
+{
+    return learnData[index];
+}
+
+int getLearnDataLength(SOLENOID_AI_INDEX index)
+{
+    return learnDataIndex[index];
+}
+
+static const char *getLogFileName(SOLENOID_AI_INDEX index)
+{
+    switch (index)
+    {
+    case SOLENOID_AI_INDEX::AI_MODEL_UP_FRONT:
+        return "/UpDataF.dat";
+    case SOLENOID_AI_INDEX::AI_MODEL_UP_REAR:
+        return "/UpDataR.dat";
+    case SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT:
+        return "/DownDataF.dat";
+    case SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR:
+        return "/DownDataR.dat";
+    default:
+        return nullptr; // AI_MODEL_UNDEFINED: no file to log to
+    }
+}
+
+static void initDataFile(SOLENOID_AI_INDEX index)
+{
+    Serial.print(getLogFileName(index));
+    Serial.print(" (");
+
+    PressureLearnSaveStruct *pls = getLearnData(index);
+    int size = getLearnDataLength(index);
+    Serial.print(size);
+    Serial.println("):");
+
+    for (int i = 0; i < size; i++)
+    {
+        pls[i].print();
+        Serial.print(", ");
+    }
+    Serial.println();
+}
+
+// Allocate the rows if needed, read the stored samples off SPIFFS, and dump them over serial.
+static void loadSamples()
+{
+    for (int i = 0; i < 4; i++)
+    {
+        if (learnData[i] == nullptr)
+        {
+            learnData[i] = (PressureLearnSaveStruct *)malloc(LEARN_SAVE_COUNT * sizeof(PressureLearnSaveStruct));
+            if (learnData[i] == nullptr)
+            {
+                Serial.print("FATAL: failed to allocate learnData row ");
+                Serial.println(i);
+                learnDataIndex[i] = 0;
+                continue;
+            }
+        }
+        learnDataIndex[i] = readBytes(getLogFileName((SOLENOID_AI_INDEX)i), learnData[i], LEARN_SAVE_COUNT * sizeof(PressureLearnSaveStruct)) / sizeof(PressureLearnSaveStruct);
+        // Weights are not persisted; they start at zero and the training task re-fits them from these
+        // samples (the fade uses the constant default until there are enough). See AI_TRAINING.md.
+    }
+
+    offsetModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_FRONT].up = false;
+    offsetModels[SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR].up = false;
+
+    for (int i = 0; i < 10; i++)
+        Serial.println("");
+    Serial.println("BEGIN IMPORTANT DATA FOR PRO");
+    Serial.println(sizeof(PressureLearnSaveStruct));
+    for (int i = 0; i < 4; i++)
+    {
+        initDataFile((SOLENOID_AI_INDEX)i);
+    }
+    Serial.println("END IMPORTANT DATA FOR PRO");
+    for (int i = 0; i < 10; i++)
+        Serial.println("");
+}
+
+void setupPressureSamples()
+{
+    loadSamples();
+
+    learnDataMutex = xSemaphoreCreateMutex();
+
+    // One AI version: the on-disk sample layout. A change wipes samples (weights are never persisted;
+    // they are re-fit from the samples each boot). See "Schema migration" in AI_TRAINING.md.
+    _SaveData.mlSampleRecord.load("mlSampleRec", 0);
+    if (_SaveData.mlSampleRecord.get().i != ML_SAMPLE_RECORD_VERSION)
+    {
+        Serial.print("AI sample record layout changed to ");
+        Serial.print(ML_SAMPLE_RECORD_VERSION);
+        Serial.println(", clearing stored samples");
+        clearPressureData();
+        _SaveData.mlSampleRecord.set(ML_SAMPLE_RECORD_VERSION);
+    }
+}
+
+void clearPressureData()
+{
+    // Called from the BLE task while wheel tasks may be inside recordLearnSample, so hold the lock
+    // across the wipe or a sample can land after the index reset and desync it from the file.
+    learnDataLock();
+    for (int i = 0; i < 4; i++)
+    {
+        deleteFile(getLogFileName((SOLENOID_AI_INDEX)i));
+        learnDataIndex[i] = 0;
+        for (int c = 0; c < ML_NUM_COEFF; c++)
+        {
+            offsetModels[i].w[c] = 0;
+        }
+    }
+    AIPercentage = 0;
+    learnDataUnlock();
+
+    loadSamples(); // re-read (now empty) + dump over serial to confirm the wipe
+}
+
+// Once a model's file is full we simply stop collecting (the fit from LEARN_SAVE_COUNT samples is plenty).
+void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settled_bag, uint8_t raw_tank)
+{
+    int *size = &learnDataIndex[aiIndex];
+
+    if (*size >= LEARN_SAVE_COUNT)
+    {
+        return;
+    }
+
+    learnDataLock();
+
+    // Both front wheels share AI_MODEL_UP_FRONT (and both rears share AI_MODEL_UP_REAR), so two wheel tasks can land here at the same time. This is the size check that actually matters since it is inside the semaphore now and safe
+    if (*size < LEARN_SAVE_COUNT)
+    {
+        PressureLearnSaveStruct *pls = getLearnData(aiIndex);
+        if (pls == nullptr)
+        {
+            learnDataUnlock();
+            return; // row failed to allocate at boot; skip logging rather than dereference null
+        }
+        // De-dup: skip a sample within SAMPLE_DEDUP_PSI of the previous stored one (a preset move closes
+        // the valve many times, which would log long runs of near-identical samples). See AI_TRAINING.md.
+        if (*size > 0 &&
+            abs((int)raw_bag - (int)pls[*size - 1].raw_bag) <= SAMPLE_DEDUP_PSI &&
+            abs((int)settled_bag - (int)pls[*size - 1].settled_bag) <= SAMPLE_DEDUP_PSI)
+        {
+            learnDataUnlock();
+            return; // near-duplicate of the last stored sample -> don't log
+        }
+        pls[*size].raw_bag = raw_bag;
+        pls[*size].settled_bag = settled_bag;
+        pls[*size].raw_tank = raw_tank;
+
+        writeBytes(getLogFileName(aiIndex), &pls[*size], sizeof(PressureLearnSaveStruct), "a");
+
+        *size = *size + 1;
+    }
+
+    learnDataUnlock();
+
+    updateAIPercentage();
+}
+
+#pragma endregion
+
+#pragma region training
 
 uint8_t AIPercentage = 0;
 
@@ -79,3 +287,5 @@ double getPredictedBagHeight(double raw_level)
 {
     return raw_level;
 }
+
+#pragma endregion
