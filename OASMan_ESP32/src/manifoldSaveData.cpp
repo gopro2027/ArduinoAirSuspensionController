@@ -10,15 +10,35 @@ void requestSendConfigBT()
     sendConfigBT = true;
 }
 
-int learnDataIndex[4];
+static int learnDataIndex[4];
 // Heap-allocated lazily in loadAILearnedDataPreferences. beginSaveData() returns before that call
 // in OTA/update mode, so this is never allocated during an OTA. Each row holds LEARN_SAVE_COUNT samples.
-PressureLearnSaveStruct *learnData[4] = {nullptr, nullptr, nullptr, nullptr};
+static PressureLearnSaveStruct *learnData[4] = {nullptr, nullptr, nullptr, nullptr};
 static SemaphoreHandle_t learnDataMutex;
 
 // The 4 offset models (RAM only). up=false for the two dump models is set in loadAILearnedDataPreferences.
 static OffsetModel offsetModels[4];
 
+// Block until the learn-data lock is held (no-op if the mutex does not exist yet).
+static void learnDataLock()
+{
+    if (learnDataMutex == NULL)
+    {
+        return;
+    }
+    while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
+    {
+        delay(1);
+    }
+}
+
+static void learnDataUnlock()
+{
+    if (learnDataMutex != NULL)
+    {
+        xSemaphoreGive(learnDataMutex);
+    }
+}
 
 OffsetModel *getOffsetModel(SOLENOID_AI_INDEX index)
 {
@@ -35,7 +55,7 @@ int getLearnDataLength(SOLENOID_AI_INDEX index)
     return learnDataIndex[index];
 }
 
-const char *getLogFileName(SOLENOID_AI_INDEX index)
+static const char *getLogFileName(SOLENOID_AI_INDEX index)
 {
     switch (index)
     {
@@ -47,10 +67,12 @@ const char *getLogFileName(SOLENOID_AI_INDEX index)
         return "/DownDataF.dat";
     case SOLENOID_AI_INDEX::AI_MODEL_DOWN_REAR:
         return "/DownDataR.dat";
+    default:
+        return nullptr; // AI_MODEL_UNDEFINED: no file to log to
     }
 }
 
-void initDataFile(SOLENOID_AI_INDEX index)
+static void initDataFile(SOLENOID_AI_INDEX index)
 {
     Serial.print(getLogFileName(index));
     Serial.print(" (");
@@ -68,29 +90,7 @@ void initDataFile(SOLENOID_AI_INDEX index)
     Serial.println();
 }
 
-#define LOG_DATA_SIZE 2000
-#define LOG_FILE_NAME "/log.txt"
-void setupSpiffsLog()
-{
-    // char data[LOG_DATA_SIZE];
-    // memset(data,0,LOG_DATA_SIZE);
-    // int size = readBytes(LOG_FILE_NAME, data, LOG_DATA_SIZE);
-    // if (size > LOG_DATA_SIZE) {
-    //     //deleteFile(LOG_FILE_NAME);
-    // }
-    // if (size > 0) {
-    //     Serial.println("\n\nSPIFFS DATA LOG:\n");
-    //     Serial.println(data);
-    //     Serial.println("\nEND SPIFFS DATA LOG\n\n");
-    // }
-}
-
-void writeToSpiffsLog(char *text)
-{
-    // writeBytes(LOG_FILE_NAME, text, strlen(text), "a");
-}
-
-void loadAILearnedDataPreferences()
+static void loadAILearnedDataPreferences()
 {
     // load the 4 models and learn data
     for (int i = 0; i < 4; i++)
@@ -221,6 +221,9 @@ void beginSaveData()
 
 void clearPressureData()
 {
+    // Called from the BLE task while wheel tasks may be inside recordLearnSample, so hold the lock
+    // across the wipe or a sample can land after the index reset and desync it from the file.
+    learnDataLock();
     for (int i = 0; i < 4; i++)
     {
         deleteFile(getLogFileName((SOLENOID_AI_INDEX)i));
@@ -231,7 +234,9 @@ void clearPressureData()
         }
     }
     AIPercentage = 0;
-    loadAILearnedDataPreferences();
+    learnDataUnlock();
+
+    loadAILearnedDataPreferences(); // re-read (now empty) + dump over serial to confirm the wipe
 }
 
 // Once a model's file is full we simply stop collecting (the fit from LEARN_SAVE_COUNT samples is plenty).
@@ -244,14 +249,7 @@ void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settl
         return;
     }
 
-    if (learnDataMutex == NULL)
-    {
-        return;
-    }
-    while (xSemaphoreTake(learnDataMutex, 1) != pdTRUE)
-    {
-        delay(1);
-    }
+    learnDataLock();
 
     // Both front wheels share AI_MODEL_UP_FRONT (and both rears share AI_MODEL_UP_REAR), so two wheel tasks can land here at the same time. This is the size check that actually matters since it is inside the semaphore now and safe
     if (*size < LEARN_SAVE_COUNT)
@@ -259,8 +257,8 @@ void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settl
         PressureLearnSaveStruct *pls = getLearnData(aiIndex);
         if (pls == nullptr)
         {
-            xSemaphoreGive(learnDataMutex);
-            return; // row failed to allocate at boot; skip logging rather than dereference null
+            learnDataUnlock();
+            return;// row failed to allocate at boot; skip logging rather than dereference null
         }
         // De-dup: skip a sample within SAMPLE_DEDUP_PSI of the previous stored one (a preset move closes
         // the valve many times, which would log long runs of near-identical samples). See AI_TRAINING.md.
@@ -268,8 +266,8 @@ void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settl
             abs((int)raw_bag - (int)pls[*size - 1].raw_bag) <= SAMPLE_DEDUP_PSI &&
             abs((int)settled_bag - (int)pls[*size - 1].settled_bag) <= SAMPLE_DEDUP_PSI)
         {
-            xSemaphoreGive(learnDataMutex);
-            return; // near-duplicate of the last stored sample -> don't log
+            learnDataUnlock();
+            return;// near-duplicate of the last stored sample -> don't log
         }
         pls[*size].raw_bag = raw_bag;
         pls[*size].settled_bag = settled_bag;
@@ -280,7 +278,7 @@ void recordLearnSample(SOLENOID_AI_INDEX aiIndex, uint8_t raw_bag, uint8_t settl
         *size = *size + 1;
     }
 
-    xSemaphoreGive(learnDataMutex);
+    learnDataUnlock();
 
     updateAIPercentage();
 }

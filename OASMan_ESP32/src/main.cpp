@@ -16,8 +16,6 @@
 
 extern bool ADS1115D_exists;
 
-void setupSpiffsLog();
-void writeToSpiffsLog(char *text);
 // #define FORCE_UPDATE_TEST
 void setup()
 {
@@ -48,8 +46,6 @@ void setup()
     delay(100);
     ESP.restart();
 #endif
-
-    setupSpiffsLog();
 
     // clearPressureData();
 

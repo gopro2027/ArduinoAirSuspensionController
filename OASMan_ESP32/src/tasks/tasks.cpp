@@ -5,8 +5,6 @@
 
 bool bp32ServiceStarted = false;
 
-void writeToSpiffsLog(char *text);
-
 void task_bluetooth(void *parameters)
 {
     delay(200); // just wait a moment i guess this is legacy
