@@ -449,22 +449,6 @@ void ScrSettings::init(lv_obj_t *parent)
     // --- Basic settings page ---
     lv_obj_t *basic_settings_page = this->addSettingsPage(pages_container, true);
 
-    // ML/AI rows (moved here from the retired ML/AI page)
-    this->ui_aiPercentage = new Option(basic_settings_page, OptionType::TEXT_WITH_VALUE, "Learn Progress:", {.STRING = test});
-
-    allOptions.push_back(new Option(basic_settings_page, OptionType::BUTTON, "Reset Learned Data", {.STRING = test}, [](void *data)
-    {
-        currentScr->showMsgBox("Reset Learned AI data?", "Run this if ai has completed training and you are getting innacurate presets.",
-            "Confirm", "Cancel",
-            []() -> void
-            {
-                ResetAIPacket pkt;
-                sendRestPacket(&pkt);
-                log_i("Pressed reset ai");
-            },
-            []() -> void {}, false);
-    }));
-
     this->ui_maintainprssure = new Option(basic_settings_page, OptionType::ON_OFF, "Maintain Pressure", {.INT = 0}, maintain_pressure_handler);
     this->ui_sensorlessleveling = new Option(basic_settings_page, OptionType::ON_OFF, "Height levelling", {.INT = 0}, sensorless_leveling_handler);
     this->ui_riseonstart = new Option(basic_settings_page, OptionType::ON_OFF, "Rise on start", {.INT = 0}, rise_on_start_handler);
@@ -547,6 +531,22 @@ void ScrSettings::init(lv_obj_t *parent)
         sendRestPacket(&pkt);
     });
     ((Option *)this->ui_rfbuttonD)->setSliderParams(1, 5, true, LV_EVENT_RELEASED);
+
+    // ML/AI rows (moved here from the retired ML/AI page; kept at the very end of Basic settings)
+    this->ui_aiPercentage = new Option(basic_settings_page, OptionType::TEXT_WITH_VALUE, "Sample Learn Progress:", {.STRING = test});
+
+    allOptions.push_back(new Option(basic_settings_page, OptionType::BUTTON, "Reset Learned Data", {.STRING = test}, [](void *data)
+    {
+        currentScr->showMsgBox("Reset Learned AI data?", "Run this if ai has completed training and you are getting innacurate presets.",
+            "Confirm", "Cancel",
+            []() -> void
+            {
+                ResetAIPacket pkt;
+                sendRestPacket(&pkt);
+                log_i("Pressed reset ai");
+            },
+            []() -> void {}, false);
+    }));
 
     // --- Levelling Mode page ---
     lv_obj_t *levelling_page = this->addSettingsPage(pages_container, true);
