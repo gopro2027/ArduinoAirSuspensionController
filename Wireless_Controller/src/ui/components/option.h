@@ -71,6 +71,8 @@ public:
     static void styleDropdownClosed(lv_obj_t *dd);
     static void styleDropdownList(lv_obj_t *dd);
     void setBooleanValue(bool value, bool netSend = false);
+    void growRowHeightTo(int neededHeight);
+    void fitHeightToWrappedLabel(int labelWidth);
     void indentText(int extraX = 0);
     static void resetHeaderStyle();
 };
