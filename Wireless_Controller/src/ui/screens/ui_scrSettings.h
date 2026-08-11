@@ -53,7 +53,6 @@ public:
     Option *ui_config3;  // Compressor On PSI (textarea)
     Option *ui_config4;  // Compressor Off PSI (textarea)
     Option *ui_config5;  // Pressure Sensor Rating PSI (textarea)
-    Option *ui_config6;  // Bag Volume Percentage (slider)
     Option *ui_config7;  // Bag Stretch Below PSI (textarea)
     Option *ui_config8;  // Bag Stretch PSI (textarea)
     Option *ui_config9;  // Compressor Crank Offset seconds (textarea)
