@@ -1,8 +1,9 @@
 /**
  * OASMan unified OTA worker
  * GET ?firmware=<FIRMWARE_RELEASE_NAME>&tag=<RELEASE_TAG_NAME>
- * - 204 if latest release tag matches tag (already up to date)
+ * - 204 if newest release (for that firmware) tag matches tag (already up to date)
  * - 200 + firmware binary if a newer release is available
+ * - blank/missing tag is treated as outdated (serve the newest matching binary)
  * Deploy as: oasman-ota → http://oasman-ota.gopro2027.workers.dev/
  */
 
@@ -276,10 +277,14 @@ export default {
     if (tag && tag.startsWith('"') && tag.endsWith('"')) {
       tag = tag.slice(1, -1);
     }
+    // Blank tag (test/release builds with empty sysenv.release_tag_name) = outdated.
+    if (tag == null) {
+      tag = '';
+    }
 
-    if (!firmware || !tag) {
+    if (!firmware) {
       return new Response(
-        JSON.stringify({ error: 'Missing required query params: firmware, tag' }),
+        JSON.stringify({ error: 'Missing required query param: firmware' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }

@@ -833,15 +833,6 @@ void ScrSettings::init(lv_obj_t *parent)
         alertValueUpdated();
     });
 
-    this->ui_config6 = new Option(config_page, OptionType::SLIDER, "Bag Volume Percentage", {.INT = 100}, [](void *data)
-    {
-        log_i("Pressed %i", ((uint32_t)data));
-        *util_configValues._bagVolumePercentage() = (uint32_t)data;
-        sendConfigValuesPacket(true);
-        alertValueUpdated();
-    });
-    ((Option *)this->ui_config6)->setSliderParams(10, 600, true, LV_EVENT_RELEASED);
-
     this->ui_config7 = new Option(config_page, OptionType::KEYBOARD_INPUT_NUMBER, "Bag Stretch Below PSI", {.INT = 0}, [](void *data)
     {
         log_i("Pressed %i", ((uint32_t)data));
@@ -1139,7 +1130,6 @@ void ScrSettings::loop()
         this->ui_config3->setRightHandText(itoa(*util_configValues._compressorOnPSI(), buf, 10));
         this->ui_config4->setRightHandText(itoa(*util_configValues._compressorOffPSI(), buf, 10));
         this->ui_config5->setRightHandText(itoa(*util_configValues._pressureSensorMax(), buf, 10));
-        this->ui_config6->setRightHandText(itoa(*util_configValues._bagVolumePercentage(), buf, 10));
         this->ui_config7->setRightHandText(itoa(*util_configValues._AirUpBagStretchTriggerBelowPressure(), buf, 10));
         this->ui_config8->setRightHandText(itoa(*util_configValues._AirUpBagStretchPressure(), buf, 10));
         this->ui_config9->setRightHandText(itoa(*util_configValues._compressorCrankOffset(), buf, 10));
@@ -1212,7 +1202,6 @@ void ScrSettings::cleanup()
     delete ui_config3;
     delete ui_config4;
     delete ui_config5;
-    delete ui_config6;
     delete ui_config7;
     delete ui_config8;
     delete ui_config9;

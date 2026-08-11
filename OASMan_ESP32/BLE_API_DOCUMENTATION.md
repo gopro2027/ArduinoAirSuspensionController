@@ -476,7 +476,7 @@ StartwebPacket packet("MyWiFi", "password123");
 - `args32()[0]`: `uint32_t systemShutoffTimeM` - System shutoff time in minutes
 - `args32()[1]`: `uint32_t configFlagsBits` - User config flags (see ConfigFlagsBit enum)
 - `args16()[4]`: `uint16_t pressureSensorMax` - Maximum pressure sensor value
-- `args16()[5]`: `uint16_t bagVolumePercentage` - Bag volume percentage
+- `args16()[5]`: _retired_ (formerly `bagVolumePercentage`) 
 - `args8()[12+0]`: `uint8_t bagMaxPressure` - Maximum bag pressure
 - `args8()[12+1]`: `uint8_t compressorOnPSI` - Compressor turn-on PSI
 - `args8()[12+2]`: `uint8_t compressorOffPSI` - Compressor turn-off PSI

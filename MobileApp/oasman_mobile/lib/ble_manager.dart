@@ -204,7 +204,6 @@ class BLEManager extends ChangeNotifier {
   int compressorOffPSI = 0;
   int systemShutoffTimeM = 15;
   int pressureSensorMax = 0;
-  int bagVolumePercentage = 0;
   int bagMaxPressure = 0;
   int AirUpBagStretchTriggerBelowPressure = 0;
   int AirUpBagStretchPressure = 0;
@@ -740,7 +739,6 @@ class BLEManager extends ChangeNotifier {
           systemShutoffTimeM = _decodeInt32(data, 4); // args32()[0]
           final configFlagsBits = _decodeInt32(data, 8); // args32()[1]
           pressureSensorMax = _decodeShort(data, 12); // args16()[4]
-          bagVolumePercentage = _decodeShort(data, 14); // args16()[5]
           bagMaxPressure = data[16];
           compressorOnPSI = data[17];
           compressorOffPSI = data[18];
@@ -955,7 +953,6 @@ class BLEManager extends ChangeNotifier {
     _writeInt32Le(args, 0, systemShutoffTimeM);
     _writeInt32Le(args, 4, _buildConfigFlagsBits());
     _writeUint16Le(args, 8, pressureSensorMax);
-    _writeUint16Le(args, 10, bagVolumePercentage);
     args[12] = bagMaxPressure;
     args[13] = compressorOnPSI;
     args[14] = compressorOffPSI;

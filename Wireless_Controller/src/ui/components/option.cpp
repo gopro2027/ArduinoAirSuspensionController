@@ -43,6 +43,34 @@ void Option::resetHeaderStyle()
     styleCreated = false;
 }
 
+// Rows are not scroll containers, so content taller than the row is clipped with no way to reveal
+// it. Grow this one row instead when something in it needs more than the standard row height.
+void Option::growRowHeightTo(int neededHeight)
+{
+    if (this->root == NULL || neededHeight <= this->optionRowHeight)
+        return;
+    this->optionRowHeight = neededHeight;
+    lv_obj_set_height(this->root, this->optionRowHeight);
+}
+
+// Option types that constrain their label's width (so the value widget has room on the right) let a
+// long name wrap onto extra lines, which can be taller than the standard row. `labelWidth` is the
+// width the label was given, ie what the text wraps against.
+void Option::fitHeightToWrappedLabel(int labelWidth)
+{
+    if (this->text == NULL || labelWidth <= 0)
+        return;
+
+    lv_point_t textSize;
+    lv_text_get_size(&textSize, lv_label_get_text(this->text),
+                     lv_obj_get_style_text_font(this->text, LV_PART_MAIN),
+                     lv_obj_get_style_text_letter_space(this->text, LV_PART_MAIN),
+                     lv_obj_get_style_text_line_space(this->text, LV_PART_MAIN),
+                     labelWidth, LV_TEXT_FLAG_NONE);
+
+    this->growRowHeightTo(textSize.y + scaledY(8)); // breathing room above/below the text
+}
+
 void Option::styleDropdownClosed(lv_obj_t *dd)
 {
     lv_obj_set_style_bg_color(dd, lv_color_hex(0x161A1F), LV_PART_MAIN);
@@ -200,6 +228,12 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     createStyle();
     this->root = lv_obj_create(parent);
     lv_obj_remove_style_all(this->root);
+    // A settings row is a fixed-size holder, never a scroll container. Left scrollable (the
+    // lv_obj_create default) a row whose content is taller than it - eg a long option name that
+    // wraps to three lines - would scroll its own content on drag instead of passing the gesture up
+    // to the settings page. findVScrollAncestor() in util.cpp (keyboard-open scrolling) also relies
+    // on rows never being a vertical scroll container.
+    lv_obj_remove_flag(this->root, LV_OBJ_FLAG_SCROLLABLE);
 #ifdef SCREEN_MODE_CIRCLE
     lv_obj_set_size(this->root, LV_PCT(100), this->optionRowHeight);
 #else
@@ -314,6 +348,7 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         const int textAreaWidth = (type == OptionType::KEYBOARD_INPUT_TEXT) ? scaledX(150) : scaledX(70);
         const int textMaxWidth = getScreenWidth() - (MARGIN * 2 + MARGIN + textAreaWidth) - scaledX(6);
         lv_obj_set_width(this->text, textMaxWidth); // space between the start position and the text input
+        this->fitHeightToWrappedLabel(textMaxWidth);
 
         this->rightHandObj = lv_textarea_create(this->root);
         lv_textarea_set_text(this->rightHandObj, (type == OptionType::KEYBOARD_INPUT_TEXT) ? value.STRING : itoa(value.INT, strbuf, 10));
@@ -356,15 +391,20 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
         const int ddLogicalW = (getScreenWidth() * 52) / 100;
         const int textMaxWidth = getScreenWidth() - (MARGIN * 2 + MARGIN + ddLogicalW) - scaledX(6);
         lv_obj_set_width(this->text, textMaxWidth);
+        this->fitHeightToWrappedLabel(textMaxWidth);
 
         this->rightHandObj = lv_dropdown_create(this->root);
         lv_dropdown_set_options(this->rightHandObj, ddOptions != NULL ? ddOptions : "");
         lv_obj_set_width(this->rightHandObj, LV_PCT(52));
 #ifdef SCREEN_MODE_CIRCLE
-        lv_obj_set_height(this->rightHandObj, scaledY(32));
+        const int ddHeight = scaledY(32);
 #else
-        lv_obj_set_height(this->rightHandObj, scaledY(36));
+        const int ddHeight = scaledY(36);
 #endif
+        lv_obj_set_height(this->rightHandObj, ddHeight);
+        // On panels where the row is short relative to scaledY (eg ws3p5) the dropdown is taller
+        // than the standard row; the row has to grow to hold it since it cannot scroll.
+        this->growRowHeightTo(ddHeight + scaledY(6));
         lv_obj_set_align(this->rightHandObj, LV_ALIGN_RIGHT_MID);
         lv_obj_set_x(this->rightHandObj, -MARGIN);
         lv_obj_set_y(this->rightHandObj, 0);
