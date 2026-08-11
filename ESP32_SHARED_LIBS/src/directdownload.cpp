@@ -1,6 +1,11 @@
 #include "directdownload.h"
 
-#ifndef RELEASE_TAG_NAME
+// PlatformIO release envs pass -D RELEASE_TAG_NAME=${sysenv.release_tag_name}.
+// When that env var is unset, the macro is defined but empty — treat like missing.
+#define RELEASE_TAG_NAME_EMPTY_HELPER(x) x##1
+#define RELEASE_TAG_NAME_IS_EMPTY(x) RELEASE_TAG_NAME_EMPTY_HELPER(x)
+#if !defined(RELEASE_TAG_NAME) || (RELEASE_TAG_NAME_IS_EMPTY(RELEASE_TAG_NAME) == 1)
+#undef RELEASE_TAG_NAME
 #define RELEASE_TAG_NAME build-dev
 #endif
 
