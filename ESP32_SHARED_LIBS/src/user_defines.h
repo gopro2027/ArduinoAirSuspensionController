@@ -169,6 +169,8 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 #define outputKeepAlivePin new InputType(12, OUTPUT) // D12, output high while accessory input is low to keep input on. Should always output high while accessory is on. Output low when accessory is low to turn off system.
 #define accessoryInput new InputType(35, INPUT)      // D35 because it's adc1 input only //D14, digital in high or low. 0 = acc on, 1 = acc off (it's on a pullup resistor)
 #define SYSTEM_SHUTOFF_TIME_M 15                     // 15 minutes
+#define bluetoothIgnitionEnabled false               // if true, bluetooth connectivity will be used to determine if the vehicle is on or off.
+                                                     // if false, the accessory wire will be used instead
 
 /* E Brake Wire */
 #define ebrakeInput new InputType(34, INPUT)

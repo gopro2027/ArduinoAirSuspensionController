@@ -1,4 +1,5 @@
 #include "ble.h"
+#include <atomic>
 
 #define ble2_new
 #ifdef ble2_new
@@ -111,13 +112,24 @@ static uint8_t rest_characteristic_data[BTOAS_PACKET_SIZE];
 static uint8_t valve_control_characteristic_data[4]; // 32-bit value
 
 std::set<hci_con_handle_t> authedClients;
+std::atomic<int> bleConnectedClientCount{0};
 bool isAuthed(hci_con_handle_t conn_id)
 {
     return std::find(authedClients.begin(), authedClients.end(), conn_id) != authedClients.end();
 }
 void addAuthed(hci_con_handle_t conn_id)
 {
-    authedClients.insert(conn_id);
+    if (authedClients.insert(conn_id).second) // .second is true only if this was a new entry
+    {
+        bleConnectedClientCount.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+// Returns the number of currently active (authenticated) bluetooth connections.
+// Just a relaxed atomic load - effectively free, safe to call from the compressor loop every tick.
+int getBLEConnectedClientCount()
+{
+    return bleConnectedClientCount.load(std::memory_order_relaxed);
 }
 
 // code for checking if a client auth times out
@@ -175,6 +187,7 @@ void removeAuthed(hci_con_handle_t conn_id)
     {
         log_i("Removing auth from client: %i", conn_id);
         authedClients.erase(index);
+        bleConnectedClientCount.fetch_sub(1, std::memory_order_relaxed);
         index = std::find(authedClients.begin(), authedClients.end(), conn_id);
     }
 
@@ -487,7 +500,7 @@ void ble_setup()
 void ble_loop()
 {
     static int prevConnectedCount = -1;
-    int connectedCount = authedClients.size();
+    int connectedCount = getBLEConnectedClientCount();
     if (connectedCount != prevConnectedCount)
     {
         Serial.printf("connectedCount: %d\n", connectedCount);
