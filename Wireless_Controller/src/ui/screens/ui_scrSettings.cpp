@@ -70,6 +70,9 @@ static void alignWifiSsidList(lv_obj_t *dropdown)
 }
 
 // Current page tracking
+// The sensor-mode radio, so its capture-less option callback can revert the selection if the user
+// cancels the "AI data will be deleted" confirmation. Re-pointed on every screen construction.
+static RadioOption *s_heightSensorModeRadio = NULL;
 static lv_obj_t *current_page = NULL;
 static int saved_page_index = 0;  // Remember page selection across reinits
 static lv_obj_t *menu_container = NULL;
@@ -540,7 +543,7 @@ void ScrSettings::init(lv_obj_t *parent)
 
     allOptions.push_back(new Option(basic_settings_page, OptionType::BUTTON, "Reset Learned Data", {.STRING = test}, [](void *data)
     {
-        currentScr->showMsgBox("Reset Learned AI data?", "Run this if ai has completed training and you are getting innacurate presets.",
+        currentScr->showMsgBox("Reset Learned data?", "Run this if you are getting innacurate presets.",
             "Confirm", "Cancel",
             []() -> void
             {
@@ -555,11 +558,32 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_t *levelling_page = this->addSettingsPage(pages_container, true);
 
     const char *levelTypeRadioText[2] = {"Pressure Sensor", "Level Sensor"};
+    // The manifold only keeps AI training data for one sensor mode, so switching wipes it (see
+    // setheightSensorMode in manifoldSaveData.cpp). Confirm before sending. This only fires on a real user
+    // tap -- RadioOption::setSelectedOption returns early when the value is unchanged, and the config-echo
+    // path below calls it with callOnSelect = false.
     option_event_cb_t levelTypeRadioCB = [](void *data)
     {
-        setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE, ((bool)data));
+        const bool wantHeightMode = ((bool)data);
+        currentScr->showMsgBox("Change Sensor Mode?",
+            "Learned data will be deleted.",
+            "OK", "Cancel",
+            [wantHeightMode]() -> void
+            {
+                setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE, wantHeightMode);
+            },
+            [wantHeightMode]() -> void
+            {
+                // Cancelled: the radio already moved itself, so put the selection back.
+                if (s_heightSensorModeRadio != nullptr)
+                {
+                    s_heightSensorModeRadio->setSelectedOption(wantHeightMode ? 0 : 1);
+                }
+            }, true); // forceButtonPress: a tap-outside dismiss runs NEITHER callback, which would strand
+                      // the radio on the new mode while nothing was actually sent to the manifold.
     };
     this->ui_heightsensormode = new RadioOption(levelling_page, levelTypeRadioText, 2, levelTypeRadioCB);
+    s_heightSensorModeRadio = this->ui_heightsensormode;
 
     this->ui_calibrateMinHeight = new Option(levelling_page, OptionType::BUTTON, "Calibrate Min Height", {.STRING = test}, [](void *data)
     {
@@ -1194,6 +1218,7 @@ void ScrSettings::cleanup()
 #endif
     delete ui_safetymode;
     delete ui_heightsensormode;
+    s_heightSensorModeRadio = NULL;
     delete ui_calibrateMinHeight;
     delete ui_calibrateMaxHeight;
     delete ui_calibrateMinRideHeight;

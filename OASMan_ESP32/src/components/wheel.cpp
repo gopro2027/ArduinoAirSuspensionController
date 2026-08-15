@@ -569,19 +569,17 @@ void Wheel::goalRoutine() {
         // the shared manifold in pressure mode, through the chassis in level mode), so with everyone idle,
         // re-read and re-correct for FINAL_RECHECK_ROUNDS synchronized rounds (a barrier per round keeps the
         // reads clean). See AI_TRAINING.md.
+        const ModeTuning modeTune = getModeTuning(getheightSensorMode());
+        for (int rc = 0; rc < FINAL_RECHECK_ROUNDS; rc++)
         {
-            const ModeTuning modeTune = getModeTuning(getheightSensorMode());
-            for (int rc = 0; rc < FINAL_RECHECK_ROUNDS; rc++)
+            double trueVal = this->waitForStableReading(modeTune.settleBand);
+            if (abs(this->pressureGoal - (int)lround(trueVal)) > modeTune.deadband)
             {
-                double trueVal = this->waitForStableReading(modeTune.settleBand);
-                if (abs(this->pressureGoal - (int)lround(trueVal)) > modeTune.deadband)
-                {
-                    this->achieveFineGoal();
-                }
-                getInSolenoid()->close();
-                getOutSolenoid()->close();
-                goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS); // re-sync (all idle) before the next round's read
+                this->achieveFineGoal();
             }
+            getInSolenoid()->close();
+            getOutSolenoid()->close();
+            goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS); // re-sync (all idle) before the next round's read
         }
 
         // goalRoutine blocks this thread, so reset sensorless baseline / instability manually.
