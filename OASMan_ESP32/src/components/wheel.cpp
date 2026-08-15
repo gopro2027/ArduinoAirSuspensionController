@@ -440,11 +440,10 @@ bool Wheel::achieveFineGoal()
 }
 
 // Coarse closed-loop control shared by pressure and level mode: commit a direction from the true
-// (valve-closed) reading, hold the valve open while a predictor recovers the true value from the live
-// reading, close at goal, settle, and re-decide (bidirectional). Near goal BOTH modes hand off to
-// achieveFineGoal for the exact landing. Only pressure mode has a learned model (and logs samples) --
-// the level sensor already reads true during flow, so its predictor is an identity stub and the fine
-// phase is what buys it precision. Full design: AI_TRAINING.md.
+// (valve-closed) reading, hold the valve open while the learned model recovers the true value from the
+// live reading, close at goal, settle, and re-decide (bidirectional). Near goal it hands off to
+// achieveFineGoal for the exact landing. Both modes learn and predict through the same 4 models -- the
+// stored samples just hold height % instead of psi while in level mode. Full design: AI_TRAINING.md.
 void Wheel::goalRoutine() {
     if (flagStartPressureGoalRoutine[thisWheelNum].load())
     {
@@ -507,9 +506,8 @@ void Wheel::goalRoutine() {
             // Coarse drive: hold the valve open and recover the true value from the live reading; stop when
             // it reaches goal.
             double raw = this->getSelectedInputValue();
-            double rawTank = heightMode ? 0.0 : getCompressor()->readTankPressureNow(); // pressure-model feature only
-            double actual = heightMode ? getPredictedBagHeight(raw)
-                                       : getPredictedBagPressure(aiIndex, raw, rawTank);
+            double rawTank = getCompressor()->readTankPressureNow();
+            double actual = getPredictedBagPressure(aiIndex, raw, rawTank);
 
             bool reached = (dir == FLOW_UP) ? (actual >= this->pressureGoal - modeTune.deadband)
                                             : (actual <= this->pressureGoal + modeTune.deadband);
@@ -520,7 +518,7 @@ void Wheel::goalRoutine() {
             if (reached || overCeiling)
             {
                 valve->close();
-                // remember the flowing readings for the offset sample logged after the settle (pressure mode)
+                // remember the flowing readings for the offset sample logged after the settle
                 sampleRawBag = (uint8_t)lround(raw);
                 sampleRawTank = (uint8_t)lround(rawTank);
                 if (overCeiling)
@@ -535,9 +533,8 @@ void Wheel::goalRoutine() {
                 // Settle to a stable true reading, log the offset sample, then re-decide (bidirectional:
                 // continue, reverse, or -- next iteration -- hand off to the fine phase).
                 double settled = this->waitForStableReading(modeTune.settleBand);
-                if (!heightMode && valveWasOpened)
+                if (valveWasOpened)
                 {
-                    // pressure mode only: level mode has no learned model
                     recordLearnSample(aiIndex, sampleRawBag, (uint8_t)lround(settled), sampleRawTank);
                 }
                 valveWasOpened = false;
@@ -779,11 +776,11 @@ void Wheel::loop()
 }
 
 // Log an offset sample from a MANUAL valve move (BLE valveControlBittset / gamepad): cache the flowing
-// readings while the valve is open, then log the settled bag after it closes. Pressure mode only (level
-// mode has no learned model), and skipped while a goal routine runs (it collects its own). See AI_TRAINING.md.
+// readings while the valve is open, then log the settled reading after it closes. Feeds whichever mode is
+// active; skipped while a goal routine runs (it collects its own). See AI_TRAINING.md.
 void Wheel::captureManualOffsetSample()
 {
-    if (getheightSensorMode() || flagStartPressureGoalRoutine[thisWheelNum].load())
+    if (flagStartPressureGoalRoutine[thisWheelNum].load())
     {
         manualValveWasOpen = false;
         manualSettleUntil = 0;

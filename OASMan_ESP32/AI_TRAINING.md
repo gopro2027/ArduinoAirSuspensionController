@@ -30,6 +30,12 @@ the same operation — **re-fit** — and weights are re-derived from the sample
 
 There are **4 models** — up-front, up-rear, down-front, down-rear (both corners of an axle share).
 
+**The same 4 models and 4 files serve both pressure and height-sensor mode.** In pressure mode the samples
+hold psi; in height mode they hold height %. This keeps the ML layer unchanged at the cost of one rule:
+**the stored AI data is only valid for the mode it was collected in — clear it when switching modes**
+(controller/app "clear AI data", or `clearPressureData()`). Mixed data trains a meaningless model.
+The untrained default follows the active mode (`OFFSET_DEFAULT_PSI` vs `OFFSET_DEFAULT_LEVEL`).
+
 ### The model
 
 `OffsetModel` is a 3-coefficient linear fit of the offset (psi). Features (`computeFeatures`, scaled by
@@ -46,9 +52,9 @@ Below `ML_FIT_MIN_SAMPLES` (25) valid samples it leaves the weights alone.
 
 ### The fade / default
 
-There is **no physics-default formula**. Before a model is trained, `getPredictionOffset` returns a flat constant —
-**−5 psi on air-up, +5 psi on air-out** (`OFFSET_DEFAULT_PSI`). As samples accumulate it fades the trained
-model in:
+There is **no physics-default formula**. Before a model is trained, `getPredictionOffset` returns a flat
+constant, negative on air-up and positive on air-out: `OFFSET_DEFAULT_PSI` (5) in pressure mode,
+`OFFSET_DEFAULT_LEVEL` (2) in height mode. As samples accumulate it fades the trained model in:
 
     w = clamp((count − OFFSET_FADE_MIN) / (AI_LEARN_RATIO_NUM − OFFSET_FADE_MIN), 0, 1)
     offset = default × (1 − w) + trained × w
@@ -65,7 +71,7 @@ Every valve close logs one sample: the last **flowing** readings while the valve
 - **Preset / maintain moves** — `goalRoutine` logs on close (after the direction's settle time).
 - **Manual moves** (BLE valveControlBittset / gamepad) — `Wheel::captureManualOffsetSample` watches this
   corner's valve state each `Wheel::loop` tick, caching the flowing readings while open and logging after
-  the settle on close. Always on (it only runs when no goal routine is active, and never in height mode).
+  the settle on close. Always on; only skipped while a goal routine is running (it collects its own).
 
 Closes happen near goal, so samples concentrate where stopping accuracy matters. The
 `BEGIN/END IMPORTANT DATA FOR PRO` serial dump prints every stored sample for offline analysis.
@@ -80,17 +86,15 @@ ADS1115 to `RATE_ADS1115_860SPS`.
 
 Decoupled into small pieces: the `goalRoutine` **coarse** loop, plus three helpers —
 `waitForStableReading` (settled read), `achieveFineGoal` (**fine** phase), and `openValveForMs` (a burst).
-Pressure and height mode run the **same** loop, fine phase and re-check; the per-mode differences are the
-predictor seam, a `ModeTuning` struct (deadband / settle band / fine constants), whether samples are
-logged (pressure only — height has no learned model), and the pressure-only bag-max ceiling.
+Pressure and height mode run the **same** loop, predictor, models, fine phase and re-check. The only
+per-mode differences are a `ModeTuning` struct (deadband / settle band / fine constants), the untrained
+default constant, and the pressure-only bag-max ceiling.
 
 **Coarse phase (`goalRoutine`).** Commit a direction from the true (valve-closed) reading; each tick read the
-live value and compute `actual` (pressure: `getPredictedBagPressure(...)` = raw + learned offset; height:
-`getPredictedBagHeight(...)`, an identity stub since the level sensor reads true even during flow), hold the
-valve open; when `actual` reaches goal, close, rendezvous at the barrier (valve closed), then
-`waitForStableReading` for the true settled value, log the sample, and re-decide against it
-(**bidirectional**: continue, reverse, or hand off to fine). Pressure mode logs a flowing→settled sample on
-each coarse close.
+live value and compute `actual = getPredictedBagPressure(aiIndex, raw, rawTank)` (raw + learned/default
+offset — psi or height % depending on mode), hold the valve open; when `actual` reaches goal, close,
+rendezvous at the barrier (valve closed), then `waitForStableReading` for the true settled value, log the
+flowing→settled sample, and re-decide against it (**bidirectional**: continue, reverse, or hand off to fine).
 
 **Settled read (`waitForStableReading`).** Instead of a fixed settle wait, block until the reading holds
 within a band (`SETTLE_STABLE_BAND_PSI` / `_LEVEL`) for `SETTLE_STABLE_MS` (100 ms), with a
@@ -160,10 +164,15 @@ wobble wider than the controller will accept and it hunts.
 
 ## Future improvements
 
-- **Height-mode valve-close-lag model** (`getPredictedBagHeight` is currently an identity stub): a trained
-  model could predict the height *after* the valve finishes closing, since closing takes a moment. E.g.
-  airing up to a 50% goal — closing at exactly 50% may land at 51% once the valve fully shuts, so a trained
-  model might close at 49% knowing it settles to 50%. Small difference; needs to be backed by data.
+- **Better features for height mode.** In height mode the model learns valve-close *overshoot* (the level
+  sensor already reads true during flow), but it currently reuses the pressure feature — the tank/bag
+  differential — because that keeps the sample layout and `pressureMath` untouched. The physically causal
+  input is the **measured rate of travel** at the moment of reading, since overshoot is displacement after
+  the read (`≈ velocity × lag`). Worth revisiting if height accuracy plateaus; it would need a rate tracker
+  and a per-mode feature branch.
+- **Separate storage per mode.** Today both modes share the same 4 files, so switching modes requires
+  clearing the AI data. A second file set would remove that rule at the cost of ~3.6 KB heap and a wider
+  model index.
 - Average the flowing reading over the last few pre-close ticks to denoise the model feature.
 - The manual-move capture still uses fixed `OFFSET_SAMPLE_SETTLE_*` waits rather than `waitForStableReading`.
 

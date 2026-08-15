@@ -257,7 +257,9 @@ void updateAIPercentage()
 static double getPredictionOffset(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank)
 {
     OffsetModel *m = getOffsetModel(aiIndex);
-    double def = m->up ? -(double)OFFSET_DEFAULT_PSI : (double)OFFSET_DEFAULT_PSI;
+    // The models are shared between modes, so the untrained default follows whichever mode is active.
+    double magnitude = getheightSensorMode() ? (double)OFFSET_DEFAULT_LEVEL : (double)OFFSET_DEFAULT_PSI;
+    double def = m->up ? -magnitude : magnitude;
     int count = getLearnDataLength(aiIndex);
     if (count < OFFSET_FADE_MIN)
     {
@@ -272,20 +274,12 @@ static double getPredictionOffset(SOLENOID_AI_INDEX aiIndex, double raw_bag, dou
     return def * (1.0 - w) + trained * w;
 }
 
-// Predicted true bag pressure recovered from the live flowing readings while a valve is open. The
-// closed-loop controller stops when this reaches goal. See AI_TRAINING.md.
+// Predicted true bag value recovered from the live readings while a valve is open: psi in pressure mode,
+// height % in level mode (the same models serve both). The closed-loop controller stops when this reaches
+// goal. See AI_TRAINING.md.
 double getPredictedBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank)
 {
     return raw_bag + getPredictionOffset(aiIndex, raw_bag, raw_tank);
-}
-
-// Height-mode counterpart to getPredictedBagPressure. The level sensor reads the true ride height even
-// while a valve is open, so this is an identity stub — it exists so the closed-loop controller can treat
-// both modes through one predictor seam. (A future valve-close-lag model could live here; see the
-// "Future improvements" note in AI_TRAINING.md.)
-double getPredictedBagHeight(double raw_level)
-{
-    return raw_level;
 }
 
 #pragma endregion

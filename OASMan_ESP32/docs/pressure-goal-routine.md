@@ -71,25 +71,25 @@ Load preset → initPressureGoal(target) per corner → flag set → wheel task 
 
 ### 2.2 Coarse phase (`goalRoutine`)
 
-**Pressure and height mode run the same loop, fine phase and re-check.** The per-mode differences are
-narrow: the **predictor seam**, a `ModeTuning` struct (deadband / settle band / fine constants), whether
-samples are logged, and the pressure-only bag-max ceiling.
+**Pressure and height mode run the same loop, predictor, models, fine phase and re-check.** The per-mode
+differences are narrow: a `ModeTuning` struct (deadband / settle band / fine constants), the untrained
+default constant, and the pressure-only bag-max ceiling.
 
 ```cpp
-actual = heightMode ? getPredictedBagHeight(raw)            // identity stub — level sensor reads true during flow
-                    : getPredictedBagPressure(aiIndex, raw, rawTank); // raw + learned/default offset
+double actual = getPredictedBagPressure(aiIndex, raw, rawTank); // raw + learned/default offset
 ```
 
-**Only pressure mode has a learned model.** The level sensor is a mechanical arm that already reads true
-height during flow, so there is no flow-skew to correct and no model is needed — height mode gets its
-precision from the fine phase (§2.4), which works purely off valve-closed readings. (Height does still
-overshoot slightly on valve close; correcting *that* with a model is a possible future improvement, §6.)
+**Both modes share the same 4 models and files** — the samples just hold height % instead of psi while in
+height mode. That keeps the ML layer untouched, at the cost of one rule: **clear the AI data when
+switching modes**, since mixed units train a meaningless model. Note the two modes are learning different
+physics: pressure mode corrects a flow-skewed sensor, height mode corrects valve-close overshoot (the
+level sensor already reads true during flow). See §6 for the feature caveat that follows from this.
 
 Cycle: with the valve closed the reading is true, so decide there — finish (within deadband), hand
 off to fine (within the mode's fine threshold), or commit a direction. Then hold the valve open,
 re-computing `actual` from the live reading each ~1 ms tick, and close when `actual` reaches goal.
 After closing: rendezvous at the barrier (valve closed), `waitForStableReading` for the true settled
-value, log the flowing→settled sample (pressure only), drop the committed direction, and re-decide.
+value, log the flowing→settled sample, drop the committed direction, and re-decide.
 
 The re-decide is **bidirectional** — it continues, reverses, or hands off to fine based on the true
 settled reading. (Earlier versions only corrected undershoot and accepted overshoot; the data showed
@@ -123,8 +123,8 @@ stop trusting the live prediction entirely and hone in on the **true** reading w
 5. `onlyAirUp` + need-to-vent → accept where we are. Routine timeout also exits.
 
 This mirrors the pre-ML main-branch anti-oscillation logic (shrink valve time on each goal crossing).
-Note it needs **no learned model** — it only ever reads settled, valve-closed values, which is exactly
-why height mode can use it despite having no AI layer.
+Note it needs **no learned model** — it only ever reads settled, valve-closed values, so it delivers the
+same precision in both modes regardless of how well trained the model is.
 
 The finest achievable step is governed by the mode's `FINE_PULSE_MIN_MS*` together with the shrink
 factor; those two are the knobs for "lands exactly."
@@ -255,11 +255,13 @@ its stack high-water mark at boot.
   sequential per-corner re-check.
 - **Air-out blind spot is physical** — no feature will fix it; only the fine phase / settled reads
   address it. Don't spend effort on fancier flowing-reading models for dump.
-- **Height mode valve-close-lag model** — `getPredictedBagHeight` is an identity stub; a small model
-  could close slightly early to account for valve-close travel. Prototyped once and dropped as not
-  worth the complexity (the fine phase already corrects the residual). If ever revisited, the right
-  input is the **measured rate of travel** at the moment of reading, since the overshoot is
-  displacement after the read (`≈ velocity × lag`) — not a pressure-differential proxy.
+- **Height mode reuses the pressure feature.** In height mode the model learns valve-close overshoot, but
+  its input is still the tank/bag differential (chosen to keep the sample layout and `pressureMath`
+  untouched). The physically causal input is the **measured rate of travel** at the read, since overshoot
+  is displacement after the read (`≈ velocity × lag`). Expect the bias term to do most of the work in
+  height mode — worth revisiting only if height accuracy plateaus.
+- **Shared files between modes** — switching modes requires clearing the AI data (mixed units train a
+  meaningless model). A second file set would remove that rule (~3.6 KB heap).
 - **Height mode in-loop pressure ceiling** — TODO in `goalRoutine`; heavy load or a stuck level
   sensor could over-pressure a bag while chasing height.
 - **Manual-move capture** still uses fixed settle waits (`OFFSET_SAMPLE_SETTLE_MS`/`_DOWN_MS`) rather

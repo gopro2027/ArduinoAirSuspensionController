@@ -41,6 +41,7 @@
 // Offset-model AI (samples -> refit -> predict -> fade). See OASMan_ESP32/AI_TRAINING.md.
 #define LEARN_SAVE_COUNT 300      // per-model on-disk sample capacity (was 500)
 #define OFFSET_DEFAULT_PSI 5      // constant offset used before a model is trained: -5 air-up, +5 air-out
+#define OFFSET_DEFAULT_LEVEL 2    // same, in height % (level mode reuses the same 4 models/files -- see AI_TRAINING.md)
 #define OFFSET_FADE_MIN 25        // start fading the trained model in at this many samples (0% -> ...)
 #define AI_LEARN_RATIO_NUM 150    // ...reaching 100% trained at this many samples (also the AIPercentage bar)
 #define SAMPLE_DEDUP_PSI 1        // drop a sample within this many psi (flowing AND settled) of the previous stored one
