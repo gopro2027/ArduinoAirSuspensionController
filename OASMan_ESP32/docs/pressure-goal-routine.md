@@ -80,8 +80,9 @@ double actual = getPredictedBagPressure(aiIndex, raw, rawTank); // raw + learned
 ```
 
 **Both modes share the same 4 models and files** — the samples just hold height % instead of psi while in
-height mode. That keeps the ML layer untouched, at the cost of one rule: **clear the AI data when
-switching modes**, since mixed units train a meaningless model. Note the two modes are learning different
+height mode. That keeps the ML layer untouched, at the cost of one rule: the AI data must be cleared when
+switching modes, since mixed units train a meaningless model. `setheightSensorMode()` does this
+automatically on an actual mode change. Note the two modes are learning different
 physics: pressure mode corrects a flow-skewed sensor, height mode corrects valve-close overshoot (the
 level sensor already reads true during flow). See §6 for the feature caveat that follows from this.
 
@@ -260,8 +261,9 @@ its stack high-water mark at boot.
   untouched). The physically causal input is the **measured rate of travel** at the read, since overshoot
   is displacement after the read (`≈ velocity × lag`). Expect the bias term to do most of the work in
   height mode — worth revisiting only if height accuracy plateaus.
-- **Shared files between modes** — switching modes requires clearing the AI data (mixed units train a
-  meaningless model). A second file set would remove that rule (~3.6 KB heap).
+- **Shared files between modes** — switching modes wipes the AI data (mixed units train a meaningless
+  model), so a user who moves between modes keeps restarting training. A second file set would remove
+  that rule (~3.6 KB heap).
 - **Height mode in-loop pressure ceiling** — TODO in `goalRoutine`; heavy load or a stuck level
   sensor could over-pressure a bag while chasing height.
 - **Manual-move capture** still uses fixed settle waits (`OFFSET_SAMPLE_SETTLE_MS`/`_DOWN_MS`) rather

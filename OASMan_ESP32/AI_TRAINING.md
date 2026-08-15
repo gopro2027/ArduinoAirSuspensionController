@@ -32,9 +32,11 @@ There are **4 models** — up-front, up-rear, down-front, down-rear (both corner
 
 **The same 4 models and 4 files serve both pressure and height-sensor mode.** In pressure mode the samples
 hold psi; in height mode they hold height %. This keeps the ML layer unchanged at the cost of one rule:
-**the stored AI data is only valid for the mode it was collected in — clear it when switching modes**
-(controller/app "clear AI data", or `clearPressureData()`). Mixed data trains a meaningless model.
-The untrained default follows the active mode (`OFFSET_DEFAULT_PSI` vs `OFFSET_DEFAULT_LEVEL`).
+stored AI data is only valid for the mode it was collected in, since mixed units train a meaningless model.
+**`setheightSensorMode()` enforces this — it calls `clearPressureData()` whenever the mode actually
+changes** (hand-written rather than `createSaveFuncInt` for exactly this reason; boot loads the preference
+directly, so a reboot never wipes). The untrained default also follows the active mode
+(`OFFSET_DEFAULT_PSI` vs `OFFSET_DEFAULT_LEVEL`).
 
 ### The model
 
@@ -170,9 +172,8 @@ wobble wider than the controller will accept and it hunts.
   input is the **measured rate of travel** at the moment of reading, since overshoot is displacement after
   the read (`≈ velocity × lag`). Worth revisiting if height accuracy plateaus; it would need a rate tracker
   and a per-mode feature branch.
-- **Separate storage per mode.** Today both modes share the same 4 files, so switching modes requires
-  clearing the AI data. A second file set would remove that rule at the cost of ~3.6 KB heap and a wider
-  model index.
+- **Separate storage per mode.** Today both modes share the same 4 files, so switching modes wipes the
+  training data. A second file set would remove that at the cost of ~3.6 KB heap and a wider model index.
 - Average the flowing reading over the last few pre-close ticks to denoise the model feature.
 - The manual-move capture still uses fixed `OFFSET_SAMPLE_SETTLE_*` waits rather than `waitForStableReading`.
 
