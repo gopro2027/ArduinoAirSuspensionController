@@ -47,13 +47,13 @@
 
 // Closed-loop pressure control (see Wheel::goalRoutine / AI_TRAINING.md):
 #define PRESSURE_DEADBAND_PSI 0          // target the exact psi (the fine-pulse phase makes 0 safe); was: 1
-#define LEVEL_DEADBAND_PERCENTAGE 1
+#define LEVEL_DEADBAND_PERCENTAGE 0      // ; was: 1. exact %, now that level mode has the fine-pulse phase too
 
 // Settled-to-stable read (Wheel::waitForStableReading): block until the reading holds within the band for
 // SETTLE_STABLE_MS (SETTLE_MAX_WAIT_MS backstop). Used for every true valve-closed reading.
 #define SETTLE_STABLE_MS 100          // reading must hold steady this long to count as settled
 #define SETTLE_STABLE_BAND_PSI 1      // max psi wobble allowed while "stable"
-#define SETTLE_STABLE_BAND_LEVEL 2    // max height-% wobble allowed while "stable"
+#define SETTLE_STABLE_BAND_LEVEL 1    // ; was: 2. must be tight or a "stable" read can wobble wider than the 0 deadband demands -> hunting
 #define SETTLE_MAX_WAIT_MS 1500       // backstop: never block on a settle longer than this
 #define OFFSET_SAMPLE_SETTLE_MS 250      // manual-capture air-up: wait after the valve closes before reading the settled bag
 #define OFFSET_SAMPLE_SETTLE_DOWN_MS 500 // manual-capture air-out settles slower, so wait longer before the settled read
@@ -64,6 +64,13 @@
 #define FINE_PULSE_MS_PER_PSI 5       // initial burst length per psi of remaining error
 #define FINE_PULSE_MIN_MS 5           // floor on the INITIAL burst size (the crossing-shrink can go below this)
 #define FINE_PULSE_MAX_MS 100         // cap on the initial burst size
+// Level-mode counterparts (height % instead of psi) -- level mode has no learned model, but it runs the
+// same fine phase, which works purely off accurate valve-closed readings. The chassis moves slower per ms
+// of valve than pressure does, hence the longer per-unit burst; all on-car tunable.
+#define FINE_PULSE_THRESHOLD_LEVEL 5  // switch coarse -> fine within this many height % of goal
+#define FINE_PULSE_MS_PER_LEVEL 20    // initial burst length per height % of remaining error
+#define FINE_PULSE_MIN_MS_LEVEL 5     // floor on the INITIAL burst size
+#define FINE_PULSE_MAX_MS_LEVEL 150   // cap on the initial burst size
 #define FINE_PULSE_OVERSHOOT_SHRINK 0.5 // burst multiplier on each goal crossing (< 1 = damp; give up when burst < 1 ms)
 #define FINE_PULSE_MAX_TRIES 8        // give up after this many bursts with the reading not moving (stuck: tank/bag exhausted)
 

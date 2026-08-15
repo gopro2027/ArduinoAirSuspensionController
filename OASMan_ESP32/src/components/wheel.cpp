@@ -298,6 +298,28 @@ static const int8_t FLOW_NONE = 0;
 static const int8_t FLOW_UP = 1;
 static const int8_t FLOW_DOWN = -1;
 
+// Per-mode tuning: pressure works in psi, level in height %. Everything else in the loop is shared.
+struct ModeTuning
+{
+    int deadband;
+    int settleBand;
+    int fineThreshold;
+    double fineMsPerUnit;
+    double fineMinMs;
+    double fineMaxMs;
+};
+
+static ModeTuning getModeTuning(bool heightMode)
+{
+    if (heightMode)
+    {
+        return {LEVEL_DEADBAND_PERCENTAGE, SETTLE_STABLE_BAND_LEVEL, FINE_PULSE_THRESHOLD_LEVEL,
+                FINE_PULSE_MS_PER_LEVEL, FINE_PULSE_MIN_MS_LEVEL, FINE_PULSE_MAX_MS_LEVEL};
+    }
+    return {PRESSURE_DEADBAND_PSI, SETTLE_STABLE_BAND_PSI, FINE_PULSE_THRESHOLD_PSI,
+            FINE_PULSE_MS_PER_PSI, FINE_PULSE_MIN_MS, FINE_PULSE_MAX_MS};
+}
+
 // Block until the selected input reading holds within `band` for SETTLE_STABLE_MS (SETTLE_MAX_WAIT_MS
 // backstop); returns the final reading. Valve(s) must already be closed -- this IS the true settled value.
 double Wheel::waitForStableReading(int band)
@@ -335,12 +357,13 @@ void Wheel::openValveForMs(Solenoid *valve, uint32_t ms)
     valve->close();
 }
 
-// Precision (fine) phase, pressure only: hone in on the EXACT goal with short valve bursts read off the
-// accurate valve-closed pressure. Bursts start sized to the error and shrink by FINE_PULSE_OVERSHOOT_SHRINK
-// each time the reading crosses the goal (anti-oscillation). No thread sync (bursts are quick and local).
-// Exit conditions + full design: AI_TRAINING.md.
+// Precision (fine) phase: hone in on the EXACT goal with short valve bursts read off the accurate
+// valve-closed reading. Bursts start sized to the error and shrink by FINE_PULSE_OVERSHOOT_SHRINK each time
+// the reading crosses the goal (anti-oscillation). No thread sync (bursts are quick and local). Runs in both
+// modes -- only the tuning differs. Exit conditions + full design: AI_TRAINING.md.
 bool Wheel::achieveFineGoal()
 {
+    const ModeTuning modeTune = getModeTuning(getheightSensorMode());
     int8_t prevDir = FLOW_NONE;
     double burstMs = 0.0;
     bool sized = false;
@@ -354,11 +377,11 @@ bool Wheel::achieveFineGoal()
             return false;
         }
 
-        double trueVal = this->waitForStableReading(SETTLE_STABLE_BAND_PSI);
+        double trueVal = this->waitForStableReading(modeTune.settleBand);
         int err = this->pressureGoal - (int)lround(trueVal);
-        if (abs(err) <= PRESSURE_DEADBAND_PSI)
+        if (abs(err) <= modeTune.deadband)
         {
-            return true; // landed on goal (deadband 0 -> exact psi)
+            return true; // landed on goal (deadband 0 -> exact value)
         }
 
         int8_t dir = (err > 0) ? FLOW_UP : FLOW_DOWN;
@@ -384,9 +407,9 @@ bool Wheel::achieveFineGoal()
 
         if (!sized)
         {
-            burstMs = (double)abs(err) * FINE_PULSE_MS_PER_PSI; // start proportional to the remaining error
-            if (burstMs < FINE_PULSE_MIN_MS) burstMs = FINE_PULSE_MIN_MS;
-            if (burstMs > FINE_PULSE_MAX_MS) burstMs = FINE_PULSE_MAX_MS;
+            burstMs = (double)abs(err) * modeTune.fineMsPerUnit; // start proportional to the remaining error
+            if (burstMs < modeTune.fineMinMs) burstMs = modeTune.fineMinMs;
+            if (burstMs > modeTune.fineMaxMs) burstMs = modeTune.fineMaxMs;
             sized = true;
         }
         else if (dir != prevDir)
@@ -416,10 +439,12 @@ bool Wheel::achieveFineGoal()
     }
 }
 
-// Coarse closed-loop control shared by pressure and height modes: commit a direction from the true
-// (valve-closed) reading, hold the valve open while a predictor recovers the true bag value from the flowing
-// reading, close at goal, settle, and re-decide (bidirectional). Near goal (pressure only) it hands off to
-// achieveFineGoal for the exact landing. Full design: AI_TRAINING.md.
+// Coarse closed-loop control shared by pressure and level mode: commit a direction from the true
+// (valve-closed) reading, hold the valve open while a predictor recovers the true value from the live
+// reading, close at goal, settle, and re-decide (bidirectional). Near goal BOTH modes hand off to
+// achieveFineGoal for the exact landing. Only pressure mode has a learned model (and logs samples) --
+// the level sensor already reads true during flow, so its predictor is an identity stub and the fine
+// phase is what buys it precision. Full design: AI_TRAINING.md.
 void Wheel::goalRoutine() {
     if (flagStartPressureGoalRoutine[thisWheelNum].load())
     {
@@ -436,6 +461,7 @@ void Wheel::goalRoutine() {
         for (;;)
         {
             const bool heightMode = getheightSensorMode();
+            const ModeTuning modeTune = getModeTuning(heightMode);
 
             // 10 second timeout in case the tank doesn't have enough air, a sensor is stuck, etc.
             if (millis() > this->routineStartTime + ROUTINE_TIMEOUT_MS)
@@ -444,20 +470,19 @@ void Wheel::goalRoutine() {
             }
 
             this->readInputs();
-            const int deadband = heightMode ? LEVEL_DEADBAND_PERCENTAGE : PRESSURE_DEADBAND_PSI;
 
             if (dir == FLOW_NONE)
             {
                 // Valve is closed here, so the reading is the TRUE value. Decide: finish, hand off to the
                 // fine precision phase, or commit a coarse fill/dump direction.
                 int rawDif = this->pressureGoal - (int)lround(this->getSelectedInputValue());
-                if (abs(rawDif) <= deadband)
+                if (abs(rawDif) <= modeTune.deadband)
                 {
                     break; // at goal
                 }
-                // Pressure only: near goal the flowing prediction is too blind to land precisely, so hand
-                // off to the fine burst routine. (Height reads true even while flowing -- no fine phase.)
-                if (!heightMode && abs(rawDif) <= FINE_PULSE_THRESHOLD_PSI)
+                // Near goal the live-reading prediction can't land precisely, so hand off to the fine
+                // burst routine, which works only off accurate valve-closed readings.
+                if (abs(rawDif) <= modeTune.fineThreshold)
                 {
                     this->achieveFineGoal();
                     break;
@@ -479,15 +504,15 @@ void Wheel::goalRoutine() {
                 aiIndex = valve->getAIIndex();
             }
 
-            // Coarse drive: hold the valve open and recover the true pressure from the flowing reading; stop
-            // when it reaches goal.
+            // Coarse drive: hold the valve open and recover the true value from the live reading; stop when
+            // it reaches goal.
             double raw = this->getSelectedInputValue();
             double rawTank = heightMode ? 0.0 : getCompressor()->readTankPressureNow(); // pressure-model feature only
             double actual = heightMode ? getPredictedBagHeight(raw)
                                        : getPredictedBagPressure(aiIndex, raw, rawTank);
 
-            bool reached = (dir == FLOW_UP) ? (actual >= this->pressureGoal - deadband)
-                                            : (actual <= this->pressureGoal + deadband);
+            bool reached = (dir == FLOW_UP) ? (actual >= this->pressureGoal - modeTune.deadband)
+                                            : (actual <= this->pressureGoal + modeTune.deadband);
             // In-loop safety ceiling (pressure mode only): never fill past the bag max.
             // TODO: Have this bag pressure check for height mode too. Future improvement.
             bool overCeiling = !heightMode && (dir == FLOW_UP) && (actual >= (double)getbagMaxPressure());
@@ -509,9 +534,10 @@ void Wheel::goalRoutine() {
 
                 // Settle to a stable true reading, log the offset sample, then re-decide (bidirectional:
                 // continue, reverse, or -- next iteration -- hand off to the fine phase).
-                double settled = this->waitForStableReading(heightMode ? SETTLE_STABLE_BAND_LEVEL : SETTLE_STABLE_BAND_PSI);
+                double settled = this->waitForStableReading(modeTune.settleBand);
                 if (!heightMode && valveWasOpened)
                 {
+                    // pressure mode only: level mode has no learned model
                     recordLearnSample(aiIndex, sampleRawBag, (uint8_t)lround(settled), sampleRawTank);
                 }
                 valveWasOpened = false;
@@ -542,15 +568,16 @@ void Wheel::goalRoutine() {
         // Rendezvous: every active corner has finished the main routine and closed its valves -> all idle.
         goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS);
 
-        // Final cross-corner re-check (pressure mode): a sibling finishing later can nudge an already-done
-        // corner through the shared manifold, so with everyone idle, re-read and re-correct for
-        // FINAL_RECHECK_ROUNDS synchronized rounds (a barrier per round keeps the reads clean). See AI_TRAINING.md.
-        if (!getheightSensorMode())
+        // Final cross-corner re-check: a sibling finishing later can nudge an already-done corner (through
+        // the shared manifold in pressure mode, through the chassis in level mode), so with everyone idle,
+        // re-read and re-correct for FINAL_RECHECK_ROUNDS synchronized rounds (a barrier per round keeps the
+        // reads clean). See AI_TRAINING.md.
         {
+            const ModeTuning modeTune = getModeTuning(getheightSensorMode());
             for (int rc = 0; rc < FINAL_RECHECK_ROUNDS; rc++)
             {
-                double trueVal = this->waitForStableReading(SETTLE_STABLE_BAND_PSI);
-                if (abs(this->pressureGoal - (int)lround(trueVal)) > PRESSURE_DEADBAND_PSI)
+                double trueVal = this->waitForStableReading(modeTune.settleBand);
+                if (abs(this->pressureGoal - (int)lround(trueVal)) > modeTune.deadband)
                 {
                     this->achieveFineGoal();
                 }
@@ -752,8 +779,8 @@ void Wheel::loop()
 }
 
 // Log an offset sample from a MANUAL valve move (BLE valveControlBittset / gamepad): cache the flowing
-// readings while the valve is open, then log the settled bag after it closes. Only runs when no goal
-// routine is active and never in height mode. See AI_TRAINING.md.
+// readings while the valve is open, then log the settled bag after it closes. Pressure mode only (level
+// mode has no learned model), and skipped while a goal routine runs (it collects its own). See AI_TRAINING.md.
 void Wheel::captureManualOffsetSample()
 {
     if (getheightSensorMode() || flagStartPressureGoalRoutine[thisWheelNum].load())

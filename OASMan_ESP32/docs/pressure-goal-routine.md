@@ -71,43 +71,50 @@ Load preset → initPressureGoal(target) per corner → flag set → wheel task 
 
 ### 2.2 Coarse phase (`goalRoutine`)
 
-One loop shared by pressure and height modes; the only per-mode difference is the **predictor seam**:
+**Pressure and height mode run the same loop, fine phase and re-check.** The per-mode differences are
+narrow: the **predictor seam**, a `ModeTuning` struct (deadband / settle band / fine constants), whether
+samples are logged, and the pressure-only bag-max ceiling.
 
 ```cpp
 actual = heightMode ? getPredictedBagHeight(raw)            // identity stub — level sensor reads true during flow
                     : getPredictedBagPressure(aiIndex, raw, rawTank); // raw + learned/default offset
 ```
 
+**Only pressure mode has a learned model.** The level sensor is a mechanical arm that already reads true
+height during flow, so there is no flow-skew to correct and no model is needed — height mode gets its
+precision from the fine phase (§2.4), which works purely off valve-closed readings. (Height does still
+overshoot slightly on valve close; correcting *that* with a model is a possible future improvement, §6.)
+
 Cycle: with the valve closed the reading is true, so decide there — finish (within deadband), hand
-off to fine (within `FINE_PULSE_THRESHOLD_PSI`), or commit a direction. Then hold the valve open,
-re-computing `actual` from the flowing reading each ~1 ms tick, and close when `actual` reaches goal.
+off to fine (within the mode's fine threshold), or commit a direction. Then hold the valve open,
+re-computing `actual` from the live reading each ~1 ms tick, and close when `actual` reaches goal.
 After closing: rendezvous at the barrier (valve closed), `waitForStableReading` for the true settled
-value, log the flowing→settled sample, drop the committed direction, and re-decide from the top.
+value, log the flowing→settled sample (pressure only), drop the committed direction, and re-decide.
 
 The re-decide is **bidirectional** — it continues, reverses, or hands off to fine based on the true
 settled reading. (Earlier versions only corrected undershoot and accepted overshoot; the data showed
 air-out overshoots low half the time, so monotonic verify systematically landed low.)
 
-Deadbands: `PRESSURE_DEADBAND_PSI` = **0** (exact psi; safe only because the fine phase exists) and
-`LEVEL_DEADBAND_PERCENTAGE` = 1 for height.
+Both deadbands are **0** (exact value), which is safe only because the fine phase exists.
 
 ### 2.3 Settled read — `waitForStableReading(band)`
 
 Every "true" reading uses this instead of a fixed wait: block until the reading holds within `band`
-(`SETTLE_STABLE_BAND_PSI` 1 / `SETTLE_STABLE_BAND_LEVEL` 2) for `SETTLE_STABLE_MS` (100 ms), with a
+(`SETTLE_STABLE_BAND_PSI` 1 / `SETTLE_STABLE_BAND_LEVEL` 1) for `SETTLE_STABLE_MS` (100 ms), with a
 `SETTLE_MAX_WAIT_MS` (1500 ms) backstop. Air-out settles much slower than air-up (the bag reading has
 to *rise* ~15–20 psi back to truth after venting), so a stability gate waits exactly as long as
 physically needed — fixed waits were either too short for air-out (corrupting both verify reads and
 training labels) or wastefully long for air-up.
 
-### 2.4 Fine phase — `achieveFineGoal()` (pressure only)
+### 2.4 Fine phase — `achieveFineGoal()` (both modes)
 
-Because of the §1 blind spot, the coarse prediction cannot land precisely near goal — it stops early,
-creeps in small steps, or oscillates. So within `FINE_PULSE_THRESHOLD_PSI` (5) of goal, stop trusting
-the flowing prediction entirely and hone in on the **true** reading with short bursts:
+The coarse prediction cannot land precisely near goal — in pressure mode because of the §1 blind spot
+(it stops early, creeps in small steps, or oscillates), in height mode because you can't stop a moving
+chassis on an exact percentage from a live reading. So within the mode's fine threshold (5 psi / 5 %),
+stop trusting the live prediction entirely and hone in on the **true** reading with short bursts:
 
 1. `waitForStableReading` → error = goal − true. Within deadband → success, return.
-2. Burst length: starts at `clamp(err × FINE_PULSE_MS_PER_PSI, FINE_PULSE_MIN_MS, FINE_PULSE_MAX_MS)`.
+2. Burst length: starts at `clamp(err × msPerUnit, minMs, maxMs)` from the mode's `ModeTuning`.
 3. **Anti-oscillation:** each time the reading *crosses* the goal (direction flips), the burst is
    multiplied by `FINE_PULSE_OVERSHOOT_SHRINK` (0.5). Successive approximation: bursts shrink until
    it lands exactly, or the burst falls below 1 ms (hardware can't resolve finer — give up).
@@ -116,16 +123,18 @@ the flowing prediction entirely and hone in on the **true** reading with short b
 5. `onlyAirUp` + need-to-vent → accept where we are. Routine timeout also exits.
 
 This mirrors the pre-ML main-branch anti-oscillation logic (shrink valve time on each goal crossing).
-Height mode never runs fine — its sensor reads true during flow, so coarse already lands accurately.
+Note it needs **no learned model** — it only ever reads settled, valve-closed values, which is exactly
+why height mode can use it despite having no AI layer.
 
-`getMinValveOpenPSI()`/`FINE_PULSE_MIN_MS` note: the finest achievable step is governed by
-`FINE_PULSE_MIN_MS` together with the shrink factor; those two are the knobs for "lands exactly."
+The finest achievable step is governed by the mode's `FINE_PULSE_MIN_MS*` together with the shrink
+factor; those two are the knobs for "lands exactly."
 
 ### 2.5 Final cross-corner re-check
 
-Observed on-car: a corner that finishes early can be nudged a few psi off by a sibling corner still
-correcting (shared manifold/tank coupling — and a sibling's flow can also disturb the early corner's
-"stable" reading). So after **all** corners rendezvous idle, every corner runs
+Observed on-car: a corner that finishes early can be nudged a few units off by a sibling corner still
+correcting (shared manifold/tank coupling in pressure mode, chassis coupling in height mode — and a
+sibling's motion can also disturb the early corner's "stable" reading). So after **all** corners
+rendezvous idle, every corner runs
 `FINAL_RECHECK_ROUNDS` (4) synchronized rounds: settle-to-stable read → if off goal,
 `achieveFineGoal()` → close valves → barrier. The per-round barrier means each round's *read* happens
 with all corners idle (clean), and a round-N correction that disturbed a neighbor gets caught in
@@ -137,8 +146,8 @@ count was raised 2→4). The robust alternative, if ever needed: loop **until a 
 corrections** (capped), or re-check corners **sequentially** (one corrects while three hold still) —
 sequential fully eliminates mutual disturbance at the cost of complexity/time.
 
-Height mode skips the re-check (no manifold-pressure coupling of its level reading). This is safe for
-barrier accounting because `heightSensorMode` is global — all corners run the same barrier count.
+Both modes run the re-check. `heightSensorMode` is global, so all corners run the same barrier count
+regardless of mode — no club mismatch.
 
 ### 2.6 Thread sync (summary — see goal-sync-barrier.md)
 
@@ -209,19 +218,26 @@ Understanding *why* the current shape won matters for future changes:
    tick; immune to the blind spot because it reads valve-closed only.
 7. **Final concurrent re-check** (§2.5): fixes the cross-corner nudge; simple-concurrent chosen over
    sequential, rounds raised 2→4 from on-car results.
+8. **Height mode joined the same loop** (user testing): it was landing imprecisely because it skipped
+   the fine phase and the re-check. Both now run in height mode. A learned model for height was
+   prototyped and **deliberately dropped** — the level sensor already reads true during flow, so the
+   only thing left to learn is a small valve-close overshoot, which the fine phase corrects anyway
+   without the cost of a second sample store, feature set and file set.
 
 ---
 
 ## 5. Tuning guide
 
-All in `user_defines.h`. What to touch for which symptom:
+All in `user_defines.h`. Control-loop knobs come in pressure/height pairs (`*_PSI` / `*_LEVEL`) — pick the
+one for the mode you're tuning. The learning knobs are pressure-only.
 
 | Symptom | Knob(s) |
 |---|---|
-| Lands 1–2 psi off, load-preset-again fixes it | `FINAL_RECHECK_ROUNDS` up (or implement loop-until-clean, §2.5) |
-| Fine phase nudges past exact repeatedly | `FINE_PULSE_MIN_MS` down (finest step), `FINE_PULSE_OVERSHOOT_SHRINK` toward 0.5–0.7 |
-| Fine phase too slow / too many bursts | `FINE_PULSE_MS_PER_PSI` up (aim: one burst ≈ half the gap) |
-| Coarse hands off too early/late | `FINE_PULSE_THRESHOLD_PSI` |
+| Lands 1–2 units off, load-preset-again fixes it | `FINAL_RECHECK_ROUNDS` up (or implement loop-until-clean, §2.5) |
+| Fine phase nudges past exact repeatedly | `FINE_PULSE_MIN_MS`/`_LEVEL` down (finest step), `FINE_PULSE_OVERSHOOT_SHRINK` toward 0.5–0.7 |
+| Fine phase too slow / too many bursts | `FINE_PULSE_MS_PER_PSI` / `_PER_LEVEL` up (aim: one burst ≈ half the gap) |
+| Coarse hands off too early/late | `FINE_PULSE_THRESHOLD_PSI` / `_LEVEL` |
+| Hunting near goal (never settles) | settle band (`SETTLE_STABLE_BAND_*`) must be tight for the 0 deadband; else raise that mode's deadband |
 | Verify reads look wrong on air-out | `SETTLE_STABLE_MS` up / `SETTLE_STABLE_BAND_PSI` down (`SETTLE_MAX_WAIT_MS` is the ceiling) |
 | Samples accumulate too slowly | `SAMPLE_DEDUP_PSI` down (min 0 = off) |
 | Model trusted too soon/late | `OFFSET_FADE_MIN`, `AI_LEARN_RATIO_NUM` |
@@ -240,7 +256,10 @@ its stack high-water mark at boot.
 - **Air-out blind spot is physical** — no feature will fix it; only the fine phase / settled reads
   address it. Don't spend effort on fancier flowing-reading models for dump.
 - **Height mode valve-close-lag model** — `getPredictedBagHeight` is an identity stub; a small model
-  could close slightly early to account for valve-close travel (needs data).
+  could close slightly early to account for valve-close travel. Prototyped once and dropped as not
+  worth the complexity (the fine phase already corrects the residual). If ever revisited, the right
+  input is the **measured rate of travel** at the moment of reading, since the overshoot is
+  displacement after the read (`≈ velocity × lag`) — not a pressure-differential proxy.
 - **Height mode in-loop pressure ceiling** — TODO in `goalRoutine`; heavy load or a stuck level
   sensor could over-pressure a bag while chasing height.
 - **Manual-move capture** still uses fixed settle waits (`OFFSET_SAMPLE_SETTLE_MS`/`_DOWN_MS`) rather

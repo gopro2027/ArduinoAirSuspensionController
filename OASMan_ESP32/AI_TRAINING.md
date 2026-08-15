@@ -80,7 +80,9 @@ ADS1115 to `RATE_ADS1115_860SPS`.
 
 Decoupled into small pieces: the `goalRoutine` **coarse** loop, plus three helpers —
 `waitForStableReading` (settled read), `achieveFineGoal` (**fine** phase), and `openValveForMs` (a burst).
-The only per-mode difference is the predictor seam.
+Pressure and height mode run the **same** loop, fine phase and re-check; the per-mode differences are the
+predictor seam, a `ModeTuning` struct (deadband / settle band / fine constants), whether samples are
+logged (pressure only — height has no learned model), and the pressure-only bag-max ceiling.
 
 **Coarse phase (`goalRoutine`).** Commit a direction from the true (valve-closed) reading; each tick read the
 live value and compute `actual` (pressure: `getPredictedBagPressure(...)` = raw + learned offset; height:
@@ -94,26 +96,27 @@ each coarse close.
 within a band (`SETTLE_STABLE_BAND_PSI` / `_LEVEL`) for `SETTLE_STABLE_MS` (100 ms), with a
 `SETTLE_MAX_WAIT_MS` backstop. Air-out (which rises back to true slowly) waits exactly as long as it needs.
 
-**Fine phase (`achieveFineGoal`, pressure only).** The flowing reading is a blind, low-saturating proxy for
-true pressure during air-out — measured, the true settled pressure scatters ±7–15 psi for a fixed flowing
-reading in the mid range — so the coarse prediction cannot land precisely and tends to hunt near goal. Once
-the true reading is within `FINE_PULSE_THRESHOLD_PSI` of goal, `goalRoutine` calls `achieveFineGoal`, which
-hones in with short **bursts** off the accurate `waitForStableReading`. The burst starts sized to the
-remaining error (`clamp(err × FINE_PULSE_MS_PER_PSI, FINE_PULSE_MIN_MS, FINE_PULSE_MAX_MS)`); **each time the
-reading crosses the goal it shrinks the burst by `FINE_PULSE_OVERSHOOT_SHRINK`** (anti-oscillation, mirroring
-the old logic). It exits on: landing exactly on goal (success); the burst shrinking below 1 ms while still
-crossing (hardware can't resolve finer — give up); the reading not moving for `FINE_PULSE_MAX_TRIES` bursts
-(stuck: tank/bag exhausted); or the routine timeout. Fine bursts are **not** logged (they'd pollute the model
-with blind near-goal samples). Height skips fine — its coarse loop already reads true and lands within
-`LEVEL_DEADBAND_PERCENTAGE`.
+**Fine phase (`achieveFineGoal`) — runs in BOTH modes.** In pressure mode the flowing reading is a blind,
+low-saturating proxy during air-out (measured: the true settled pressure scatters ±7–15 psi for a fixed
+flowing reading in the mid range), so the coarse prediction cannot land precisely and tends to hunt near
+goal. Height mode has no such blind spot, but it still can't stop on an exact percentage from a moving
+chassis — the fine phase gives it the same precision, and it needs **no model** to do so because it works
+purely off accurate valve-closed readings. Once the true reading is within the mode's `FINE_PULSE_THRESHOLD_*`
+of goal, `goalRoutine` calls `achieveFineGoal`, which hones in with short **bursts** off
+`waitForStableReading`. The burst starts sized to the remaining error (`clamp(err × msPerUnit, minMs, maxMs)`
+from `ModeTuning`); **each time the reading crosses the goal it shrinks the burst by
+`FINE_PULSE_OVERSHOOT_SHRINK`** (anti-oscillation, mirroring the old logic). It exits on: landing exactly on
+goal (success); the burst shrinking below 1 ms while still crossing (hardware can't resolve finer — give up);
+the reading not moving for `FINE_PULSE_MAX_TRIES` bursts (stuck: tank/bag exhausted); or the routine timeout.
+Fine bursts are **not** logged (they'd pollute the model with blind near-goal samples).
 
-**Final cross-corner re-check (pressure only).** Corners finish at slightly different times, and a sibling
-still moving can nudge an already-done corner through the shared manifold, leaving it a few psi off. After
-the main loop all corners rendezvous idle, then run `FINAL_RECHECK_ROUNDS` synchronized rounds: re-read the
-settled pressure and, if off, re-correct with `achieveFineGoal`. Each round is bracketed by a barrier so the
-next read happens with all corners idle again, catching a correction that disturbed a neighbor. Height skips
-it (its level sensor reads true and isn't coupled through manifold pressure). `getheightSensorMode()` is
-global, so every corner runs the same barrier count (no club mismatch).
+**Final cross-corner re-check — runs in BOTH modes.** Corners finish at slightly different times, and a
+sibling still moving can nudge an already-done corner (through the shared manifold in pressure mode, through
+the chassis in height mode). After the main loop all corners rendezvous idle, then run
+`FINAL_RECHECK_ROUNDS` synchronized rounds: re-read the settled value and, if off, re-correct with
+`achieveFineGoal`. Each round is bracketed by a barrier so the next read happens with all corners idle again,
+catching a correction that disturbed a neighbor. `getheightSensorMode()` is global, so every corner runs the
+same barrier count (no club mismatch).
 
 **Sync / safety.** `achieveFineGoal` takes no barriers (the valve is only open during a burst, never
 waiting), so the never-wait-with-valve-open invariant holds and a fine corner rendezvouses only at
@@ -137,13 +140,23 @@ the next refit.
 
 `pressureMath.h`: `ML_OFFSET_NORM` (100), `ML_FIT_RIDGE`, `ML_FIT_MIN_SAMPLES` (25), `ML_NUM_COEFF` (3),
 `ML_SAMPLE_RECORD_VERSION`. `user_defines.h`: `LEARN_SAVE_COUNT` (300), `OFFSET_DEFAULT_PSI` (5),
-`OFFSET_FADE_MIN` (25), `AI_LEARN_RATIO_NUM` (150), `PRESSURE_DEADBAND_PSI` (0), `LEVEL_DEADBAND_PERCENTAGE`
-(1), `SAMPLE_DEDUP_PSI` (1), `FINAL_RECHECK_ROUNDS` (4). Settled read:
-`SETTLE_STABLE_MS` (100), `SETTLE_STABLE_BAND_PSI` (1),
-`SETTLE_STABLE_BAND_LEVEL` (2), `SETTLE_MAX_WAIT_MS` (1500); `OFFSET_SAMPLE_SETTLE_MS`/`_DOWN_MS` are now
-only for the manual-move capture. Fine phase: `FINE_PULSE_THRESHOLD_PSI` (5), `FINE_PULSE_MS_PER_PSI` (5),
-`FINE_PULSE_MIN_MS` (5), `FINE_PULSE_MAX_MS` (100), `FINE_PULSE_OVERSHOOT_SHRINK` (0.5), `FINE_PULSE_MAX_TRIES`
-(8) — the on-car tuning knobs (`FINE_PULSE_MIN_MS` + `FINE_PULSE_OVERSHOOT_SHRINK` govern the finest step).
+`OFFSET_FADE_MIN` (25), `AI_LEARN_RATIO_NUM` (150), `SAMPLE_DEDUP_PSI` (1), `FINAL_RECHECK_ROUNDS` (4),
+`SETTLE_STABLE_MS` (100), `SETTLE_MAX_WAIT_MS` (1500), `FINE_PULSE_OVERSHOOT_SHRINK` (0.5),
+`FINE_PULSE_MAX_TRIES` (8). `OFFSET_SAMPLE_SETTLE_MS`/`_DOWN_MS` are now only for the manual-move capture.
+
+The control loop's mode-specific knobs come in pairs — pick the one for the mode you're tuning:
+
+| | Pressure mode | Height mode |
+|---|---|---|
+| deadband | `PRESSURE_DEADBAND_PSI` (0) | `LEVEL_DEADBAND_PERCENTAGE` (0) |
+| settle band | `SETTLE_STABLE_BAND_PSI` (1) | `SETTLE_STABLE_BAND_LEVEL` (1) |
+| fine threshold | `FINE_PULSE_THRESHOLD_PSI` (5) | `FINE_PULSE_THRESHOLD_LEVEL` (5) |
+| fine ms per unit | `FINE_PULSE_MS_PER_PSI` (5) | `FINE_PULSE_MS_PER_LEVEL` (20) |
+| fine burst min/max | `FINE_PULSE_MIN_MS` (5) / `FINE_PULSE_MAX_MS` (100) | `FINE_PULSE_MIN_MS_LEVEL` (5) / `FINE_PULSE_MAX_MS_LEVEL` (150) |
+
+The finest achievable step is governed by the mode's `FINE_PULSE_MIN_MS*` together with
+`FINE_PULSE_OVERSHOOT_SHRINK`. With a 0 deadband the settle band must stay tight, or a "settled" reading can
+wobble wider than the controller will accept and it hunts.
 
 ## Future improvements
 
