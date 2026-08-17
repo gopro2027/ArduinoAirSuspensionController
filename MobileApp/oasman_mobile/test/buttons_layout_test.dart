@@ -73,6 +73,22 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('disconnected overflow can still be scrolled to reach presets',
+      (tester) async {
+    // The disconnected controls are inert, but the list must still scroll -
+    // otherwise the presets bar is simply clipped behind the nav bar with no
+    // way to reach it.
+    await pumpAt(tester, const Size(800, 220), connected: false);
+    expect(tester.takeException(), isNull);
+
+    final scrollable = tester.state<ScrollableState>(find.byType(Scrollable));
+    expect(scrollable.position.maxScrollExtent, greaterThan(0));
+
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -80));
+    await tester.pump();
+    expect(scrollable.position.pixels, greaterThan(0));
+  });
+
   testWidgets('controller page scrolls instead of overflowing when very short',
       (tester) async {
     // Far shorter than the content needs; it must scroll rather than overflow.

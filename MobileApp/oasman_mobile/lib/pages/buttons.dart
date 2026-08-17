@@ -92,22 +92,27 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
                 ),
               ),
             Expanded(
-              child: Opacity(
-                opacity: connected ? 1.0 : 0.4,
-                child: IgnorePointer(
-                  ignoring: !connected,
-                  // Normally everything fits and the grid is centred in the
-                  // space left above the presets bar. On a short screen the
-                  // content would previously overflow and paint over the
-                  // presets; instead it now scrolls. minHeight keeps the
-                  // fill-the-viewport layout whenever there is room.
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SingleChildScrollView(
-                        child: ConstrainedBox(
-                          constraints:
-                              BoxConstraints(minHeight: constraints.maxHeight),
-                          child: IntrinsicHeight(
+              // Normally everything fits and the grid is centred in the space
+              // left above the presets bar. On a short screen the content
+              // would previously overflow and paint over the presets; instead
+              // it now scrolls. minHeight keeps the fill-the-viewport layout
+              // whenever there is room.
+              //
+              // The scroll view stays OUTSIDE the IgnorePointer: while
+              // disconnected the banner makes the content taller, and if
+              // IgnorePointer wrapped the scrolling too, the user could not
+              // reach the presets bar - it was simply clipped by the nav bar.
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints:
+                          BoxConstraints(minHeight: constraints.maxHeight),
+                      child: IntrinsicHeight(
+                        child: Opacity(
+                          opacity: connected ? 1.0 : 0.4,
+                          child: IgnorePointer(
+                            ignoring: !connected,
                             child: Column(
                               children: [
                                 Expanded(
@@ -120,10 +125,10 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
                             ),
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -188,8 +193,9 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
     );
   }
 
-  /// All four corners at once. Momentary hold like every other valve control -
-  /// never a latch - and release clears only these bits.
+  /// All four corners at once, as two separate side-by-side buttons. Each
+  /// carries four arrows, one per wheel. Momentary hold like every other valve
+  /// control - never a latch - and release clears only that button's bits.
   Widget _valveAll(BuildContext ctx) {
     final upMask = (1 << SOLENOID_INDEX.FRONT_PASSENGER_IN.index) |
         (1 << SOLENOID_INDEX.REAR_PASSENGER_IN.index) |
@@ -199,14 +205,21 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
         (1 << SOLENOID_INDEX.REAR_PASSENGER_OUT.index) |
         (1 << SOLENOID_INDEX.FRONT_DRIVER_OUT.index) |
         (1 << SOLENOID_INDEX.REAR_DRIVER_OUT.index);
-    return OvalControlButton(
-      iconUp: Icons.keyboard_double_arrow_up,
-      iconDown: Icons.keyboard_double_arrow_down,
-      centerLabel: 'ALL',
-      onUpPressed: () => openValvesMask(ctx, upMask),
-      onUpReleased: () => closeValveMask(upMask),
-      onDownPressed: () => openValvesMask(ctx, downMask),
-      onDownReleased: () => closeValveMask(downMask),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        AllWheelsButton(
+          pointingUp: true,
+          onPressed: () => openValvesMask(ctx, upMask),
+          onReleased: () => closeValveMask(upMask),
+        ),
+        const SizedBox(width: 12),
+        AllWheelsButton(
+          pointingUp: false,
+          onPressed: () => openValvesMask(ctx, downMask),
+          onReleased: () => closeValveMask(downMask),
+        ),
+      ],
     );
   }
 
@@ -507,6 +520,111 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
   }
 }
 
+/// Draws a tight stack of chevrons, one per wheel.
+///
+/// These are painted rather than composed from `keyboard_arrow_*` icons: the
+/// ink inside those glyphs is neither centred in its em box nor a predictable
+/// fraction of the font size, so stacking them tightly left the arrows visibly
+/// off-centre and made the spacing impossible to control. Painting gives exact
+/// pitch and exact centring.
+class _ChevronStackPainter extends CustomPainter {
+  const _ChevronStackPainter({
+    required this.color,
+    required this.pointingUp,
+  });
+
+  final Color color;
+  final bool pointingUp;
+
+  /// One chevron per wheel.
+  static const int count = 4;
+
+  /// Vertical distance between successive chevrons. Smaller than
+  /// [chevronHeight], so each tip nests inside the one before it.
+  static const double pitch = 4;
+  static const double chevronWidth = 15;
+  static const double chevronHeight = 5;
+  static const double stroke = 2;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final totalHeight = chevronHeight + pitch * (count - 1);
+    final top = (size.height - totalHeight) / 2;
+    final cx = size.width / 2;
+
+    for (var i = 0; i < count; i++) {
+      final y = top + i * pitch;
+      final path = Path();
+      if (pointingUp) {
+        path.moveTo(cx - chevronWidth / 2, y + chevronHeight);
+        path.lineTo(cx, y);
+        path.lineTo(cx + chevronWidth / 2, y + chevronHeight);
+      } else {
+        path.moveTo(cx - chevronWidth / 2, y);
+        path.lineTo(cx, y + chevronHeight);
+        path.lineTo(cx + chevronWidth / 2, y);
+      }
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ChevronStackPainter old) =>
+      old.color != color || old.pointingUp != pointingUp;
+}
+
+/// One direction of the all-corners control: a single momentary-hold button
+/// showing one arrow per wheel.
+class AllWheelsButton extends StatelessWidget {
+  final bool pointingUp;
+  final VoidCallback onPressed;
+  final VoidCallback onReleased;
+
+  const AllWheelsButton({
+    super.key,
+    required this.pointingUp,
+    required this.onPressed,
+    required this.onReleased,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => onPressed(),
+      onTapUp: (_) => onReleased(),
+      onTapCancel: onReleased,
+      child: Container(
+        width: 56,
+        height: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFFBB86FC).withOpacity(0.15),
+            width: 1,
+          ),
+        ),
+        // The painter centres the stack within these bounds, so the arrows sit
+        // dead centre regardless of how tightly they are packed.
+        child: CustomPaint(
+          painter: _ChevronStackPainter(
+            color: const Color(0xFFBB86FC),
+            pointingUp: pointingUp,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class OvalControlButton extends StatelessWidget {
   final IconData iconUp;
   final IconData iconDown;
@@ -518,10 +636,6 @@ class OvalControlButton extends StatelessWidget {
   final VoidCallback? onUpReleased;
   final VoidCallback? onDownReleased;
 
-  /// Optional tag drawn over the pill's centre (e.g. "ALL"). Overlaid rather
-  /// than laid out, so it costs no height and does not shrink the touch halves.
-  final String? centerLabel;
-
   const OvalControlButton({
     super.key,
     required this.iconUp,
@@ -531,7 +645,6 @@ class OvalControlButton extends StatelessWidget {
     this.onDownPressed,
     this.onUpReleased,
     this.onDownReleased,
-    this.centerLabel,
   });
 
   @override
@@ -556,43 +669,25 @@ class OvalControlButton extends StatelessWidget {
           width: 1,
         ),
       ),
-      child: Stack(
-        alignment: Alignment.center,
+      child: Flex(
+        direction: landscape ? Axis.horizontal : Axis.vertical,
         children: [
-          Flex(
-            direction: landscape ? Axis.horizontal : Axis.vertical,
-            children: [
-              // Each half fills its side of the pill so the whole surface is
-              // tappable, rather than only the icon glyph.
-              Expanded(
-                child: ControlButton(
-                  icon: iconUp,
-                  onPressed: onUpPressed,
-                  onReleased: onUpReleased,
-                ),
-              ),
-              Expanded(
-                child: ControlButton(
-                  icon: iconDown,
-                  onPressed: onDownPressed,
-                  onReleased: onDownReleased,
-                ),
-              ),
-            ],
-          ),
-          if (centerLabel != null)
-            // Must not eat touches - the halves underneath own the whole pill.
-            IgnorePointer(
-              child: Text(
-                centerLabel!,
-                style: TextStyle(
-                  color: const Color(0xFFBB86FC).withOpacity(0.7),
-                  fontSize: 9,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
-              ),
+          // Each half fills its side of the pill so the whole surface is
+          // tappable, rather than only the icon glyph.
+          Expanded(
+            child: ControlButton(
+              icon: iconUp,
+              onPressed: onUpPressed,
+              onReleased: onUpReleased,
             ),
+          ),
+          Expanded(
+            child: ControlButton(
+              icon: iconDown,
+              onPressed: onDownPressed,
+              onReleased: onDownReleased,
+            ),
+          ),
         ],
       ),
     );
