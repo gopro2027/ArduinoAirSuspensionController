@@ -192,8 +192,9 @@ class _ButtonsPageState extends State<ButtonsPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               OutlinedButton(
-                onPressed:
-                    canUsePresetActions ? () => _saveSelectedPreset() : null,
+                onPressed: canUsePresetActions
+                    ? () => _confirmSavePreset(context)
+                    : null,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFFBB86FC),
                   side: const BorderSide(color: Color(0xFFBB86FC)),
@@ -275,6 +276,30 @@ class _ButtonsPageState extends State<ButtonsPage> {
     } else {
       _sendLoadPreset(_selectedPreset);
     }
+  }
+
+  /// Overwrites a stored preset, so confirm first - the Wireless_Controller
+  /// guards its Save button the same way.
+  void _confirmSavePreset(BuildContext context) {
+    if (bleManager.connectedDevice == null || _selectedPreset < 1) return;
+    showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Save current height to preset $_selectedPreset?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    ).then((confirmed) {
+      if (confirmed == true) _saveSelectedPreset();
+    });
   }
 
   void _saveSelectedPreset() {
