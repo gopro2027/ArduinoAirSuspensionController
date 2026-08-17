@@ -766,7 +766,17 @@ class SettingsPageState extends State<SettingsPage> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _closeSection();
       },
-      child: open == null ? _buildSectionList() : _buildSectionDetail(open),
+      // The section list stays mounted (offstage) while a section is open, so
+      // its ScrollPosition is never disposed and the list is still where the
+      // user left it on the way back. Swapping the widget out instead would
+      // build a fresh list every time, always starting at the top.
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Offstage(offstage: open != null, child: _buildSectionList()),
+          if (open != null) _buildSectionDetail(open),
+        ],
+      ),
     );
   }
 
