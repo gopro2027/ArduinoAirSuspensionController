@@ -452,6 +452,24 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  /// Shared style for the settings' in-page action buttons (Learn Fob,
+  /// Calibrate…, Allow New Controller, and friends). They were bare
+  /// [TextButton]s, which on this dark background read as plain labels rather
+  /// than something you can press. Dialog actions and the external links are
+  /// deliberately left as text.
+  ButtonStyle _actionButtonStyle(BuildContext context) {
+    return OutlinedButton.styleFrom(
+      foregroundColor: AppTheme.accent(context),
+      side: BorderSide(color: AppTheme.accent(context)),
+      backgroundColor: const Color(0xFF1E1E1E),
+      disabledForegroundColor: Colors.white38,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+    );
+  }
+
   Widget _readOnlyStatusRow(String label, String value) {
     const labelStyle = TextStyle(color: Colors.white, fontSize: 16);
     const valueStyle = TextStyle(color: Colors.white70, fontSize: 16);
@@ -674,7 +692,8 @@ class SettingsPageState extends State<SettingsPage> {
             ),
           ),
           if (_imageFile != null)
-            TextButton(
+            OutlinedButton(
+              style: _actionButtonStyle(context),
               onPressed: () async {
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.remove('uploaded_image');
@@ -1329,7 +1348,9 @@ class SettingsPageState extends State<SettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextButton(
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  style: _actionButtonStyle(context),
                   onPressed: () => _showConfirm(
                     title: 'Confirm?',
                     message:
@@ -1348,7 +1369,9 @@ class SettingsPageState extends State<SettingsPage> {
                   ),
                   child: const Text('Allow New Controller'),
                 ),
-                TextButton(
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  style: _actionButtonStyle(context),
                   onPressed: () => _showConfirm(
                     title: 'Confirm?',
                     message:
@@ -1368,7 +1391,9 @@ class SettingsPageState extends State<SettingsPage> {
                   ),
                   child: const Text('Un-pair All Controllers'),
                 ),
-                TextButton(
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  style: _actionButtonStyle(context),
                   onPressed: () => _showConfirm(
                     title: 'Confirm?',
                     message:
@@ -1534,7 +1559,9 @@ class SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                 ),
-                TextButton(
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  style: _actionButtonStyle(context),
                   onPressed: () => _showConfirm(
                     title: 'Unlearn key fob?',
                     message:
@@ -1553,7 +1580,9 @@ class SettingsPageState extends State<SettingsPage> {
                   ),
                   child: const Text('Unlearn Fob'),
                 ),
-                TextButton(
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  style: _actionButtonStyle(context),
                   onPressed: () => _showConfirm(
                     title: 'Learn fob?',
                     message: 'Requires an OASMan Key Fob Receiver (RX480E).',
@@ -1589,7 +1618,9 @@ class SettingsPageState extends State<SettingsPage> {
                     '$learnPct%',
                   ),
                 ),
-                TextButton(
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  style: _actionButtonStyle(context),
                   onPressed: () => _showConfirm(
                     title: 'Reset Learned AI data?',
                     message:
@@ -1681,7 +1712,9 @@ class SettingsPageState extends State<SettingsPage> {
                 ),
                 if (bm.heightSensorMode) ...[
                   const SizedBox(height: 8),
-                  TextButton(
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    style: _actionButtonStyle(context),
                     onPressed: () => _showConfirm(
                       title: 'Calibrate Min Height?',
                       message:
@@ -1702,7 +1735,9 @@ class SettingsPageState extends State<SettingsPage> {
                     ),
                     child: const Text('Calibrate Min Height'),
                   ),
-                  TextButton(
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    style: _actionButtonStyle(context),
                     onPressed: () => _showConfirm(
                       title: 'Calibrate Max Height?',
                       message:
@@ -1723,7 +1758,9 @@ class SettingsPageState extends State<SettingsPage> {
                     ),
                     child: const Text('Calibrate Max Height'),
                   ),
-                  TextButton(
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    style: _actionButtonStyle(context),
                     onPressed: () => _showConfirm(
                       title: 'Calibrate Minimum Ride Height?',
                       message:
