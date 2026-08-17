@@ -226,11 +226,37 @@ static uint16_t att_read_callback(hci_con_handle_t con_handle, uint16_t att_hand
 
 void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet);
 
+// Last valve bitset written over the VALVECONTROL characteristic. File scope (was: a
+// static local inside att_write_callback) so the disconnect handler can release it.
+static unsigned int valveTableValues = 0;
+
+// Safety: a client can drop (out of range, app killed, battery dead) while it is still
+// holding a valve open, and nothing would ever write the closing bitset - leaving that
+// solenoid energized indefinitely. On any disconnect, force the bitset back to 0 and
+// close whatever it had open.
+static void releaseBleHeldValves()
+{
+    if (valveTableValues == 0)
+    {
+        return;
+    }
+
+    Serial.printf("Client disconnected with valve bitset %u still open, closing all\n", valveTableValues);
+    for (int i = 0; i < SOLENOID_COUNT; i++)
+    {
+        if ((valveTableValues >> i) & 1)
+        {
+            Serial.print("Closing ");
+            Serial.println(i);
+            getManifold()->get(i)->close();
+        }
+    }
+    valveTableValues = 0;
+}
+
 // ATT write callback
 static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, uint16_t transaction_mode, uint16_t offset, uint8_t *buffer, uint16_t buffer_size)
 {
-    static unsigned int valveTableValues = 0;
-
     if (att_handle == rest_characteristic_value_handle)
     {
         if (buffer_size == 0)
@@ -286,7 +312,7 @@ static int att_write_callback(hci_con_handle_t con_handle, uint16_t att_handle, 
             unsigned int valveControlBittset = *(unsigned int *)&valveControlBittsetArr; // little_endian_read_32(buffer, 0);
             Serial.printf("Value received for valve: %i\n", valveControlBittset);
 
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < SOLENOID_COUNT; i++)
             {
                 bool prevVal = (valveTableValues >> i) & 1;
                 bool curVal = (valveControlBittset >> i) & 1;
@@ -390,6 +416,8 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
     case HCI_EVENT_DISCONNECTION_COMPLETE:
         log_i("Client disconnected!");
         removeAuthed(hci_event_disconnection_complete_get_connection_handle(packet));
+        // don't leave a valve open because the client disconnected mid-hold
+        releaseBleHeldValves();
         gap_advertisements_enable(1);
         break;
 
