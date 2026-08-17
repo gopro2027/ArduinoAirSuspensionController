@@ -7,11 +7,18 @@ class AppSettings {
   String passkeyText = '202777';
   String pairedManifoldId = '';
 
+  /// When true the BLE scan is unfiltered (every advertising device is listed)
+  /// instead of only devices advertising the OASMan service UUID. Some Android
+  /// devices never report the advertised service UUIDs, so the filtered scan
+  /// finds nothing for them.
+  bool showAllBluetoothDevices = false;
+
   AppSettings({
     required this.units,
     required this.passkeyText,
     required this.uploadedPicture,
     required this.pairedManifoldId,
+    required this.showAllBluetoothDevices,
   });
 
   factory AppSettings.fromPrefs(SharedPreferences prefs) {
@@ -21,6 +28,8 @@ class AppSettings {
       passkeyText : prefs.getString('_passkeyText') ?? '202777',
       uploadedPicture: prefs.getString('uploaded_image') ?? '',
       pairedManifoldId: prefs.getString('_pairedManifoldId') ?? '',
+      showAllBluetoothDevices:
+          prefs.getBool('_showAllBluetoothDevices') ?? false,
     );
   }
 }
@@ -36,5 +45,7 @@ Future<void> loadGlobalSettings() async {
       passkeyText : prefs.getString('_passkeyText') ?? '202777',
       uploadedPicture: prefs.getString('uploaded_image') ?? '',
       pairedManifoldId: prefs.getString('_pairedManifoldId') ?? '',
+      showAllBluetoothDevices:
+          prefs.getBool('_showAllBluetoothDevices') ?? false,
   );
 }

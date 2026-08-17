@@ -362,9 +362,13 @@ class BLEManager extends ChangeNotifier {
       }
     });
 
+    // Some Android devices never surface the advertised service UUIDs, so a
+    // filtered scan finds nothing on them. The "show all bluetooth devices"
+    // setting drops the filter and lists everything that advertises.
+    final showAll = globalSettings?.showAllBluetoothDevices ?? false;
     FlutterBluePlus.startScan(
       timeout: const Duration(seconds: 5),
-      withServices: [Guid(oasmanServiceUuid)],
+      withServices: showAll ? const [] : [Guid(oasmanServiceUuid)],
     );
     debugPrint(
         "ble scan started, paired ID: ${globalSettings!.pairedManifoldId}");
@@ -391,6 +395,24 @@ class BLEManager extends ChangeNotifier {
       notifyListeners();
 
       await discoverServices(device, context);
+
+      // With "show all bluetooth devices" on, the list can contain anything -
+      // don't remember a device that isn't a manifold, it would poison
+      // auto-reconnect.
+      if (restCharacteristic == null && statusCharacteristic == null) {
+        debugPrint("Not an OASMan manifold: ${device.name} (${device.id})");
+        await disconnectDevice();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('That device is not an OASMan manifold'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
       await _onConnectionCompleted();
 
       print("Successfully connected to ${device.name} (${device.id})");

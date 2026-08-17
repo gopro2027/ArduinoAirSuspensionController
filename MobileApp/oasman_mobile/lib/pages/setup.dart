@@ -146,6 +146,8 @@ class SettingsPageState extends State<SettingsPage> {
     passkeyText = globalSettings!.passkeyText;
     await prefs.setString('_units', globalSettings!.units);
     await prefs.setString('_passkeyText', passkeyText);
+    await prefs.setBool(
+        '_showAllBluetoothDevices', globalSettings!.showAllBluetoothDevices);
     await prefs.setString('_wifiSsid', wifiSsidController.text);
     await prefs.setString('_wifiPass', wifiPassController.text);
   }
@@ -918,6 +920,49 @@ class SettingsPageState extends State<SettingsPage> {
                   tooltip:
                       'Must match the manifold. Validates on connection. When the manifold is connected, updating this updates the manifold too. Six digits only.',
                   saveWhenKeyboardDone: true,
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Flexible(
+                            child: Text(
+                              'Show all bluetooth devices',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.help_outline,
+                                size: 20, color: Colors.grey),
+                            onPressed: () {
+                              showInfoDialog(
+                                context,
+                                'Show all bluetooth devices',
+                                'Normally the scan only lists devices advertising the OASMan service. Some phones never report that information, so no devices show up at all. Turn this on to list every bluetooth device nearby and pick the manifold by name.',
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    _buildSwitch(
+                      '',
+                      globalSettings!.showAllBluetoothDevices,
+                      (value) async {
+                        setState(() {
+                          globalSettings!.showAllBluetoothDevices = value;
+                        });
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('_showAllBluetoothDevices', value);
+                      },
+                    ),
+                  ],
                 ),
                 Selector<BLEManager, bool>(
                   selector: (_, m) => m.connectedDevice != null,
