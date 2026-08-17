@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:provider/provider.dart';
 import '../../ble_manager.dart';
+import '../../models/appSettings.dart';
+import '../../theme/app_theme.dart';
 
 class BluetoothPopup extends StatefulWidget {
   const BluetoothPopup({super.key});
@@ -56,7 +58,7 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
                           setState(() {});
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFBB86FC),
+                          backgroundColor: AppTheme.accent(context),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -108,20 +110,32 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
       builder: (context, snapshot) {
         final scanResults = snapshot.data ?? [];
         final oasmanServiceGuid = Guid(oasmanServiceUuid);
-        final filteredResults = scanResults
-            .where((result) =>
-                result.advertisementData.serviceUuids.contains(oasmanServiceGuid))
-            .toList();
+        final showAll = globalSettings?.showAllBluetoothDevices ?? false;
+        bool isOasman(ScanResult r) =>
+            r.advertisementData.serviceUuids.contains(oasmanServiceGuid);
+
+        final List<ScanResult> filteredResults;
+        if (showAll) {
+          // Keep known OASMan devices pinned at the top of the full list.
+          filteredResults = [
+            ...scanResults.where(isOasman),
+            ...scanResults.where((r) => !isOasman(r)),
+          ];
+        } else {
+          filteredResults = scanResults.where(isOasman).toList();
+        }
         final seen = <String>{};
         final deduped = filteredResults
             .where((r) => seen.add(r.device.remoteId.str))
             .toList();
 
         if (deduped.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
-              "No OASMan devices found. Tap Refresh to scan.",
-              style: TextStyle(color: Colors.grey),
+              showAll
+                  ? "No devices found. Tap Refresh to scan."
+                  : "No OASMan devices found. Tap Refresh to scan.\n\nIf your phone never lists the manifold, turn on \"Show all bluetooth devices\" in Settings.",
+              style: const TextStyle(color: Colors.grey),
               textAlign: TextAlign.center,
             ),
           );
@@ -135,7 +149,7 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
               const Divider(color: Colors.grey),
           itemBuilder: (context, index) {
             final device = deduped[index].device;
-            return _buildDeviceTile(device, bleManager);
+            return _buildDeviceTile(device, bleManager, showSubtitleId: showAll);
           },
         );
       },
@@ -182,7 +196,7 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
               await bleManager.disconnectDevice();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFBB86FC),
+              backgroundColor: AppTheme.accent(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -198,7 +212,9 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
     );
   }
 
-  Widget _buildDeviceTile(BluetoothDevice device, BLEManager bleManager) {
+  Widget _buildDeviceTile(BluetoothDevice device, BLEManager bleManager,
+      {bool showSubtitleId = false}) {
+    final hasName = device.name.isNotEmpty;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -206,20 +222,29 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Text(
-              device.name.isNotEmpty
-                  ? device.name
-                  : device.remoteId.str,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  hasName ? device.name : device.remoteId.str,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (showSubtitleId && hasName)
+                  Text(
+                    device.remoteId.str,
+                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                  ),
+              ],
             ),
           ),
           Container(
             decoration: BoxDecoration(
-              color: const Color(0xFFBB86FC),
+              color: AppTheme.accent(context),
               shape: BoxShape.circle,
             ),
             child: IconButton(

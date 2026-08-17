@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_theme.dart';
 
 class InvalidPasskeyPopup extends StatelessWidget {
   const InvalidPasskeyPopup({super.key});
@@ -39,7 +40,7 @@ class InvalidPasskeyPopup extends StatelessWidget {
                 Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFBB86FC),
+                backgroundColor: AppTheme.accent(context),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

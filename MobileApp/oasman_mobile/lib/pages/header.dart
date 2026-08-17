@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'popup/bluetooth.dart';
 import '../ble_manager.dart';
@@ -89,9 +90,9 @@ class Header extends StatelessWidget {
                 rawPressure: double.tryParse(
                         bleManager.pressureValues["frontLeft"] ?? "0") ??
                     0.0,
-                percentage: "- %",
                 asset: 'assets/Group2.svg',
                 unitProvider: unitProvider,
+                heightSensorMode: bleManager.heightSensorMode,
               ),
               _buildPositionedInfo(
                 top: 0,
@@ -99,11 +100,11 @@ class Header extends StatelessWidget {
                 rawPressure: double.tryParse(
                         bleManager.pressureValues["frontRight"] ?? "0") ??
                     0.0,
-                percentage: "- %",
                 asset: 'assets/Group2.svg',
                 alignRight: true,
                 flipSvg: true,
                 unitProvider: unitProvider,
+                heightSensorMode: bleManager.heightSensorMode,
               ),
               _buildPositionedInfo(
                 bottom: 24,
@@ -111,10 +112,10 @@ class Header extends StatelessWidget {
                 rawPressure: double.tryParse(
                         bleManager.pressureValues["rearLeft"] ?? "0") ??
                     0.0,
-                percentage: "- %",
                 asset: 'assets/Group1.svg',
                 flipSvg: true,
                 unitProvider: unitProvider,
+                heightSensorMode: bleManager.heightSensorMode,
               ),
               _buildPositionedInfo(
                 bottom: 24,
@@ -122,10 +123,10 @@ class Header extends StatelessWidget {
                 rawPressure: double.tryParse(
                         bleManager.pressureValues["rearRight"] ?? "0") ??
                     0.0,
-                percentage: "- %",
                 asset: 'assets/Group1.svg',
                 alignRight: true,
                 unitProvider: unitProvider,
+                heightSensorMode: bleManager.heightSensorMode,
               ),
               Align(
                 alignment: Alignment.bottomCenter,
@@ -162,9 +163,9 @@ class Header extends StatelessWidget {
                 rawPressure: double.tryParse(
                         bleManager.pressureValues["frontLeft"] ?? "0") ??
                     0.0,
-                percentage: "- %",
                 asset: 'assets/Group2.svg',
                 unitProvider: unitProvider,
+                heightSensorMode: bleManager.heightSensorMode,
               ),
               _buildPositionedInfo(
                 top: size.height * 0.07,
@@ -172,11 +173,11 @@ class Header extends StatelessWidget {
                 rawPressure: double.tryParse(
                         bleManager.pressureValues["frontRight"] ?? "0") ??
                     0.0,
-                percentage: "- %",
                 asset: 'assets/Group2.svg',
                 alignRight: true,
                 flipSvg: true,
                 unitProvider: unitProvider,
+                heightSensorMode: bleManager.heightSensorMode,
               ),
               _buildPositionedInfo(
                 bottom: size.height * 0.12,
@@ -184,10 +185,10 @@ class Header extends StatelessWidget {
                 rawPressure: double.tryParse(
                         bleManager.pressureValues["rearLeft"] ?? "0") ??
                     0.0,
-                percentage: "- %",
                 asset: 'assets/Group1.svg',
                 flipSvg: true,
                 unitProvider: unitProvider,
+                heightSensorMode: bleManager.heightSensorMode,
               ),
               _buildPositionedInfo(
                 bottom: size.height * 0.12,
@@ -195,10 +196,10 @@ class Header extends StatelessWidget {
                 rawPressure: double.tryParse(
                         bleManager.pressureValues["rearRight"] ?? "0") ??
                     0.0,
-                percentage: "- %",
                 asset: 'assets/Group1.svg',
                 alignRight: true,
                 unitProvider: unitProvider,
+                heightSensorMode: bleManager.heightSensorMode,
               ),
               Align(
                 alignment: Alignment.bottomCenter,
@@ -212,6 +213,28 @@ class Header extends StatelessWidget {
   }
 
   Widget _buildTankPressure(BLEManager bleManager, UnitProvider unitProvider) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Mirrors the Wireless_Controller status bar's "Adjusting" label
+        // (StatusPacketBittset.ADJUSTMENT_IN_PROGRESS): a corner is actively
+        // filling or dumping toward a target.
+        if (bleManager.adjustmentInProgress)
+          const Text(
+            'Adjusting',
+            style: TextStyle(
+              fontFamily: 'Bebas Neue',
+              color: Color(0xFF4ADE80),
+              fontSize: 18,
+            ),
+          ),
+        _buildTankPressureRow(bleManager, unitProvider),
+      ],
+    );
+  }
+
+  Widget _buildTankPressureRow(
+      BLEManager bleManager, UnitProvider unitProvider) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
@@ -249,34 +272,49 @@ class Header extends StatelessWidget {
     double? left,
     double? right,
     required double rawPressure,
-    required String percentage,
     required String asset,
     required UnitProvider unitProvider,
+    required bool heightSensorMode,
     bool alignRight = false,
     bool flipSvg = false,
   }) {
-    final convertedPressure = unitProvider.unit == 'Bar'
-        ? unitProvider.convertToBar(rawPressure).toStringAsFixed(2)
-        : rawPressure.toStringAsFixed(2);
+    // In level sensor mode the manifold packs height percentage into the same
+    // STATUSREPORT wheel fields (Wheel::getSelectedInputValue), so it must not
+    // be run through the PSI/Bar conversion. Matches updatePressure() on the
+    // Wireless_Controller, which renders "%u%%" for corners in this mode.
+    // The tank reading is always a real pressure and is not affected.
+    final String label;
+    if (heightSensorMode) {
+      label = "${rawPressure.toStringAsFixed(0)}%";
+    } else {
+      final convertedPressure = unitProvider.unit == 'Bar'
+          ? unitProvider.convertToBar(rawPressure).toStringAsFixed(2)
+          : rawPressure.toStringAsFixed(2);
+      label = "$convertedPressure ${unitProvider.unit}";
+    }
 
     return Positioned(
       top: top,
       bottom: bottom,
       left: left,
       right: right,
-      child: _buildPressureInfo(
-        "$convertedPressure ${unitProvider.unit}",
-        percentage,
-        asset,
-        alignRight: alignRight,
-        flipSvg: flipSvg,
+      // Builder: the layout helpers are called without a context of their own,
+      // and the leader line needs one to read the theme accent.
+      child: Builder(
+        builder: (context) => _buildPressureInfo(
+          context,
+          label,
+          asset,
+          alignRight: alignRight,
+          flipSvg: flipSvg,
+        ),
       ),
     );
   }
 
   Widget _buildPressureInfo(
+    BuildContext context,
     String pressure,
-    String percentage,
     String asset, {
     bool alignRight = false,
     bool flipSvg = false,
@@ -308,22 +346,12 @@ class Header extends StatelessWidget {
             asset,
             width: 20,
             height: 20,
+            // The corner leader lines are single-path SVGs with a hardcoded
+            // purple fill; srcIn repaints them in the selected theme accent.
+            colorFilter:
+                ColorFilter.mode(AppTheme.accent(context), BlendMode.srcIn),
             placeholderBuilder: (BuildContext context) =>
                 const CircularProgressIndicator(),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Transform.translate(
-          offset: flipSvg && !alignRight || !flipSvg && alignRight
-              ? const Offset(0, 0)
-              : const Offset(0, -18),
-          child: Text(
-            percentage,
-            style: const TextStyle(
-              fontFamily: 'Bebas Neue',
-              color: Colors.white,
-              fontSize: 14,
-            ),
           ),
         ),
       ],

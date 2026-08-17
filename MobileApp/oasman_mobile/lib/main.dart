@@ -11,6 +11,7 @@ import 'package:oasman_mobile/pages/menu.dart';
 import 'package:oasman_mobile/pages/buttons.dart';
 import 'package:oasman_mobile/pages/setup.dart';
 import 'package:oasman_mobile/pages/header.dart'; // Import your header
+import 'package:oasman_mobile/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +31,8 @@ void main() async {
             create: (_) => BLEManager()), // BLEManager globally available
         ChangeNotifierProvider(
             create: (_) => UnitProvider()), // UnitProvider globally available
+        ChangeNotifierProvider(
+            create: (_) => ThemeProvider()), // ThemeProvider globally available
       ],
       child: MyApp(),
     ),
@@ -80,18 +83,19 @@ class _MyAppState extends State<MyApp> {
       });
     }
 
-    // App is ready, use globalSettings
-    return MaterialApp(
-      title: 'OASMan',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF000000)),
-        useMaterial3: true,
+    // App is ready, use globalSettings.
+    // The Consumer rebuilds MaterialApp when the theme changes; everything that
+    // reads a colour through Theme.of() then repaints in the new theme.
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) => MaterialApp(
+        title: 'OASMan',
+        theme: AppTheme.themeData(themeProvider.preset),
+        home: const MainPage(), // Main page
+        routes: {
+          '/buttons': (context) => const ButtonsPage(),
+          '/setup': (context) => const SettingsPage(),
+        },
       ),
-      home: const MainPage(), // Main page
-      routes: {
-        '/buttons': (context) => const ButtonsPage(),
-        '/setup': (context) => const SettingsPage(),
-      },
     );
   }
 }

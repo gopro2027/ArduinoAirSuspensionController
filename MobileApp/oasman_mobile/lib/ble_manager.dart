@@ -64,6 +64,20 @@ final List<int> kConfigReadPacket = List<int>.filled(btoasPacketSize, 0)
   ..[0] = BTOasIdentifier.GETCONFIGVALUES & 0xFF
   ..[1] = BTOasIdentifier.GETCONFIGVALUES >> 8;
 
+/// Live status bits carried in STATUSREPORT's bittset. Mirrors
+/// StatusPacketBittset in BTOas.h - these are live state, not config.
+class StatusPacketBittset {
+  static const int COMPRESSOR_FROZEN = 0;
+  static const int COMPRESSOR_STATUS_ON = 1;
+  static const int ACC_STATUS_ON = 2;
+  static const int TIMER_STATUS_EXPIRED = 3; // not really used
+  static const int CLOCK = 4; // not really used
+  static const int EBRAKE_STATUS_ON = 5;
+  /// isAnyWheelActive() on the manifold: a corner is actively filling/dumping
+  /// to a target. The Wireless_Controller shows an "Adjusting" label for this.
+  static const int ADJUSTMENT_IN_PROGRESS = 6;
+}
+
 /// Config flags in ConfigValuesPacket.configFlagsBits (GETCONFIGVALUES).
 class ConfigFlagsBit {
   static const int CONFIG_MAINTAIN_PRESSURE = 0;
@@ -123,6 +137,46 @@ class BLEManager extends ChangeNotifier {
   Timer? _reconnectTimer;
   bool _autoReconnectEnabled = false;
 
+  /// How long we wait for the manifold's AUTHPACKET reply before giving up on
+  /// the link. Mirrors AUTH_TIMEOUT in OASMan_ESP32/src/bluetooth/ble.cpp - the
+  /// manifold drops an un-authed client on the same budget. Ours is measured
+  /// from when the auth packet is sent (i.e. after service discovery) so a slow
+  /// Android discovery doesn't eat into it.
+  static const Duration authTimeout = Duration(seconds: 5);
+
+  /// True once the manifold has answered our auth packet with AUTHRESULT_SUCCESS.
+  bool authenticated = false;
+  Timer? _authTimer;
+
+  /// Arm the auth watchdog. Called right after the auth packet goes out; a peer
+  /// that never answers (wrong device, dead firmware) gets dropped instead of
+  /// leaving the app stuck on a connection that will never work.
+  void _startAuthWatchdog() {
+    // The reply can already be in when we get here - the rest notify listener
+    // is attached before the auth packet goes out, so a fast manifold can
+    // answer while we're still awaiting the write. Never re-arm on a live link.
+    if (authenticated) return;
+    _authTimer?.cancel();
+    _authTimer = Timer(authTimeout, () {
+      _authTimer = null;
+      if (authenticated || connectedDevice == null) return;
+      debugPrint(
+          'No auth response within ${authTimeout.inMilliseconds}ms - disconnecting');
+      disconnectDevice();
+      _scheduleReconnectScan();
+    });
+  }
+
+  void _cancelAuthWatchdog() {
+    _authTimer?.cancel();
+    _authTimer = null;
+  }
+
+  /// Whether service discovery found the OASMan GATT characteristics, i.e. the
+  /// peer is a manifold rather than some unrelated bluetooth device.
+  bool get _hasManifoldCharacteristics =>
+      restCharacteristic != null || statusCharacteristic != null;
+
   /// Start the background reconnect loop. Safe to call multiple times.
   void enableAutoReconnect() {
     _autoReconnectEnabled = true;
@@ -162,7 +216,13 @@ class BLEManager extends ChangeNotifier {
       if (connectedDevice?.id == event.device.id &&
           event.connectionState == BluetoothConnectionState.disconnected) {
         debugPrint('Manifold disconnected!');
+        _cancelAuthWatchdog();
+        authenticated = false;
         connectedDevice = null;
+        // Drop any held valve bits. The manifold does not close valves on
+        // disconnect, so a stale mask here would be OR'd into the next press
+        // after reconnect and re-open a valve the user never touched.
+        valveControlValue = 0;
         vehicleOn = false;
         restCharacteristic = null;
         statusCharacteristic = null;
@@ -189,6 +249,11 @@ class BLEManager extends ChangeNotifier {
   bool compressorFrozen = false;
   bool vehicleOn = false;
   bool ebrakeOn = false;
+
+  /// A corner is actively filling/dumping toward a target (manifold's
+  /// isAnyWheelActive). Drives the "Adjusting" indicator, same as the
+  /// Wireless_Controller status bar.
+  bool adjustmentInProgress = false;
   bool riseOnStart = false;
   bool maintainPressure = false;
   bool sensorlessLeveling = false;
@@ -213,7 +278,9 @@ class BLEManager extends ChangeNotifier {
 
   /// From STATUSREPORT args (AI learning UI).
   int aiLearnPercent = 0;
-  int aiReadyBittset = 0;
+  // args8()[11] (byte 15) is reserved on the wire - it used to carry an
+  // "AI ready" bittset per solenoid, but the manifold now always writes 0 and
+  // neither client displays it. Do not resurrect it without a firmware change.
 
 
   /// RF key fob button preset indices on manifold (0–4 = presets 1–5).
@@ -276,6 +343,18 @@ class BLEManager extends ChangeNotifier {
 
   void setValveBit(int bit) {
     setValveMask(1 << bit);
+  }
+
+  /// Clears [mask] from the valve bitmask and sends a single BLE write.
+  /// Mirrors unsetValveBit() on the Wireless_Controller: releasing one control
+  /// must only close that valve, so multi-touch holds stay independent.
+  void unsetValveMask(int mask) {
+    valveControlValue &= ~mask;
+    writeValveValue(valveControlValue);
+  }
+
+  void unsetValveBit(int bit) {
+    unsetValveMask(1 << bit);
   }
 
   void closeValves() {
@@ -362,9 +441,13 @@ class BLEManager extends ChangeNotifier {
       }
     });
 
+    // Some Android devices never surface the advertised service UUIDs, so a
+    // filtered scan finds nothing on them. The "show all bluetooth devices"
+    // setting drops the filter and lists everything that advertises.
+    final showAll = globalSettings?.showAllBluetoothDevices ?? false;
     FlutterBluePlus.startScan(
       timeout: const Duration(seconds: 5),
-      withServices: [Guid(oasmanServiceUuid)],
+      withServices: showAll ? const [] : [Guid(oasmanServiceUuid)],
     );
     debugPrint(
         "ble scan started, paired ID: ${globalSettings!.pairedManifoldId}");
@@ -385,12 +468,31 @@ class BLEManager extends ChangeNotifier {
     try {
       _startGlobalConnListener(); // ensure listener is active
       print("Connecting to device: ${device.name} (${device.id})");
+      authenticated = false;
       await device.connect(autoConnect: false);
 
       connectedDevice = device;
       notifyListeners();
 
       await discoverServices(device, context);
+
+      // With "show all bluetooth devices" on, the list can contain anything -
+      // don't remember a device that isn't a manifold, it would poison
+      // auto-reconnect.
+      if (!_hasManifoldCharacteristics) {
+        debugPrint("Not an OASMan manifold: ${device.name} (${device.id})");
+        await disconnectDevice();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('That device is not an OASMan manifold'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
       await _onConnectionCompleted();
 
       print("Successfully connected to ${device.name} (${device.id})");
@@ -408,12 +510,23 @@ class BLEManager extends ChangeNotifier {
     try {
       _startGlobalConnListener(); // ensure listener is active
       print("Connecting to device: ${device.name} (${device.id})");
+      authenticated = false;
       await device.connect(autoConnect: false);
 
       connectedDevice = device;
       notifyListeners();
 
       await discoverServices(device, context);
+
+      // Same guard as the manual connect path: the saved paired ID could point
+      // at something that isn't a manifold any more.
+      if (!_hasManifoldCharacteristics) {
+        debugPrint("Not an OASMan manifold: ${device.name} (${device.id})");
+        await disconnectDevice();
+        _scheduleReconnectScan();
+        return;
+      }
+
       await _onConnectionCompleted();
 
       print("Successfully connected to ${device.name} (${device.id})");
@@ -430,6 +543,8 @@ class BLEManager extends ChangeNotifier {
 
   /// Disconnect from the device
   Future<void> disconnectDevice() async {
+    _cancelAuthWatchdog();
+    authenticated = false;
     if (connectedDevice != null) {
       try {
         await connectedDevice!.disconnect();
@@ -643,6 +758,7 @@ class BLEManager extends ChangeNotifier {
             });
             print("doing auth check");
             await authCheck();
+            _startAuthWatchdog();
             print("Write characteristic found: ${characteristic.uuid}");
           }
 
@@ -719,8 +835,13 @@ class BLEManager extends ChangeNotifier {
 
       switch (packetCmd) {
         case BTOasIdentifier.AUTHPACKET:
-          if (data.length >= 12 &&
-              _decodeInt32(data, 8) == 2 /*AuthResult::AUTHRESULT_FAIL*/) {
+          final authResult = data.length >= 12 ? _decodeInt32(data, 8) : -1;
+          if (authResult == 1 /*AuthResult::AUTHRESULT_SUCCESS*/) {
+            // Manifold accepted the passkey - the link is live, stand the
+            // watchdog down.
+            authenticated = true;
+            _cancelAuthWatchdog();
+          } else if (authResult == 2 /*AuthResult::AUTHRESULT_FAIL*/) {
             disconnectDevice();
             if (context != null && context.mounted) {
               showDialog(
@@ -830,11 +951,18 @@ class BLEManager extends ChangeNotifier {
     final byteData = ByteData.sublistView(Uint8List.fromList(statusBytes));
     final statusBittset = byteData.getUint32(0, Endian.little);
 
-    // Live status only (bits 0-5). Config toggles come from GETCONFIGVALUES.
-    compressorFrozen = (statusBittset & (1 << 0)) != 0;
-    compressorOn = (statusBittset & (1 << 1)) != 0;
-    vehicleOn = (statusBittset & (1 << 2)) != 0;
-    ebrakeOn = (statusBittset & (1 << 5)) != 0;
+    // Live status only. Config toggles come from GETCONFIGVALUES.
+    compressorFrozen =
+        (statusBittset & (1 << StatusPacketBittset.COMPRESSOR_FROZEN)) != 0;
+    compressorOn =
+        (statusBittset & (1 << StatusPacketBittset.COMPRESSOR_STATUS_ON)) != 0;
+    vehicleOn =
+        (statusBittset & (1 << StatusPacketBittset.ACC_STATUS_ON)) != 0;
+    ebrakeOn =
+        (statusBittset & (1 << StatusPacketBittset.EBRAKE_STATUS_ON)) != 0;
+    adjustmentInProgress =
+        (statusBittset & (1 << StatusPacketBittset.ADJUSTMENT_IN_PROGRESS)) !=
+            0;
   }
 
   void _handleIncomingData(List<int> data) {
@@ -853,8 +981,8 @@ class BLEManager extends ChangeNotifier {
       final prevCompOn = compressorOn;
       final prevVeh = vehicleOn;
       final prevEb = ebrakeOn;
+      final prevAdjusting = adjustmentInProgress;
       final prevAiLearn = aiLearnPercent;
-      final prevAiReady = aiReadyBittset;
       final prevFl = pressureValues['frontLeft'];
       final prevFr = pressureValues['frontRight'];
       final prevRl = pressureValues['rearLeft'];
@@ -868,9 +996,8 @@ class BLEManager extends ChangeNotifier {
         _decodeShort(data, 10),
       ];
       final tankPressure = _decodeShort(data, 12);
-      if (data.length >= 16) {
-        aiLearnPercent = data[14] & 0xFF;
-        aiReadyBittset = data[15] & 0xFF;
+      if (data.length >= 15) {
+        aiLearnPercent = data[14] & 0xFF; // args8()[10]
       }
       if (data.length >= 20) {
         handleStatusBittset(data.sublist(16, 20));
@@ -888,8 +1015,8 @@ class BLEManager extends ChangeNotifier {
           prevCompOn != compressorOn ||
           prevVeh != vehicleOn ||
           prevEb != ebrakeOn ||
+          prevAdjusting != adjustmentInProgress ||
           prevAiLearn != aiLearnPercent ||
-          prevAiReady != aiReadyBittset ||
           prevFl != pressureValues['frontLeft'] ||
           prevFr != pressureValues['frontRight'] ||
           prevRl != pressureValues['rearLeft'] ||
