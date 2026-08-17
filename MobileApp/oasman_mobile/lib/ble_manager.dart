@@ -64,6 +64,20 @@ final List<int> kConfigReadPacket = List<int>.filled(btoasPacketSize, 0)
   ..[0] = BTOasIdentifier.GETCONFIGVALUES & 0xFF
   ..[1] = BTOasIdentifier.GETCONFIGVALUES >> 8;
 
+/// Live status bits carried in STATUSREPORT's bittset. Mirrors
+/// StatusPacketBittset in BTOas.h - these are live state, not config.
+class StatusPacketBittset {
+  static const int COMPRESSOR_FROZEN = 0;
+  static const int COMPRESSOR_STATUS_ON = 1;
+  static const int ACC_STATUS_ON = 2;
+  static const int TIMER_STATUS_EXPIRED = 3; // not really used
+  static const int CLOCK = 4; // not really used
+  static const int EBRAKE_STATUS_ON = 5;
+  /// isAnyWheelActive() on the manifold: a corner is actively filling/dumping
+  /// to a target. The Wireless_Controller shows an "Adjusting" label for this.
+  static const int ADJUSTMENT_IN_PROGRESS = 6;
+}
+
 /// Config flags in ConfigValuesPacket.configFlagsBits (GETCONFIGVALUES).
 class ConfigFlagsBit {
   static const int CONFIG_MAINTAIN_PRESSURE = 0;
@@ -231,6 +245,11 @@ class BLEManager extends ChangeNotifier {
   bool compressorFrozen = false;
   bool vehicleOn = false;
   bool ebrakeOn = false;
+
+  /// A corner is actively filling/dumping toward a target (manifold's
+  /// isAnyWheelActive). Drives the "Adjusting" indicator, same as the
+  /// Wireless_Controller status bar.
+  bool adjustmentInProgress = false;
   bool riseOnStart = false;
   bool maintainPressure = false;
   bool sensorlessLeveling = false;
@@ -914,11 +933,18 @@ class BLEManager extends ChangeNotifier {
     final byteData = ByteData.sublistView(Uint8List.fromList(statusBytes));
     final statusBittset = byteData.getUint32(0, Endian.little);
 
-    // Live status only (bits 0-5). Config toggles come from GETCONFIGVALUES.
-    compressorFrozen = (statusBittset & (1 << 0)) != 0;
-    compressorOn = (statusBittset & (1 << 1)) != 0;
-    vehicleOn = (statusBittset & (1 << 2)) != 0;
-    ebrakeOn = (statusBittset & (1 << 5)) != 0;
+    // Live status only. Config toggles come from GETCONFIGVALUES.
+    compressorFrozen =
+        (statusBittset & (1 << StatusPacketBittset.COMPRESSOR_FROZEN)) != 0;
+    compressorOn =
+        (statusBittset & (1 << StatusPacketBittset.COMPRESSOR_STATUS_ON)) != 0;
+    vehicleOn =
+        (statusBittset & (1 << StatusPacketBittset.ACC_STATUS_ON)) != 0;
+    ebrakeOn =
+        (statusBittset & (1 << StatusPacketBittset.EBRAKE_STATUS_ON)) != 0;
+    adjustmentInProgress =
+        (statusBittset & (1 << StatusPacketBittset.ADJUSTMENT_IN_PROGRESS)) !=
+            0;
   }
 
   void _handleIncomingData(List<int> data) {
@@ -937,6 +963,7 @@ class BLEManager extends ChangeNotifier {
       final prevCompOn = compressorOn;
       final prevVeh = vehicleOn;
       final prevEb = ebrakeOn;
+      final prevAdjusting = adjustmentInProgress;
       final prevAiLearn = aiLearnPercent;
       final prevAiReady = aiReadyBittset;
       final prevFl = pressureValues['frontLeft'];
@@ -972,6 +999,7 @@ class BLEManager extends ChangeNotifier {
           prevCompOn != compressorOn ||
           prevVeh != vehicleOn ||
           prevEb != ebrakeOn ||
+          prevAdjusting != adjustmentInProgress ||
           prevAiLearn != aiLearnPercent ||
           prevAiReady != aiReadyBittset ||
           prevFl != pressureValues['frontLeft'] ||

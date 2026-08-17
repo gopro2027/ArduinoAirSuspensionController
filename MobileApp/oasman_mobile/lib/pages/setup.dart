@@ -74,6 +74,8 @@ class SettingsPageState extends State<SettingsPage> {
   late TextEditingController maxPressureController;
   late TextEditingController bagMaxController;
   late TextEditingController pressureSensorRatingController;
+  late TextEditingController bagStretchBelowController;
+  late TextEditingController bagStretchPressureController;
   late TextEditingController compressorCrankOffsetController;
   late TextEditingController wifiSsidController;
   late TextEditingController wifiPassController;
@@ -106,6 +108,9 @@ class SettingsPageState extends State<SettingsPage> {
     }
     bagMaxController.text = bm.bagMaxPressure.toString();
     pressureSensorRatingController.text = bm.pressureSensorMax.toString();
+    bagStretchBelowController.text =
+        bm.AirUpBagStretchTriggerBelowPressure.toString();
+    bagStretchPressureController.text = bm.AirUpBagStretchPressure.toString();
     compressorCrankOffsetController.text = bm.compressorCrankOffset.toString();
     auxPulseDurationController.text = bm.auxPulseDuration.toString();
     auxIntervalCyclesController.text = bm.auxIntervalCycles.toString();
@@ -124,6 +129,8 @@ class SettingsPageState extends State<SettingsPage> {
     maxPressureController.dispose();
     bagMaxController.dispose();
     pressureSensorRatingController.dispose();
+    bagStretchBelowController.dispose();
+    bagStretchPressureController.dispose();
     compressorCrankOffsetController.dispose();
     wifiSsidController.dispose();
     wifiPassController.dispose();
@@ -226,6 +233,16 @@ class SettingsPageState extends State<SettingsPage> {
       if (psMax != null) {
         bm.pressureSensorMax = psMax.clamp(0, 65535);
       }
+      final stretchBelow = int.tryParse(bagStretchBelowController.text.trim());
+      if (stretchBelow != null) {
+        bm.AirUpBagStretchTriggerBelowPressure = stretchBelow.clamp(0, 255);
+      }
+      final stretchPressure =
+          int.tryParse(bagStretchPressureController.text.trim());
+      if (stretchPressure != null) {
+        bm.AirUpBagStretchPressure = stretchPressure.clamp(0, 255);
+      }
+
       final crankOffset =
           int.tryParse(compressorCrankOffsetController.text.trim());
       if (crankOffset != null) {
@@ -470,6 +487,8 @@ class SettingsPageState extends State<SettingsPage> {
     maxPressureController = TextEditingController();
     bagMaxController = TextEditingController();
     pressureSensorRatingController = TextEditingController();
+    bagStretchBelowController = TextEditingController();
+    bagStretchPressureController = TextEditingController();
     compressorCrankOffsetController = TextEditingController();
     wifiSsidController =
         TextEditingController(text: prefs.getString('_wifiSsid') ?? '');
@@ -490,6 +509,9 @@ class SettingsPageState extends State<SettingsPage> {
       _lastSyncedConfigRevision = bm.configRevision;
       bagMaxController.text = bm.bagMaxPressure.toString();
       pressureSensorRatingController.text = bm.pressureSensorMax.toString();
+      bagStretchBelowController.text =
+          bm.AirUpBagStretchTriggerBelowPressure.toString();
+      bagStretchPressureController.text = bm.AirUpBagStretchPressure.toString();
       compressorCrankOffsetController.text = bm.compressorCrankOffset.toString();
       print("Manifold's settings loaded");
     }
@@ -818,7 +840,7 @@ class SettingsPageState extends State<SettingsPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _readOnlyStatusRow(
-                      'Learn Progress:',
+                      'Sample Learn Progress:',
                       '$learnPct%',
                     ),
                     Padding(
@@ -964,9 +986,14 @@ class SettingsPageState extends State<SettingsPage> {
                     ),
                   ],
                 ),
-                Selector<BLEManager, bool>(
-                  selector: (_, m) => m.connectedDevice != null,
-                  builder: (context, hasDevice, _) {
+                // heightSensorMode is part of the selector so the bag-stretch
+                // rows appear/disappear as soon as the levelling mode changes,
+                // matching updateLevelModeOptionsVisibility() on the controller.
+                Selector<BLEManager, (bool, bool)>(
+                  selector: (_, m) =>
+                      (m.connectedDevice != null, m.heightSensorMode),
+                  builder: (context, sel, _) {
+                    final (hasDevice, heightSensorMode) = sel;
                     if (!hasDevice) return const SizedBox.shrink();
                     final m = context.read<BLEManager>();
                     return Column(
@@ -1059,6 +1086,31 @@ class SettingsPageState extends State<SettingsPage> {
                                       'Rated range of your pressure sensors. Must match manifold configuration.',
                                   saveWhenKeyboardDone: true,
                                 ),
+                                // Bag stretch only applies to pressure-sensor
+                                // mode; the controller hides these in level
+                                // sensor mode.
+                                if (!heightSensorMode) ...[
+                                  _buildKeyboardInputRow(
+                                    'Bag Stretch Below PSI',
+                                    bagStretchBelowController,
+                                    isNumberInput: true,
+                                    limitChar: 3,
+                                    tooltipTitle: 'Bag Stretch Below PSI',
+                                    tooltip:
+                                        'Only air up with a stretch step when the bag is currently below this pressure (default 40). Ignored in level sensor mode.',
+                                    saveWhenKeyboardDone: true,
+                                  ),
+                                  _buildKeyboardInputRow(
+                                    'Bag Stretch PSI',
+                                    bagStretchPressureController,
+                                    isNumberInput: true,
+                                    limitChar: 3,
+                                    tooltipTitle: 'Bag Stretch PSI',
+                                    tooltip:
+                                        'Extra PSI added on top of the target when airing up, to unroll the bag before settling back to the target. 0 disables bag stretch.',
+                                    saveWhenKeyboardDone: true,
+                                  ),
+                                ],
                               ],
                             );
                           },
@@ -1204,7 +1256,7 @@ class SettingsPageState extends State<SettingsPage> {
                 ),
                 if (!bm.heightSensorMode)
                   _buildSwitch(
-                    'Sensorless Level',
+                    'Height levelling',
                     bm.sensorlessLeveling,
                     (value) {
                       bm.sensorlessLeveling = value;
