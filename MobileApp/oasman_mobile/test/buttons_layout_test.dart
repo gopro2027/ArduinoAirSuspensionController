@@ -25,6 +25,7 @@ void main() {
       uploadedPicture: '',
       pairedManifoldId: '',
       showAllBluetoothDevices: false,
+      themePreset: AppSettings.defaultThemePreset,
     );
   });
 

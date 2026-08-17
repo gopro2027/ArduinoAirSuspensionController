@@ -13,12 +13,22 @@ class AppSettings {
   /// finds nothing for them.
   bool showAllBluetoothDevices = false;
 
+  /// Selected colour theme, stored as the `ThemePreset.id` (matches the
+  /// Wireless_Controller's `ThemePreset` enum values). See lib/theme/app_theme.dart.
+  int themePreset = defaultThemePreset;
+
+  /// SharedPreferences key + default for [themePreset]; 1 is Plump Purple,
+  /// the shade the app shipped with.
+  static const String themePresetKey = '_themePreset';
+  static const int defaultThemePreset = 1;
+
   AppSettings({
     required this.units,
     required this.passkeyText,
     required this.uploadedPicture,
     required this.pairedManifoldId,
     required this.showAllBluetoothDevices,
+    required this.themePreset,
   });
 
   factory AppSettings.fromPrefs(SharedPreferences prefs) {
@@ -30,6 +40,7 @@ class AppSettings {
       pairedManifoldId: prefs.getString('_pairedManifoldId') ?? '',
       showAllBluetoothDevices:
           prefs.getBool('_showAllBluetoothDevices') ?? false,
+      themePreset: prefs.getInt(themePresetKey) ?? defaultThemePreset,
     );
   }
 }
@@ -47,5 +58,7 @@ Future<void> loadGlobalSettings() async {
       pairedManifoldId: prefs.getString('_pairedManifoldId') ?? '',
       showAllBluetoothDevices:
           prefs.getBool('_showAllBluetoothDevices') ?? false,
+      themePreset: prefs.getInt(AppSettings.themePresetKey) ??
+          AppSettings.defaultThemePreset,
   );
 }

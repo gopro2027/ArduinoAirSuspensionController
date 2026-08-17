@@ -278,7 +278,9 @@ class BLEManager extends ChangeNotifier {
 
   /// From STATUSREPORT args (AI learning UI).
   int aiLearnPercent = 0;
-  int aiReadyBittset = 0;
+  // args8()[11] (byte 15) is reserved on the wire - it used to carry an
+  // "AI ready" bittset per solenoid, but the manifold now always writes 0 and
+  // neither client displays it. Do not resurrect it without a firmware change.
 
 
   /// RF key fob button preset indices on manifold (0–4 = presets 1–5).
@@ -981,7 +983,6 @@ class BLEManager extends ChangeNotifier {
       final prevEb = ebrakeOn;
       final prevAdjusting = adjustmentInProgress;
       final prevAiLearn = aiLearnPercent;
-      final prevAiReady = aiReadyBittset;
       final prevFl = pressureValues['frontLeft'];
       final prevFr = pressureValues['frontRight'];
       final prevRl = pressureValues['rearLeft'];
@@ -995,9 +996,8 @@ class BLEManager extends ChangeNotifier {
         _decodeShort(data, 10),
       ];
       final tankPressure = _decodeShort(data, 12);
-      if (data.length >= 16) {
-        aiLearnPercent = data[14] & 0xFF;
-        aiReadyBittset = data[15] & 0xFF;
+      if (data.length >= 15) {
+        aiLearnPercent = data[14] & 0xFF; // args8()[10]
       }
       if (data.length >= 20) {
         handleStatusBittset(data.sublist(16, 20));
@@ -1017,7 +1017,6 @@ class BLEManager extends ChangeNotifier {
           prevEb != ebrakeOn ||
           prevAdjusting != adjustmentInProgress ||
           prevAiLearn != aiLearnPercent ||
-          prevAiReady != aiReadyBittset ||
           prevFl != pressureValues['frontLeft'] ||
           prevFr != pressureValues['frontRight'] ||
           prevRl != pressureValues['rearLeft'] ||

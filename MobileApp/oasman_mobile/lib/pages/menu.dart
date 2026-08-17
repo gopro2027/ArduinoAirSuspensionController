@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 class CustomBottomNavigationBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
@@ -16,18 +18,18 @@ class CustomBottomNavigationBar extends StatelessWidget {
   /// label and its own padding even when the label is empty, which wasted
   /// vertical space the valve controls need. This is a plain row instead.
   static const double _barHeight = 44;
-  static const Color _accent = Color(0xFFBB86FC);
   static const Color _idle = Color.fromARGB(255, 239, 239, 239);
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppTheme.accent(context);
     return Container(
       color: const Color(0xFF121212),
       height: _barHeight,
       child: Row(
         children: List.generate(itemCount, (index) {
           final selected = selectedIndex == index;
-          final color = selected ? _accent : _idle;
+          final color = selected ? accent : _idle;
           return Expanded(
             child: InkWell(
               onTap: () => onItemTapped(index),
@@ -36,7 +38,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
                   // Selected-item underline, full item width.
                   Container(
                     height: 3,
-                    color: selected ? _accent : Colors.transparent,
+                    color: selected ? accent : Colors.transparent,
                   ),
                   Expanded(
                     child: Row(

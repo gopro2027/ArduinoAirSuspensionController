@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'popup/bluetooth.dart';
 import '../ble_manager.dart';
@@ -297,16 +298,22 @@ class Header extends StatelessWidget {
       bottom: bottom,
       left: left,
       right: right,
-      child: _buildPressureInfo(
-        label,
-        asset,
-        alignRight: alignRight,
-        flipSvg: flipSvg,
+      // Builder: the layout helpers are called without a context of their own,
+      // and the leader line needs one to read the theme accent.
+      child: Builder(
+        builder: (context) => _buildPressureInfo(
+          context,
+          label,
+          asset,
+          alignRight: alignRight,
+          flipSvg: flipSvg,
+        ),
       ),
     );
   }
 
   Widget _buildPressureInfo(
+    BuildContext context,
     String pressure,
     String asset, {
     bool alignRight = false,
@@ -339,6 +346,10 @@ class Header extends StatelessWidget {
             asset,
             width: 20,
             height: 20,
+            // The corner leader lines are single-path SVGs with a hardcoded
+            // purple fill; srcIn repaints them in the selected theme accent.
+            colorFilter:
+                ColorFilter.mode(AppTheme.accent(context), BlendMode.srcIn),
             placeholderBuilder: (BuildContext context) =>
                 const CircularProgressIndicator(),
           ),

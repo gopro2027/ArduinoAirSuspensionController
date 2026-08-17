@@ -9,6 +9,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:wifi_scan/wifi_scan.dart';
+import '../theme/app_theme.dart';
 
 class ConnectManifoldCard extends StatelessWidget {
   const ConnectManifoldCard({super.key});
@@ -83,6 +86,11 @@ class SettingsPageState extends State<SettingsPage> {
   /// Which drill-down section is open; null shows the section list.
   /// Stored by title so the list can be rebuilt without stale indices.
   String? _openSectionTitle;
+
+  /// Nearby Wi-Fi networks for the SSID picker.
+  List<String> _wifiNetworks = [];
+  bool _wifiScanning = false;
+  String? _wifiScanError;
 
   /// Phone-only copy for SharedPreferences (mirrors `globalSettings!.passkeyText`).
   String passkeyText = '';
@@ -355,7 +363,7 @@ class SettingsPageState extends State<SettingsPage> {
       padding: const EdgeInsets.only(top: 16.0, bottom: 0),
       child: TextButton.icon(
         onPressed: _openWebsite,
-        icon: const Icon(Icons.open_in_new, size: 20, color: Color(0xFFBB86FC)),
+        icon: Icon(Icons.open_in_new, size: 20, color: AppTheme.accent(context)),
         label: const Text(
           'View website',
           style: TextStyle(color: Colors.white70, fontSize: 16),
@@ -369,19 +377,13 @@ class SettingsPageState extends State<SettingsPage> {
       padding: const EdgeInsets.symmetric(vertical: 16.0),
       child: TextButton.icon(
         onPressed: _openPrivacyPolicy,
-        icon: const Icon(Icons.open_in_new, size: 20, color: Color(0xFFBB86FC)),
+        icon: Icon(Icons.open_in_new, size: 20, color: AppTheme.accent(context)),
         label: const Text(
           'Privacy policy',
           style: TextStyle(color: Colors.white70, fontSize: 16),
         ),
       ),
     );
-  }
-
-  String _aiTrainedSummary(int bits) {
-    String y(bool on) => on ? 'Y' : 'n';
-    return 'UF:  ${y((bits & 1) != 0)} UR:  ${y(((bits >> 1) & 1) != 0)}\n'
-        'DF: ${y(((bits >> 2) & 1) != 0)} DR: ${y(((bits >> 3) & 1) != 0)}';
   }
 
   int _rfPresetZeroBased(BLEManager bm, int rfButtonNumber) {
@@ -564,6 +566,69 @@ class SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  /// Theme picker. The presets mirror the Wireless_Controller's "Theme Colors"
+  /// setting one for one, so a phone and a controller can be set to the same
+  /// look. Selecting one repaints the app immediately and is saved on the
+  /// phone; it is not sent to the manifold.
+  Widget _buildThemeSection() {
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Accent color used throughout the app. These are the same presets '
+              'the Wireless Controller offers.',
+              style: TextStyle(color: Colors.white54, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: AppTheme.accent(context), width: 2),
+                ),
+              ),
+              child: Column(
+                children: [
+                  for (final preset in ThemePreset.values)
+                    RadioListTile<ThemePreset>(
+                      title: Text(preset.label,
+                          style: const TextStyle(color: Colors.white)),
+                      secondary: _buildThemeSwatch(preset),
+                      value: preset,
+                      groupValue: themeProvider.preset,
+                      onChanged: (value) {
+                        if (value != null) themeProvider.setPreset(value);
+                      },
+                      activeColor: AppTheme.accent(context),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// All three shades of a preset, so the choice is visible before picking it.
+  Widget _buildThemeSwatch(ThemePreset preset) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: SizedBox(
+        width: 54,
+        height: 22,
+        child: Row(
+          children: [
+            for (final color in [preset.light, preset.medium, preset.dark])
+              Expanded(child: Container(color: color)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildUploadImageSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24.0),
@@ -581,7 +646,7 @@ class SettingsPageState extends State<SettingsPage> {
               height: 200,
               width: 100,
               decoration: BoxDecoration(
-                border: Border.all(color: Color(0xFFBB86FC), width: 2),
+                border: Border.all(color: AppTheme.accent(context), width: 2),
                 borderRadius: BorderRadius.circular(16),
                 color: Colors.grey[900],
                 image: _imageFile != null
@@ -597,7 +662,7 @@ class SettingsPageState extends State<SettingsPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.upload,
-                              size: 30, color: Color(0xFFBB86FC)),
+                              size: 30, color: AppTheme.accent(context)),
                           const SizedBox(height: 8),
                           Text('Tap to upload image',
                               style: TextStyle(color: Colors.white70),
@@ -620,11 +685,11 @@ class SettingsPageState extends State<SettingsPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.delete, size: 20, color: Color(0xFFBB86FC)),
+                  Icon(Icons.delete, size: 20, color: AppTheme.accent(context)),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Remove Image',
-                    style: TextStyle(color: Color(0xFFBB86FC)),
+                    style: TextStyle(color: AppTheme.accent(context)),
                   ),
                 ],
               ),
@@ -703,13 +768,6 @@ class SettingsPageState extends State<SettingsPage> {
           builder: _buildGameControllerSection,
         ),
         _SettingsSection(
-          title: 'ML/AI',
-          icon: Icons.auto_graph,
-          subtitle: 'Learn progress and reset',
-          requiresConnection: true,
-          builder: _buildAIStatusSection,
-        ),
-        _SettingsSection(
           title: 'Wifi / Update',
           icon: Icons.system_update_alt,
           subtitle: 'Manifold firmware update over Wi-Fi',
@@ -724,9 +782,35 @@ class SettingsPageState extends State<SettingsPage> {
         ),
         _SettingsSection(
           title: 'Appearance',
-          icon: Icons.image_outlined,
-          subtitle: 'Car image shown on the home screen',
-          builder: (context) => _buildUploadImageSection(),
+          icon: Icons.palette_outlined,
+          subtitle: 'Theme colors and the home screen car image',
+          builder: (context) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: 24, bottom: 8),
+                child: Text(
+                  'Theme',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              _buildThemeSection(),
+              const Divider(color: Colors.white12, height: 32),
+              const Text(
+                'Car Image',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              _buildUploadImageSection(),
+            ],
+          ),
         ),
         _SettingsSection(
           title: 'About',
@@ -820,7 +904,7 @@ class SettingsPageState extends State<SettingsPage> {
       opacity: enabled ? 1.0 : 0.4,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        leading: Icon(section.icon, color: const Color(0xFFBB86FC)),
+        leading: Icon(section.icon, color: AppTheme.accent(context)),
         title: Text(
           section.title,
           style: const TextStyle(color: Colors.white, fontSize: 17),
@@ -831,7 +915,12 @@ class SettingsPageState extends State<SettingsPage> {
         ),
         trailing: const Icon(Icons.chevron_right, color: Colors.white38),
         onTap: enabled
-            ? () => setState(() => _openSectionTitle = section.title)
+            ? () {
+                setState(() => _openSectionTitle = section.title);
+                // Populate the SSID picker up front, like the controller
+                // scanning when its dropdown opens.
+                if (section.title == 'Wifi / Update') _scanWifiNetworks();
+              }
             : null,
       ),
     );
@@ -953,9 +1042,9 @@ class SettingsPageState extends State<SettingsPage> {
               final (frozen, accOn, ebrake, compOn) = status;
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(
-                    left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+                    left: BorderSide(color: AppTheme.accent(context), width: 2),
                   ),
                 ),
                 child: Column(
@@ -985,85 +1074,9 @@ class SettingsPageState extends State<SettingsPage> {
                           onChanged: (value) {
                             bm.sendCompressorStatus(value);
                           },
-                          activeColor: const Color(0xFFBB86FC),
+                          activeColor: AppTheme.accent(context),
                         ),
                       ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAIStatusSection(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Selector<BLEManager, (int, int)>(
-            selector: (_, m) => (m.aiLearnPercent, m.aiReadyBittset),
-            builder: (context, ai, _) {
-              final bm = context.read<BLEManager>();
-              final (learnPct, trainedBits) = ai;
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                decoration: const BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: Color(0xFFBB86FC), width: 2),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _readOnlyStatusRow(
-                      'Sample Learn Progress:',
-                      '$learnPct%',
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Trained:',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
-                          ),
-                          Flexible(
-                            child: Text(
-                              _aiTrainedSummary(trainedBits),
-                              style: const TextStyle(
-                                  color: Colors.white70, fontSize: 14),
-                              textAlign: TextAlign.right,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: () => _showConfirm(
-                        title: 'Reset Learned AI data?',
-                        message:
-                            'Run this if AI has completed training and you are getting inaccurate presets.',
-                        onConfirm: () {
-                          bm.sendResetAi();
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Reset AI command sent'),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                      child: const Text('Reset Learned Data'),
                     ),
                   ],
                 ),
@@ -1086,7 +1099,7 @@ class SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             decoration: BoxDecoration(
               border: Border(
-                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+                left: BorderSide(color: AppTheme.accent(context), width: 2),
               ),
             ),
             child: Column(
@@ -1308,9 +1321,9 @@ class SettingsPageState extends State<SettingsPage> {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(
-                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+                left: BorderSide(color: AppTheme.accent(context), width: 2),
               ),
             ),
             child: Column(
@@ -1393,7 +1406,7 @@ class SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             decoration: BoxDecoration(
               border: Border(
-                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+                left: BorderSide(color: AppTheme.accent(context), width: 2),
               ),
             ),
             child: Column(
@@ -1432,7 +1445,7 @@ class SettingsPageState extends State<SettingsPage> {
                         bm.refreshFromUi();
                         _saveManifoldConfigNow();
                       },
-                      activeColor: const Color(0xFFBB86FC),
+                      activeColor: AppTheme.accent(context),
                     ),
                   ],
                 ),
@@ -1450,7 +1463,7 @@ class SettingsPageState extends State<SettingsPage> {
                         bm.refreshFromUi();
                         _saveManifoldConfigNow();
                       },
-                      activeColor: const Color(0xFFBB86FC),
+                      activeColor: AppTheme.accent(context),
                     ),
                   ],
                 ),
@@ -1566,12 +1579,72 @@ class SettingsPageState extends State<SettingsPage> {
                     bm, 'Button C Preset Number', BLEManager.rfButtonC),
                 _buildRfPresetRow(
                     bm, 'Button D Preset Number', BLEManager.rfButtonD),
+                // AI learn progress + reset live at the end of Basic settings,
+                // matching the Wireless_Controller. The old separate ML/AI
+                // section (and its "Trained" Y/N grid) no longer exists there.
+                Selector<BLEManager, int>(
+                  selector: (_, m) => m.aiLearnPercent,
+                  builder: (context, learnPct, _) => _readOnlyStatusRow(
+                    'Sample Learn Progress:',
+                    '$learnPct%',
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => _showConfirm(
+                    title: 'Reset Learned AI data?',
+                    message:
+                        'Run this if AI has completed training and you are getting inaccurate presets.',
+                    onConfirm: () {
+                      bm.sendResetAi();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Reset AI command sent'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  child: const Text('Reset Learned Data'),
+                ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// Switching sensor mode makes the manifold clear its learned data
+  /// (setheightSensorMode -> clearPressureData), so confirm first. Mirrors the
+  /// Wireless_Controller, which asks in both directions and cannot be
+  /// dismissed by tapping away (forceButtonPress). Nothing is mutated until
+  /// the user confirms, so Cancel simply leaves the radio where it was.
+  Future<void> _confirmSensorModeChange(BLEManager bm, bool? wantHeightMode) async {
+    if (wantHeightMode == null || wantHeightMode == bm.heightSensorMode) return;
+    final go = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Change Sensor Mode?'),
+        content: const Text('Learned data will be deleted.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    if (go != true || !mounted) return;
+    bm.heightSensorMode = wantHeightMode;
+    bm.refreshFromUi();
+    _saveManifoldConfigNow();
   }
 
   Widget _buildLevellingSection(BLEManager bm) {
@@ -1582,9 +1655,9 @@ class SettingsPageState extends State<SettingsPage> {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(
-                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+                left: BorderSide(color: AppTheme.accent(context), width: 2),
               ),
             ),
             child: Column(
@@ -1595,26 +1668,16 @@ class SettingsPageState extends State<SettingsPage> {
                       style: TextStyle(color: Colors.white)),
                   value: false,
                   groupValue: bm.heightSensorMode,
-                  onChanged: (v) {
-                    if (v == null) return;
-                    bm.heightSensorMode = v;
-                    bm.refreshFromUi();
-                    _saveManifoldConfigNow();
-                  },
-                  activeColor: const Color(0xFFBB86FC),
+                  onChanged: (v) => _confirmSensorModeChange(bm, v),
+                  activeColor: AppTheme.accent(context),
                 ),
                 RadioListTile<bool>(
                   title: const Text('Level Sensor',
                       style: TextStyle(color: Colors.white)),
                   value: true,
                   groupValue: bm.heightSensorMode,
-                  onChanged: (v) {
-                    if (v == null) return;
-                    bm.heightSensorMode = v;
-                    bm.refreshFromUi();
-                    _saveManifoldConfigNow();
-                  },
-                  activeColor: const Color(0xFFBB86FC),
+                  onChanged: (v) => _confirmSensorModeChange(bm, v),
+                  activeColor: AppTheme.accent(context),
                 ),
                 if (bm.heightSensorMode) ...[
                   const SizedBox(height: 8),
@@ -1710,9 +1773,9 @@ class SettingsPageState extends State<SettingsPage> {
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(
-                    left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+                    left: BorderSide(color: AppTheme.accent(context), width: 2),
                   ),
                 ),
                 child: Column(
@@ -1761,7 +1824,7 @@ class SettingsPageState extends State<SettingsPage> {
                             setState(() => _auxOutputLatchUi = value);
                             bm.sendAuxillaryOutputControl(value);
                           },
-                          activeColor: const Color(0xFFBB86FC),
+                          activeColor: AppTheme.accent(context),
                         ),
                       ],
                     ),
@@ -1845,6 +1908,176 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  /// Scan for nearby networks and populate the SSID dropdown. Mirrors the
+  /// Wireless_Controller, which scans when its SSID dropdown is opened.
+  Future<void> _scanWifiNetworks() async {
+    if (_wifiScanning) return;
+    setState(() {
+      _wifiScanning = true;
+      _wifiScanError = null;
+    });
+    try {
+      final can = await WiFiScan.instance.canStartScan();
+      if (can != CanStartScan.yes) {
+        // Most often the permission prompt has not been granted yet; ask, then
+        // re-check once before giving up.
+        await Permission.locationWhenInUse.request();
+        final retry = await WiFiScan.instance.canStartScan();
+        if (retry != CanStartScan.yes) {
+          if (mounted) {
+            setState(() {
+              _wifiScanning = false;
+              _wifiScanError = 'Cannot scan for networks on this device';
+            });
+          }
+          return;
+        }
+      }
+      await WiFiScan.instance.startScan();
+      final canGet = await WiFiScan.instance.canGetScannedResults();
+      if (canGet != CanGetScannedResults.yes) {
+        if (mounted) {
+          setState(() {
+            _wifiScanning = false;
+            _wifiScanError = 'Cannot read scan results on this device';
+          });
+        }
+        return;
+      }
+      final results = await WiFiScan.instance.getScannedResults();
+      // Drop hidden networks (blank SSID) and duplicates from multi-band APs.
+      final names = <String>{
+        for (final r in results)
+          if (r.ssid.trim().isNotEmpty) r.ssid,
+      }.toList()
+        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      if (!mounted) return;
+      setState(() {
+        _wifiNetworks = names;
+        _wifiScanning = false;
+        _wifiScanError = names.isEmpty ? 'No networks found' : null;
+      });
+    } catch (e) {
+      debugPrint('Wi-Fi scan failed: $e');
+      if (!mounted) return;
+      setState(() {
+        _wifiScanning = false;
+        _wifiScanError = 'Wi-Fi scan failed';
+      });
+    }
+  }
+
+  /// SSID picker. The saved SSID is always an option so the current value
+  /// survives a scan that no longer sees that network; if scanning is refused
+  /// outright the user can still type the name in by hand.
+  Widget _buildSsidRow(BuildContext context) {
+    final saved = wifiSsidController.text.trim();
+    final options = <String>[
+      if (saved.isNotEmpty) saved,
+      ..._wifiNetworks.where((n) => n != saved),
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              // Label kept to its intrinsic width so the dropdown - and with
+              // it the popup menu, which inherits the button's width - gets as
+              // much room as possible for long SSIDs.
+              const Text(
+                'SSID',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              IconButton(
+                icon: const Icon(Icons.help_outline,
+                    size: 20, color: Colors.grey),
+                onPressed: () => showInfoDialog(
+                  context,
+                  'Wi-Fi SSID',
+                  'Network the manifold uses to download updates. Pick one of the networks near you. Saved on this phone when you save settings.',
+                ),
+              ),
+              Expanded(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: saved.isNotEmpty ? saved : null,
+                  hint: Text(
+                    _wifiScanning ? 'Scanning…' : 'Select network',
+                    style: const TextStyle(color: Colors.white54),
+                  ),
+                  dropdownColor: Colors.grey[850],
+                  style: const TextStyle(color: Colors.white),
+                  // Variable item height: a long SSID wraps onto extra lines
+                  // instead of being clipped. Fixed-height items would force
+                  // a single truncated line.
+                  itemHeight: null,
+                  items: [
+                    for (final n in options)
+                      DropdownMenuItem(
+                        value: n,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          // No ellipsis here - the open menu must show the
+                          // whole name so networks are distinguishable.
+                          child: Text(n, softWrap: true),
+                        ),
+                      ),
+                  ],
+                  // Only the collapsed button abbreviates; it has one line.
+                  selectedItemBuilder: (context) => [
+                    for (final n in options)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          n,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                  onChanged: (v) {
+                    if (v == null) return;
+                    wifiSsidController.text = v;
+                    _persistPhoneSettings();
+                    setState(() {});
+                  },
+                ),
+              ),
+              IconButton(
+                icon: _wifiScanning
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh, color: Colors.grey),
+                tooltip: 'Scan for networks',
+                onPressed: _wifiScanning ? null : _scanWifiNetworks,
+              ),
+            ],
+          ),
+          if (_wifiScanError != null) ...[
+            Text(
+              _wifiScanError!,
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            // Fall back to manual entry so a refused scan can't lock the user
+            // out of updating.
+            _buildKeyboardInputRow(
+              'Enter manually',
+              wifiSsidController,
+              onChanged: (_) => setState(() {}),
+              limitChar: 49,
+              saveWhenKeyboardDone: true,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildWifiUpdateSection(BuildContext context) {
     final bm = context.read<BLEManager>();
     final canUpdate = wifiSsidController.text.trim().isNotEmpty &&
@@ -1856,24 +2089,15 @@ class SettingsPageState extends State<SettingsPage> {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(
-                left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+                left: BorderSide(color: AppTheme.accent(context), width: 2),
               ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildKeyboardInputRow(
-                  'SSID',
-                  wifiSsidController,
-                  onChanged: (_) => setState(() {}),
-                  limitChar: 49,
-                  tooltipTitle: 'Wi-Fi SSID',
-                  tooltip:
-                      'Network the manifold uses to download updates. Saved on this phone when you save settings.',
-                  saveWhenKeyboardDone: true,
-                ),
+                _buildSsidRow(context),
                 _buildKeyboardInputRow(
                   'PASS',
                   wifiPassController,
@@ -2000,7 +2224,7 @@ class SettingsPageState extends State<SettingsPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 decoration: BoxDecoration(
                   border: Border(
-                    left: BorderSide(color: Color(0xFFBB86FC), width: 2),
+                    left: BorderSide(color: AppTheme.accent(context), width: 2),
                   ),
                 ),
                 child: Column(
@@ -2015,7 +2239,7 @@ class SettingsPageState extends State<SettingsPage> {
                         globalSettings!.units = value;
                         _persistPhoneSettings();
                       },
-                      activeColor: Color(0xFFBB86FC),
+                      activeColor: AppTheme.accent(context),
                     ),
                     RadioListTile<String>(
                       title: const Text('Bar',
@@ -2027,7 +2251,7 @@ class SettingsPageState extends State<SettingsPage> {
                         globalSettings!.units = value;
                         _persistPhoneSettings();
                       },
-                      activeColor: Color(0xFFBB86FC),
+                      activeColor: AppTheme.accent(context),
                     ),
                   ],
                 ),
@@ -2122,8 +2346,14 @@ Widget _buildSwitch(String label, bool value, ValueChanged<bool> onChanged) {
             label,
             style: TextStyle(color: Colors.white, fontSize: 16),
           ),
-        Switch(
-            value: value, onChanged: onChanged, activeColor: Color(0xFFBB86FC)),
+        // Builder: this is a top-level function, so it has no context of its
+        // own to read the theme accent from.
+        Builder(
+          builder: (context) => Switch(
+              value: value,
+              onChanged: onChanged,
+              activeColor: AppTheme.accent(context)),
+        ),
       ],
     ),
   );

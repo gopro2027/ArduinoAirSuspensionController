@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../ble_manager.dart';
 import 'popup/nobt.dart';
 import 'popup/bluetooth.dart';
+import '../theme/app_theme.dart';
 
 class ButtonsPage extends StatefulWidget {
   const ButtonsPage({super.key});
@@ -85,8 +86,8 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
                       onPressed: () => showDialog(
                           context: context,
                           builder: (_) => const BluetoothPopup()),
-                      child: const Text('Connect',
-                          style: TextStyle(color: Color(0xFFBB86FC))),
+                      child: Text('Connect',
+                          style: TextStyle(color: AppTheme.accent(context))),
                     ),
                   ],
                 ),
@@ -302,7 +303,7 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
             child: CircleAvatar(
               radius: 18,
               backgroundColor: i == _selectedPreset
-                  ? const Color(0xFFBB86FC)
+                  ? AppTheme.accent(context)
                   : Colors.grey[800],
               child: Text(
                 '$i',
@@ -325,8 +326,8 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
     return OutlinedButton(
       onPressed: canUse ? () => _confirmSavePreset(context) : null,
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFFBB86FC),
-        side: const BorderSide(color: Color(0xFFBB86FC)),
+        foregroundColor: AppTheme.accent(context),
+        side: BorderSide(color: AppTheme.accent(context)),
         disabledForegroundColor: Colors.white60,
         backgroundColor: const Color(0xFF1E1E1E),
         padding: compact
@@ -344,7 +345,7 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
     return ElevatedButton(
       onPressed: canUse ? () => _confirmLoadPreset(context) : null,
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFBB86FC),
+        backgroundColor: AppTheme.accent(context),
         foregroundColor: Colors.white,
         disabledBackgroundColor: const Color(0xFF2A2A2A),
         disabledForegroundColor: Colors.white60,
@@ -608,7 +609,7 @@ class AllWheelsButton extends StatelessWidget {
           color: const Color(0xFF1E1E1E),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: const Color(0xFFBB86FC).withOpacity(0.15),
+            color: AppTheme.accent(context).withOpacity(0.15),
             width: 1,
           ),
         ),
@@ -616,7 +617,7 @@ class AllWheelsButton extends StatelessWidget {
         // dead centre regardless of how tightly they are packed.
         child: CustomPaint(
           painter: _ChevronStackPainter(
-            color: const Color(0xFFBB86FC),
+            color: AppTheme.accent(context),
             pointingUp: pointingUp,
           ),
         ),
@@ -665,7 +666,7 @@ class OvalControlButton extends StatelessWidget {
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(short / 2),
         border: Border.all(
-          color: const Color(0xFFBB86FC).withOpacity(0.15),
+          color: AppTheme.accent(context).withOpacity(0.15),
           width: 1,
         ),
       ),
@@ -717,7 +718,7 @@ class ControlButton extends StatelessWidget {
       child: Center(
         child: Icon(
           icon,
-          color: const Color(0xFFBB86FC),
+          color: AppTheme.accent(context),
           size: 22,
         ),
       ),
