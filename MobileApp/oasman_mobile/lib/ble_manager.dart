@@ -123,6 +123,46 @@ class BLEManager extends ChangeNotifier {
   Timer? _reconnectTimer;
   bool _autoReconnectEnabled = false;
 
+  /// How long we wait for the manifold's AUTHPACKET reply before giving up on
+  /// the link. Mirrors AUTH_TIMEOUT in OASMan_ESP32/src/bluetooth/ble.cpp - the
+  /// manifold drops an un-authed client on the same budget. Ours is measured
+  /// from when the auth packet is sent (i.e. after service discovery) so a slow
+  /// Android discovery doesn't eat into it.
+  static const Duration authTimeout = Duration(seconds: 5);
+
+  /// True once the manifold has answered our auth packet with AUTHRESULT_SUCCESS.
+  bool authenticated = false;
+  Timer? _authTimer;
+
+  /// Arm the auth watchdog. Called right after the auth packet goes out; a peer
+  /// that never answers (wrong device, dead firmware) gets dropped instead of
+  /// leaving the app stuck on a connection that will never work.
+  void _startAuthWatchdog() {
+    // The reply can already be in when we get here - the rest notify listener
+    // is attached before the auth packet goes out, so a fast manifold can
+    // answer while we're still awaiting the write. Never re-arm on a live link.
+    if (authenticated) return;
+    _authTimer?.cancel();
+    _authTimer = Timer(authTimeout, () {
+      _authTimer = null;
+      if (authenticated || connectedDevice == null) return;
+      debugPrint(
+          'No auth response within ${authTimeout.inMilliseconds}ms - disconnecting');
+      disconnectDevice();
+      _scheduleReconnectScan();
+    });
+  }
+
+  void _cancelAuthWatchdog() {
+    _authTimer?.cancel();
+    _authTimer = null;
+  }
+
+  /// Whether service discovery found the OASMan GATT characteristics, i.e. the
+  /// peer is a manifold rather than some unrelated bluetooth device.
+  bool get _hasManifoldCharacteristics =>
+      restCharacteristic != null || statusCharacteristic != null;
+
   /// Start the background reconnect loop. Safe to call multiple times.
   void enableAutoReconnect() {
     _autoReconnectEnabled = true;
@@ -162,6 +202,8 @@ class BLEManager extends ChangeNotifier {
       if (connectedDevice?.id == event.device.id &&
           event.connectionState == BluetoothConnectionState.disconnected) {
         debugPrint('Manifold disconnected!');
+        _cancelAuthWatchdog();
+        authenticated = false;
         connectedDevice = null;
         vehicleOn = false;
         restCharacteristic = null;
@@ -389,6 +431,7 @@ class BLEManager extends ChangeNotifier {
     try {
       _startGlobalConnListener(); // ensure listener is active
       print("Connecting to device: ${device.name} (${device.id})");
+      authenticated = false;
       await device.connect(autoConnect: false);
 
       connectedDevice = device;
@@ -399,7 +442,7 @@ class BLEManager extends ChangeNotifier {
       // With "show all bluetooth devices" on, the list can contain anything -
       // don't remember a device that isn't a manifold, it would poison
       // auto-reconnect.
-      if (restCharacteristic == null && statusCharacteristic == null) {
+      if (!_hasManifoldCharacteristics) {
         debugPrint("Not an OASMan manifold: ${device.name} (${device.id})");
         await disconnectDevice();
         if (context.mounted) {
@@ -430,12 +473,23 @@ class BLEManager extends ChangeNotifier {
     try {
       _startGlobalConnListener(); // ensure listener is active
       print("Connecting to device: ${device.name} (${device.id})");
+      authenticated = false;
       await device.connect(autoConnect: false);
 
       connectedDevice = device;
       notifyListeners();
 
       await discoverServices(device, context);
+
+      // Same guard as the manual connect path: the saved paired ID could point
+      // at something that isn't a manifold any more.
+      if (!_hasManifoldCharacteristics) {
+        debugPrint("Not an OASMan manifold: ${device.name} (${device.id})");
+        await disconnectDevice();
+        _scheduleReconnectScan();
+        return;
+      }
+
       await _onConnectionCompleted();
 
       print("Successfully connected to ${device.name} (${device.id})");
@@ -452,6 +506,8 @@ class BLEManager extends ChangeNotifier {
 
   /// Disconnect from the device
   Future<void> disconnectDevice() async {
+    _cancelAuthWatchdog();
+    authenticated = false;
     if (connectedDevice != null) {
       try {
         await connectedDevice!.disconnect();
@@ -665,6 +721,7 @@ class BLEManager extends ChangeNotifier {
             });
             print("doing auth check");
             await authCheck();
+            _startAuthWatchdog();
             print("Write characteristic found: ${characteristic.uuid}");
           }
 
@@ -741,8 +798,13 @@ class BLEManager extends ChangeNotifier {
 
       switch (packetCmd) {
         case BTOasIdentifier.AUTHPACKET:
-          if (data.length >= 12 &&
-              _decodeInt32(data, 8) == 2 /*AuthResult::AUTHRESULT_FAIL*/) {
+          final authResult = data.length >= 12 ? _decodeInt32(data, 8) : -1;
+          if (authResult == 1 /*AuthResult::AUTHRESULT_SUCCESS*/) {
+            // Manifold accepted the passkey - the link is live, stand the
+            // watchdog down.
+            authenticated = true;
+            _cancelAuthWatchdog();
+          } else if (authResult == 2 /*AuthResult::AUTHRESULT_FAIL*/) {
             disconnectDevice();
             if (context != null && context.mounted) {
               showDialog(
