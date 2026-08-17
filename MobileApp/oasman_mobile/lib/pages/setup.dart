@@ -49,6 +49,25 @@ class ConnectManifoldCard extends StatelessWidget {
 
 bool _settingsLoaded = false;
 
+/// One drill-down group on the settings screen.
+class _SettingsSection {
+  const _SettingsSection({
+    required this.title,
+    required this.icon,
+    required this.subtitle,
+    required this.builder,
+    this.requiresConnection = false,
+  });
+
+  final String title;
+  final IconData icon;
+  final String subtitle;
+  final Widget Function(BuildContext context) builder;
+
+  /// Section talks to the manifold, so it is unusable without a link.
+  final bool requiresConnection;
+}
+
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -60,6 +79,10 @@ class SettingsPageState extends State<SettingsPage> {
   late BLEManager bleManager;
   bool _bleListenerAttached = false;
   int _lastSyncedConfigRevision = -1;
+
+  /// Which drill-down section is open; null shows the section list.
+  /// Stored by title so the list can be rebuilt without stale indices.
+  String? _openSectionTitle;
 
   /// Phone-only copy for SharedPreferences (mirrors `globalSettings!.passkeyText`).
   String passkeyText = '';
@@ -547,13 +570,9 @@ class SettingsPageState extends State<SettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Controller car image',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          const Text(
+            'Car image shown on the home screen.',
+            style: TextStyle(color: Colors.white54, fontSize: 13),
           ),
           const SizedBox(height: 16),
           GestureDetector(
@@ -628,19 +647,137 @@ class SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  /// Settings are grouped into drill-down sections (the standard mobile
+  /// settings pattern) rather than one very long scroll. Section names follow
+  /// the Wireless_Controller's own section list where the section exists on
+  /// both; the controller uses a dropdown only because it has no room for a
+  /// list on a 2.8" screen.
+  List<_SettingsSection> get _sections => [
+        // Config leads: it holds the passkey and the device-visibility toggle,
+        // which are what you need before a manifold will connect at all.
+        _SettingsSection(
+          title: 'Config',
+          icon: Icons.settings_outlined,
+          subtitle: 'Passkey, compressor PSI, bag limits',
+          builder: _buildConfigSection,
+        ),
+        _SettingsSection(
+          title: 'Status',
+          icon: Icons.monitor_heart_outlined,
+          subtitle: 'Compressor, ACC, e-brake, reboot',
+          requiresConnection: true,
+          builder: (context) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildStatusSection(context),
+              _buildRebootTurnOffButton(context),
+            ],
+          ),
+        ),
+        _SettingsSection(
+          title: 'Basic settings',
+          icon: Icons.tune,
+          subtitle: 'Maintain, rise/fall, safety mode, key fob',
+          requiresConnection: true,
+          builder: _buildBasicSettingsPage,
+        ),
+        _SettingsSection(
+          title: 'Levelling Mode',
+          icon: Icons.height,
+          subtitle: 'Pressure or level sensor, calibration',
+          requiresConnection: true,
+          builder: _buildLevellingPage,
+        ),
+        _SettingsSection(
+          title: 'Auxillary Output',
+          icon: Icons.bolt_outlined,
+          subtitle: 'Manual control and timed pulses',
+          requiresConnection: true,
+          builder: _buildAuxillaryOutputSection,
+        ),
+        _SettingsSection(
+          title: 'Game Controller',
+          icon: Icons.sports_esports_outlined,
+          subtitle: 'Pair, un-pair, disconnect',
+          requiresConnection: true,
+          builder: _buildGameControllerSection,
+        ),
+        _SettingsSection(
+          title: 'ML/AI',
+          icon: Icons.auto_graph,
+          subtitle: 'Learn progress and reset',
+          requiresConnection: true,
+          builder: _buildAIStatusSection,
+        ),
+        _SettingsSection(
+          title: 'Wifi / Update',
+          icon: Icons.system_update_alt,
+          subtitle: 'Manifold firmware update over Wi-Fi',
+          requiresConnection: true,
+          builder: _buildWifiUpdateSection,
+        ),
+        _SettingsSection(
+          title: 'Units',
+          icon: Icons.straighten,
+          subtitle: 'PSI or Bar',
+          builder: (context) => _buildUnitsSection(),
+        ),
+        _SettingsSection(
+          title: 'Appearance',
+          icon: Icons.image_outlined,
+          subtitle: 'Car image shown on the home screen',
+          builder: (context) => _buildUploadImageSection(),
+        ),
+        _SettingsSection(
+          title: 'About',
+          icon: Icons.info_outline,
+          subtitle: 'Website and privacy policy',
+          builder: (context) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildWebsiteLinkSection(),
+              _buildPrivacyPolicySection(),
+            ],
+          ),
+        ),
+      ];
+
+  /// Leaving a subsection is a natural save point, mirroring the existing
+  /// save-on-leave-page behaviour.
+  void _closeSection() {
+    if (_openSectionTitle == null) return;
+    setState(() => _openSectionTitle = null);
+    _saveManifoldConfigNow(showSnackBar: false);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_settingsLoaded) {
       return const Center(child: CircularProgressIndicator());
     }
-    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    final open = _openSectionTitle == null
+        ? null
+        : _sections.where((s) => s.title == _openSectionTitle).firstOrNull;
+
+    // Android back should step out of a subsection before leaving the app.
+    return PopScope(
+      canPop: open == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _closeSection();
+      },
+      child: open == null ? _buildSectionList() : _buildSectionDetail(open),
+    );
+  }
+
+  Widget _buildSectionList() {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
           child: Text(
             'Settings',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 25,
               fontWeight: FontWeight.w600,
               fontFamily: 'Roboto',
@@ -649,36 +786,91 @@ class SettingsPageState extends State<SettingsPage> {
           ),
         ),
         Expanded(
+          child: Selector<BLEManager, bool>(
+            selector: (_, m) => m.isConnected(),
+            builder: (context, connected, _) {
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                children: [
+                  // No global "connect a manifold" card here - each row that
+                  // needs a link already says so.
+                  for (final s in _sections)
+                    _buildSectionTile(s, connected || !s.requiresConnection),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionTile(_SettingsSection section, bool enabled) {
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.4,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        leading: Icon(section.icon, color: const Color(0xFFBB86FC)),
+        title: Text(
+          section.title,
+          style: const TextStyle(color: Colors.white, fontSize: 17),
+        ),
+        subtitle: Text(
+          enabled ? section.subtitle : 'Connect a manifold first',
+          style: const TextStyle(color: Colors.white54, fontSize: 13),
+        ),
+        trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+        onTap: enabled
+            ? () => setState(() => _openSectionTitle = section.title)
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildSectionDetail(_SettingsSection section) {
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 8, 16, 8),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: _closeSection,
+                tooltip: 'Back to settings',
+              ),
+              Expanded(
+                child: Text(
+                  section.title,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Roboto',
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
           child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + keyboardInset),
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + keyboardInset),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildUploadImageSection(),
-                _buildConfigSection(context),
+                // A manifold section stays usable only while connected; drop
+                // back to the list if the link goes away mid-edit.
                 Selector<BLEManager, bool>(
                   selector: (_, m) => m.isConnected(),
                   builder: (context, connected, _) {
-                    if (!connected) {
+                    if (section.requiresConnection && !connected) {
                       return const ConnectManifoldCard();
                     }
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildStatusSection(context),
-                        _buildGameControllerSection(context),
-                        _buildAIStatusSection(context),
-                        _buildManifoldConfigSections(context),
-                        _buildAuxillaryOutputSection(context),
-                        _buildUnitsSection(),
-                        _buildWifiUpdateSection(context),
-                        _buildRebootTurnOffButton(context),
-                      ],
-                    );
+                    return section.builder(context);
                   },
                 ),
-                _buildWebsiteLinkSection(),
-                _buildPrivacyPolicySection(),
               ],
             ),
           ),
@@ -687,9 +879,9 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  /// Config / RF / levelling fields only change with GETCONFIGVALUES or local edits,
-  /// not with high-frequency STATUSREPORT packets.
-  Widget _buildManifoldConfigSections(BuildContext context) {
+  /// Config / RF / levelling fields only change with GETCONFIGVALUES or local
+  /// edits, not with high-frequency STATUSREPORT packets.
+  Widget _buildManifoldConfigSelector(Widget Function(BLEManager bm) child) {
     return Selector<
         BLEManager,
         (
@@ -716,18 +908,15 @@ class SettingsPageState extends State<SettingsPage> {
         m.rfButtonCPreset,
         m.rfButtonDPreset,
       ),
-      builder: (context, _, __) {
-        final bm = context.read<BLEManager>();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildBasicSettingsSection(bm),
-            _buildLevellingSection(bm),
-          ],
-        );
-      },
+      builder: (context, _, __) => child(context.read<BLEManager>()),
     );
   }
+
+  Widget _buildBasicSettingsPage(BuildContext context) =>
+      _buildManifoldConfigSelector(_buildBasicSettingsSection);
+
+  Widget _buildLevellingPage(BuildContext context) =>
+      _buildManifoldConfigSelector(_buildLevellingSection);
 
   Widget _buildStatusSection(BuildContext context) {
     return Padding(
@@ -735,15 +924,6 @@ class SettingsPageState extends State<SettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Status',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
           Selector<
               BLEManager,
               (
@@ -815,15 +995,6 @@ class SettingsPageState extends State<SettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'ML/AI',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
           Selector<BLEManager, (int, int)>(
             selector: (_, m) => (m.aiLearnPercent, m.aiReadyBittset),
             builder: (context, ai, _) {
@@ -901,15 +1072,6 @@ class SettingsPageState extends State<SettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Config',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             decoration: BoxDecoration(
@@ -1134,15 +1296,6 @@ class SettingsPageState extends State<SettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Game Controller',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             decoration: const BoxDecoration(
@@ -1226,15 +1379,6 @@ class SettingsPageState extends State<SettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Basic settings',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             decoration: BoxDecoration(
@@ -1426,15 +1570,6 @@ class SettingsPageState extends State<SettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Levelling Mode',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             decoration: const BoxDecoration(
@@ -1563,15 +1698,6 @@ class SettingsPageState extends State<SettingsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Auxillary Output',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 decoration: const BoxDecoration(
@@ -1718,15 +1844,6 @@ class SettingsPageState extends State<SettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Wi-Fi / Update',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             decoration: const BoxDecoration(
@@ -1862,28 +1979,11 @@ class SettingsPageState extends State<SettingsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const Text(
-                    'Units',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.help_outline,
-                        size: 20, color: Colors.grey),
-                    onPressed: () {
-                      showInfoDialog(
-                        context,
-                        'Units',
-                        'Choose which pressure unit you prefer. Default is PSI.',
-                      );
-                    },
-                  ),
-                ],
+              // Was a help dialog on the section title; the title now lives in
+              // the header, so the same guidance is shown inline instead.
+              const Text(
+                'Choose which pressure unit you prefer. Default is PSI.',
+                style: TextStyle(color: Colors.white54, fontSize: 13),
               ),
               const SizedBox(height: 16),
               Container(
