@@ -22,9 +22,34 @@ enum SOLENOID_INDEX {
   REAR_DRIVER_OUT
 }
 
-class _ButtonsPageState extends State<ButtonsPage> {
+class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
   late BLEManager bleManager;
   int _selectedPreset = 3;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // Leaving the page with a valve held would otherwise leave it open - the
+    // release callback never fires once the widget is gone.
+    closeAllValves();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Backgrounding, an incoming call, or the notification shade can swallow
+    // the touch release. Fail closed rather than leave air moving.
+    if (state != AppLifecycleState.resumed) {
+      closeAllValves();
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -138,19 +163,23 @@ class _ButtonsPageState extends State<ButtonsPage> {
       iconDown: Icons.keyboard_arrow_down,
       isLarge: large,
       onUpPressed: () => openValve(ctx, inBit),
+      onUpReleased: () => closeValve(inBit),
       onDownPressed: () => openValve(ctx, outBit),
-      onReleasedButton: () => closeValves(ctx),
+      onDownReleased: () => closeValve(outBit),
     );
   }
 
   Widget _valve2(BuildContext ctx, int in1, int in2, int out1, int out2) {
+    final upMask = (1 << in1) | (1 << in2);
+    final downMask = (1 << out1) | (1 << out2);
     return OvalControlButton(
       iconUp: Icons.keyboard_double_arrow_up,
       iconDown: Icons.keyboard_double_arrow_down,
       isLarge: true,
-      onUpPressed: () => openValvesMask(ctx, (1 << in1) | (1 << in2)),
-      onDownPressed: () => openValvesMask(ctx, (1 << out1) | (1 << out2)),
-      onReleasedButton: () => closeValves(ctx),
+      onUpPressed: () => openValvesMask(ctx, upMask),
+      onUpReleased: () => closeValveMask(upMask),
+      onDownPressed: () => openValvesMask(ctx, downMask),
+      onDownReleased: () => closeValveMask(downMask),
     );
   }
 
@@ -365,14 +394,26 @@ class _ButtonsPageState extends State<ButtonsPage> {
     }
   }
 
-  void closeValves(BuildContext context) {
+  /// Release closes only the valve(s) that button holds, so a second finger
+  /// holding another corner keeps working. Matches unsetValveBit() on the
+  /// Wireless_Controller. No popup on release - a release must always be
+  /// allowed to go through.
+  void closeValve(int bit) {
+    closeValveMask(1 << bit);
+  }
+
+  void closeValveMask(int mask) {
+    if (bleManager.connectedDevice != null) {
+      bleManager.unsetValveMask(mask);
+    }
+  }
+
+  /// Close everything, unconditionally. Used for the safety paths (leaving the
+  /// page, app backgrounded) rather than for ordinary button releases - the
+  /// manifold does not close valves on its own if the link drops.
+  void closeAllValves() {
     if (bleManager.connectedDevice != null) {
       bleManager.closeValves();
-    } else {
-      showDialog(
-        context: context,
-        builder: (_) => const NoBluetoothPopup(),
-      );
     }
   }
 }
@@ -383,7 +424,10 @@ class OvalControlButton extends StatelessWidget {
   final bool isLarge;
   final VoidCallback? onUpPressed;
   final VoidCallback? onDownPressed;
-  final VoidCallback? onReleasedButton;
+  // Separate release callbacks: each half closes only its own valve(s), so
+  // holding two controls at once and lifting one finger leaves the other open.
+  final VoidCallback? onUpReleased;
+  final VoidCallback? onDownReleased;
 
   const OvalControlButton({
     super.key,
@@ -392,7 +436,8 @@ class OvalControlButton extends StatelessWidget {
     this.isLarge = false,
     this.onUpPressed,
     this.onDownPressed,
-    this.onReleasedButton,
+    this.onUpReleased,
+    this.onDownReleased,
   });
 
   @override
@@ -414,12 +459,12 @@ class OvalControlButton extends StatelessWidget {
           ControlButton(
             icon: iconUp,
             onPressed: onUpPressed,
-            onReleased: onReleasedButton,
+            onReleased: onUpReleased,
           ),
           ControlButton(
             icon: iconDown,
             onPressed: onDownPressed,
-            onReleased: onReleasedButton,
+            onReleased: onDownReleased,
           ),
         ],
       ),

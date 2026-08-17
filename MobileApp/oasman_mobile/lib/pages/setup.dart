@@ -1801,6 +1801,13 @@ class SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
+                // The controller shows the connected manifold's address on this
+                // page too (ble_getMAC), which is what builders read back when
+                // asking for support.
+                _readOnlyStatusRow(
+                  'Manifold MAC:',
+                  bm.connectedDevice?.remoteId.str ?? 'Not connected',
+                ),
               ],
             ),
           ),

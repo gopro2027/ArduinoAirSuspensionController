@@ -219,6 +219,10 @@ class BLEManager extends ChangeNotifier {
         _cancelAuthWatchdog();
         authenticated = false;
         connectedDevice = null;
+        // Drop any held valve bits. The manifold does not close valves on
+        // disconnect, so a stale mask here would be OR'd into the next press
+        // after reconnect and re-open a valve the user never touched.
+        valveControlValue = 0;
         vehicleOn = false;
         restCharacteristic = null;
         statusCharacteristic = null;
@@ -337,6 +341,18 @@ class BLEManager extends ChangeNotifier {
 
   void setValveBit(int bit) {
     setValveMask(1 << bit);
+  }
+
+  /// Clears [mask] from the valve bitmask and sends a single BLE write.
+  /// Mirrors unsetValveBit() on the Wireless_Controller: releasing one control
+  /// must only close that valve, so multi-touch holds stay independent.
+  void unsetValveMask(int mask) {
+    valveControlValue &= ~mask;
+    writeValveValue(valveControlValue);
+  }
+
+  void unsetValveBit(int bit) {
+    unsetValveMask(1 << bit);
   }
 
   void closeValves() {
