@@ -3,6 +3,7 @@ import 'dart:convert'; // for utf8.encode
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:oasman_mobile/pages/popup/invalidkey.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -391,7 +392,28 @@ class BLEManager extends ChangeNotifier {
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<bool>? _isScanningStateSub;
 
-  /// Request necessary permissions
+  /// Why the last scan turned up nothing, in words the user can act on.
+  /// Null means "no known problem" (either the scan worked, or it genuinely
+  /// found nothing). Set after a scan finishes empty, or if the scan threw.
+  String? scanDiagnostic;
+
+  /// True when [scanDiagnostic] is something the user fixes in the app's own
+  /// permission screen, so the UI can offer a button straight to it.
+  bool scanNeedsAppSettings = false;
+
+  /// Raw values behind [scanDiagnostic] (adapter state, each permission status,
+  /// location services, how many devices the scan actually saw). Shown on screen
+  /// because some head units can't be attached to adb - this is the substitute
+  /// for reading logcat.
+  String? scanDetails;
+
+  /// Request necessary permissions.
+  ///
+  /// On Android 12+ (S23 etc) the "Nearby devices" prompt comes from
+  /// bluetoothScan/bluetoothConnect and location isn't needed for scanning.
+  /// On Android 11 and older those two are no-ops inside permission_handler and
+  /// BLE scanning depends entirely on location permission *and* the system
+  /// Location toggle - see [_diagnoseEmptyScan].
   Future<void> requestPermissions() async {
     final statuses = await [
       Permission.bluetoothScan,
@@ -399,8 +421,120 @@ class BLEManager extends ChangeNotifier {
       Permission.location,
     ].request();
 
+    statuses.forEach((permission, status) {
+      debugPrint('Permission $permission -> $status');
+    });
+
     if (statuses.values.any((status) => status.isDenied)) {
       debugPrint("Required permissions are denied. Scanning may not work.");
+    }
+  }
+
+  /// Work out why a scan came back with nothing, returning a reason to show the
+  /// user (or null if nothing looks wrong). Only called on an empty or failed
+  /// scan, so it never interferes with a device that is working.
+  ///
+  /// Also fills [scanDetails] with the raw values every time, whether or not a
+  /// specific fault is identified - on head units that can't be attached to
+  /// adb, that on-screen block is the only way to see what Android reported.
+  Future<String?> _diagnoseScanProblem() async {
+    scanNeedsAppSettings = false;
+    try {
+      final supported = await FlutterBluePlus.isSupported;
+      final adapter = FlutterBluePlus.adapterStateNow;
+      final btScan = await Permission.bluetoothScan.status;
+      final btConnect = await Permission.bluetoothConnect.status;
+      final locationStatus = await Permission.location.status;
+      final locationService = await Permission.location.serviceStatus;
+      final filtered = !(globalSettings?.showAllBluetoothDevices ?? false);
+
+      scanDetails = [
+        'BLE supported: $supported',
+        'Adapter: ${adapter.name}',
+        'Permission bluetoothScan: ${btScan.name}',
+        'Permission bluetoothConnect: ${btConnect.name}',
+        'Permission location: ${locationStatus.name}',
+        'Location services: ${locationService.name}',
+        'Service UUID filter: ${filtered ? "on" : "off"}',
+        'Devices seen this scan: ${devicesList.length}',
+      ].join('\n');
+      debugPrint('Scan diagnostics:\n$scanDetails');
+
+      if (!supported) {
+        return 'This device reports no Bluetooth LE support.';
+      }
+
+      if (adapter != BluetoothAdapterState.on) {
+        return 'Bluetooth is turned off. Turn it on and scan again.';
+      }
+
+      // Android 11 and older can only scan for BLE with location permission
+      // granted AND location services switched on. Android 12+ scans without
+      // either (we declare BLUETOOTH_SCAN with neverForLocation), so a denied
+      // location permission there is not a fault.
+      if (locationService.isDisabled) {
+        return 'Location services are turned off. Android needs Location '
+            'switched on to scan for Bluetooth devices - turn it on in system '
+            'settings, then scan again.';
+      }
+
+      if (locationStatus.isPermanentlyDenied || locationStatus.isRestricted) {
+        scanNeedsAppSettings = true;
+        return 'Location permission is blocked for OASMan. On Android 11 and '
+            'older it is required to scan for Bluetooth devices.';
+      }
+
+      if (locationStatus.isDenied) {
+        scanNeedsAppSettings = true;
+        return 'Location permission was not granted. On Android 11 and older it '
+            'is required to scan for Bluetooth devices.';
+      }
+
+      return null; // nothing obviously wrong - likely nothing nearby
+    } catch (e) {
+      debugPrint('Scan diagnostic failed: $e');
+      scanDetails = 'Diagnostic failed: $e';
+      return null;
+    }
+  }
+
+  /// Opens the OS permission screen for OASMan, for when a permission is
+  /// blocked and the in-app prompt will never appear again.
+  Future<void> openPermissionSettings() => openAppSettings();
+
+  /// Native side of the system-settings shortcuts (see MainActivity.kt).
+  static const MethodChannel _settingsChannel =
+      MethodChannel('dev.oasman.oasman_mobile/settings');
+
+  /// Open the system Bluetooth settings screen. Some head units have no
+  /// reachable Bluetooth page in their own settings app, so this is the only
+  /// way in. Returns false if no settings screen could be opened at all.
+  Future<bool> openBluetoothSettings() =>
+      _invokeSettingsChannel('openBluetoothSettings');
+
+  /// Open the system Location settings screen (the master Location toggle,
+  /// which Android 11 and older require for BLE scanning).
+  Future<bool> openLocationSettings() =>
+      _invokeSettingsChannel('openLocationSettings');
+
+  Future<bool> _invokeSettingsChannel(String method) async {
+    try {
+      return await _settingsChannel.invokeMethod<bool>(method) ?? false;
+    } catch (e) {
+      debugPrint('$method failed: $e');
+      return false;
+    }
+  }
+
+  /// Ask Android to enable the Bluetooth adapter (shows the system prompt).
+  /// Returns false if the request was refused or unavailable.
+  Future<bool> turnOnBluetooth() async {
+    try {
+      await FlutterBluePlus.turnOn();
+      return true;
+    } catch (e) {
+      debugPrint('turnOn failed: $e');
+      return false;
     }
   }
 
@@ -413,6 +547,9 @@ class BLEManager extends ChangeNotifier {
     _scanSub?.cancel();
     _isScanningStateSub?.cancel();
     devicesList.clear();
+    scanDiagnostic = null;
+    scanDetails = null;
+    scanNeedsAppSettings = false;
     isScanning = true;
     notifyListeners();
 
@@ -421,6 +558,14 @@ class BLEManager extends ChangeNotifier {
         isScanning = false;
         _scanSub?.cancel();
         _isScanningStateSub?.cancel();
+        // A scan that ends with nothing at all is the symptom users actually
+        // report ("I press refresh and nothing happens"). Say why.
+        if (devicesList.isEmpty && scanDiagnostic == null) {
+          _diagnoseScanProblem().then((reason) {
+            scanDiagnostic = reason;
+            notifyListeners();
+          });
+        }
         notifyListeners();
         _scheduleReconnectScan();
       }
@@ -445,12 +590,27 @@ class BLEManager extends ChangeNotifier {
     // filtered scan finds nothing on them. The "show all bluetooth devices"
     // setting drops the filter and lists everything that advertises.
     final showAll = globalSettings?.showAllBluetoothDevices ?? false;
-    FlutterBluePlus.startScan(
-      timeout: const Duration(seconds: 5),
-      withServices: showAll ? const [] : [Guid(oasmanServiceUuid)],
-    );
-    debugPrint(
-        "ble scan started, paired ID: ${globalSettings!.pairedManifoldId}");
+    try {
+      // Must be awaited inside a try: when Android refuses the scan (missing
+      // permission, location off, adapter off) flutter_blue_plus throws here.
+      // Unawaited, that became an invisible async error and the user just saw
+      // an empty list with no explanation.
+      await FlutterBluePlus.startScan(
+        timeout: const Duration(seconds: 5),
+        withServices: showAll ? const [] : [Guid(oasmanServiceUuid)],
+      );
+      debugPrint(
+          "ble scan started, paired ID: ${globalSettings!.pairedManifoldId}");
+    } catch (e) {
+      debugPrint("startScan failed: $e");
+      isScanning = false;
+      _scanSub?.cancel();
+      _isScanningStateSub?.cancel();
+      // Prefer the specific cause; fall back to whatever Android said.
+      scanDiagnostic = await _diagnoseScanProblem() ??
+          'Bluetooth scan was refused by Android:\n$e';
+      notifyListeners();
+    }
   }
 
   /// Stop scanning
