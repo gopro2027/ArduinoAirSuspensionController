@@ -61,8 +61,8 @@
 // Fine-pulse precision phase (Wheel::achieveFineGoal): near-goal bursts that hone in on the exact psi,
 // shrinking on each goal crossing (anti-oscillation). On-car tuning knobs; design in AI_TRAINING.md.
 #define FINE_PULSE_THRESHOLD_PSI 7    // switch coarse -> fine within this many psi of goal
-#define FINE_PULSE_MS_PER_PSI 4       // initial burst length per psi of remaining error
-#define FINE_PULSE_MIN_MS 4           // floor on the INITIAL burst size (the crossing-shrink can go below this)
+#define FINE_PULSE_MS_PER_PSI 5       // initial burst length per psi of remaining error
+#define FINE_PULSE_MIN_MS 5           // floor on the INITIAL burst size (the crossing-shrink can go below this)
 #define FINE_PULSE_MAX_MS 100         // cap on the initial burst size
 #define FINE_PULSE_OVERSHOOT_SHRINK 0.5 // burst multiplier on each goal crossing (< 1 = damp; give up when burst < 1 ms)
 #define FINE_PULSE_MAX_TRIES 8        // give up after this many bursts with the reading not moving (stuck: tank/bag exhausted)
