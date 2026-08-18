@@ -11,7 +11,7 @@
 #include "solenoid.h"
 #include "compressor.h"
 #include "manifoldSaveData.h"
-#include "../aiPressureUtil.h" // getPredictedBagPressure / getPredictedBagHeight
+#include "../aiPressureUtil.h" // getPredictedBagPressure / recordLearnSample
 
 class Manifold; // from manifold.h, forward reference
 

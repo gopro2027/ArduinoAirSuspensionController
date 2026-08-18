@@ -48,8 +48,8 @@ void updateAIPercentage();
 
 // Refit any offset model whose sample count changed. Called at boot and periodically from task_trainAI.
 void trainOffsetModels();
-// Predicted true bag pressure from live flowing readings: rawBag + faded (default -> trained) offset.
+// Predicted true bag value from live readings: rawBag + faded (default -> trained) offset. Serves both
+// modes -- psi in pressure mode, height % in level mode.
 double getPredictedBagPressure(SOLENOID_AI_INDEX aiIndex, double raw_bag, double raw_tank);
-double getPredictedBagHeight(double raw_level);
 
 #endif

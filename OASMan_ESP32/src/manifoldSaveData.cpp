@@ -111,13 +111,26 @@ createSaveFuncInt(riseOnStart, bool);
 createSaveFuncInt(maintainPressure, bool);
 createSaveFuncInt(sensorlessLeveling, bool);
 createSaveFuncInt(airOutOnShutoff, bool);
-createSaveFuncInt(heightSensorMode, bool);
 createSaveFuncInt(baseProfile, byte);
 createSaveFuncInt(raiseOnPressure, bool);
 createSaveFuncInt(internalReboot, bool);
 createSaveFuncInt(learnPressureSensors, bool);
 createSaveFuncInt(safetyMode, bool);
 createSaveFuncInt(updateMode, bool);
+
+bool getheightSensorMode()
+{
+    return _SaveData.heightSensorMode.get().i;
+}
+void setheightSensorMode(bool value)
+{
+    if (getheightSensorMode() != value)
+    {
+        _SaveData.heightSensorMode.set(value);
+        Serial.println("Sensor mode changed, clearing AI samples (psi and height data can't be mixed)");
+        clearPressureData(); // Must wipe samples when switching. See AI_TRAINING.md.
+    }
+}
 
 createSaveFuncString(wifiSSID);
 createSaveFuncString(wifiPassword);
