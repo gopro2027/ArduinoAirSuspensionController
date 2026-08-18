@@ -69,7 +69,7 @@
 // same fine phase, which works purely off accurate valve-closed readings. The chassis moves slower per ms
 // of valve than pressure does, hence the longer per-unit burst; all on-car tunable.
 #define FINE_PULSE_THRESHOLD_LEVEL 5  // switch coarse -> fine within this many height % of goal
-#define FINE_PULSE_MS_PER_LEVEL 20    // initial burst length per height % of remaining error
+#define FINE_PULSE_MS_PER_LEVEL 5    // initial burst length per height % of remaining error
 #define FINE_PULSE_MIN_MS_LEVEL 5     // floor on the INITIAL burst size
 #define FINE_PULSE_MAX_MS_LEVEL 150   // cap on the initial burst size
 #define FINE_PULSE_OVERSHOOT_SHRINK 0.5 // burst multiplier on each goal crossing (< 1 = damp; give up when burst < 1 ms)
