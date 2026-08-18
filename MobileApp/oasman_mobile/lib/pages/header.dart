@@ -144,21 +144,27 @@ class Header extends StatelessWidget {
 
   Widget _buildLandscapeLayout(
       Size size, BLEManager bleManager, UnitProvider unitProvider) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          height: size.height - 97,
+    // Height comes from the real constraints, not the screen. This used to be
+    // `size.height - 97`: the full screen height minus a hardcoded guess at the
+    // nav bar. The header sits inside the Scaffold body, which already excludes
+    // the nav bar AND the system inset, so on a device with a tall system nav
+    // bar (head units, tablets) the stack ran past the bottom of the body and
+    // the tank pressure - bottom-aligned in it - was drawn behind the nav bar.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final h = constraints.maxHeight;
+        return SizedBox(
+          height: h,
           child: Stack(
             children: [
               Center(
                 child: CarImageWidget(
                   width: size.width * 0.6,
-                  height: size.height * 0.3,
+                  height: h * 0.3,
                 ),
               ),
               _buildPositionedInfo(
-                top: size.height * 0.07,
+                top: h * 0.07,
                 left: size.width * 0.01,
                 rawPressure: double.tryParse(
                         bleManager.pressureValues["frontLeft"] ?? "0") ??
@@ -168,7 +174,7 @@ class Header extends StatelessWidget {
                 heightSensorMode: bleManager.heightSensorMode,
               ),
               _buildPositionedInfo(
-                top: size.height * 0.07,
+                top: h * 0.07,
                 right: size.width * 0.01,
                 rawPressure: double.tryParse(
                         bleManager.pressureValues["frontRight"] ?? "0") ??
@@ -180,7 +186,7 @@ class Header extends StatelessWidget {
                 heightSensorMode: bleManager.heightSensorMode,
               ),
               _buildPositionedInfo(
-                bottom: size.height * 0.12,
+                bottom: h * 0.12,
                 left: size.width * 0.01,
                 rawPressure: double.tryParse(
                         bleManager.pressureValues["rearLeft"] ?? "0") ??
@@ -191,7 +197,7 @@ class Header extends StatelessWidget {
                 heightSensorMode: bleManager.heightSensorMode,
               ),
               _buildPositionedInfo(
-                bottom: size.height * 0.12,
+                bottom: h * 0.12,
                 right: size.width * 0.01,
                 rawPressure: double.tryParse(
                         bleManager.pressureValues["rearRight"] ?? "0") ??
@@ -207,8 +213,8 @@ class Header extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 

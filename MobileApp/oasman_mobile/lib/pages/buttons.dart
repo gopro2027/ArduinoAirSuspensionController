@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../ble_manager.dart';
@@ -105,6 +107,11 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
               // reach the presets bar - it was simply clipped by the nav bar.
               child: LayoutBuilder(
                 builder: (context, constraints) {
+                  final scale = _uiScale(
+                    constraints,
+                    MediaQuery.of(context).orientation ==
+                        Orientation.landscape,
+                  );
                   return SingleChildScrollView(
                     child: ConstrainedBox(
                       constraints:
@@ -118,10 +125,10 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
                               children: [
                                 Expanded(
                                   child: Center(
-                                    child: _buildValveGrid(context),
+                                    child: _buildValveGrid(context, scale),
                                   ),
                                 ),
-                                _buildPresetsBar(context, bleManager),
+                                _buildPresetsBar(context, bleManager, scale),
                               ],
                             ),
                           ),
@@ -138,9 +145,33 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildValveGrid(BuildContext context) {
+  /// How much to enlarge the valve/preset controls for the space available.
+  ///
+  /// The control sizes are authored for a phone. On a tablet or an in-dash head
+  /// unit there is far more room than those sizes use, which left the arrows and
+  /// preset buttons tiny in the middle of a large screen. The base figures below
+  /// are the natural (unscaled) footprint of the grid plus the presets bar, so
+  /// the ratio is simply how many times over the content fits.
+  ///
+  /// Never returns less than 1: shrinking is not this method's job, and a screen
+  /// too small for the base layout is handled by the surrounding scroll view.
+  double _uiScale(BoxConstraints c, bool landscape) {
+    // Widths come from the widest fixed row in each orientation, not a guess.
+    // Portrait: 5 preset circles (5 x 36) + 32 padding = 212, rounded up for the
+    // Save/Load row whose width depends on text metrics.
+    // Landscape: Save/Load sidebar 76 + 12 gap + circles 180 + 24 padding = 292.
+    // Heights: grid (2 pill rows + the ALL row + gaps) plus the presets bar.
+    final baseW = landscape ? 300.0 : 240.0;
+    final baseH = landscape ? 250.0 : 350.0;
+    final fit = math.min(c.maxWidth / baseW, c.maxHeight / baseH);
+    // 0.96 keeps a sliver of slack so rounding in the estimates above can never
+    // push the content past the viewport and force a needless scrollbar.
+    return (fit * 0.96).clamp(1.0, 2.6);
+  }
+
+  Widget _buildValveGrid(BuildContext context, double scale) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: 16 * scale),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -148,33 +179,33 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _valve(context, SOLENOID_INDEX.FRONT_DRIVER_IN.index,
-                  SOLENOID_INDEX.FRONT_DRIVER_OUT.index, false),
+                  SOLENOID_INDEX.FRONT_DRIVER_OUT.index, false, scale),
               _valve2(
                   context,
                   SOLENOID_INDEX.FRONT_DRIVER_IN.index,
                   SOLENOID_INDEX.FRONT_PASSENGER_IN.index,
                   SOLENOID_INDEX.FRONT_DRIVER_OUT.index,
-                  SOLENOID_INDEX.FRONT_PASSENGER_OUT.index),
+                  SOLENOID_INDEX.FRONT_PASSENGER_OUT.index, scale),
               _valve(context, SOLENOID_INDEX.FRONT_PASSENGER_IN.index,
-                  SOLENOID_INDEX.FRONT_PASSENGER_OUT.index, false),
+                  SOLENOID_INDEX.FRONT_PASSENGER_OUT.index, false, scale),
             ],
           ),
-          const SizedBox(height: 8),
-          _valveAll(context),
-          const SizedBox(height: 8),
+          SizedBox(height: 8 * scale),
+          _valveAll(context, scale),
+          SizedBox(height: 8 * scale),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _valve(context, SOLENOID_INDEX.REAR_DRIVER_IN.index,
-                  SOLENOID_INDEX.REAR_DRIVER_OUT.index, false),
+                  SOLENOID_INDEX.REAR_DRIVER_OUT.index, false, scale),
               _valve2(
                   context,
                   SOLENOID_INDEX.REAR_DRIVER_IN.index,
                   SOLENOID_INDEX.REAR_PASSENGER_IN.index,
                   SOLENOID_INDEX.REAR_DRIVER_OUT.index,
-                  SOLENOID_INDEX.REAR_PASSENGER_OUT.index),
+                  SOLENOID_INDEX.REAR_PASSENGER_OUT.index, scale),
               _valve(context, SOLENOID_INDEX.REAR_PASSENGER_IN.index,
-                  SOLENOID_INDEX.REAR_PASSENGER_OUT.index, false),
+                  SOLENOID_INDEX.REAR_PASSENGER_OUT.index, false, scale),
             ],
           ),
         ],
@@ -182,11 +213,13 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _valve(BuildContext ctx, int inBit, int outBit, bool large) {
+  Widget _valve(
+      BuildContext ctx, int inBit, int outBit, bool large, double scale) {
     return OvalControlButton(
       iconUp: Icons.keyboard_arrow_up,
       iconDown: Icons.keyboard_arrow_down,
       isLarge: large,
+      scale: scale,
       onUpPressed: () => openValve(ctx, inBit),
       onUpReleased: () => closeValve(inBit),
       onDownPressed: () => openValve(ctx, outBit),
@@ -197,7 +230,7 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
   /// All four corners at once, as two separate side-by-side buttons. Each
   /// carries four arrows, one per wheel. Momentary hold like every other valve
   /// control - never a latch - and release clears only that button's bits.
-  Widget _valveAll(BuildContext ctx) {
+  Widget _valveAll(BuildContext ctx, double scale) {
     final upMask = (1 << SOLENOID_INDEX.FRONT_PASSENGER_IN.index) |
         (1 << SOLENOID_INDEX.REAR_PASSENGER_IN.index) |
         (1 << SOLENOID_INDEX.FRONT_DRIVER_IN.index) |
@@ -210,12 +243,14 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         AllWheelsButton(
+          scale: scale,
           pointingUp: true,
           onPressed: () => openValvesMask(ctx, upMask),
           onReleased: () => closeValveMask(upMask),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12 * scale),
         AllWheelsButton(
+          scale: scale,
           pointingUp: false,
           onPressed: () => openValvesMask(ctx, downMask),
           onReleased: () => closeValveMask(downMask),
@@ -224,13 +259,15 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _valve2(BuildContext ctx, int in1, int in2, int out1, int out2) {
+  Widget _valve2(BuildContext ctx, int in1, int in2, int out1, int out2,
+      double scale) {
     final upMask = (1 << in1) | (1 << in2);
     final downMask = (1 << out1) | (1 << out2);
     return OvalControlButton(
       iconUp: Icons.keyboard_double_arrow_up,
       iconDown: Icons.keyboard_double_arrow_down,
       isLarge: true,
+      scale: scale,
       onUpPressed: () => openValvesMask(ctx, upMask),
       onUpReleased: () => closeValveMask(upMask),
       onDownPressed: () => openValvesMask(ctx, downMask),
@@ -238,7 +275,8 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildPresetsBar(BuildContext context, BLEManager bleManager) {
+  Widget _buildPresetsBar(
+      BuildContext context, BLEManager bleManager, double scale) {
     final canUsePresetActions =
         bleManager.connectedDevice != null && _selectedPreset >= 1;
 
@@ -248,24 +286,25 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
     final landscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     return landscape
-        ? _buildPresetsBarLandscape(context, canUsePresetActions)
-        : _buildPresetsBarPortrait(context, canUsePresetActions);
+        ? _buildPresetsBarLandscape(context, canUsePresetActions, scale)
+        : _buildPresetsBarPortrait(context, canUsePresetActions, scale);
   }
 
-  Widget _buildPresetsBarPortrait(BuildContext context, bool canUse) {
+  Widget _buildPresetsBarPortrait(
+      BuildContext context, bool canUse, double scale) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      padding: EdgeInsets.fromLTRB(16 * scale, 4 * scale, 16 * scale, 12 * scale),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildPresetCircles(context),
-          const SizedBox(height: 8),
+          _buildPresetCircles(context, scale),
+          SizedBox(height: 8 * scale),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildSaveButton(context, canUse, compact: false),
-              const SizedBox(width: 16),
-              _buildLoadButton(context, canUse, compact: false),
+              _buildSaveButton(context, canUse, compact: false, scale: scale),
+              SizedBox(width: 16 * scale),
+              _buildLoadButton(context, canUse, compact: false, scale: scale),
             ],
           ),
         ],
@@ -273,27 +312,28 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildPresetsBarLandscape(BuildContext context, bool canUse) {
+  Widget _buildPresetsBarLandscape(
+      BuildContext context, bool canUse, double scale) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      padding: EdgeInsets.fromLTRB(12 * scale, 4 * scale, 12 * scale, 8 * scale),
       child: Row(
         children: [
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildSaveButton(context, canUse, compact: true),
-              const SizedBox(height: 6),
-              _buildLoadButton(context, canUse, compact: true),
+              _buildSaveButton(context, canUse, compact: true, scale: scale),
+              SizedBox(height: 6 * scale),
+              _buildLoadButton(context, canUse, compact: true, scale: scale),
             ],
           ),
-          const SizedBox(width: 12),
-          Expanded(child: _buildPresetCircles(context)),
+          SizedBox(width: 12 * scale),
+          Expanded(child: _buildPresetCircles(context, scale)),
         ],
       ),
     );
   }
 
-  Widget _buildPresetCircles(BuildContext context) {
+  Widget _buildPresetCircles(BuildContext context, double scale) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
@@ -301,14 +341,14 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
           GestureDetector(
             onTap: () => _onPresetTapped(context, i),
             child: CircleAvatar(
-              radius: 18,
+              radius: 18 * scale,
               backgroundColor: i == _selectedPreset
                   ? AppTheme.accent(context)
                   : Colors.grey[800],
               child: Text(
                 '$i',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 14 * scale,
                   color:
                       i == _selectedPreset ? Colors.white : Colors.grey[400],
                 ),
@@ -322,7 +362,7 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
   /// [compact] trims the padding and drops the framework's 48px minimum tap
   /// target, used only where landscape height is scarce.
   Widget _buildSaveButton(BuildContext context, bool canUse,
-      {required bool compact}) {
+      {required bool compact, double scale = 1.0}) {
     return OutlinedButton(
       onPressed: canUse ? () => _confirmSavePreset(context) : null,
       style: OutlinedButton.styleFrom(
@@ -332,8 +372,9 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
         backgroundColor: const Color(0xFF1E1E1E),
         padding: compact
             ? EdgeInsets.zero
-            : const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        minimumSize: compact ? const Size(76, 30) : null,
+            : EdgeInsets.symmetric(horizontal: 20 * scale, vertical: 8 * scale),
+        minimumSize: compact ? Size(76 * scale, 30 * scale) : null,
+        textStyle: TextStyle(fontSize: 14 * scale),
         tapTargetSize: compact ? MaterialTapTargetSize.shrinkWrap : null,
       ),
       child: const Text('Save'),
@@ -341,7 +382,7 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
   }
 
   Widget _buildLoadButton(BuildContext context, bool canUse,
-      {required bool compact}) {
+      {required bool compact, double scale = 1.0}) {
     return ElevatedButton(
       onPressed: canUse ? () => _confirmLoadPreset(context) : null,
       style: ElevatedButton.styleFrom(
@@ -351,8 +392,9 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
         disabledForegroundColor: Colors.white60,
         padding: compact
             ? EdgeInsets.zero
-            : const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        minimumSize: compact ? const Size(76, 30) : null,
+            : EdgeInsets.symmetric(horizontal: 20 * scale, vertical: 8 * scale),
+        minimumSize: compact ? Size(76 * scale, 30 * scale) : null,
+        textStyle: TextStyle(fontSize: 14 * scale),
         tapTargetSize: compact ? MaterialTapTargetSize.shrinkWrap : null,
       ),
       child: const Text('Load'),
@@ -532,10 +574,14 @@ class _ChevronStackPainter extends CustomPainter {
   const _ChevronStackPainter({
     required this.color,
     required this.pointingUp,
+    this.scale = 1.0,
   });
 
   final Color color;
   final bool pointingUp;
+
+  /// Enlarges the whole stack on roomier screens; see _uiScale.
+  final double scale;
 
   /// One chevron per wheel.
   static const int count = 4;
@@ -547,30 +593,35 @@ class _ChevronStackPainter extends CustomPainter {
   static const double chevronHeight = 5;
   static const double stroke = 2;
 
+  double get _pitch => pitch * scale;
+  double get _chevronWidth => chevronWidth * scale;
+  double get _chevronHeight => chevronHeight * scale;
+  double get _stroke => stroke * scale;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
+      ..strokeWidth = _stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    final totalHeight = chevronHeight + pitch * (count - 1);
+    final totalHeight = _chevronHeight + _pitch * (count - 1);
     final top = (size.height - totalHeight) / 2;
     final cx = size.width / 2;
 
     for (var i = 0; i < count; i++) {
-      final y = top + i * pitch;
+      final y = top + i * _pitch;
       final path = Path();
       if (pointingUp) {
-        path.moveTo(cx - chevronWidth / 2, y + chevronHeight);
+        path.moveTo(cx - _chevronWidth / 2, y + _chevronHeight);
         path.lineTo(cx, y);
-        path.lineTo(cx + chevronWidth / 2, y + chevronHeight);
+        path.lineTo(cx + _chevronWidth / 2, y + _chevronHeight);
       } else {
-        path.moveTo(cx - chevronWidth / 2, y);
-        path.lineTo(cx, y + chevronHeight);
-        path.lineTo(cx + chevronWidth / 2, y);
+        path.moveTo(cx - _chevronWidth / 2, y);
+        path.lineTo(cx, y + _chevronHeight);
+        path.lineTo(cx + _chevronWidth / 2, y);
       }
       canvas.drawPath(path, paint);
     }
@@ -578,7 +629,9 @@ class _ChevronStackPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ChevronStackPainter old) =>
-      old.color != color || old.pointingUp != pointingUp;
+      old.color != color ||
+      old.pointingUp != pointingUp ||
+      old.scale != scale;
 }
 
 /// One direction of the all-corners control: a single momentary-hold button
@@ -587,12 +640,14 @@ class AllWheelsButton extends StatelessWidget {
   final bool pointingUp;
   final VoidCallback onPressed;
   final VoidCallback onReleased;
+  final double scale;
 
   const AllWheelsButton({
     super.key,
     required this.pointingUp,
     required this.onPressed,
     required this.onReleased,
+    this.scale = 1.0,
   });
 
   @override
@@ -603,11 +658,11 @@ class AllWheelsButton extends StatelessWidget {
       onTapUp: (_) => onReleased(),
       onTapCancel: onReleased,
       child: Container(
-        width: 56,
-        height: 40,
+        width: 56 * scale,
+        height: 40 * scale,
         decoration: BoxDecoration(
           color: const Color(0xFF1E1E1E),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20 * scale),
           border: Border.all(
             color: AppTheme.accent(context).withOpacity(0.15),
             width: 1,
@@ -619,6 +674,7 @@ class AllWheelsButton extends StatelessWidget {
           painter: _ChevronStackPainter(
             color: AppTheme.accent(context),
             pointingUp: pointingUp,
+            scale: scale,
           ),
         ),
       ),
@@ -637,11 +693,15 @@ class OvalControlButton extends StatelessWidget {
   final VoidCallback? onUpReleased;
   final VoidCallback? onDownReleased;
 
+  /// Enlarges the pill on roomier screens; see _uiScale.
+  final double scale;
+
   const OvalControlButton({
     super.key,
     required this.iconUp,
     required this.iconDown,
     this.isLarge = false,
+    this.scale = 1.0,
     this.onUpPressed,
     this.onDownPressed,
     this.onUpReleased,
@@ -656,8 +716,8 @@ class OvalControlButton extends StatelessWidget {
     // so it overflowed and painted over the presets bar.
     final landscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
-    final long = isLarge ? 96.0 : 72.0;
-    final short = isLarge ? 56.0 : 48.0;
+    final long = (isLarge ? 96.0 : 72.0) * scale;
+    final short = (isLarge ? 56.0 : 48.0) * scale;
 
     return Container(
       width: landscape ? long : short,
@@ -678,6 +738,7 @@ class OvalControlButton extends StatelessWidget {
           Expanded(
             child: ControlButton(
               icon: iconUp,
+              iconSize: 22 * scale,
               onPressed: onUpPressed,
               onReleased: onUpReleased,
             ),
@@ -685,6 +746,7 @@ class OvalControlButton extends StatelessWidget {
           Expanded(
             child: ControlButton(
               icon: iconDown,
+              iconSize: 22 * scale,
               onPressed: onDownPressed,
               onReleased: onDownReleased,
             ),
@@ -699,12 +761,14 @@ class ControlButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onPressed;
   final VoidCallback? onReleased;
+  final double iconSize;
 
   const ControlButton({
     super.key,
     required this.icon,
     this.onPressed,
     this.onReleased,
+    this.iconSize = 22,
   });
 
   @override
@@ -719,7 +783,7 @@ class ControlButton extends StatelessWidget {
         child: Icon(
           icon,
           color: AppTheme.accent(context),
-          size: 22,
+          size: iconSize,
         ),
       ),
     );

@@ -90,6 +90,28 @@ void main() {
     expect(scrollable.position.pixels, greaterThan(0));
   });
 
+  testWidgets('controls scale up to fill a large landscape head unit',
+      (tester) async {
+    // Roughly what the buttons page receives on a 1024x600 head unit: the
+    // header takes 40% of the width, the nav bar and system inset the rest of
+    // the height. Base-size controls left a lot of dead space here.
+    await pumpAt(tester, const Size(614, 540));
+    expect(tester.takeException(), isNull);
+    expect(maxScrollExtent(tester), 0);
+
+    // Base width is 56; on this much screen it should be far larger.
+    final allBtn = tester.getSize(find.byType(AllWheelsButton).first);
+    expect(allBtn.width, greaterThan(90));
+  });
+
+  testWidgets('controls stay at base size when space is tight', (tester) async {
+    // Scale must never drop below 1 - shrinking is the scroll view's job.
+    await pumpAt(tester, const Size(800, 180));
+    expect(tester.takeException(), isNull);
+    final allBtn = tester.getSize(find.byType(AllWheelsButton).first);
+    expect(allBtn.width, 56);
+  });
+
   testWidgets('controller page scrolls instead of overflowing when very short',
       (tester) async {
     // Far shorter than the content needs; it must scroll rather than overflow.

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:provider/provider.dart';
 import '../../ble_manager.dart';
@@ -130,15 +131,7 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
             .toList();
 
         if (deduped.isEmpty) {
-          return Center(
-            child: Text(
-              showAll
-                  ? "No devices found. Tap Refresh to scan."
-                  : "No OASMan devices found. Tap Refresh to scan.\n\nIf your phone never lists the manifold, turn on \"Show all bluetooth devices\" in Settings.",
-              style: const TextStyle(color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          );
+          return _buildEmptyState(bleManager, showAll);
         }
 
         return ListView.separated(
@@ -153,6 +146,160 @@ class _BluetoothPopupState extends State<BluetoothPopup> {
           },
         );
       },
+    );
+  }
+
+  /// Shown when a scan turns up nothing. If [BLEManager.scanDiagnostic] worked
+  /// out why (permission blocked, location off, adapter off, Android refused
+  /// the scan) show that instead of the generic "nothing found" text - on some
+  /// head units and older Android builds that reason is the whole story.
+  Widget _buildEmptyState(BLEManager bleManager, bool showAll) {
+    final diagnostic = bleManager.scanDiagnostic;
+    final details = bleManager.scanDetails;
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (diagnostic != null) ...[
+              const Icon(Icons.error_outline, color: Colors.orangeAccent),
+              const SizedBox(height: 8),
+              Text(
+                diagnostic,
+                style: const TextStyle(color: Colors.orangeAccent),
+                textAlign: TextAlign.center,
+              ),
+            ] else
+              Text(
+                showAll
+                    ? "No devices found. Tap Refresh to scan."
+                    : "No OASMan devices found. Tap Refresh to scan.\n\nIf your phone never lists the manifold, turn on \"Show all bluetooth devices\" in Settings.",
+                style: const TextStyle(color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+
+            const SizedBox(height: 16),
+            _buildFixItButtons(bleManager),
+
+            // What Android actually reported. Shown even when nothing looks
+            // wrong, since on a device with no adb this is the only way to see
+            // it. "Copy" puts it on the clipboard to paste into a bug report.
+            if (details != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      details,
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    TextButton.icon(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: details));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Diagnostics copied'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.copy, size: 16),
+                      label: const Text('Copy diagnostics'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Shortcuts into the system screens that actually fix a failed scan. These
+  /// stay visible whenever a scan comes up empty - not only when a specific
+  /// fault was detected - because some head units have no reachable Bluetooth
+  /// page in their own settings app, and the scan can fail with the adapter
+  /// looking fine from here.
+  Widget _buildFixItButtons(BLEManager bleManager) {
+    Widget button(String label, IconData icon, VoidCallback onPressed) {
+      return OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppTheme.accent(context),
+          side: BorderSide(color: AppTheme.accent(context)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+
+    Future<void> openOrWarn(Future<bool> Function() open, String what) async {
+      final opened = await open();
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open $what on this device'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+
+    final adapterOff =
+        FlutterBluePlus.adapterStateNow != BluetoothAdapterState.on;
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: [
+        // Most direct fix when the adapter is simply off: ask Android to turn
+        // it on, then rescan. Falls back to the settings buttons if the ROM
+        // refuses the request.
+        if (adapterOff)
+          button('Turn on Bluetooth', Icons.bluetooth_disabled, () async {
+            final on = await bleManager.turnOnBluetooth();
+            if (on) {
+              await bleManager.startScan();
+            } else if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Could not turn Bluetooth on - try Bluetooth '
+                      'settings below'),
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            }
+            if (mounted) setState(() {});
+          }),
+        button('Bluetooth settings', Icons.bluetooth, () {
+          openOrWarn(bleManager.openBluetoothSettings, 'Bluetooth settings');
+        }),
+        button('Location settings', Icons.location_on, () {
+          openOrWarn(bleManager.openLocationSettings, 'Location settings');
+        }),
+        button('App permissions', Icons.lock_open, () {
+          bleManager.openPermissionSettings();
+        }),
+      ],
     );
   }
 
