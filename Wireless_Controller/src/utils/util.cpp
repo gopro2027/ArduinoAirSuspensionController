@@ -290,6 +290,7 @@ void beginSaveData()
     _SaveData.themeColorMedium.load("themeColorMedium", THEME_COLOR_OCEAN_BLUE_MEDIUM);
     _SaveData.swipeNavigation.load("swipeNav", false);
     _SaveData.showBattery.load("showBattery", true);
+    _SaveData.presetButtonCount.load("presetBtnCount", MAX_PROFILE_COUNT);
 }
 
 createSaveFuncInt(unitsMode, int);
@@ -313,6 +314,19 @@ createSaveFuncInt(themeColorDark, uint32_t);
 createSaveFuncInt(themeColorMedium, uint32_t);
 createSaveFuncInt(swipeNavigation, bool);
 createSaveFuncInt(showBattery, bool);
+createSaveFuncInt(presetButtonCount, byte);
+
+// NVS can hand back a value written by other firmware or a corrupt key, so clamp here rather
+// than at every call site — callers index profilePressures[] with the result.
+int getPresetCount()
+{
+    int count = (int)getpresetButtonCount();
+    if (count < 1)
+        count = 1;
+    if (count > MAX_PROFILE_COUNT)
+        count = MAX_PROFILE_COUNT;
+    return count;
+}
 
 float getBrightnessFloat()
 {

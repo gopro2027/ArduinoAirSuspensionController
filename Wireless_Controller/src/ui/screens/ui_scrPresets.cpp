@@ -56,15 +56,29 @@ static int getCarY3() { return getCarY2() - scaledY(5); }
 static int getCarY4() { return getCarY3() - scaledY(5); }
 static int getCarY5() { return getCarY4() - scaledY(5); }
 
+// Car height for preset `num` when `count` presets are shown. The travel between lowest and
+// highest is fixed, so spread the available presets across it evenly — with fewer presets the
+// step between them grows and the animation stays readable. count == MAX_PROFILE_COUNT gives
+// exactly getCarY1()..getCarY5().
+static int getCarYForPreset(int num, int count)
+{
+    if (count < 1)
+        count = 1;
+    if (num < 1)
+        num = 1;
+    if (num > count)
+        num = count;
+    if (count == 1)
+        return getCarY1();
+    const int travel = getCarY1() - getCarY5(); // positive: Y decreases as the car rises
+    return getCarY1() - (travel * (num - 1)) / (count - 1);
+}
+
 // Legacy macros for animation functions
 #define car_x getCarX()
 #define wheels_x getWheelsX()
 #define wheels_y getWheelsY()
 #define car_y_1 getCarY1()
-#define car_y_2 getCarY2()
-#define car_y_3 getCarY3()
-#define car_y_4 getCarY4()
-#define car_y_5 getCarY5()
 
 // Wheel well (fender) offsets - use scaledX/Y for proper scaling
 SimpleRect fender1Offset = {scaledX(40), scaledY(37), scaledX(32), scaledY(26)};
@@ -86,7 +100,7 @@ static const uint32_t PRESET_BTN_TEXT_COLOR = 0x8888AA;     // Muted text when i
 static const uint32_t PRESET_BTN_TEXT_ACTIVE = 0xFFFFFF;    // Bright text when active
 
 // Store label references for updating text color
-static lv_obj_t* presetLabels[5] = {NULL};
+static lv_obj_t* presetLabels[MAX_PROFILE_COUNT] = {NULL};
 
 // Forward declaration for load function used in lambdas
 void loadSelectedPreset();
@@ -135,7 +149,7 @@ static lv_obj_t* createPresetButton(lv_obj_t *parent, const char *text, int pres
     lv_obj_center(label);
 
     // Store label reference for color updates
-    if (presetNum >= 1 && presetNum <= 5) {
+    if (presetNum >= 1 && presetNum <= MAX_PROFILE_COUNT) {
         presetLabels[presetNum - 1] = label;
     }
 
@@ -186,9 +200,12 @@ void ScrPresets::init(lv_obj_t *parent)
     Scr::init(parent);
 
     // Reset static label references on reinit
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < MAX_PROFILE_COUNT; i++) {
         presetLabels[i] = NULL;
+        this->btnPresets[i] = NULL;
     }
+
+    this->presetCount = getPresetCount();
 
     const int screenWidth = getScreenWidth();
     const int screenHeight = getScreenHeight();
@@ -245,12 +262,12 @@ void ScrPresets::init(lv_obj_t *parent)
     lv_obj_set_flex_align(this->presetButtonsContainer, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_remove_flag(this->presetButtonsContainer, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Circular preset buttons
-    this->btnPreset1 = createPresetButton(this->presetButtonsContainer, "1", 1);
-    this->btnPreset2 = createPresetButton(this->presetButtonsContainer, "2", 2);
-    this->btnPreset3 = createPresetButton(this->presetButtonsContainer, "3", 3);
-    this->btnPreset4 = createPresetButton(this->presetButtonsContainer, "4", 4);
-    this->btnPreset5 = createPresetButton(this->presetButtonsContainer, "5", 5);
+    // Circular preset buttons - SPACE_EVENLY on the container spreads however many exist
+    for (int i = 0; i < this->presetCount; i++) {
+        char label[4];
+        snprintf(label, sizeof(label), "%i", i + 1);
+        this->btnPresets[i] = createPresetButton(this->presetButtonsContainer, label, i + 1);
+    }
 
     // --- Save/Load buttons container ---
     lv_obj_t *actionContainer = lv_obj_create(this->scr);
@@ -363,14 +380,19 @@ void ScrPresets::init(lv_obj_t *parent)
     // (setPreset shows dialog when clicking same preset twice)
     int savedPreset = currentPreset;
     currentPreset = -1;
-    this->setPreset(savedPreset > 0 ? savedPreset : 3);
+    int defaultPreset = savedPreset > 0 ? savedPreset : 3;
+    if (defaultPreset > this->presetCount)
+        defaultPreset = this->presetCount;
+    this->setPreset(defaultPreset);
 }
 
 void ScrPresets::updateButtonStyles()
 {
     // Update button styles based on current preset
-    lv_obj_t* btns[] = {btnPreset1, btnPreset2, btnPreset3, btnPreset4, btnPreset5};
-    for (int i = 0; i < 5; i++) {
+    lv_obj_t** btns = this->btnPresets;
+    for (int i = 0; i < this->presetCount; i++) {
+        if (btns[i] == NULL)
+            continue;
         lv_obj_remove_state(btns[i], LV_STATE_FOCUSED);
         if (i + 1 == currentPreset) {
             // Active button - purple with glow (same shadow width to prevent shifting)
@@ -401,30 +423,20 @@ void ScrPresets::updateButtonStyles()
 }
 void ScrPresets::setPreset(int num)
 {
+    // The manifold (or the boot button) can hand us a preset the user has hidden; clamp so we
+    // never light up a button that does not exist or index profilePressures[] out of range.
+    if (num < 1)
+        num = 1;
+    if (num > this->presetCount)
+        num = this->presetCount;
+
     if (currentPreset == num)
     {
         this->showPresetDialog();
     }
     currentPreset = num;
     updateButtonStyles();
-    switch (num)
-    {
-    case 1:
-        animCarPreset(this, car_y_1);
-        break;
-    case 2:
-        animCarPreset(this, car_y_2);
-        break;
-    case 3:
-        animCarPreset(this, car_y_3);
-        break;
-    case 4:
-        animCarPreset(this, car_y_4);
-        break;
-    case 5:
-        animCarPreset(this, car_y_5);
-        break;
-    }
+    animCarPreset(this, getCarYForPreset(num, this->presetCount));
     requestPreset();
 }
 

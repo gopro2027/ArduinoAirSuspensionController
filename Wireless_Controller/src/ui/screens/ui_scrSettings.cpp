@@ -694,6 +694,33 @@ void ScrSettings::init(lv_obj_t *parent)
     });
     ((Option *)this->ui_brightnessSlider)->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
 
+    allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Presets", {.STRING = ""}));
+
+    // Dropdown options are the newline-separated list "1\n2\n...MAX_PROFILE_COUNT"; selected index is count-1.
+    static_assert(MAX_PROFILE_COUNT <= 9, "preset count dropdown assumes single-digit labels");
+    static char presetCountOpts[MAX_PROFILE_COUNT * 2 + 1];
+    for (int i = 0; i < MAX_PROFILE_COUNT; i++)
+    {
+        presetCountOpts[i * 2] = (char)('1' + i);
+        presetCountOpts[i * 2 + 1] = '\n';
+    }
+    presetCountOpts[MAX_PROFILE_COUNT * 2 - 1] = '\0';
+
+    allOptions.push_back(new Option(screen_settings_page, OptionType::DROPDOWN_SELECT, "Preset Buttons",
+        {.INT = getPresetCount() - 1}, [](void *data)
+    {
+        int count = (int)(uintptr_t)data + 1;
+        if (count < 1)
+            count = 1;
+        if (count > MAX_PROFILE_COUNT)
+            count = MAX_PROFILE_COUNT;
+        if (count == getPresetCount())
+            return;
+        setpresetButtonCount((byte)count);
+        // The presets screen builds its buttons in init(), so it has to be rebuilt to pick this up.
+        runNextFrame([]() { reinitializeScreens(); });
+    }, (void *)presetCountOpts));
+
     allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Status Bar", {.STRING = ""}));
     allOptions.push_back(new Option(screen_settings_page, OptionType::ON_OFF, "Show Battery", {.INT = getshowBattery() ? 1 : 0}, [](void *data)
     {
