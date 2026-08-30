@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/appSettings.dart';
 
+/// Bar per PSI. Exposed so callers that only need the conversion (and have no
+/// [UnitProvider] instance to hand) don't have to repeat the literal.
+const double barPerPsi = 0.0689476;
+
 class UnitProvider extends ChangeNotifier {
   String _unit = globalSettings!.units;
 
@@ -8,11 +12,11 @@ class UnitProvider extends ChangeNotifier {
 
   // Convert pressure to Bar if needed
   double convertToBar(double psi) {
-    return psi * 0.0689476;
+    return psi * barPerPsi;
   }
 
   double convertToPsi(double bar) {
-    return bar / 0.0689476;
+    return bar / barPerPsi;
   }
 
   // Update the unit and notify listeners

@@ -145,7 +145,31 @@ class SettingsPageState extends State<SettingsPage> {
     compressorCrankOffsetController.text = bm.compressorCrankOffset.toString();
     auxPulseDurationController.text = bm.auxPulseDuration.toString();
     auxIntervalCyclesController.text = bm.auxIntervalCycles.toString();
-    setState(() => _lastUnits = null);
+    setState(() {
+      _seedCompressorControllers(bm, globalSettings!.units);
+    });
+  }
+
+  /// Seeds the compressor on/off fields from the manifold's current values.
+  ///
+  /// These two are the only config fields displayed in the user's chosen units,
+  /// so they need this unit-aware path rather than a plain `toString()`. They
+  /// must be seeded here and in [_loadSettings] like every other config field:
+  /// leaving them empty until the Config section happened to be rendered made
+  /// [_applyCompressorFromControllers] read blank text on every save that fired
+  /// from elsewhere on the page, which zeroed the manifold's thresholds.
+  void _seedCompressorControllers(BLEManager bm, String units) {
+    minPressureController.text = _formatPressureField(bm.compressorOnPSI, units);
+    maxPressureController.text =
+        _formatPressureField(bm.compressorOffPSI, units);
+    _lastUnits = units;
+  }
+
+  String _formatPressureField(int psi, String units) {
+    if (units == 'Bar') {
+      return (psi * barPerPsi).toStringAsFixed(2);
+    }
+    return psi.toString();
   }
 
   @override
@@ -208,10 +232,10 @@ class SettingsPageState extends State<SettingsPage> {
       BLEManager bm, UnitProvider unitProvider, String units) {
     void apply(TextEditingController c, void Function(int) assign) {
       final t = c.text.trim();
-      if (t.isEmpty) {
-        assign(0);
-        return;
-      }
+      // An empty field means "never populated / not edited", never "zero".
+      // Assigning 0 here zeroed the manifold's thresholds on any save that ran
+      // before the field had been seeded. Leave the current value untouched.
+      if (t.isEmpty) return;
       try {
         if (units == 'Bar') {
           assign(unitProvider.convertToPsi(double.parse(t)).toInt());
@@ -245,6 +269,23 @@ class SettingsPageState extends State<SettingsPage> {
       }
 
       final bm = bleManager;
+
+      // Never push a config we have never read. Until the manifold's first
+      // GETCONFIGVALUES arrives every field here is still a client-side default,
+      // and saveConfigToManifold() writes the whole struct with setValues=1 —
+      // so saving in that window would overwrite the manifold with zeros.
+      if (bm.configRevision == 0) {
+        if (mounted && showSnackBar) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Still loading settings from the manifold'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
+      }
+
       final st = int.tryParse(shutdownTimeController.text.trim());
       if (st != null) bm.systemShutoffTimeM = st;
       bm.bleBroadcastName = broadcastController.text;
@@ -252,9 +293,12 @@ class SettingsPageState extends State<SettingsPage> {
       final unitProvider = Provider.of<UnitProvider>(context, listen: false);
       _applyCompressorFromControllers(bm, unitProvider, unitProvider.unit);
 
-      if (bm.compressorOnPSI >= bm.compressorOffPSI) {
-        bm.compressorOffPSI = bm.compressorOnPSI + 1;
-      }
+      // args[13]/args[14] are single bytes on the wire and the BLE write
+      // truncates mod 256, so an out-of-range entry would arrive as garbage
+      // (300 -> 44). Keeping the value representable is all that happens here;
+      // the On/Off relationship is the manifold's to police, not the app's.
+      bm.compressorOffPSI = bm.compressorOffPSI.clamp(0, 255);
+      bm.compressorOnPSI = bm.compressorOnPSI.clamp(0, 255);
 
       final bagMax = int.tryParse(bagMaxController.text.trim());
       if (bagMax != null) {
@@ -556,6 +600,12 @@ class SettingsPageState extends State<SettingsPage> {
           bm.AirUpBagStretchTriggerBelowPressure.toString();
       bagStretchPressureController.text = bm.AirUpBagStretchPressure.toString();
       compressorCrankOffsetController.text = bm.compressorCrankOffset.toString();
+      // Only seed once the manifold has actually sent its config. Before that
+      // these are still 0/0 defaults, and seeding "0" would look like a real
+      // user-entered zero to the save path.
+      if (bm.configRevision > 0) {
+        _seedCompressorControllers(bm, globalSettings!.units);
+      }
       print("Manifold's settings loaded");
     }
     _settingsLoaded = true;
@@ -1223,20 +1273,12 @@ class SettingsPageState extends State<SettingsPage> {
                         Consumer<UnitProvider>(
                           builder: (context, unitProvider, _) {
                             final units = unitProvider.unit;
+                            // Only re-seeds on a unit switch now; the fields are
+                            // already populated by _loadSettings and
+                            // _onBleManagerChanged, so this is no longer the
+                            // only thing standing between them and empty text.
                             if (_lastUnits != units) {
-                              minPressureController.text = units == 'Bar'
-                                  ? unitProvider
-                                      .convertToBar(
-                                          m.compressorOnPSI.toDouble())
-                                      .toStringAsFixed(2)
-                                  : m.compressorOnPSI.toString();
-                              maxPressureController.text = units == 'Bar'
-                                  ? unitProvider
-                                      .convertToBar(
-                                          m.compressorOffPSI.toDouble())
-                                      .toStringAsFixed(2)
-                                  : m.compressorOffPSI.toString();
-                              _lastUnits = units;
+                              _seedCompressorControllers(m, units);
                             }
                             return Column(
                               children: [
