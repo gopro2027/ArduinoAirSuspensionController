@@ -161,6 +161,11 @@ void ui_reinit(void)
     changeScreen(prevScreen, false);
 
     lv_obj_del(splashScr);
+
+    // applyRotationAndShowSplashScreen() drives the backlight to full so the logo is visible
+    // through the rebuild; put the user's brightness back. Only noticeable before now because
+    // every reinit followed a deliberate tap, but auto rotate fires on its own.
+    set_brightness(getBrightnessFloat());
 }
 
 void changeScreen(SCREEN screen, bool animate)
