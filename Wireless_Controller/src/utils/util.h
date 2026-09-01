@@ -209,6 +209,7 @@ public:
     Preferencable updateResult;
     Preferencable brightness;
     Preferencable screenRotation;
+    Preferencable autoRotate;
     // Theme colors
     Preferencable themeColorLight;
     Preferencable themeColorDark;
@@ -233,6 +234,7 @@ headerDefineSaveFunc(wifiPassword, String);
 headerDefineSaveFunc(updateResult, byte);
 headerDefineSaveFunc(brightness, byte);
 headerDefineSaveFunc(screenRotation, byte);
+headerDefineSaveFunc(autoRotate, bool);
 headerDefineSaveFunc(themeColorLight, uint32_t);
 headerDefineSaveFunc(themeColorDark, uint32_t);
 headerDefineSaveFunc(themeColorMedium, uint32_t);

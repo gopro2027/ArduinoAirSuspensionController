@@ -168,8 +168,10 @@ void LCD_SetCursor(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yen
 {
   // Calculate offsets based on current rotation
   // ST7789 RAM is 240x320, offsets swap when using MADCTL rotation for landscape
-  uint16_t x_offset = (lcd_rotation == 1) ? Offset_Y : Offset_X;
-  uint16_t y_offset = (lcd_rotation == 1) ? Offset_X : Offset_Y;
+  // Odd rotations (1 and 3) are the landscape pair. ; was: (lcd_rotation == 1), which
+  // missed rotation 3 once auto rotate started using all four orientations
+  uint16_t x_offset = (lcd_rotation & 1) ? Offset_Y : Offset_X;
+  uint16_t y_offset = (lcd_rotation & 1) ? Offset_X : Offset_Y;
 
   // Column address set (0x2A)
   LCD_WriteCommand(0x2A);
@@ -245,20 +247,27 @@ void Set_Backlight(uint8_t Light)
 /******************************************************************************
 function: Set LCD rotation using MADCTL register (0x36)
 parameter:
-    rotation: 0 = Portrait, 1 = Landscape (90°)
+    rotation: 0 = Portrait, 1 = Landscape (90°), 2 = Portrait flipped (180°),
+              3 = Landscape flipped (270°)
 ******************************************************************************/
 void LCD_SetRotation(uint8_t rotation)
 {
-  lcd_rotation = rotation;
+  lcd_rotation = rotation & 0x03;
 
   LCD_WriteCommand(0x36); // MADCTL
-  switch (rotation)
+  switch (lcd_rotation)
   {
   case 0: // Portrait (240x320)
     LCD_WriteData(0x00);
     break;
   case 1: // Landscape (320x240) - 90 degrees
     LCD_WriteData(0x60); // MX + MV
+    break;
+  case 2: // Portrait upside down (240x320) - 180 degrees
+    LCD_WriteData(0xC0); // MY + MX
+    break;
+  case 3: // Landscape the other way (320x240) - 270 degrees
+    LCD_WriteData(0xA0); // MY + MV
     break;
   default:
     LCD_WriteData(0x00);

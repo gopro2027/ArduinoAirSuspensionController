@@ -25,6 +25,10 @@
 // Touch header
 #include "files/esp_lcd_touch_ft6336.h"
 
+// Bus mutex. Unlike the 2.8, this board polls the AXP2101 from a background task on core 0
+// (pmic_cache_start), so anything else touching Wire has to serialise against it.
+#include "files/i2c_guard.h"
+
 // ---------- Power key and battery definitions ----------
 //
 // The PWR side button is NOT on an ESP32 GPIO on this board. It drives the
@@ -83,6 +87,22 @@
 #endif
 
 #define SUPPORTS_ROTATION 1
+
+// QMI8658 6-axis IMU on the shared I2C bus. Only its accelerometer is used, and only to pick
+// a screen orientation for auto rotate (src/utils/imu.cpp). The driver still probes WHO_AM_I
+// at boot, so a board that turns out not to be populated just hides the setting.
+#define HAS_IMU 1
+
+// Every IMU transaction goes through i2c_lock()/i2c_unlock() above, because the PMIC cache
+// task shares this bus from the other core.
+#define IMU_I2C_GUARDED 1
+
+// IMU -> screen axis mapping for auto rotate. The QMI8658 is mounted turned 90 degrees from
+// the panel, so the raw axes cross over: screen X comes from the IMU's Y, and screen Y is the
+// IMU's X negated. Derived on hardware 2026-08-31 from all four resting positions.
+// ; was: identity on both axes, which sent every orientation to the neighbouring one
+#define IMU_SCREEN_X(ax, ay, az) (ay)
+#define IMU_SCREEN_Y(ax, ay, az) (-(ax))
 
 // Physical panel: 3.5" diagonal, 320x480 -> ~165 px/inch
 #define DEVICE_DPI 165
