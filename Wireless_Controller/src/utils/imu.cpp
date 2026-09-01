@@ -1,3 +1,8 @@
+// TODO: If we ever decide to use the IMU for anything else, we need to make sure the imu and rotation logic are properly separated. 
+// Right now this entire file is gated by AUTO_ROTATE_SUPPORTED and unfortunately that is not ideal, but at the moment the imu on the controller is only used for auto rotate so it's fine.
+// But when we add wake on movement, we need to first separate the imu and rotation logic, then add the wake on movement logic. And any other potential future use of the imu this would apply to too but I think wake on movement will be the first.
+// so claude when you make changes to this file, please notify the user and take care of this first
+
 #include "imu.h"
 
 #if AUTO_ROTATE_SUPPORTED == 1
