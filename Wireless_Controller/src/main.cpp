@@ -9,6 +9,7 @@
 
 #include "utils/touch_lib.h"
 #include "utils/imu.h"
+#include "utils/auto_rotate.h"
 #include "tasks/tasks.h"
 
 #include "utils/util.h"
@@ -59,7 +60,8 @@ void setup()
     board_drivers_init();
 
     // After board_drivers_init() because it owns I2C_Init(), and before ui_init() because the
-    // settings screen asks imuAvailable() whether to show the auto rotate switch.
+    // settings screen asks imuAvailable() whether to show the auto rotate switch. The driver
+    // itself is feature-agnostic; auto rotate is just its first consumer.
     imuInit();
 
 #ifndef SCREEN_MODE_CIRCLE

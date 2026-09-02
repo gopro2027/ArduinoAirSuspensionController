@@ -88,9 +88,10 @@
 
 #define SUPPORTS_ROTATION 1
 
-// QMI8658 6-axis IMU on the shared I2C bus. Only its accelerometer is used, and only to pick
-// a screen orientation for auto rotate (src/utils/imu.cpp). The driver still probes WHO_AM_I
-// at boot, so a board that turns out not to be populated just hides the setting.
+// QMI8658 6-axis IMU on the shared I2C bus. Builds the driver in src/utils/imu.cpp; auto rotate
+// (src/utils/auto_rotate.cpp) is its first consumer and additionally needs SUPPORTS_ROTATION.
+// The driver probes WHO_AM_I at boot, so a board that turns out not to be populated just hides
+// whatever UI depends on it.
 #define HAS_IMU 1
 
 // Every IMU transaction goes through i2c_lock()/i2c_unlock() above, because the PMIC cache

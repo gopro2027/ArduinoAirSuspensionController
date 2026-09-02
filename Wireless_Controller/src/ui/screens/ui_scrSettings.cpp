@@ -1,6 +1,7 @@
 #include "device_lib_exports.h"
 #include "ui_scrSettings.h"
 #include "utils/imu.h"
+#include "utils/auto_rotate.h"
 #include <stdint.h>
 
 #ifndef SCREEN_MODE_CIRCLE
