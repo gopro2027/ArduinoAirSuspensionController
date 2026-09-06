@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "jinja-html": "html",
+        "algorithm": "cpp",
+        "chrono": "cpp",
+        "limits": "cpp",
+        "random": "cpp",
+        "utility": "cpp",
+        "valarray": "cpp"
+    }
+}

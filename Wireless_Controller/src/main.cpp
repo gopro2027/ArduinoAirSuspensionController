@@ -180,7 +180,7 @@ void bootButtonFunctionality() {
         }
         if (bootButtonLoadPresetStarted) {
             bootButtonPresetCount++;
-            if (bootButtonPresetCount > 5) {
+            if (bootButtonPresetCount > getPresetCount()) {
                 showDialog("Preset loading cancelled", lv_color_hex(0xFF0000));
                 bootButtonLoadPresetStarted = false;
             } else {
@@ -227,7 +227,7 @@ void bootButtonFunctionality() {
         // check if button is released for longer than 1000ms (stopped changing preset numbers)
         if (now - bootBtnLastReleased > beginPresetLoadingAfterNoInputPeriod) {
             bootButtonLoadPresetStarted = false;
-            if (bootButtonPresetCount >= 1 && bootButtonPresetCount <= 5) {
+            if (bootButtonPresetCount >= 1 && bootButtonPresetCount <= getPresetCount()) {
                 // send the preset first to the manifold
                 AirupQuickPacket pkt(bootButtonPresetCount - 1);
                 sendRestPacket(&pkt);

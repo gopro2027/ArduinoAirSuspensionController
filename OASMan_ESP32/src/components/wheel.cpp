@@ -685,8 +685,7 @@ void Wheel::heightsensorlessLevelling() {
             {
                 // newTarget = 2*current - start, with the step clamped to bound 2x noise amplification
                 int step = constrain(2 * delta, -SENSORLESS_LEVEL_MAX_STEP_PSI, SENSORLESS_LEVEL_MAX_STEP_PSI);
-                int hardMax = min((int)MAX_PRESSURE_SAFETY, (int)getbagMaxPressure());
-                int newTarget = constrain(start + step, 0, hardMax);
+                int newTarget = constrain(start + step, 0, (int)getbagMaxPressure());
 
                 // Fault-latch: repeated same-direction corrections look like a slow leak or thermal
                 // drift (not real weight changes). Auto-disable to prevent ratcheting to the ceiling.

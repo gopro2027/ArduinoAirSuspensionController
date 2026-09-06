@@ -243,6 +243,8 @@ public:
     Preferencable swipeNavigation;
     // Status bar
     Preferencable showBattery;
+    // Presets
+    Preferencable presetButtonCount;
 };
 
 extern SaveData _SaveData;
@@ -262,6 +264,9 @@ headerDefineSaveFunc(themeColorDark, uint32_t);
 headerDefineSaveFunc(themeColorMedium, uint32_t);
 headerDefineSaveFunc(swipeNavigation, bool);
 headerDefineSaveFunc(showBattery, bool);
+headerDefineSaveFunc(presetButtonCount, byte);
+/** Saved preset count clamped to [1, MAX_PROFILE_COUNT]; always use this to bound preset UI/indices. */
+int getPresetCount();
 
 // Single source of truth for "should the battery readout be on screen": the user's preference,
 // but only on boards that can actually measure the battery. Use this instead of getshowBattery()

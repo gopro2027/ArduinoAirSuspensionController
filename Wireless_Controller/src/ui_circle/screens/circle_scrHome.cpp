@@ -11,7 +11,8 @@ ScrHome scrHome(true);
 static const unsigned long KNOB_HOLD_MS = 100;
 
 static constexpr int kPresetMin = 1;
-static constexpr int kPresetMax = 5;
+/** Upper bound follows the user's "Preset Buttons" setting; read live so a settings change applies. */
+static inline int presetMax() { return getPresetCount(); }
 
 /** After long-press load, suppress the following CLICKED so the PSI dialog does not open. */
 static bool s_skipNextPresetClick = false;
@@ -44,7 +45,7 @@ static void centerPresetEventCb(lv_event_t *e)
 {
     const lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_LONG_PRESSED) {
-        if (currentPreset < kPresetMin || currentPreset > kPresetMax)
+        if (currentPreset < kPresetMin || currentPreset > presetMax())
             return;
         s_skipNextPresetClick = true;
         if (currentPreset == 1) {
@@ -61,7 +62,7 @@ static void centerPresetEventCb(lv_event_t *e)
         s_skipNextPresetClick = false;
         return;
     }
-    if (currentPreset >= kPresetMin && currentPreset <= kPresetMax)
+    if (currentPreset >= kPresetMin && currentPreset <= presetMax())
         scrHome.showPresetDialog();
 }
 
@@ -241,7 +242,7 @@ void ScrHome::init(lv_obj_t *parent)
 
     int savedPreset = currentPreset;
     currentPreset = -1;
-    setPreset(savedPreset > 0 ? savedPreset : 3);
+    setPreset(savedPreset > 0 ? savedPreset : 3); // setPreset clamps to the configured preset count
 }
 
 void ScrHome::updatePresetVisuals()
@@ -249,12 +250,18 @@ void ScrHome::updatePresetVisuals()
     if (!presetSelectBtn_ || !presetNumberLabel_)
         return;
 
-    const bool ok = (currentPreset >= kPresetMin && currentPreset <= kPresetMax);
+    const bool ok = (currentPreset >= kPresetMin && currentPreset <= presetMax());
     lv_label_set_text_fmt(presetNumberLabel_, "%d", ok ? currentPreset : 0);
 }
 
 void ScrHome::setPreset(int num)
 {
+    // The manifold (or the boot button) can hand us a preset the user has hidden; clamp so we
+    // never index profilePressures[] outside the range the user selected.
+    if (num < kPresetMin)
+        num = kPresetMin;
+    if (num > presetMax())
+        num = presetMax();
     currentPreset = num;
     updatePresetVisuals();
     requestPreset();
@@ -331,14 +338,15 @@ void ScrHome::processKnob()
 
     knobActiveUntil_ = 0;
 
+    const int pMax = presetMax();
     int p = currentPreset;
-    if (p < kPresetMin || p > kPresetMax)
+    if (p < kPresetMin || p > pMax)
         p = 3;
     p += delta;
     if (p < kPresetMin)
         p = kPresetMin;
-    if (p > kPresetMax)
-        p = kPresetMax;
+    if (p > pMax)
+        p = pMax;
     if (p != currentPreset)
         setPreset(p);
 #endif
