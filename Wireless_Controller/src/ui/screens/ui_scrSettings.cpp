@@ -2,6 +2,7 @@
 #include "ui_scrSettings.h"
 #include "utils/imu.h"
 #include "utils/auto_rotate.h"
+#include "utils/wake_on_movement.h"
 #include <stdint.h>
 
 #ifndef SCREEN_MODE_CIRCLE
@@ -687,6 +688,20 @@ void ScrSettings::init(lv_obj_t *parent)
         log_i("Pressed %i", ((uint32_t)data));
         setscreenDimTimeM((uint32_t)data);
     }));
+
+    #if WAKE_ON_MOVEMENT_SUPPORTED == 1
+    // Sits with the dim timeout it modifies, and deliberately outside the SUPPORTS_ROTATION
+    // block below - this needs an IMU, not a rotatable panel. Same two-level gate as Auto
+    // Rotate: the define says the board can have an IMU, imuAvailable() says this unit does.
+    if (imuAvailable())
+    {
+        allOptions.push_back(new Option(screen_settings_page, OptionType::ON_OFF, "Wake on Movement",
+            {.INT = getwakeOnMovement() ? 1 : 0}, [](void *data)
+        {
+            setwakeOnMovement((bool)data);
+        }));
+    }
+    #endif
 
     this->ui_brightnessSlider = new Option(screen_settings_page, OptionType::SLIDER, "Brightness", {.INT = getbrightness()}, [](void *data)
     {

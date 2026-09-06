@@ -212,6 +212,7 @@ public:
     Preferencable brightness;
     Preferencable screenRotation;
     Preferencable autoRotate;
+    Preferencable wakeOnMovement;
     // Theme colors
     Preferencable themeColorLight;
     Preferencable themeColorDark;
@@ -237,6 +238,7 @@ headerDefineSaveFunc(updateResult, byte);
 headerDefineSaveFunc(brightness, byte);
 headerDefineSaveFunc(screenRotation, byte);
 headerDefineSaveFunc(autoRotate, bool);
+headerDefineSaveFunc(wakeOnMovement, bool);
 headerDefineSaveFunc(themeColorLight, uint32_t);
 headerDefineSaveFunc(themeColorDark, uint32_t);
 headerDefineSaveFunc(themeColorMedium, uint32_t);

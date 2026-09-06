@@ -10,6 +10,7 @@
 #include "utils/touch_lib.h"
 #include "utils/imu.h"
 #include "utils/auto_rotate.h"
+#include "utils/wake_on_movement.h"
 #include "tasks/tasks.h"
 
 #include "utils/util.h"
@@ -290,6 +291,9 @@ void loop()
     // Rebuilds the whole UI when it fires, so it has to run on this task (LVGL is
     // single-threaded here) and outside any LVGL event callback.
     autoRotateLoop();
+
+    // After the dim check above, so it sees the dim edge in the iteration it happens.
+    wakeOnMovementLoop();
 
 
     // Update the ticker

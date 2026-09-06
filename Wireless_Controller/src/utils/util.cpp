@@ -290,6 +290,7 @@ void beginSaveData()
     _SaveData.brightness.load("brightness", 80);
     _SaveData.screenRotation.load("screenRotation", 0);
     _SaveData.autoRotate.load("autoRotate", false);
+    _SaveData.wakeOnMovement.load("wakeOnMove", false);
     // Theme colors - using default purple/lavender theme values
     _SaveData.themeColorLight.load("themeColorLight", THEME_COLOR_OCEAN_BLUE_LIGHT);
     _SaveData.themeColorDark.load("themeColorDark", THEME_COLOR_OCEAN_BLUE_DARK);
@@ -316,6 +317,7 @@ createSaveFuncInt(updateResult, byte);
 createSaveFuncInt(brightness, byte);
 createSaveFuncInt(screenRotation, byte);
 createSaveFuncInt(autoRotate, bool);
+createSaveFuncInt(wakeOnMovement, bool);
 createSaveFuncInt(themeColorLight, uint32_t);
 createSaveFuncInt(themeColorDark, uint32_t);
 createSaveFuncInt(themeColorMedium, uint32_t);
