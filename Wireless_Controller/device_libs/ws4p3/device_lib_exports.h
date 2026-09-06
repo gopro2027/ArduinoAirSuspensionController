@@ -32,6 +32,22 @@
 // command all four corners to AIR UP, so this is not merely cosmetic.
 #define USE_BOOT_BUTTON_FUNCTIONALITY 0
 
+// KNOWN BOARD BEHAVIOUR, same root cause, nothing firmware can do about it:
+// pressing the RESET button (K1) after the LCD has been running drops the board into the ROM
+// download stub -- black screen, and on serial:
+//     rst:0x1 (POWERON),boot:0x0 (DOWNLOAD(USB/UART0))
+//     waiting for download
+// boot:0x0 means GPIO0 read LOW when the ROM latched the boot strap. Verified on-device 2026-09-06:
+//   - a SECOND press of RESET boots normally (in the download stub the LCD is not running, so
+//     GPIO0 is free and R39's 10K pull-up wins) -- so nothing holds GPIO0 low permanently;
+//   - it reproduces on a bare wall charger with no USB host, so it is not the CH343P's DTR line
+//     through the Q1/Q2 auto-reset circuit;
+//   - a cold power-on is always fine, because the panel has never been clocked at that point;
+//   - a SOFTWARE reboot (esp_restart(), i.e. the OTA path) is unaffected -- field updates are safe.
+// Strapping pins are latched by the ROM before any application code runs, so no driver change can
+// influence this. Recovery is a second RESET press or a power cycle.
+
+
 // Backlight enable (schematic net DISP) is CH422G EXIO2, an I2C expander pin -- on/off only, no
 // PWM path. See the Backlight section of files/Display_ST7262.cpp.
 #define HAS_BRIGHTNESS_ADJUSTMENT 0
