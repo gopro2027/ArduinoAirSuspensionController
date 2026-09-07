@@ -439,13 +439,8 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
         {
             hci_con_handle_t disconnected = hci_event_disconnection_complete_get_connection_handle(packet);
             removeAuthed(disconnected);
-            // Drop any responses still queued for the dead handle. Its
-            // hci_connection is freed, so att_server_can_send_packet_now()
-            // stays false forever and ble_notify() would busy-wait on them,
-            // stalling the Bluetooth task (and the auth/notify path for
-            // every other client). The bounded wait in
-            // att_server_notify_SAFE is only the safety net for the rare
-            // dequeue/disconnect race where a packet is already in flight.
+            // A freed handle's queued responses can never be sent; clear them
+            // or ble_notify() stalls (see att_server_notify_SAFE).
             packetMover::clearPacketsForHandle(disconnected);
         }
         // don't leave a valve open because the client disconnected mid-hold
@@ -558,16 +553,10 @@ void ble_loop()
     ble_notify();
 }
 
-// Safety net only. In the normal case the packetMover queue is already
-// drained of a dropped client's packets by the DISCONNECTION_COMPLETE
-// handler, so this just sends and returns. The bounded wait below only
-// matters for the narrow race where ble_notify() has already dequeued a
-// packet for a handle that dies in the same instant: without a deadline
-// att_server_can_send_packet_now() would stay false forever (the
-// hci_connection is freed) and wedge the Bluetooth task, stalling the
-// notify/auth path for every other client. On that timeout we flush any
-// remaining packets for the dead handle and give up on this one rather
-// than block the task.
+// Bounded wait: once a connection drops, att_server_can_send_packet_now()
+// is false forever, so an unbounded loop here would wedge the Bluetooth
+// task. The DISCONNECTION handler normally clears stale packets first; this
+// deadline is the backstop for the dequeue/disconnect race.
 uint8_t att_server_notify_SAFE(hci_con_handle_t con_handle, uint16_t attribute_handle, const uint8_t *value, uint16_t value_len)
 {
     const unsigned long start = millis();
