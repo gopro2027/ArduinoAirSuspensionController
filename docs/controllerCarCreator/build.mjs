@@ -26,6 +26,7 @@ const DEVICE_NAMES = {
 	ws2p8b: '2.8" B Model Waveshare',
 	ws3p5: '3.5" Waveshare',
 	ws3p5b: '3.5" B Model Waveshare',
+	ws4p3: '4.3" Waveshare',
 };
 
 function pngDimensions(buffer) {

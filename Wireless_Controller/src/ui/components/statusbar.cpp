@@ -91,6 +91,7 @@ void Statusbar::create(lv_obj_t* parent) {
     lv_obj_align(adjustmentLabel, LV_ALIGN_LEFT_MID, padding + scaledX(18), 0);
     lv_obj_add_flag(adjustmentLabel, LV_OBJ_FLAG_HIDDEN);
 
+#if HAS_BATTERY_SENSE_READING
     // Battery icon (right side)
     batteryIcon = lv_label_create(container);
     lv_label_set_text(batteryIcon, LV_SYMBOL_BATTERY_FULL);
@@ -106,7 +107,9 @@ void Statusbar::create(lv_obj_t* parent) {
     lv_obj_align(batteryLabel, LV_ALIGN_RIGHT_MID, -padding, 0);
 
     // Apply the saved "Show Battery" setting
-    setBatteryVisible(getshowBattery());
+    setBatteryVisible(showBatteryReadout());
+#endif // HAS_BATTERY_SENSE_READING -- no sense hardware, so no icon/label is created at all
+       // (updateBatteryStatus() already early-returns when they are null)
 
     // Center line marker (pull indicator)
     lv_obj_t* centerLine = lv_obj_create(container);
@@ -187,6 +190,7 @@ void Statusbar::createPullDownPanel(lv_obj_t* parent) {
     };
 
     // ========== BATTERY SECTION ==========
+#if HAS_BATTERY_SENSE_READING
     batterySection = lv_obj_create(pullDownPanel);
     lv_obj_remove_style_all(batterySection);
     lv_obj_set_size(batterySection, sectionWidth, LV_SIZE_CONTENT);
@@ -208,6 +212,7 @@ void Statusbar::createPullDownPanel(lv_obj_t* parent) {
     lv_label_set_text(panelBatteryLabel, "Battery: 100%");
     lv_obj_set_style_text_color(panelBatteryLabel, lv_color_hex(STATUSBAR_TEXT_COLOR), 0);
     lv_obj_set_style_text_font(panelBatteryLabel, getScaledFont(10), 0);
+#endif // HAS_BATTERY_SENSE_READING
 
     // ========== ALERT SECTION ==========
     alertSection = lv_obj_create(pullDownPanel);

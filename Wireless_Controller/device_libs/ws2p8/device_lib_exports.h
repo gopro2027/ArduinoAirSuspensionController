@@ -12,5 +12,18 @@
 
 #define SUPPORTS_ROTATION 1
 
+// QMI8658 6-axis IMU on the shared I2C bus. Builds the driver in src/utils/imu.cpp; auto rotate
+// (src/utils/auto_rotate.cpp) is its first consumer and additionally needs SUPPORTS_ROTATION.
+// The driver probes WHO_AM_I at boot, so a board that turns out not to be populated just hides
+// whatever UI depends on it.
+#define HAS_IMU 1
+
+// IMU -> screen axis mapping for auto rotate. The QMI8658 is mounted turned 90 degrees from
+// the panel, so the raw axes cross over: screen X comes from the IMU's Y, and screen Y is the
+// IMU's X negated. Derived on hardware 2026-08-31 from all four resting positions.
+// ; was: identity on both axes, which sent every orientation to the neighbouring one
+#define IMU_SCREEN_X(ax, ay, az) (ay)
+#define IMU_SCREEN_Y(ax, ay, az) (-(ax))
+
 // Physical panel: 2.8" diagonal, 240x320 -> ~143 px/inch (the scaling reference panel)
 #define DEVICE_DPI 143

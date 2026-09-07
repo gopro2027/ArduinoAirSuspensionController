@@ -8,6 +8,9 @@
 #include <ui/ui.h>
 
 #include "utils/touch_lib.h"
+#include "utils/imu.h"
+#include "utils/auto_rotate.h"
+#include "utils/wake_on_movement.h"
 #include "tasks/tasks.h"
 
 #include "utils/util.h"
@@ -22,7 +25,10 @@ unsigned long dimScreenTime = 0;
 bool dimmed = false;
 
 // set pin number for the boot button
-const int BootButtonPin = 0; 
+// Not usable as a runtime input on every board: on ws4p3 GPIO0 is also an RGB data line, so
+// USE_BOOT_BUTTON_FUNCTIONALITY is 0 there and every use below compiles out.
+// See src/utils/util.h for the default.
+const int BootButtonPin = 0;
 
 void setup()
 {
@@ -56,6 +62,11 @@ void setup()
     setup_tasks();
 
     board_drivers_init();
+
+    // After board_drivers_init() because it owns I2C_Init(), and before ui_init() because the
+    // settings screen asks imuAvailable() whether to show the auto rotate switch. The driver
+    // itself is feature-agnostic; auto rotate is just its first consumer.
+    imuInit();
 
 #ifndef SCREEN_MODE_CIRCLE
     loadCustomImagesFromSpiffs();
@@ -114,7 +125,9 @@ void setup()
     }
 #endif
     set_brightness(getBrightnessFloat());
-    pinMode(BootButtonPin, INPUT); 
+#if USE_BOOT_BUTTON_FUNCTIONALITY
+    pinMode(BootButtonPin, INPUT);
+#endif
 }
 
 // auto lv_last_tick = millis();
@@ -150,6 +163,10 @@ int beginAirUpAfterQuickPressActivationPeriod = 750; // the time after a quick p
 int beginPresetLoadingAfterNoInputPeriod = 1000; // the time after the last button press that we will start loading the preset procedure
 
 void bootButtonFunctionality() {
+#if !USE_BOOT_BUTTON_FUNCTIONALITY
+    // No usable BOOT button on this board -- see the note by BootButtonPin above.
+    return;
+#else
     auto const now = millis();
     if (digitalRead(BootButtonPin) == LOW && BootButtonState == 0) {
         wakeScreenFromDim();
@@ -171,7 +188,7 @@ void bootButtonFunctionality() {
         }
         if (bootButtonLoadPresetStarted) {
             bootButtonPresetCount++;
-            if (bootButtonPresetCount > 5) {
+            if (bootButtonPresetCount > getPresetCount()) {
                 showDialog("Preset loading cancelled", lv_color_hex(0xFF0000));
                 bootButtonLoadPresetStarted = false;
             } else {
@@ -218,7 +235,7 @@ void bootButtonFunctionality() {
         // check if button is released for longer than 1000ms (stopped changing preset numbers)
         if (now - bootBtnLastReleased > beginPresetLoadingAfterNoInputPeriod) {
             bootButtonLoadPresetStarted = false;
-            if (bootButtonPresetCount >= 1 && bootButtonPresetCount <= 5) {
+            if (bootButtonPresetCount >= 1 && bootButtonPresetCount <= getPresetCount()) {
                 // send the preset first to the manifold
                 AirupQuickPacket pkt(bootButtonPresetCount - 1);
                 sendRestPacket(&pkt);
@@ -241,6 +258,7 @@ void bootButtonFunctionality() {
             }
         }
     }
+#endif // USE_BOOT_BUTTON_FUNCTIONALITY
 }
 
 void loop()
@@ -279,6 +297,13 @@ void loop()
     screenLoop();
     dialogLoop();
     safetyModeMsgBoxCheck();
+
+    // Rebuilds the whole UI when it fires, so it has to run on this task (LVGL is
+    // single-threaded here) and outside any LVGL event callback.
+    autoRotateLoop();
+
+    // After the dim check above, so it sees the dim edge in the iteration it happens.
+    wakeOnMovementLoop();
 
 
     // Update the ticker

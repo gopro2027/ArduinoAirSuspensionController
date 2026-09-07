@@ -67,6 +67,12 @@
 
 #define SUPPORTS_ROTATION 0
 
+// This board carries a QMI8658 IMU too. HAS_IMU alone now builds the driver (src/utils/imu.cpp)
+// and is worth defining as soon as something uses it - wake on movement, say. Auto rotate is a
+// separate matter: it additionally needs SUPPORTS_ROTATION, which no driver here implements
+// yet, plus IMU_SCREEN_X/Y, plus IMU_I2C_GUARDED if this bus turns out to need the mutex.
+// Left undefined for now because the bus setup here has not been checked against the driver.
+
 // Physical panel: 3.5" diagonal, 320x480 -> ~165 px/inch
 #define DEVICE_DPI 165
 

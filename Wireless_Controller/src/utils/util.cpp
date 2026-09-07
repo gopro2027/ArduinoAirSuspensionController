@@ -284,12 +284,15 @@ void beginSaveData()
     _SaveData.updateResult.load("updateResult", 0);
     _SaveData.brightness.load("brightness", 80);
     _SaveData.screenRotation.load("screenRotation", 0);
+    _SaveData.autoRotate.load("autoRotate", false);
+    _SaveData.wakeOnMovement.load("wakeOnMove", false);
     // Theme colors - using default purple/lavender theme values
     _SaveData.themeColorLight.load("themeColorLight", THEME_COLOR_OCEAN_BLUE_LIGHT);
     _SaveData.themeColorDark.load("themeColorDark", THEME_COLOR_OCEAN_BLUE_DARK);
     _SaveData.themeColorMedium.load("themeColorMedium", THEME_COLOR_OCEAN_BLUE_MEDIUM);
     _SaveData.swipeNavigation.load("swipeNav", false);
     _SaveData.showBattery.load("showBattery", true);
+    _SaveData.presetButtonCount.load("presetBtnCount", MAX_PROFILE_COUNT);
 }
 
 createSaveFuncInt(unitsMode, int);
@@ -308,11 +311,26 @@ createSaveFuncString(wifiPassword);
 createSaveFuncInt(updateResult, byte);
 createSaveFuncInt(brightness, byte);
 createSaveFuncInt(screenRotation, byte);
+createSaveFuncInt(autoRotate, bool);
+createSaveFuncInt(wakeOnMovement, bool);
 createSaveFuncInt(themeColorLight, uint32_t);
 createSaveFuncInt(themeColorDark, uint32_t);
 createSaveFuncInt(themeColorMedium, uint32_t);
 createSaveFuncInt(swipeNavigation, bool);
 createSaveFuncInt(showBattery, bool);
+createSaveFuncInt(presetButtonCount, byte);
+
+// NVS can hand back a value written by other firmware or a corrupt key, so clamp here rather
+// than at every call site — callers index profilePressures[] with the result.
+int getPresetCount()
+{
+    int count = (int)getpresetButtonCount();
+    if (count < 1)
+        count = 1;
+    if (count > MAX_PROFILE_COUNT)
+        count = MAX_PROFILE_COUNT;
+    return count;
+}
 
 float getBrightnessFloat()
 {
@@ -338,7 +356,9 @@ void applyScreenRotation(byte rotation)
 
     // Use actual LCD dimensions (works for all display sizes)
     // LCD_WIDTH and LCD_HEIGHT are defined in board JSON as compile-time constants
-    if (rotation == 1) {
+    // Rotations 0/2 are portrait (upright, upside down), 1/3 are landscape (both ways),
+    // so the odd bit is what decides whether the resolution is swapped.
+    if (rotation & 1) {
         // Landscape: swap width and height
         lv_display_set_resolution(disp, LCD_HEIGHT, LCD_WIDTH);
     } else {

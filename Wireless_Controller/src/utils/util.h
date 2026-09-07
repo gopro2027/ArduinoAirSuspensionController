@@ -42,6 +42,32 @@ inline int mmToPx(float mm) {
     return (int)(mm * (float)DEVICE_DPI / 25.4f + 0.5f);
 }
 
+// ───────────────────── Per-device hardware capability flags ─────────────────────
+// Each defaults to 1 (the historical behaviour, and correct for every board that existed before
+// ws4p3). A device that lacks the hardware sets its flag to 0 in its device_lib_exports.h.
+
+// USE_BOOT_BUTTON_FUNCTIONALITY: whether GPIO0 can be *read as a button at runtime*. GPIO0 is the
+// BOOT strapping pin on every ESP32, but on ws4p3 Waveshare also routes it to the RGB bus as data
+// line D6, so once the LCD peripheral claims the pin it is no longer an input. Reading it there
+// would both corrupt the green channel and feed pixel-clock noise into the air-up shortcut.
+#ifndef USE_BOOT_BUTTON_FUNCTIONALITY
+#define USE_BOOT_BUTTON_FUNCTIONALITY 1
+#endif
+
+// HAS_BRIGHTNESS_ADJUSTMENT: whether the backlight can be set to intermediate levels. 0 on boards
+// whose backlight is a plain on/off enable (ws4p3 drives it from an I2C expander pin, so there is
+// no PWM path); the brightness slider is compiled out there rather than presented as a no-op.
+#ifndef HAS_BRIGHTNESS_ADJUSTMENT
+#define HAS_BRIGHTNESS_ADJUSTMENT 1
+#endif
+
+// HAS_BATTERY_SENSE_READING: whether battery voltage reaches an ADC. 0 on boards where it does
+// not (ws4p3 charges a cell but never routes VBAT to a pin), which hides the on-screen percentage
+// and its settings rows instead of displaying a permanent 0%.
+#ifndef HAS_BATTERY_SENSE_READING
+#define HAS_BATTERY_SENSE_READING 1
+#endif
+
 // DPI the hardcoded UI font sizes were originally tuned at (ws2p8, 2.8in 240x320 ~143 dpi).
 #define UI_BASELINE_DPI 143
 
@@ -209,6 +235,8 @@ public:
     Preferencable updateResult;
     Preferencable brightness;
     Preferencable screenRotation;
+    Preferencable autoRotate;
+    Preferencable wakeOnMovement;
     // Theme colors
     Preferencable themeColorLight;
     Preferencable themeColorDark;
@@ -217,6 +245,8 @@ public:
     Preferencable swipeNavigation;
     // Status bar
     Preferencable showBattery;
+    // Presets
+    Preferencable presetButtonCount;
 };
 
 extern SaveData _SaveData;
@@ -231,11 +261,21 @@ headerDefineSaveFunc(wifiPassword, String);
 headerDefineSaveFunc(updateResult, byte);
 headerDefineSaveFunc(brightness, byte);
 headerDefineSaveFunc(screenRotation, byte);
+headerDefineSaveFunc(autoRotate, bool);
+headerDefineSaveFunc(wakeOnMovement, bool);
 headerDefineSaveFunc(themeColorLight, uint32_t);
 headerDefineSaveFunc(themeColorDark, uint32_t);
 headerDefineSaveFunc(themeColorMedium, uint32_t);
 headerDefineSaveFunc(swipeNavigation, bool);
 headerDefineSaveFunc(showBattery, bool);
+headerDefineSaveFunc(presetButtonCount, byte);
+/** Saved preset count clamped to [1, MAX_PROFILE_COUNT]; always use this to bound preset UI/indices. */
+int getPresetCount();
+
+// Single source of truth for "should the battery readout be on screen": the user's preference,
+// but only on boards that can actually measure the battery. Use this instead of getshowBattery()
+// at every display site.
+inline bool showBatteryReadout() { return HAS_BATTERY_SENSE_READING && getshowBattery(); }
 
 // Theme presets enum
 enum ThemePreset {

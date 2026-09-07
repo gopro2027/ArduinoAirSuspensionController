@@ -17,12 +17,10 @@ public:
     lv_obj_t *ww2;
     lv_obj_t *wheels;
 
-    // LVGL button objects for preset selection (supports rotation/encoder)
-    lv_obj_t *btnPreset1;
-    lv_obj_t *btnPreset2;
-    lv_obj_t *btnPreset3;
-    lv_obj_t *btnPreset4;
-    lv_obj_t *btnPreset5;
+    // LVGL button objects for preset selection (supports rotation/encoder).
+    // Only the first presetCount entries are created; the rest stay NULL.
+    lv_obj_t *btnPresets[MAX_PROFILE_COUNT];
+    int presetCount = MAX_PROFILE_COUNT;
 
     // Container for preset buttons (for group navigation)
     lv_obj_t *presetButtonsContainer;

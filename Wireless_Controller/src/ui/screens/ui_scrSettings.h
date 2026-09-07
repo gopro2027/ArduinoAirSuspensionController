@@ -64,7 +64,10 @@ public:
     Option *ui_mac;  // MAC address (text with value)
     Option *ui_volts;  // Battery voltage (text with value)
     Option *ui_brightnessSlider;  // Brightness (slider)
-    Option *ui_screenRotation;  // Screen rotation toggle button
+    Option *ui_screenRotation;  // Screen orientation dropdown (index == saved rotation value)
+    // Auto rotate switch. Non-owning - it lives in allOptions, which cleanup() deletes.
+    // Stays null on boards without rotation support or without an IMU fitted.
+    Option *ui_autoRotate = nullptr;
     RadioOption *ui_themePreset;  // Theme preset selection (radio)
     Option *ui_rfbuttonA;
     Option *ui_rfbuttonB;

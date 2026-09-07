@@ -42,5 +42,6 @@
 
 void ble_setup();
 void ble_loop();
+int getBLEConnectedClientCount();
 
 #endif

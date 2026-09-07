@@ -94,6 +94,18 @@ void ui_init(void)
 
 void ui_reinit(void)
 {
+    // ui_reinit() is reachable from inside itself: changeScreen() below calls the navbar's
+    // change callback, which runs screenLoop() -> Scr::loop() -> handleFunctionRunOnNextFrame().
+    // Anything that queues a runNextFrame(reinitializeScreens) while the screen is being rebuilt
+    // therefore re-enters here on a half-built UI, where the nested call deletes the objects the
+    // outer one is still walking. The visible symptom is the splash screen never going away.
+    static bool reinitInProgress = false;
+    if (reinitInProgress)
+    {
+        log_e("ui_reinit re-entered mid-rebuild - ignoring the nested call");
+        return;
+    }
+    reinitInProgress = true;
     // Store current screen to restore after reinit
     SCREEN prevScreen = currentScreen;
 
@@ -101,12 +113,14 @@ void ui_reinit(void)
     set_brightness(0);// turn off brightness to not display gross artifacts while the logo is rendering
     delay(10); // not sure if this is needed, but just in case
 
+    log_i("ui_reinit: rebuilding at rotation %u", (unsigned)getscreenRotation());
     lv_obj_t *splashScr = applyRotationAndShowSplashScreen();
 
     // Reset state
     currentScreen = SCREEN_NONE;
     currentScr = nullptr;
 
+    log_i("ui_reinit: splash up, tearing down screens");
     // Clean up each screen (virtual cleanup handles screen-specific objects)
     scrHome.cleanup();
     scrPresets.cleanup();
@@ -131,6 +145,7 @@ void ui_reinit(void)
     lv_obj_set_style_border_width(mainScreen, 0, 0);
     lv_obj_set_style_pad_all(mainScreen, 0, 0);
 
+    log_i("ui_reinit: screens torn down, rebuilding");
     // Recreate tabview with navbar
     globalNavbar.create(mainScreen);
     globalNavbar.setChangeCallback(onTabChanged);
@@ -157,10 +172,19 @@ void ui_reinit(void)
     // Load main screen
     lv_screen_load(mainScreen);
 
+    log_i("ui_reinit: screens rebuilt, restoring tab");
     // Restore to previous screen
     changeScreen(prevScreen, false);
 
     lv_obj_del(splashScr);
+
+    // applyRotationAndShowSplashScreen() drives the backlight to full so the logo is visible
+    // through the rebuild; put the user's brightness back. Only noticeable before now because
+    // every reinit followed a deliberate tap, but auto rotate fires on its own.
+    set_brightness(getBrightnessFloat());
+
+    log_i("ui_reinit: done");
+    reinitInProgress = false;
 }
 
 void changeScreen(SCREEN screen, bool animate)
