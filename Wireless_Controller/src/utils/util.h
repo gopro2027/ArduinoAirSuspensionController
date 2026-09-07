@@ -178,8 +178,6 @@ struct SimpleRect // used in ui_scrPresets.cpp.
 };
 
 void runNextFrame(std::function<void()> function);
-/** True while a runNextFrame() callback is still waiting to run. */
-bool isFunctionQueuedForNextFrame();
 void handleFunctionRunOnNextFrame();
 
 extern int currentPressures[5];

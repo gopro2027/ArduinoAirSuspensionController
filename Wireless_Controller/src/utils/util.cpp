@@ -128,11 +128,6 @@ void runNextFrame(std::function<void()> function)
     functionToRunOnNextFrame = function;
     doRunFunctionNextFrame = true;
 }
-bool isFunctionQueuedForNextFrame()
-{
-    return doRunFunctionNextFrame;
-}
-
 void handleFunctionRunOnNextFrame()
 {
     if (doRunFunctionNextFrame)

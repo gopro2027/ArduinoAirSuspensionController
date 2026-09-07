@@ -115,11 +115,6 @@ void autoRotateLoop()
     if (now - pendingSince < AUTO_ROTATE_SETTLE_MS)
         return;
 
-    // A queued runNextFrame is almost always a pending reinitializeScreens (theme, preset count,
-    // colour picker). Rotating now would rebuild the UI twice back to back, roughly four seconds
-    // of splash, and the queued rebuild would land on top of ours anyway.
-    if (isFunctionQueuedForNextFrame())
-        return;
     if (currentScr != NULL && currentScr->isMsgBoxDisplayed())
         return;
     if (!isKeyboardHidden())
