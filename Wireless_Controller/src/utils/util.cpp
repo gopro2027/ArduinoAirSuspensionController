@@ -284,8 +284,8 @@ void beginSaveData()
     _SaveData.updateResult.load("updateResult", 0);
     _SaveData.brightness.load("brightness", 80);
     _SaveData.screenRotation.load("screenRotation", 0);
-    _SaveData.autoRotate.load("autoRotate", false);
-    _SaveData.wakeOnMovement.load("wakeOnMove", false);
+    _SaveData.autoRotate.load("autoRotate", true);
+    _SaveData.wakeOnMovement.load("wakeOnMove", true);
     // Theme colors - using default purple/lavender theme values
     _SaveData.themeColorLight.load("themeColorLight", THEME_COLOR_OCEAN_BLUE_LIGHT);
     _SaveData.themeColorDark.load("themeColorDark", THEME_COLOR_OCEAN_BLUE_DARK);
