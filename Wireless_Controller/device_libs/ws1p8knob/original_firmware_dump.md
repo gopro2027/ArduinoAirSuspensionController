@@ -89,36 +89,113 @@ Declared partition table:
 
 ## 3. Restoring the snapshot
 
-Erase first, then write the image back at offset 0:
+**Tested end-to-end on 2026-09-06** — restored over an OAS-Man install and verified bit-exact
+against this snapshot across all 16 MB.
+
+> **Do not write the 16 MB file directly.** That was tried first and it **fails**: esptool
+> gets partway through and dies with `A fatal error occurred: The chip stopped responding.`,
+> leaving the flash partially written. The device is recoverable (the ROM USB-Serial/JTAG
+> loader works regardless of flash contents), but the write does not complete.
+>
+> Write only the **used region** instead. `erase-flash` already produces `0xFF` everywhere,
+> which is exactly what the remaining 14 MB contains, so the result is identical.
+
+### Step 1 — trim the image to the used region
+
+`0x201000` (2,101,248 bytes) is where the written data ends; see §2.
+
+```bash
+head -c $((0x201000)) original_firmware_dump.bin > restore_2mb.bin
+```
+
+PowerShell equivalent, if you are not in Git Bash:
+
+```bash
+$b=[IO.File]::ReadAllBytes("original_firmware_dump.bin"); [IO.File]::WriteAllBytes("restore_2mb.bin",$b[0..2101247])
+```
+
+Expected SHA-256 of `restore_2mb.bin`:
+`eee95b2a2ec8a4906dd92473693f187619218032c8bde622a891dd1ff7a7212b`
+
+### Step 2 — erase
 
 ```bash
 C:\Users\user\.platformio\penv\Scripts\platformio.exe pkg exec -p "tool-esptoolpy" -- esptool.py --chip esp32s3 --port COM23 --baud 921600 erase-flash
 ```
 
-```bash
-C:\Users\user\.platformio\penv\Scripts\platformio.exe pkg exec -p "tool-esptoolpy" -- esptool.py --chip esp32s3 --port COM23 --baud 921600 write-flash --flash-size 16MB --flash-mode dio --flash-freq 80m 0x0 original_firmware_dump.bin
-```
-
-Then verify:
+### Step 3 — write
 
 ```bash
-C:\Users\user\.platformio\penv\Scripts\platformio.exe pkg exec -p "tool-esptoolpy" -- esptool.py --chip esp32s3 --port COM23 --baud 921600 verify-flash 0x0 original_firmware_dump.bin
+C:\Users\user\.platformio\penv\Scripts\platformio.exe pkg exec -p "tool-esptoolpy" -- esptool.py --chip esp32s3 --port COM23 --baud 921600 write-flash --flash-size 16MB --flash-mode dio --flash-freq 80m 0x0 restore_2mb.bin
 ```
 
-Notes:
+Takes ~15 s (2,101,248 bytes → 1,300,280 compressed, ~1.1 Mbit/s) and ends with
+`Wrote ... Hash of data verified.`
+
+### Step 4 — verify
+
+```bash
+C:\Users\user\.platformio\penv\Scripts\platformio.exe pkg exec -p "tool-esptoolpy" -- esptool.py --chip esp32s3 --port COM23 --baud 921600 verify-flash 0x0 restore_2mb.bin
+```
+
+Expect `Verification successful (digest matched).` For a full-chip check, re-read all 16 MB
+with the §1 command and confirm the SHA-256 equals
+`142cd6d775ffc3d9c1fc05a9a1498ebb252933f50a5511775c54635055319bcc` — that is what was
+confirmed on the tested run.
+
+### Notes
 
 - The image starts at `0x0` because the ESP32-S3 bootloader lives at offset 0 (unlike the
   ESP32-WROOM manifold, where it sits at `0x1000`). Do not use `0x1000` here.
-- Writing 16 MB is not slow in practice — the stub compresses, and 14 MB of it is `0xFF`.
 - `erase-flash` first is what reproduces the *exact* captured state, including the erased
   `spiffs` / `app1` / `coredump` regions. Without it, a prior OAS-Man install could leave
-  stale bytes in regions this image only nominally covers.
+  stale bytes in regions the trimmed image does not cover.
+- esptool prints `SHA digest in image updated.` on write. It recomputes the bootloader's
+  appended SHA-256 — for this image it recomputes the *same* value already present, which is
+  why `verify-flash` still matches the file exactly. Not a cause for concern.
 - **This restores NVS too**, including the stock Wi-Fi AP config (`My-Ap` / `12345678`) and
   the RF calibration blobs. Writing it to a *different* ESP32-S3 also writes this unit's
   `cal_mac` into that chip's NVS — harmless, since the real MAC lives in eFuse and calibration
   is re-derived, but it is not a clean provisioning path for a second device.
 - **eFuses are not captured by a flash dump** and are not restorable from this file. Nothing
   on this unit appears to depend on them.
+- Restoring flash does **not** restore the TF card. If the card has been reused since, the
+  stock firmware will boot but complain about missing fonts/assets — see the §2 callout.
+
+### Step 5 — confirm it boots
+
+Bit-exact flash is not proof of a working device. Capture the boot log over the same USB
+serial port (115200) after a reset. A healthy restore looks like this:
+
+```
+rst:0x15 (USB_UART_CHIP_RESET),boot:0x2b (SPI_FAST_FLASH_BOOT)
+[I] [MAIN] System start...
+[I] [OTA] CURRENT FIRMWARE: VALID
+[I] [MAIN] Used psram: 7870208
+[I] [FS] TF Card : SDSC 480MB
+[I] [MAIN] Boot finished.
+[I] [APP] Setup UI...
+[I] [IO] Play: /night7/boot.mjpeg
+[I] [WIFI] WebServer started!
+```
+
+`CURRENT FIRMWARE: VALID` is the OTA state machine accepting the image. `Play: /night7/boot.mjpeg`
+means it found its assets and is running the boot animation — i.e. the TF card is intact as well
+as the flash.
+
+### Confirming which firmware is on the device
+
+Cheap check without a full read — the `esp_app_desc` at `0x10020` carries version, build time
+and IDF version:
+
+```bash
+C:\Users\user\.platformio\penv\Scripts\platformio.exe pkg exec -p "tool-esptoolpy" -- esptool.py --chip esp32s3 --port COM23 --baud 921600 read-flash 0x10020 0x100 appdesc.bin
+```
+
+| Firmware | version field | IDF | build date |
+|---|---|---|---|
+| Stock TAIJI | `769c168` | `v5.1.4-972-g632e0c2a9f-dirty` | Jan 26 2026 |
+| OAS-Man controller | `8cabf2c` | `v5.5.2-729-g87912cd291` | Feb 11 2026 |
 
 ### Reflashing OAS-Man afterwards
 
