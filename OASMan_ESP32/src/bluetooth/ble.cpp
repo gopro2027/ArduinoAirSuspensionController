@@ -78,6 +78,19 @@ namespace packetMover
         giveRestSemaphore();
     }
 
+    void clearPacketsForHandle(hci_con_handle_t con_handle)
+    {
+        waitRestSemaphore();
+        for (int i = 0; i < BTOASPACKETCOUNT; i++)
+        {
+            if (packets[i].taken && packets[i].con_handle == con_handle)
+            {
+                packets[i].taken = false;
+            }
+        }
+        giveRestSemaphore();
+    }
+
 };
 
 #pragma endregion
@@ -536,11 +549,19 @@ void ble_loop()
 
 uint8_t att_server_notify_SAFE(hci_con_handle_t con_handle, uint16_t attribute_handle, const uint8_t *value, uint16_t value_len)
 {
-
+    // For a dropped connection att_server_can_send_packet_now() is false
+    // forever; without a deadline this would wedge the task and stall the
+    // notify/auth path for every other client.
+    const unsigned long start = millis();
+    const unsigned long timeoutMs = 250;
     while (!att_server_can_send_packet_now(con_handle))
     {
-        // log_i("\n\n\nCAN'T SEND PACKET\n\n\n");
-        delay(10);
+        if (millis() - start >= timeoutMs)
+        {
+            packetMover::clearPacketsForHandle(con_handle);
+            return ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER;
+        }
+        delay(5);
     }
     return att_server_notify(con_handle, attribute_handle, value, value_len);
 }
