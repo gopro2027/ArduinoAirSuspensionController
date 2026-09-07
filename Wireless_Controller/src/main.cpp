@@ -25,7 +25,10 @@ unsigned long dimScreenTime = 0;
 bool dimmed = false;
 
 // set pin number for the boot button
-const int BootButtonPin = 0; 
+// Not usable as a runtime input on every board: on ws4p3 GPIO0 is also an RGB data line, so
+// USE_BOOT_BUTTON_FUNCTIONALITY is 0 there and every use below compiles out.
+// See src/utils/util.h for the default.
+const int BootButtonPin = 0;
 
 void setup()
 {
@@ -122,7 +125,9 @@ void setup()
     }
 #endif
     set_brightness(getBrightnessFloat());
-    pinMode(BootButtonPin, INPUT); 
+#if USE_BOOT_BUTTON_FUNCTIONALITY
+    pinMode(BootButtonPin, INPUT);
+#endif
 }
 
 // auto lv_last_tick = millis();
@@ -158,6 +163,10 @@ int beginAirUpAfterQuickPressActivationPeriod = 750; // the time after a quick p
 int beginPresetLoadingAfterNoInputPeriod = 1000; // the time after the last button press that we will start loading the preset procedure
 
 void bootButtonFunctionality() {
+#if !USE_BOOT_BUTTON_FUNCTIONALITY
+    // No usable BOOT button on this board -- see the note by BootButtonPin above.
+    return;
+#else
     auto const now = millis();
     if (digitalRead(BootButtonPin) == LOW && BootButtonState == 0) {
         wakeScreenFromDim();
@@ -249,6 +258,7 @@ void bootButtonFunctionality() {
             }
         }
     }
+#endif // USE_BOOT_BUTTON_FUNCTIONALITY
 }
 
 void loop()
