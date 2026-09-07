@@ -40,7 +40,7 @@ void CircleStatusbarMini::create(lv_obj_t *parent)
     lv_obj_set_style_text_font(batteryLabel, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(batteryLabel, lv_color_hex(0xC0C0C0), 0);
 
-    setBatteryVisible(getshowBattery());
+    setBatteryVisible(showBatteryReadout());
 }
 
 void CircleStatusbarMini::setBatteryVisible(bool batteryVisible)

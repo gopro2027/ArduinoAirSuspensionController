@@ -686,6 +686,7 @@ void ScrSettings::init(lv_obj_t *parent)
         setscreenDimTimeM((uint32_t)data);
     }));
 
+#if HAS_BRIGHTNESS_ADJUSTMENT
     this->ui_brightnessSlider = new Option(screen_settings_page, OptionType::SLIDER, "Brightness", {.INT = getbrightness()}, [](void *data)
     {
         log_i("Brightness %i", ((uint32_t)data));
@@ -693,6 +694,10 @@ void ScrSettings::init(lv_obj_t *parent)
         set_brightness(getBrightnessFloat());
     });
     ((Option *)this->ui_brightnessSlider)->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
+#else
+    // On/off backlight only -- a slider here would do nothing. See HAS_BRIGHTNESS_ADJUSTMENT.
+    this->ui_brightnessSlider = nullptr;
+#endif
 
     allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Presets", {.STRING = ""}));
 
@@ -721,6 +726,7 @@ void ScrSettings::init(lv_obj_t *parent)
         runNextFrame([]() { reinitializeScreens(); });
     }, (void *)presetCountOpts));
 
+#if HAS_BATTERY_SENSE_READING
     allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Status Bar", {.STRING = ""}));
     allOptions.push_back(new Option(screen_settings_page, OptionType::ON_OFF, "Show Battery", {.INT = getshowBattery() ? 1 : 0}, [](void *data)
     {
@@ -732,6 +738,7 @@ void ScrSettings::init(lv_obj_t *parent)
         globalStatusbar.setBatteryVisible(enabled);
 #endif
     }));
+#endif
 
 #ifndef SCREEN_MODE_CIRCLE
     allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Navigation", {.STRING = ""}));
@@ -1046,7 +1053,12 @@ void ScrSettings::init(lv_obj_t *parent)
 #endif
     allOptions.push_back(new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Version:", versionValue));
     this->ui_mac = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Manifold:", {.STRING = ble_getMAC()});
+#if HAS_BATTERY_SENSE_READING
     this->ui_volts = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Battery:", {.STRING = getBatteryVoltageString()});
+#else
+    // Nothing to report -- this board has no battery sense. See HAS_BATTERY_SENSE_READING.
+    this->ui_volts = nullptr;
+#endif
 
     // Restore previously selected page (or default to Status)
     if (saved_page_index < 0 || saved_page_index >= this->settingsPageCount) {
@@ -1170,7 +1182,8 @@ void ScrSettings::loop()
     this->ui_aiPercentage->setRightHandText(buf);
 
     this->ui_mac->setRightHandText(ble_getMAC());
-    this->ui_volts->setRightHandText(getBatteryVoltageString());
+    if (this->ui_volts)
+        this->ui_volts->setRightHandText(getBatteryVoltageString());
 
     // Update config values
     if (*util_configValues._setValues())
