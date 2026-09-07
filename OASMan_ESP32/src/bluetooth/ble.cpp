@@ -120,6 +120,9 @@ void addAuthed(hci_con_handle_t conn_id)
     authedClients.insert(conn_id);
 }
 
+__attribute__((noinline))   // This is to prevent LTO from trying to inline this function and realizing that authedClients is never called from the same thread (explained below) and defaulting it to constant 0.
+                            // Specifically in the 'is vehicle on' call when BOARD_ALWAYS_ON_ACC_UNUSED_USE_BT_CONN_AS_VEHICLE_ON is true this function is used, and it is the only use in that thread so the threat of compiling as a const 0 is possible depending on the compiler. 
+                            // The reason this exists is because this is technically not a thread safe usage, but the risk is very low on the .size() call (no crash risk, just plus or minus 1 of the actual value in an edge case, and it's only compared to 0 in a sample of 5 so it is basically zero risk when used in that case).
 int getBLEConnectedClientCount()
 {
     return authedClients.size();
