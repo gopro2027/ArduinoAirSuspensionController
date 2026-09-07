@@ -54,3 +54,7 @@
 
 // VBAT never reaches an ADC on this board. See files/BAT_Driver.h.
 #define HAS_BATTERY_SENSE_READING 0
+
+// No IMU. Vendor docs and the schematic agree the I2C bus carries only the CH422G expander and
+// the GT911 touch controller, so auto rotate and wake on movement are both unavailable here.
+#define HAS_IMU 0
