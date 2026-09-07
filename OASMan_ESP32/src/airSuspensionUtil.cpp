@@ -358,7 +358,7 @@ bool hasJustShutoff = true;
 void accessoryWireLoop()
 {
     bool previousVehicleOn = vehicleOn;
-#if USE_BLUETOOTH_CONN_AS_ACCESSORY_ON
+#if BOARD_ALWAYS_ON_ACC_UNUSED_USE_BT_CONN_AS_VEHICLE_ON
     sampleReading(vehicleOn, getBLEConnectedClientCount() > 0, vehicleOnHistory, vehicleOnCounter, accessoryWireSampleSize);
 #else
     sampleReading(vehicleOn, accessoryWire->digitalRead() == HIGH, vehicleOnHistory, vehicleOnCounter, accessoryWireSampleSize);
@@ -387,7 +387,7 @@ void accessoryWireLoop()
             }
         }
     }
-#if USE_BLUETOOTH_CONN_AS_ACCESSORY_ON
+#if BOARD_ALWAYS_ON_ACC_UNUSED_USE_BT_CONN_AS_VEHICLE_ON
     // vehicle on/off is driven by bluetooth connectivity, so keep the accessory output latched high
     outputKeepESPAlive->digitalWrite(HIGH);
 #else
