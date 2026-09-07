@@ -128,6 +128,11 @@ void runNextFrame(std::function<void()> function)
     functionToRunOnNextFrame = function;
     doRunFunctionNextFrame = true;
 }
+bool isFunctionQueuedForNextFrame()
+{
+    return doRunFunctionNextFrame;
+}
+
 void handleFunctionRunOnNextFrame()
 {
     if (doRunFunctionNextFrame)
@@ -284,6 +289,8 @@ void beginSaveData()
     _SaveData.updateResult.load("updateResult", 0);
     _SaveData.brightness.load("brightness", 80);
     _SaveData.screenRotation.load("screenRotation", 0);
+    _SaveData.autoRotate.load("autoRotate", false);
+    _SaveData.wakeOnMovement.load("wakeOnMove", false);
     // Theme colors - using default purple/lavender theme values
     _SaveData.themeColorLight.load("themeColorLight", THEME_COLOR_OCEAN_BLUE_LIGHT);
     _SaveData.themeColorDark.load("themeColorDark", THEME_COLOR_OCEAN_BLUE_DARK);
@@ -309,6 +316,8 @@ createSaveFuncString(wifiPassword);
 createSaveFuncInt(updateResult, byte);
 createSaveFuncInt(brightness, byte);
 createSaveFuncInt(screenRotation, byte);
+createSaveFuncInt(autoRotate, bool);
+createSaveFuncInt(wakeOnMovement, bool);
 createSaveFuncInt(themeColorLight, uint32_t);
 createSaveFuncInt(themeColorDark, uint32_t);
 createSaveFuncInt(themeColorMedium, uint32_t);
@@ -352,7 +361,9 @@ void applyScreenRotation(byte rotation)
 
     // Use actual LCD dimensions (works for all display sizes)
     // LCD_WIDTH and LCD_HEIGHT are defined in board JSON as compile-time constants
-    if (rotation == 1) {
+    // Rotations 0/2 are portrait (upright, upside down), 1/3 are landscape (both ways),
+    // so the odd bit is what decides whether the resolution is swapped.
+    if (rotation & 1) {
         // Landscape: swap width and height
         lv_display_set_resolution(disp, LCD_HEIGHT, LCD_WIDTH);
     } else {

@@ -8,6 +8,9 @@
 #include <ui/ui.h>
 
 #include "utils/touch_lib.h"
+#include "utils/imu.h"
+#include "utils/auto_rotate.h"
+#include "utils/wake_on_movement.h"
 #include "tasks/tasks.h"
 
 #include "utils/util.h"
@@ -59,6 +62,11 @@ void setup()
     setup_tasks();
 
     board_drivers_init();
+
+    // After board_drivers_init() because it owns I2C_Init(), and before ui_init() because the
+    // settings screen asks imuAvailable() whether to show the auto rotate switch. The driver
+    // itself is feature-agnostic; auto rotate is just its first consumer.
+    imuInit();
 
 #ifndef SCREEN_MODE_CIRCLE
     loadCustomImagesFromSpiffs();
@@ -289,6 +297,13 @@ void loop()
     screenLoop();
     dialogLoop();
     safetyModeMsgBoxCheck();
+
+    // Rebuilds the whole UI when it fires, so it has to run on this task (LVGL is
+    // single-threaded here) and outside any LVGL event callback.
+    autoRotateLoop();
+
+    // After the dim check above, so it sees the dim edge in the iteration it happens.
+    wakeOnMovementLoop();
 
 
     // Update the ticker

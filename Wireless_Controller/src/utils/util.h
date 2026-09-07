@@ -178,6 +178,8 @@ struct SimpleRect // used in ui_scrPresets.cpp.
 };
 
 void runNextFrame(std::function<void()> function);
+/** True while a runNextFrame() callback is still waiting to run. */
+bool isFunctionQueuedForNextFrame();
 void handleFunctionRunOnNextFrame();
 
 extern int currentPressures[5];
@@ -235,6 +237,8 @@ public:
     Preferencable updateResult;
     Preferencable brightness;
     Preferencable screenRotation;
+    Preferencable autoRotate;
+    Preferencable wakeOnMovement;
     // Theme colors
     Preferencable themeColorLight;
     Preferencable themeColorDark;
@@ -259,6 +263,8 @@ headerDefineSaveFunc(wifiPassword, String);
 headerDefineSaveFunc(updateResult, byte);
 headerDefineSaveFunc(brightness, byte);
 headerDefineSaveFunc(screenRotation, byte);
+headerDefineSaveFunc(autoRotate, bool);
+headerDefineSaveFunc(wakeOnMovement, bool);
 headerDefineSaveFunc(themeColorLight, uint32_t);
 headerDefineSaveFunc(themeColorDark, uint32_t);
 headerDefineSaveFunc(themeColorMedium, uint32_t);
