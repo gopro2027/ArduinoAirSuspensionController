@@ -10,7 +10,7 @@
 
 #include "util.h"
 
-extern bool isScreenDimmed();
+extern void wakeScreenFromDim();
 
 // Committing a rotation runs applyScreenRotation() + reinitializeScreens(), which tears down
 // and rebuilds every LVGL object and blanks the panel for roughly two seconds. A phone-style
@@ -115,12 +115,6 @@ void autoRotateLoop()
     if (now - pendingSince < AUTO_ROTATE_SETTLE_MS)
         return;
 
-    // The settle timer has expired, but rebuilding the UI right now would be destructive:
-    // it drives the backlight back to full on a dimmed screen, and it deletes any open msgbox
-    // or on-screen keyboard out from under the user. Hold instead. pendingSince is already
-    // past, so the rotation lands on the first pass after the blocker clears.
-    if (isScreenDimmed())
-        return;
     // A queued runNextFrame is almost always a pending reinitializeScreens (theme, preset count,
     // colour picker). Rotating now would rebuild the UI twice back to back, roughly four seconds
     // of splash, and the queued rebuild would land on top of ours anyway.
@@ -130,6 +124,8 @@ void autoRotateLoop()
         return;
     if (!isKeyboardHidden())
         return;
+
+    wakeScreenFromDim(); // after rotation, some reinitialization will happen and change the brightness, so take it out of the dimmed state if it is in it. In addition, it makes sense that rotating the screen like this should wake it up from dim.
 
     log_i("Auto rotate: %u -> %u", getscreenRotation(), pendingRotation);
     setscreenRotation(pendingRotation);
