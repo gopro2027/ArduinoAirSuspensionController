@@ -439,8 +439,6 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
         {
             hci_con_handle_t disconnected = hci_event_disconnection_complete_get_connection_handle(packet);
             removeAuthed(disconnected);
-            // A freed handle's queued responses can never be sent; clear them
-            // or ble_notify() stalls (see att_server_notify_SAFE).
             packetMover::clearPacketsForHandle(disconnected);
         }
         // don't leave a valve open because the client disconnected mid-hold
@@ -553,24 +551,19 @@ void ble_loop()
     ble_notify();
 }
 
-// Bounded wait: once a connection drops, att_server_can_send_packet_now()
-// is false forever, so an unbounded loop here would wedge the Bluetooth
-// task. The DISCONNECTION handler normally clears stale packets first; this
-// deadline is the backstop for the dequeue/disconnect race.
 uint8_t att_server_notify_SAFE(hci_con_handle_t con_handle, uint16_t attribute_handle, const uint8_t *value, uint16_t value_len)
 {
     const unsigned long start = millis();
-    const unsigned long timeoutMs = 250;
+    const unsigned long timeoutMs = 500;
     while (!att_server_can_send_packet_now(con_handle))
     {
         if (millis() - start >= timeoutMs)
         {
-            packetMover::clearPacketsForHandle(con_handle);
-            return ERROR_CODE_UNKNOWN_CONNECTION_IDENTIFIER;
+            return ERROR_CODE_CONNECTION_TIMEOUT;
         }
         delay(5);
     }
-    return att_server_notify(con_handle, attribute_handle, value, value_len);
+    return att_server_notify(con_handle, attribute_handle, value, value_len); // returns ERROR_CODE_SUCCESS on success
 }
 
 ConfigValuesPacket buildCurrentConfigValuesPacket()
@@ -610,8 +603,15 @@ void ble_notify()
         delay(40); // This feels really shitty but it wants some delay here in-between packets or it won't send. So there is various delay's throught this file
         packet.dump();
         memcpy(rest_characteristic_data, packet.tx(), BTOAS_PACKET_SIZE);
-        att_server_notify_SAFE(rest_con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
-        Serial.println("Sent rest packet!");
+        uint8_t res = att_server_notify_SAFE(rest_con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
+        if (res == ERROR_CODE_CONNECTION_TIMEOUT) {
+            Serial.println("Connection timeout, dropping packets for this connection!");
+            packetMover::clearPacketsForHandle(rest_con_handle);
+        } else if (res == ERROR_CODE_SUCCESS) {
+            Serial.println("Sent rest packet!");
+        } else {
+            Serial.println("Error sending rest packet!");
+        }
         delay(40);
     }
 
