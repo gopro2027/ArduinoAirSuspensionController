@@ -563,7 +563,7 @@ uint8_t att_server_notify_SAFE(hci_con_handle_t con_handle, uint16_t attribute_h
         }
         delay(5);
     }
-    return att_server_notify(con_handle, attribute_handle, value, value_len); // returns ERROR_CODE_SUCCESS on success
+    return att_server_notify(con_handle, attribute_handle, value, value_len);
 }
 
 ConfigValuesPacket buildCurrentConfigValuesPacket()
