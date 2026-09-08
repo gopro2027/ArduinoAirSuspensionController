@@ -606,7 +606,7 @@ void ble_notify()
         uint8_t res = att_server_notify_SAFE(rest_con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
         if (res == ERROR_CODE_CONNECTION_TIMEOUT) {
             Serial.println("Connection timeout, dropping packets for this connection!");
-            packetMover::clearPacketsForHandle(rest_con_handle);
+            packetMover::clearPacketsForHandle(rest_con_handle); // clear here so it doesn't get stuck waiting 500ms for every packet in att_server_notify_SAFE
         } else if (res == ERROR_CODE_SUCCESS) {
             Serial.println("Sent rest packet!");
         } else {
