@@ -15,7 +15,10 @@ flowchart TB
     subgraph esp32 [ESP32]
         A[downloadUpdate connects WiFi]
         B[installFirmware single GET]
-        C[Update.writeStream then restart]
+        C[Update.writeStream, verify MD5, restart]
+        V{Runs OTA_VERIFY_CONFIRM_MS without rebooting?}
+        OK[esp_ota_mark_app_valid_cancel_rollback]
+        RB[Bootloader boots the previous slot]
     end
 
     subgraph worker [oasman-ota Worker]
@@ -55,7 +58,14 @@ flowchart TB
     K --> R200
     R204 --> ESP204[Set ALREADY_UP_TO_DATE]
     R200 --> C
+    C --> V
+    V -->|yes| OK
+    V -->|no| RB
 ```
+
+The new image boots unconfirmed (`ESP_OTA_IMG_PENDING_VERIFY`) and is confirmed once `loop()` has
+run for `OTA_VERIFY_CONFIRM_MS` -- see [`otarollback.cpp`](./otarollback.cpp). Any reboot before
+that point is reverted by the bootloader.
 
 ---
 
@@ -79,9 +89,14 @@ sequenceDiagram
         Note left of ESP: UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE
     else Newer release available
         OTA->>GH: GET firmware binary URL
-        Note right of OTA: Binary cached 30 minutes per file
-        OTA-->>ESP: 200 octet-stream plus Content-Length
-        Note left of ESP: Update.begin and writeStream
+        Note right of OTA: Verified against GitHub sha256, cached 30 minutes per file
+        OTA-->>ESP: 200 octet-stream, Content-Length, X-Firmware-MD5
+        Note left of ESP: Update.begin, setMD5, writeStream
+        alt MD5 matches
+            Note left of ESP: Boot partition switched, reboot unconfirmed
+        else MD5 mismatch
+            Note left of ESP: Boot partition untouched, retry then FAIL_CORRUPT_DOWNLOAD
+        end
     end
 ```
 
@@ -96,5 +111,19 @@ sequenceDiagram
 | 3 | Worker | If newest GitHub tag changed since last cache, delete old `*_firmware.bin` caches |
 | 4 | Worker | Pick the newest release that actually ships `{firmware}_firmware.bin` |
 | 5 | Worker | If `tag` param equals that release's `tag_name` → **204** (already up to date) |
-| 6 | Worker | Else serve `{firmware}_firmware.bin` from that release, cache or GitHub → **200** |
-| 7 | ESP32 | Flash via `Update` API and restart |
+| 6 | Worker | Else fetch `{firmware}_firmware.bin` (cache or GitHub), check it against the asset's GitHub `sha256` digest (**502** on mismatch), serve → **200** |
+| 7 | Worker | Set `X-Firmware-MD5` to the MD5 of that exact body |
+| 8 | ESP32 | Flash via `Update` API, reject the image if the MD5 does not match, then restart |
+| 9 | ESP32 | New image boots `PENDING_VERIFY`; confirmed after `OTA_VERIFY_CONFIRM_MS` of `loop()`, reverted if it reboots first |
+
+## Failure modes and what catches them
+
+| What goes wrong | Caught by | Result |
+|-----------------|-----------|--------|
+| Worker's copy from GitHub corrupted | Worker checks it against the asset's GitHub `sha256` | **502**, never cached; device retries and the worker refetches |
+| Transfer truncated | `written != fileSize` | Retry; running firmware untouched |
+| Body corrupted between worker and device | `Update.setMD5` against `X-Firmware-MD5` | Retry, then `FAIL_CORRUPT_DOWNLOAD`; boot partition never switched |
+| Image corrupt past the MD5 (e.g. bad flash write) | Bootloader image verification | Boots the other slot |
+| Image can't boot (crash / boot loop in setup or early tasks) | Bootloader sees `PENDING_VERIFY` on the reboot | Boots the previous slot |
+| Image hangs before it is confirmed | Bootloader, on the next reboot or power cycle | Boots the previous slot |
+| Image boots but misbehaves | Not covered -- releases are tested before publishing | Stays installed |

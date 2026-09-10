@@ -2,7 +2,8 @@
  * OASMan unified OTA worker
  * GET ?firmware=<FIRMWARE_RELEASE_NAME>&tag=<RELEASE_TAG_NAME>
  * - 204 if newest release (for that firmware) tag matches tag (already up to date)
- * - 200 + firmware binary if a newer release is available
+ * - 200 + firmware binary if a newer release is available, plus X-Firmware-MD5 of that body
+ * - 502 if the binary fetched from GitHub does not match the asset's sha256 digest
  * - blank/missing tag is treated as outdated (serve the newest matching binary)
  * Deploy as: oasman-ota → http://oasman-ota.gopro2027.workers.dev/
  */
@@ -21,9 +22,33 @@ const BINARY_URL_PREFIX =
 const FIRMWARE_NAME_RE = /^[a-zA-Z0-9_]+$/;
 const CACHE_TTL_MS = 30 * 60 * 1000;
 /** Bump when binary cache/response format changes (v1 streamed bodies broke ESP32 HTTPClient). */
-const BINARY_CACHE_VERSION = 'v2-buffered';
+const BINARY_CACHE_VERSION = 'v3-md5';
 
 const FIRMWARE_BIN_SUFFIX = '_firmware.bin';
+
+function toHex(digest) {
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** MD5 of the bytes actually being sent, for the device's Update.setMD5(). Null if unavailable. */
+async function firmwareMd5Hex(body) {
+  try {
+    return toHex(await crypto.subtle.digest('MD5', body));
+  } catch (err) {
+    console.log(`MD5 unavailable, serving firmware without an integrity header: ${err}`);
+    return null;
+  }
+}
+
+/** Check firmware bytes against GitHub's asset digest ("sha256:<hex>"). No digest = unverifiable, allowed. */
+async function matchesGithubDigest(buffer, expectedDigest) {
+  if (!expectedDigest?.startsWith('sha256:')) {
+    console.log(`No sha256 digest from GitHub (${expectedDigest}), serving firmware unverified`);
+    return true;
+  }
+  const actual = toHex(await crypto.subtle.digest('SHA-256', buffer));
+  return actual === expectedDigest.slice('sha256:'.length).toLowerCase();
+}
 
 function binaryCacheRequest(downloadUrl) {
   return new Request(`${downloadUrl}#${BINARY_CACHE_VERSION}`, { method: 'GET' });
@@ -176,9 +201,13 @@ function findReleaseWithFirmware(releases, firmware) {
  * Fixed-length firmware body for ESP32 HTTPClient (must not use chunked Transfer-Encoding).
  * Body is a Uint8Array copy so Content-Length always matches bytes on the wire.
  */
-function binaryResponse(buffer, extraHeaders = {}) {
+async function binaryResponse(buffer, extraHeaders = {}) {
   const body = new Uint8Array(buffer);
   const headers = new Headers(extraHeaders);
+  const md5 = await firmwareMd5Hex(body);
+  if (md5) {
+    headers.set('X-Firmware-MD5', md5);
+  }
   headers.set('Content-Type', 'application/octet-stream');
   headers.set('Content-Length', String(body.byteLength));
   headers.set('Connection', 'close');
@@ -187,7 +216,7 @@ function binaryResponse(buffer, extraHeaders = {}) {
   return new Response(body, { status: 200, headers });
 }
 
-async function proxyBinary(downloadUrl, ctx) {
+async function proxyBinary(downloadUrl, expectedDigest, ctx) {
   if (!downloadUrl || !downloadUrl.startsWith(BINARY_URL_PREFIX)) {
     return new Response('Invalid download URL', { status: 400 });
   }
@@ -200,11 +229,16 @@ async function proxyBinary(downloadUrl, ctx) {
     const cacheExpiry = cachedResponse.headers.get('X-Cache-Expiry');
     if (cacheExpiry && Date.now() < parseInt(cacheExpiry, 10)) {
       const buffer = await cachedResponse.arrayBuffer();
-      return binaryResponse(buffer, {
-        'X-Cache-Hit': 'true',
-        'X-Cache-Time': cachedResponse.headers.get('X-Cache-Time'),
-        'X-Cache-Expiry': cacheExpiry,
-      });
+      if (await matchesGithubDigest(buffer, expectedDigest)) {
+        return await binaryResponse(buffer, {
+          'X-Cache-Hit': 'true',
+          'X-Cache-Time': cachedResponse.headers.get('X-Cache-Time'),
+          'X-Cache-Expiry': cacheExpiry,
+        });
+      }
+      console.log(`Cached firmware failed its sha256 check, refetching ${downloadUrl}`);
+      await cache.delete(cacheKey);
+      cachedResponse = null;
     }
   }
 
@@ -216,12 +250,14 @@ async function proxyBinary(downloadUrl, ctx) {
   if (response.status === 403 || response.status === 429) {
     if (cachedResponse) {
       const buffer = await cachedResponse.arrayBuffer();
-      return binaryResponse(buffer, {
-        'X-Cache-Hit': 'true',
-        'X-Cache-Time': cachedResponse.headers.get('X-Cache-Time'),
-        'X-Rate-Limited': 'true',
-        'X-Rate-Limit-Reset': rateLimitReset || 'unknown',
-      });
+      if (await matchesGithubDigest(buffer, expectedDigest)) {
+        return await binaryResponse(buffer, {
+          'X-Cache-Hit': 'true',
+          'X-Cache-Time': cachedResponse.headers.get('X-Cache-Time'),
+          'X-Rate-Limited': 'true',
+          'X-Rate-Limit-Reset': rateLimitReset || 'unknown',
+        });
+      }
     }
     return new Response(
       JSON.stringify({
@@ -250,6 +286,14 @@ async function proxyBinary(downloadUrl, ctx) {
   }
 
   const buffer = await response.arrayBuffer();
+  // Never cache or serve a bad download; a non-200 makes the device retry, which refetches.
+  if (!(await matchesGithubDigest(buffer, expectedDigest))) {
+    console.log(`Downloaded firmware failed its sha256 check against GitHub: ${downloadUrl}`);
+    return new Response(
+      JSON.stringify({ error: 'Downloaded firmware did not match the GitHub sha256 digest' }),
+      { status: 502, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
   const responseToCache = new Response(buffer, {
     status: 200,
     headers: {
@@ -262,7 +306,7 @@ async function proxyBinary(downloadUrl, ctx) {
   });
   ctx.waitUntil(cache.put(cacheKey, responseToCache));
 
-  return binaryResponse(buffer, {
+  return await binaryResponse(buffer, {
     'X-Cache-Hit': 'false',
     'X-Cache-Time': new Date(now).toISOString(),
   });
@@ -328,6 +372,6 @@ export default {
       });
     }
 
-    return proxyBinary(match.asset.browser_download_url, ctx);
+    return proxyBinary(match.asset.browser_download_url, match.asset.digest, ctx);
   },
 };

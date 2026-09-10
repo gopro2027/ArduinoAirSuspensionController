@@ -11,6 +11,7 @@
 #include "airSuspensionUtil.h"
 #include "tasks/tasks.h"
 #include <directdownload.h>
+#include <otarollback.h>
 
 #include <SPIFFS.h>
 
@@ -112,6 +113,8 @@ void setup()
 
 void loop()
 {
+    otaVerifyLoop();
+
     accessoryWireLoop();
     ebrakeWireLoop();
     if (getinternalReboot() == true)

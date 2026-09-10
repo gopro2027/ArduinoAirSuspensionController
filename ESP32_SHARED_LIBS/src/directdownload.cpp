@@ -13,6 +13,9 @@
 #define download_firmware_response_retry 2
 #define download_firmware_response_fail -1
 
+// Only picks which status the user sees once the retries are exhausted.
+static bool lastFailureWasCorruptDownload = false;
+
 /* WiFi.status() is not enough to tell "still trying" from "we were rejected":
  * the core's STA.cpp maps 4WAY_HANDSHAKE_TIMEOUT to WL_DISCONNECTED, the same
  * value it reports mid-connect. The disconnect reason is the only place that
@@ -122,6 +125,8 @@ bool check300Redirect(int httpCode, String &responseURLString)
 
 int installFirmware(String &url)
 {
+    lastFailureWasCorruptDownload = false;
+
     if (!https->begin(url))
     {
         log_i("Connection failed");
@@ -131,8 +136,8 @@ int installFirmware(String &url)
     https->useHTTP10(true); // not necessary, but tells the server we don't support chunked responses
     https->setReuse(false); // helps with stability on flaky wifi connections. This is automatically set to true if useHTTP10 is true, but added here for clarity.
     https->setTimeout(65535); // 65535 milliseconds = 65.535 seconds = 1 minute and 5.535 seconds
-    const char *headerKeys[] = {"Content-Length"};
-    https->collectHeaders(headerKeys, 1);// may help ensure content length is stored by the HTTPClient
+    const char *headerKeys[] = {"Content-Length", OTA_FIRMWARE_MD5_HEADER};
+    https->collectHeaders(headerKeys, 2);// may help ensure content length is stored by the HTTPClient
     int httpCode = https->GET();
     log_i("HTTP GET code: %d", httpCode);
 
@@ -185,6 +190,18 @@ int installFirmware(String &url)
         return download_firmware_response_retry;
     }
 
+    // After begin(), which clears any armed digest. Optional so an older worker still works.
+    const String expectedMd5 = https->header(OTA_FIRMWARE_MD5_HEADER);
+    if (Update.setMD5(expectedMd5.c_str()))
+    {
+        log_i("Verifying firmware against MD5 %s", expectedMd5.c_str());
+    }
+    else
+    {
+        log_w("No usable %s header (got \"%s\"), installing without an integrity check",
+              OTA_FIRMWARE_MD5_HEADER, expectedMd5.c_str());
+    }
+
     size_t written = Update.writeStream(*https->getStreamPtr());
 
     if (written != (size_t)fileSize)
@@ -202,9 +219,16 @@ int installFirmware(String &url)
     {
         log_i("Update was successful!");
     }
+    else if (Update.getError() == UPDATE_ERROR_MD5)
+    {
+        // Update aborted before _verifyEnd(), so the boot partition was never switched.
+        log_i("Firmware MD5 mismatch, the download was corrupted. Retry?");
+        lastFailureWasCorruptDownload = true;
+        return download_firmware_response_retry;
+    }
     else
     {
-        log_i("Update download failed");
+        log_i("Update download failed: %s", Update.errorString());
         setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_GENERIC);
         ESP.restart();
         return download_firmware_response_fail;
@@ -288,12 +312,15 @@ void downloadUpdate(String SSID, String PASS)
     log_i("Downloading firmware from %s", url.c_str());
 
     counter = 0;
+    lastFailureWasCorruptDownload = false;
     while (installFirmware(url) != download_firmware_response_success)
     {
         if (counter > 5)
         {
             log_i("Failed to download firmware after multiple attempts.");
-            setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST);
+            setupdateResult(lastFailureWasCorruptDownload
+                                ? UPDATE_STATUS::UPDATE_STATUS_FAIL_CORRUPT_DOWNLOAD
+                                : UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST);
             ESP.restart();
             return;
         }

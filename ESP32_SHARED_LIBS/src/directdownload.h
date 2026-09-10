@@ -25,11 +25,16 @@ enum UPDATE_STATUS
     UPDATE_STATUS_FAIL_GENERIC,
     UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE,
     UPDATE_STATUS_FAIL_WIFI_PASSWORD,
-    UPDATE_STATUS_FAIL_WIFI_NO_NETWORK
+    UPDATE_STATUS_FAIL_WIFI_NO_NETWORK,
+    // Append only. Reported to clients as strings, never as the raw byte, so this is not a wire change.
+    UPDATE_STATUS_FAIL_CORRUPT_DOWNLOAD
 };
 
 extern void setupdateResult(byte value);
 
 void downloadUpdate(String SSID, String PASS);
+
+// MD5 of the exact body the worker sent; absent from older worker deployments.
+#define OTA_FIRMWARE_MD5_HEADER "X-Firmware-MD5"
 
 #endif
