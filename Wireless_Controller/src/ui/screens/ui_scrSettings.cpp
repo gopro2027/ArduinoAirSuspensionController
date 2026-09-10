@@ -51,6 +51,11 @@ static void alignWifiSsidList(lv_obj_t *dropdown)
     if (!list)
         return;
 
+    // Measure at natural width; the marquee's fixed width below would otherwise pin the list.
+    lv_obj_t *listLabel = lv_obj_get_child(list, 0);
+    if (listLabel)
+        lv_obj_set_width(listLabel, LV_SIZE_CONTENT);
+
     lv_obj_update_layout(list);
 
     const int margin = scaledX(10);
@@ -63,6 +68,14 @@ static void alignWifiSsidList(lv_obj_t *dropdown)
         w = ddW;
     lv_obj_set_width(list, w);
 
+    // One label holds every option; a fixed width lets scroll mode marquee it without wrapping (wrapping breaks row hit-testing).
+    if (listLabel)
+    {
+        lv_obj_update_layout(list);
+        lv_label_set_long_mode(listLabel, LV_LABEL_LONG_MODE_SCROLL);
+        lv_obj_set_width(listLabel, lv_obj_get_content_width(list));
+    }
+
     // Preserve whether LVGL decided to drop the list up or down (compare absolute coords,
     // since the list is parented to the screen but the dropdown is not).
     lv_area_t listCoords, ddCoords;
@@ -70,6 +83,24 @@ static void alignWifiSsidList(lv_obj_t *dropdown)
     lv_obj_get_coords(dropdown, &ddCoords);
     const bool openedUp = listCoords.y1 < ddCoords.y1;
     lv_obj_align_to(list, dropdown, openedUp ? LV_ALIGN_OUT_TOP_RIGHT : LV_ALIGN_OUT_BOTTOM_RIGHT, 0, 0);
+}
+
+// A closed dropdown draws its own text and has no label to scroll, so overlay one. Call after any selection change.
+static void setWifiSsidValueLabel(lv_obj_t *dropdown)
+{
+    lv_obj_t *lbl = lv_obj_get_child(dropdown, 0);
+    if (lbl == NULL)
+    {
+        lv_dropdown_set_text_static(dropdown, ""); // stop the widget drawing the value itself
+        lbl = lv_label_create(dropdown);
+        lv_label_set_long_mode(lbl, LV_LABEL_LONG_MODE_SCROLL);
+        lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 0, 0);
+        lv_obj_set_width(lbl, LV_PCT(85)); // the rest of the row is the dropdown's own arrow
+    }
+
+    char buf[64];
+    lv_dropdown_get_selected_str(dropdown, buf, sizeof(buf));
+    lv_label_set_text(lbl, buf);
 }
 
 // Current page tracking
@@ -986,6 +1017,7 @@ void ScrSettings::init(lv_obj_t *parent)
     {
         uint32_t idx = (uint32_t)(uintptr_t)data;
         ScrSettings *s = (ScrSettings *)currentScr;
+        setWifiSsidValueLabel(s->ui_wifiSSID->rightHandObj);
         // Ignore the "Select network" placeholder (empty string); only real SSIDs are saved.
         if (idx < s->scannedSSIDs.size())
         {
@@ -1006,6 +1038,9 @@ void ScrSettings::init(lv_obj_t *parent)
         lv_obj_set_width(this->ui_wifiSSID->text, labelW);
         lv_obj_set_width(this->ui_wifiSSID->rightHandObj, getScreenWidth() - margin * 3 - labelW);
     }
+
+    // Long SSIDs still overflow the widened row, so the closed value gets a scrolling label.
+    setWifiSsidValueLabel(this->ui_wifiSSID->rightHandObj);
 
     // Right-align the open list after LVGL opens it (this user callback runs after the
     // dropdown's own class handler, which opens the list on release).
@@ -1195,6 +1230,7 @@ void ScrSettings::loop()
             lv_dropdown_set_options(this->ui_wifiSSID->rightHandObj, opts.c_str());
             // Keep the pinned saved SSID / placeholder (index 0) selected so the closed value stays put.
             lv_dropdown_set_selected(this->ui_wifiSSID->rightHandObj, 0);
+            setWifiSsidValueLabel(this->ui_wifiSSID->rightHandObj);
 
             // Refresh the open list so the scanned results replace "Scanning...".
             if (lv_dropdown_is_open(this->ui_wifiSSID->rightHandObj))
