@@ -13,11 +13,75 @@
 #define download_firmware_response_retry 2
 #define download_firmware_response_fail -1
 
+/* WiFi.status() is not enough to tell "still trying" from "we were rejected":
+ * the core's STA.cpp maps 4WAY_HANDSHAKE_TIMEOUT to WL_DISCONNECTED, the same
+ * value it reports mid-connect. The disconnect reason is the only place that
+ * distinction survives, so we capture it from the event. */
+enum WIFI_FAIL_CLASS
+{
+    WIFI_FAIL_NONE,
+    WIFI_FAIL_TRANSIENT,  // worth retrying: weak signal, busy AP, dropped frame
+    WIFI_FAIL_PASSWORD,   // wrong passphrase, retrying can never fix it
+    WIFI_FAIL_NO_NETWORK  // SSID not present, or no compatible security
+};
+
+static volatile WIFI_FAIL_CLASS wifiFailReason = WIFI_FAIL_NONE;
+
+// event callback for disconnect event during wifi connection establishment
+// only sets the value of wifiFailReason
+static void onWifiStaDisconnected(arduino_event_id_t event, arduino_event_info_t info)
+{
+    uint8_t reason = info.wifi_sta_disconnected.reason;
+
+    // Reason 8 is our own WiFi.disconnect() in connectToWifi, not a failure.
+    if (reason == WIFI_REASON_ASSOC_LEAVE)
+        return;
+
+    switch (reason)
+    {
+    /* The passphrase is only ever exercised in the 4-way EAPOL handshake. A wrong
+     * PSK derives a PMK whose MIC the AP rejects, and the AP then simply stops
+     * replying -- so a bad password surfaces as a timeout rather than an explicit
+     * rejection. Association itself succeeds either way, which is why AUTH_FAIL
+     * is almost never what you actually see. */
+    case WIFI_REASON_MIC_FAILURE:            // 14
+    case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT: // 15
+    case WIFI_REASON_AUTH_FAIL:              // 202
+    case WIFI_REASON_HANDSHAKE_TIMEOUT:      // 204
+        wifiFailReason = WIFI_FAIL_PASSWORD;
+        break;
+    case WIFI_REASON_NO_AP_FOUND: // 201
+    /* 210/211 exist only in IDF 5.x (the controller). This file also compiles for
+     * the manifold on arduino-esp32 2.0.17 / IDF 4.4, where those enum names are
+     * undefined, so match them numerically. */
+    case 210: // NO_AP_FOUND_W_COMPATIBLE_SECURITY
+    case 211: // NO_AP_FOUND_IN_AUTHMODE_THRESHOLD
+        wifiFailReason = WIFI_FAIL_NO_NETWORK;
+        break;
+    default:
+        // Includes 212 NO_AP_FOUND_IN_RSSI_THRESHOLD: the AP is there, just weak.
+        wifiFailReason = WIFI_FAIL_TRANSIENT;
+        break;
+    }
+
+    log_i("Wifi disconnect reason %u -> fail class %d", reason, (int)wifiFailReason);
+}
+
 int connectToWifi(String SSID, String PASS)
 {
+    static bool wifiEventRegistered = false;
+    if (!wifiEventRegistered)
+    {
+        WiFi.onEvent(onWifiStaDisconnected, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+        wifiEventRegistered = true;
+    }
+
     WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(false); // manually control reconnects
     WiFi.disconnect();
+    delay(100); // let any event from the previous attempt drain before we listen
     log_i("Connecting to network");
+    wifiFailReason = WIFI_FAIL_NONE;
     WiFi.begin(SSID, PASS);
 
     const int maxtimeout = 20; // 500ms * 20 = 10 seconds
@@ -25,6 +89,11 @@ int connectToWifi(String SSID, String PASS)
 
     while (WiFi.status() != WL_CONNECTED)
     {
+        // if wifiFailReason is not none, that means we have disconnected (ARDUINO_EVENT_WIFI_STA_DISCONNECTED event ran) so we should return, because setAutoReconnect is false so it's not going to automatically retry
+        if (wifiFailReason != WIFI_FAIL_NONE)
+        {
+            return download_firmware_response_retry;
+        }
         delay(500);
         Serial.print(".");
         timeoutCounter++;
@@ -166,10 +235,32 @@ void downloadUpdate(String SSID, String PASS)
     log_i("Min free heap: %d", ESP.getMinFreeHeap());
 
     int counter = 0;
+    int definitiveFailures = 0;
 
     while (connectToWifi(SSID, PASS) != download_firmware_response_success)
     {
-        if (counter > 3)
+        /* A wrong passphrase or an absent SSID will never start working on retry,
+         * so give up instead of burning the whole ~63s budget on it. 2 failures is
+         * allowed before hard reboot: a weak signal can drop a handshake frame and look exactly
+         * like a bad password on a single attempt. */
+        if (wifiFailReason == WIFI_FAIL_PASSWORD || wifiFailReason == WIFI_FAIL_NO_NETWORK)
+        {
+            definitiveFailures++;
+            if (definitiveFailures > 1)
+            {
+                bool badPassword = (wifiFailReason == WIFI_FAIL_PASSWORD);
+                log_i("Wifi rejected us (%s), not retrying.", badPassword ? "bad password" : "network not found");
+                setupdateResult(badPassword
+                                    ? UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_PASSWORD
+                                    : UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_NO_NETWORK);
+                ESP.restart();
+                return;
+            }
+        }
+
+        counter++;
+        // transient failures 5 times allowed since it's much more likely not that we are manually controlling the wifi restarts
+        if (counter > 4)
         {
             log_i("Failed to connect to wifi after multiple attempts.");
             setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_CONNECTION);
@@ -180,11 +271,13 @@ void downloadUpdate(String SSID, String PASS)
         log_i("Retrying to connect to wifi...");
         delay(2500);
 
-        counter++;
+        
     }
 
     /* Modem sleep during TLS often shows up as HTTPC_ERROR_CONNECTION_LOST (-5). */
     WiFi.setSleep(false);
+    // Connected: give reconnects back to the core so a drop mid-download recovers.
+    WiFi.setAutoReconnect(true);
 
     https = new HTTPClient();
 

@@ -110,15 +110,30 @@ void setup()
             showDialog("Update failed (wifi connection)", lv_color_hex(0xFF0000));
             currentScr->showMsgBox("Update failed", "Could not connect to wifi network. Please check your wifi SSID and password", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_PASSWORD:
+            showDialog("Update failed (wifi password)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "The wifi network rejected the password. Please check your wifi password and try again", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_NO_NETWORK:
+            showDialog("Update failed (wifi not found)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "Could not find that wifi network. Please check your wifi SSID and that the network is in range", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
             showDialog("Update not needed", lv_color_hex(0xFFFF00));
             currentScr->showMsgBox("Update aborted", "You are already on the latest release", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
+        {
             showDialog("Update success!", lv_color_hex(0x00FF00));
             char buf[170];
             snprintf(buf, sizeof(buf), "Welcome to version %s!\nPlease check the manifold update status in the update section of settings to verify the manifold was updated successfully too.", EVALUATE_AND_STRINGIFY(RELEASE_VERSION));
             currentScr->showMsgBox("Update success!", buf, NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        }
+        default:
+            // A status written by a newer firmware than this UI knows about.
+            showDialog("Update failed (unknown)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "Unknown update status", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         }
         setupdateResult(0);
