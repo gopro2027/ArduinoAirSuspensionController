@@ -13,8 +13,11 @@
 #define download_firmware_response_retry 2
 #define download_firmware_response_fail -1
 
-// Only picks which status the user sees once the retries are exhausted.
-static bool lastFailureWasCorruptDownload = false;
+// Why the most recent attempt failed; reported to the user once the retries are exhausted.
+static UPDATE_STATUS lastFailureStatus = UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST;
+
+// An attempt is abandoned after this long without a single byte, so a stalled connection retries instead of hanging.
+#define OTA_STALL_TIMEOUT_MS 15000UL
 
 /* WiFi.status() is not enough to tell "still trying" from "we were rejected":
  * the core's STA.cpp maps 4WAY_HANDSHAKE_TIMEOUT to WL_DISCONNECTED, the same
@@ -123,9 +126,62 @@ bool check300Redirect(int httpCode, String &responseURLString)
     return false;
 }
 
+// Replaces Update.writeStream(), which keeps retrying a stalled stream for a very long time instead of failing fast.
+static size_t streamFirmware(Stream &stream, size_t fileSize)
+{
+    static uint8_t buf[2048];
+    const unsigned long start = millis();
+    unsigned long lastData = start;
+    size_t written = 0;
+    unsigned int nextReport = 10;
+
+    while (written < fileSize)
+    {
+        if (millis() - lastData > OTA_STALL_TIMEOUT_MS)
+        {
+            log_i("No data for %lu s at %u/%u bytes, abandoning this attempt", OTA_STALL_TIMEOUT_MS / 1000, (unsigned)written, (unsigned)fileSize);
+            lastFailureStatus = UPDATE_STATUS::UPDATE_STATUS_FAIL_WEAK_CONNECTION;
+            break;
+        }
+
+        const int available = stream.available();
+        if (available <= 0)
+        {
+            delay(10);
+            continue;
+        }
+
+        size_t chunk = fileSize - written;
+        if (chunk > sizeof(buf))
+            chunk = sizeof(buf);
+        if (chunk > (size_t)available)
+            chunk = (size_t)available;
+
+        const size_t got = stream.readBytes(buf, chunk);
+        if (got == 0)
+            continue;
+        if (Update.write(buf, got) != got)
+        {
+            log_i("Update.write failed: %s", Update.errorString());
+            break;
+        }
+        written += got;
+        lastData = millis();
+
+        if (written * 100 >= nextReport * fileSize)
+        {
+            const unsigned long elapsed = millis() - start;
+            log_i("Downloaded %u%% (%u KB, %lu KB/s)", nextReport, (unsigned)(written / 1024),
+                  elapsed ? (unsigned long)(written / 1024) * 1000UL / elapsed : 0UL);
+            nextReport += 10;
+        }
+    }
+    return written;
+}
+
 int installFirmware(String &url)
 {
-    lastFailureWasCorruptDownload = false;
+    lastFailureStatus = UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST;
 
     if (!https->begin(url))
     {
@@ -202,7 +258,7 @@ int installFirmware(String &url)
               OTA_FIRMWARE_MD5_HEADER, expectedMd5.c_str());
     }
 
-    size_t written = Update.writeStream(*https->getStreamPtr());
+    size_t written = streamFirmware(*https->getStreamPtr(), (size_t)fileSize);
 
     if (written != (size_t)fileSize)
     {
@@ -223,7 +279,7 @@ int installFirmware(String &url)
     {
         // Update aborted before _verifyEnd(), so the boot partition was never switched.
         log_i("Firmware MD5 mismatch, the download was corrupted. Retry?");
-        lastFailureWasCorruptDownload = true;
+        lastFailureStatus = UPDATE_STATUS::UPDATE_STATUS_FAIL_CORRUPT_DOWNLOAD;
         return download_firmware_response_retry;
     }
     else
@@ -312,15 +368,12 @@ void downloadUpdate(String SSID, String PASS)
     log_i("Downloading firmware from %s", url.c_str());
 
     counter = 0;
-    lastFailureWasCorruptDownload = false;
     while (installFirmware(url) != download_firmware_response_success)
     {
         if (counter > 5)
         {
             log_i("Failed to download firmware after multiple attempts.");
-            setupdateResult(lastFailureWasCorruptDownload
-                                ? UPDATE_STATUS::UPDATE_STATUS_FAIL_CORRUPT_DOWNLOAD
-                                : UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST);
+            setupdateResult(lastFailureStatus);
             ESP.restart();
             return;
         }

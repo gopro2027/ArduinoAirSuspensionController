@@ -27,7 +27,8 @@ enum UPDATE_STATUS
     UPDATE_STATUS_FAIL_WIFI_PASSWORD,
     UPDATE_STATUS_FAIL_WIFI_NO_NETWORK,
     // Append only. Reported to clients as strings, never as the raw byte, so this is not a wire change.
-    UPDATE_STATUS_FAIL_CORRUPT_DOWNLOAD
+    UPDATE_STATUS_FAIL_CORRUPT_DOWNLOAD,
+    UPDATE_STATUS_FAIL_WEAK_CONNECTION
 };
 
 extern void setupdateResult(byte value);

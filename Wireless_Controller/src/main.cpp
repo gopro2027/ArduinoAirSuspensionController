@@ -123,6 +123,10 @@ void setup()
             showDialog("Update failed (corrupt download)", lv_color_hex(0xFF0000));
             currentScr->showMsgBox("Update failed", "The downloaded firmware did not match its checksum, so it was not installed. Your device is untouched. Please try again", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WEAK_CONNECTION:
+            showDialog("Update failed (weak connection)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "The download timed out because of a weak or poor connection. Please move closer to your wifi and try again", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
             showDialog("Update not needed", lv_color_hex(0xFFFF00));
             currentScr->showMsgBox("Update aborted", "You are already on the latest release", NULL, "OK", []() -> void {}, []() -> void {}, false);

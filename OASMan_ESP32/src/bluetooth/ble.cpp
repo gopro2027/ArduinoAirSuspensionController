@@ -873,6 +873,9 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_CORRUPT_DOWNLOAD:
             pkt.setStatus("[F] Corrupt");
             break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WEAK_CONNECTION:
+            pkt.setStatus("[F] Timeout");
+            break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
         case UPDATE_STATUS::UPDATE_STATUS_NONE:
         case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
