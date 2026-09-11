@@ -862,7 +862,7 @@ class BLEManager extends ChangeNotifier {
   }
 
   /// OTA / Wi-Fi download (StartwebPacket): SSID in args[0..49], password in args[50..99].
-  void sendStartWebUpdate(String ssid, String password) {
+  void sendStartWebUpdate(String ssid, String password, {bool allowInsecure = false}) {
     final args = List<int>.filled(100, 0);
     final s = utf8.encode(ssid);
     final p = utf8.encode(password);
@@ -872,6 +872,8 @@ class BLEManager extends ChangeNotifier {
     for (var i = 0; i < p.length && i < 49; i++) {
       args[50 + i] = p[i];
     }
+    // SSIDs are at most 32 bytes, so args[49] is free: 1 = allow a one-time insecure HTTP update.
+    args[49] = allowInsecure ? 1 : 0;
     sendRestCommand(
         [..._encodeInt32(BTOasIdentifier.STARTWEB), ...args]);
   }

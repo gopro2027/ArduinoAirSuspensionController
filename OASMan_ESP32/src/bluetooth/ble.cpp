@@ -730,6 +730,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         Serial.println(F("Starting OTA..."));
         setwifiSSID(((StartwebPacket *)packet)->getSSID());
         setwifiPassword(((StartwebPacket *)packet)->getPassword());
+        setotaInsecure(((StartwebPacket *)packet)->getAllowInsecure());
         setupdateMode(true);
         setinternalReboot(true);
         break;
@@ -878,6 +879,9 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ROLLED_BACK:
             pkt.setStatus("[F] Rollback");
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_SECURE_CONNECTION:
+            pkt.setStatus("[F] Cert");
             break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
         case UPDATE_STATUS::UPDATE_STATUS_NONE:

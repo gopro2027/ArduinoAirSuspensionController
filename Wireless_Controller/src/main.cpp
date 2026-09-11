@@ -53,9 +53,13 @@ void setup()
     if (getupdateMode())
     {
         setupdateMode(false);
+        const bool allowInsecure = getotaInsecure();
+        setotaInsecure(false); // applies to one update only
         Serial.println("Gonna try to download update");
     #if defined(OTA_SUPPORTED)
-        downloadUpdate(getwifiSSID(), getwifiPassword());
+        downloadUpdate(getwifiSSID(), getwifiPassword(), allowInsecure);
+    #else
+        (void)allowInsecure;
     #endif
         return;
     }
@@ -131,6 +135,10 @@ void setup()
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ROLLED_BACK:
             showDialog("Update reverted", lv_color_hex(0xFF0000));
             currentScr->showMsgBox("Update reverted", "The new firmware did not start up correctly, so your device went back to the previous version", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_SECURE_CONNECTION:
+            showDialog("Update failed (secure connection)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "Could not verify a secure connection to the update server. If this keeps happening, turn on Allow insecure update in the update settings and try again", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
             showDialog("Update not needed", lv_color_hex(0xFFFF00));

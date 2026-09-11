@@ -1,6 +1,11 @@
 #include "directdownload.h"
 
 #include <esp_ota_ops.h>
+#include <WiFiClientSecure.h>
+
+// Mozilla root bundle already compiled into both cores' mbedTLS; used to verify the worker's certificate.
+extern const uint8_t caBundleStart[] asm("_binary_x509_crt_bundle_start");
+extern const uint8_t caBundleEnd[] asm("_binary_x509_crt_bundle_end");
 
 // PlatformIO release envs pass -D RELEASE_TAG_NAME=${sysenv.release_tag_name}.
 // When that env var is unset, the macro is defined but empty — treat like missing.
@@ -115,6 +120,8 @@ int connectToWifi(String SSID, String PASS)
 }
 
 HTTPClient *https;
+// Null when the user opted into an insecure HTTP update.
+static WiFiClientSecure *secureClient = nullptr;
 
 bool check300Redirect(int httpCode, String &responseURLString)
 {
@@ -185,7 +192,13 @@ int installFirmware(String &url)
 {
     lastFailureStatus = UPDATE_STATUS::UPDATE_STATUS_FAIL_FILE_REQUEST;
 
-    if (!https->begin(url))
+    if (secureClient && !url.startsWith("https://"))
+    {
+        log_i("Refusing to leave HTTPS for %s", url.c_str());
+        return download_firmware_response_retry;
+    }
+
+    if (!(secureClient ? https->begin(*secureClient, url) : https->begin(url)))
     {
         log_i("Connection failed");
         return download_firmware_response_retry;
@@ -198,6 +211,18 @@ int installFirmware(String &url)
     https->collectHeaders(headerKeys, 2);// may help ensure content length is stored by the HTTPClient
     int httpCode = https->GET();
     log_i("HTTP GET code: %d", httpCode);
+
+    if (httpCode < 0 && secureClient)
+    {
+        char tlsError[100];
+        const int err = secureClient->lastError(tlsError, sizeof(tlsError));
+        // -1 is a plain socket failure; any other code came from mbedTLS, so the secure connection itself failed.
+        if (err != 0 && err != -1)
+        {
+            log_i("Secure connection failed: %d %s", err, tlsError);
+            lastFailureStatus = UPDATE_STATUS::UPDATE_STATUS_FAIL_SECURE_CONNECTION;
+        }
+    }
 
     if (check300Redirect(httpCode, url)) /* any 300 code lets try to redirect */
     {
@@ -313,7 +338,7 @@ void checkUpdateRolledBack()
     }
 }
 
-void downloadUpdate(String SSID, String PASS)
+void downloadUpdate(String SSID, String PASS, bool allowInsecure)
 {
 
     log_i("=== Initial Memory Status ===");
@@ -376,7 +401,21 @@ void downloadUpdate(String SSID, String PASS)
 
     https = new HTTPClient();
 
-    String url = String("http://oasman-ota.gopro2027.workers.dev/?firmware=") +
+    if (allowInsecure)
+    {
+        log_w("Insecure update requested: downloading over plain HTTP");
+    }
+    else
+    {
+        secureClient = new WiFiClientSecure();
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+        secureClient->setCACertBundle(caBundleStart, caBundleEnd - caBundleStart);
+#else
+        secureClient->setCACertBundle(caBundleStart);
+#endif
+    }
+
+    String url = String(allowInsecure ? "http" : "https") + "://oasman-ota.gopro2027.workers.dev/?firmware=" +
                  String(FIRMWARE_RELEASE_NAME) +
                  "&tag=" + String(EVALUATE_AND_STRINGIFY(RELEASE_TAG_NAME));
 
@@ -404,7 +443,7 @@ void downloadUpdate(String SSID, String PASS)
 
 /**
  * Cloudflare Worker: oasman-ota
- * http://oasman-ota.gopro2027.workers.dev/?firmware=<FIRMWARE_RELEASE_NAME>&tag=<RELEASE_TAG_NAME>
+ * https://oasman-ota.gopro2027.workers.dev/?firmware=<FIRMWARE_RELEASE_NAME>&tag=<RELEASE_TAG_NAME>
  * See file: oasman-ota_worker.js
  *
  * Returns 204 when tag matches latest release (already up to date).

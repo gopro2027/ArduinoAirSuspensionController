@@ -18,6 +18,7 @@ void beginSaveData()
     _SaveData.wifiSSID.loadString("wifiSSID", "");
     _SaveData.wifiPassword.loadString("wifiPassword", "");
     _SaveData.updateResult.load("updateResult", 0);
+    _SaveData.otaInsecure.load("otaInsecure", false);
 
     if (getupdateMode())
     {
@@ -117,6 +118,7 @@ createSaveFuncInt(internalReboot, bool);
 createSaveFuncInt(learnPressureSensors, bool);
 createSaveFuncInt(safetyMode, bool);
 createSaveFuncInt(updateMode, bool);
+createSaveFuncInt(otaInsecure, bool);
 
 bool getheightSensorMode()
 {
