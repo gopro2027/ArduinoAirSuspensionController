@@ -4,6 +4,7 @@
 
 // Must be extern "C" (the weak default is in the core's esp32-hal-misc.c, unmangled) and must
 // stay in the same file as otaVerifyLoop(), or the linker never pulls it out of the archive.
+// By default the bootloader will cancel the rollback via it's own checks inside of the bootloader code, but we want to wait to cancel the rollback in our own code to make sure setup runs before we cancel the rollback. So this function tells the bootloader 'hey! I will manually decide when to cancel the rollback and mark the update as valid.'
 extern "C" bool verifyRollbackLater()
 {
     return true;
