@@ -4,6 +4,7 @@
 #if defined(OTA_SUPPORTED)
 #include <directdownload.h>
 #endif
+#include <otarollback.h> // not behind OTA_SUPPORTED: any build may be running an unconfirmed image
 
 #include <ui/ui.h>
 
@@ -117,6 +118,10 @@ void setup()
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_NO_NETWORK:
             showDialog("Update failed (wifi not found)", lv_color_hex(0xFF0000));
             currentScr->showMsgBox("Update failed", "Could not find that wifi network. Please check your wifi SSID and that the network is in range", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_CORRUPT_DOWNLOAD:
+            showDialog("Update failed (corrupt download)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "The downloaded firmware did not match its checksum, so it was not installed. Your device is untouched. Please try again", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
             showDialog("Update not needed", lv_color_hex(0xFFFF00));
@@ -279,6 +284,8 @@ void bootButtonFunctionality() {
 void loop()
 {
     auto const now = millis();
+
+    otaVerifyLoop();
 
     bootButtonFunctionality();
 

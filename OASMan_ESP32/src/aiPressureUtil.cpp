@@ -260,6 +260,11 @@ static double getPredictionOffset(SOLENOID_AI_INDEX aiIndex, double raw_bag, dou
     // The models are shared between modes, so the untrained default follows whichever mode is active.
     double magnitude = getheightSensorMode() ? (double)OFFSET_DEFAULT_LEVEL : (double)OFFSET_DEFAULT_PSI;
     double def = m->up ? -magnitude : magnitude;
+    // Fix for airing out when preset < OFFSET_DEFAULT_PSI (aka 5psi), it would have never been able to calculate 0 (goes to max timeout). So just allow it to return raw_bag instead so it can get to 0.
+    if (!m->up && raw_bag < magnitude)
+    {
+        def = raw_bag;
+    }
     int count = getLearnDataLength(aiIndex);
     if (count < OFFSET_FADE_MIN)
     {

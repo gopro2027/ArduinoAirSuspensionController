@@ -1092,7 +1092,7 @@ void ScrSettings::init(lv_obj_t *parent)
 #if defined(OTA_SUPPORTED)
                 runNextFrame([]() -> void
                 {
-                    currentScr->showMsgBox("Updating in progress...",
+                    currentScr->showMsgBox("Updating in progress",
                         "Both the manifold & controller are installing their updates. Both will reboot when completed.",
                         NULL, "OK", []() -> void {}, []() -> void {}, false);
                     runNextFrame([]() -> void
@@ -1104,7 +1104,7 @@ void ScrSettings::init(lv_obj_t *parent)
                     log_i("Attempted to download update");
                 });
 #else
-                currentScr->showMsgBox("Updating in progress...",
+                currentScr->showMsgBox("Updating in progress",
                     "The manifold is installing the latest update. Your controller does not support OTA updates. Please go to http://oasman.dev on your computer to flash the latest update to your controller.",
                     NULL, "OK",
                     []() -> void { ESP.restart(); },
@@ -1115,7 +1115,24 @@ void ScrSettings::init(lv_obj_t *parent)
     });
 
     updateUpdateButtonVisbility();
-    this->ui_manifoldUpdateStatus = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Manifold:", {.STRING = test});
+
+    // Version and info
+    this->ui_manifoldUpdateStatus = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Manifold Version:", {.STRING = "Not connected"});
+
+    OptionValue versionValue;
+#ifdef OFFICIAL_RELEASE
+    versionValue.STRING = EVALUATE_AND_STRINGIFY(RELEASE_VERSION);
+#else
+    versionValue.STRING = "DEVELOPMENT";
+#endif
+    allOptions.push_back(new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Controller Version:", versionValue));
+    this->ui_mac = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Manifold MAC:", {.STRING = ble_getMAC()});
+#if HAS_BATTERY_SENSE_READING
+    this->ui_volts = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Battery:", {.STRING = getBatteryVoltageString()});
+#else
+    // Nothing to report -- this board has no battery sense. See HAS_BATTERY_SENSE_READING.
+    this->ui_volts = nullptr;
+#endif
 
     // QR Code - scaled for display size
     const int qrSize = scaledX(100);
@@ -1128,25 +1145,9 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_qrcode_set_dark_color(this->ui_qrcode, lv_color_black());
     lv_qrcode_set_light_color(this->ui_qrcode, lv_color_white());
 
-    const char *qr_data = "https://oasman.dev";
+    const char *qr_data = "https://oasman.co";
     lv_qrcode_update(this->ui_qrcode, qr_data, strlen(qr_data));
     lv_obj_set_x(this->ui_qrcode, scrW / 2 - qrSize / 2);
-
-    // Version and info
-    OptionValue versionValue;
-#ifdef OFFICIAL_RELEASE
-    versionValue.STRING = EVALUATE_AND_STRINGIFY(RELEASE_VERSION);
-#else
-    versionValue.STRING = "DEVELOPMENT";
-#endif
-    allOptions.push_back(new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Version:", versionValue));
-    this->ui_mac = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Manifold:", {.STRING = ble_getMAC()});
-#if HAS_BATTERY_SENSE_READING
-    this->ui_volts = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Battery:", {.STRING = getBatteryVoltageString()});
-#else
-    // Nothing to report -- this board has no battery sense. See HAS_BATTERY_SENSE_READING.
-    this->ui_volts = nullptr;
-#endif
 
     // Restore previously selected page (or default to Status)
     if (saved_page_index < 0 || saved_page_index >= this->settingsPageCount) {
