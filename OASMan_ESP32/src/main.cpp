@@ -11,6 +11,7 @@
 #include "airSuspensionUtil.h"
 #include "tasks/tasks.h"
 #include <directdownload.h>
+#include <otarollback.h>
 
 #include <SPIFFS.h>
 
@@ -34,6 +35,8 @@ void setup()
         downloadUpdate(getwifiSSID(), getwifiPassword());
         return;
     }
+
+    checkUpdateRolledBack();
 
 #ifdef FORCE_UPDATE_TEST
     for (int i = 0; i < 10; i++)
@@ -112,6 +115,8 @@ void setup()
 
 void loop()
 {
+    otaVerifyLoop();
+
     accessoryWireLoop();
     ebrakeWireLoop();
     if (getinternalReboot() == true)

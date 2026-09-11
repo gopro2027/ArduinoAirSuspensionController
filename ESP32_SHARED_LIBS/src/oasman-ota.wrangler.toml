@@ -1,0 +1,14 @@
+# Deploy from the repo root: npx wrangler deploy -c ESP32_SHARED_LIBS/src/oasman-ota.wrangler.toml
+name = "oasman-ota"
+main = "oasman-ota_worker.js"
+compatibility_date = "2024-11-01"
+workers_dev = true
+keep_vars = true
+
+# Account Secrets Store token, read by the worker as env.GITHUB_TOKEN. Deploying without this removes the binding.
+secrets_store_secrets = [
+  { binding = "GITHUB_TOKEN", store_id = "fcfd9bd535d3466f98f29dabcf622dc8", secret_name = "github-cloudflare-ota-token-no-expiry" }
+]
+
+[observability]
+enabled = true

@@ -4,6 +4,7 @@
 #if defined(OTA_SUPPORTED)
 #include <directdownload.h>
 #endif
+#include <otarollback.h> // not behind OTA_SUPPORTED: any build may be running an unconfirmed image
 
 #include <ui/ui.h>
 
@@ -89,6 +90,7 @@ void setup()
     dimScreenTime = millis() + getScreenDimTimeMs();
 
 #if defined(OTA_SUPPORTED)
+    checkUpdateRolledBack();
     byte updateResult = getupdateResult();
     if (updateResult != UPDATE_STATUS::UPDATE_STATUS_NONE)
     {
@@ -110,15 +112,42 @@ void setup()
             showDialog("Update failed (wifi connection)", lv_color_hex(0xFF0000));
             currentScr->showMsgBox("Update failed", "Could not connect to wifi network. Please check your wifi SSID and password", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_PASSWORD:
+            showDialog("Update failed (wifi password)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "The wifi network rejected the password. Please check your wifi password and try again", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_NO_NETWORK:
+            showDialog("Update failed (wifi not found)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "Could not find that wifi network. Please check your wifi SSID and that the network is in range", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_CORRUPT_DOWNLOAD:
+            showDialog("Update failed (corrupt download)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "The downloaded firmware did not match its checksum, so it was not installed. Your device is untouched. Please try again", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WEAK_CONNECTION:
+            showDialog("Update failed (weak connection)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "The download timed out because of a weak or poor connection. Please move closer to your wifi and try again", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_ROLLED_BACK:
+            showDialog("Update reverted", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update reverted", "The new firmware did not start up correctly, so your device went back to the previous version", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
             showDialog("Update not needed", lv_color_hex(0xFFFF00));
             currentScr->showMsgBox("Update aborted", "You are already on the latest release", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
+        {
             showDialog("Update success!", lv_color_hex(0x00FF00));
             char buf[170];
             snprintf(buf, sizeof(buf), "Welcome to version %s!\nPlease check the manifold update status in the update section of settings to verify the manifold was updated successfully too.", EVALUATE_AND_STRINGIFY(RELEASE_VERSION));
             currentScr->showMsgBox("Update success!", buf, NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        }
+        default:
+            // A status written by a newer firmware than this UI knows about.
+            showDialog("Update failed (unknown)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "Unknown update status", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         }
         setupdateResult(0);
@@ -264,6 +293,8 @@ void bootButtonFunctionality() {
 void loop()
 {
     auto const now = millis();
+
+    otaVerifyLoop();
 
     bootButtonFunctionality();
 
