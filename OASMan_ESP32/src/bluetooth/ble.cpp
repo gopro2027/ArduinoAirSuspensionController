@@ -877,7 +877,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             pkt.setStatus("[F] Timeout");
             break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ROLLED_BACK:
-            pkt.setStatus("[F] Reverted");
+            pkt.setStatus("[F] Rollback");
             break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
         case UPDATE_STATUS::UPDATE_STATUS_NONE:
