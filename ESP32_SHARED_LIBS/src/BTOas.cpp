@@ -157,6 +157,14 @@ String StartwebPacket::getPassword()
 {
     return String((char *)&this->args[50]);
 }
+void StartwebPacket::setAllowInsecure(bool allow)
+{
+    this->args[STARTWEB_INSECURE_FLAG_INDEX] = allow ? 1 : 0;
+}
+bool StartwebPacket::getAllowInsecure()
+{
+    return this->args[STARTWEB_INSECURE_FLAG_INDEX] == 1;
+}
 
 int ProfilePacket::getProfileIndex()
 {

@@ -1079,6 +1079,14 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_textarea_set_password_mode(pass->rightHandObj, true);
     lv_textarea_set_password_show_time(pass->rightHandObj, 10000);
 
+    // Escape hatch for when HTTPS can't be verified (e.g. a device's certificates went stale); cleared after one update.
+    Option *insecureUpdate = new Option(wifi_update_page, OptionType::ON_OFF, "Allow insecure update", {.INT = 0}, [](void *data)
+    {
+        setotaInsecure((bool)data);
+    });
+    insecureUpdate->setBooleanValue(getotaInsecure(), false);
+    allOptions.push_back(insecureUpdate);
+
     this->ui_updateBtn = new Option(wifi_update_page, OptionType::BUTTON, "Start Software Update", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Begin update wifi service?",
@@ -1087,6 +1095,7 @@ void ScrSettings::init(lv_obj_t *parent)
             []() -> void
             {
                 StartwebPacket pkt(getwifiSSID(), getwifiPassword());
+                pkt.setAllowInsecure(getotaInsecure());
                 sendRestPacket(&pkt);
                 log_i("Starting web service");
 #if defined(OTA_SUPPORTED)

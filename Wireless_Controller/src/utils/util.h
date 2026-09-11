@@ -233,6 +233,7 @@ public:
     Preferencable wifiSSID;
     Preferencable wifiPassword;
     Preferencable updateResult;
+    Preferencable otaInsecure;
     Preferencable brightness;
     Preferencable screenRotation;
     Preferencable autoRotate;
@@ -259,6 +260,7 @@ headerDefineSaveFunc(updateMode, bool);
 headerDefineSaveFunc(wifiSSID, String);
 headerDefineSaveFunc(wifiPassword, String);
 headerDefineSaveFunc(updateResult, byte);
+headerDefineSaveFunc(otaInsecure, bool);
 headerDefineSaveFunc(brightness, byte);
 headerDefineSaveFunc(screenRotation, byte);
 headerDefineSaveFunc(autoRotate, bool);

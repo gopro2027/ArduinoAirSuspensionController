@@ -2,7 +2,7 @@
 
 ESP32 [`directdownload.cpp`](./directdownload.cpp) calls one URL:
 
-`http://oasman-ota.gopro2027.workers.dev/?firmware=<name>&tag=<installed-tag>`
+`https://oasman-ota.gopro2027.workers.dev/?firmware=<name>&tag=<installed-tag>` (plain `http://` only for a one-time insecure update the user opts into)
 
 Implementation: [`oasman-ota_worker.js`](./oasman-ota_worker.js)
 

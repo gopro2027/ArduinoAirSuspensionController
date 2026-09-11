@@ -248,11 +248,15 @@ struct ResetAIPacket : BTOasPacket
 {
     ResetAIPacket();
 };
+// SSIDs are at most 32 bytes, so the last byte of the 50-byte SSID field is free; 1 = allow a one-time insecure HTTP update.
+#define STARTWEB_INSECURE_FLAG_INDEX 49
 struct StartwebPacket : BTOasPacket
 {
     StartwebPacket(String ssid, String password);
     String getSSID();
     String getPassword();
+    void setAllowInsecure(bool allow);
+    bool getAllowInsecure();
 };
 struct ConfigValuesPacket : BTOasPacket
 {
