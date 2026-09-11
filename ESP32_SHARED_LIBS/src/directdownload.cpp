@@ -4,8 +4,8 @@
 #include <WiFiClientSecure.h>
 
 // Mozilla root bundle already compiled into both cores' mbedTLS; used to verify the worker's certificate.
-extern const uint8_t caBundleStart[] asm("_binary_x509_crt_bundle_start");
-extern const uint8_t caBundleEnd[] asm("_binary_x509_crt_bundle_end");
+extern "C" const uint8_t _binary_x509_crt_bundle_start[];
+extern "C" const uint8_t _binary_x509_crt_bundle_end[];
 
 // PlatformIO release envs pass -D RELEASE_TAG_NAME=${sysenv.release_tag_name}.
 // When that env var is unset, the macro is defined but empty — treat like missing.
@@ -409,9 +409,9 @@ void downloadUpdate(String SSID, String PASS, bool allowInsecure)
     {
         secureClient = new WiFiClientSecure();
 #if ESP_ARDUINO_VERSION_MAJOR >= 3
-        secureClient->setCACertBundle(caBundleStart, caBundleEnd - caBundleStart);
+        secureClient->setCACertBundle(_binary_x509_crt_bundle_start, _binary_x509_crt_bundle_end - _binary_x509_crt_bundle_start);
 #else
-        secureClient->setCACertBundle(caBundleStart);
+        secureClient->setCACertBundle(_binary_x509_crt_bundle_start);
 #endif
     }
 
