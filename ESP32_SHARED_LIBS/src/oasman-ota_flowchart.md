@@ -107,12 +107,12 @@ sequenceDiagram
 | Step | Who | What |
 |------|-----|------|
 | 1 | ESP32 | `GET oasman-ota?firmware=...&tag=...` |
-| 2 | Worker | Load or fetch `releases` list (30 min cache) |
+| 2 | Worker | Load or fetch `releases` list (30 min cache; authenticated with `GITHUB_TOKEN` if set) |
 | 3 | Worker | If newest GitHub tag changed since last cache, delete old `*_firmware.bin` caches |
 | 4 | Worker | Pick the newest release that actually ships `{firmware}_firmware.bin` |
 | 5 | Worker | If `tag` param equals that release's `tag_name` → **204** (already up to date) |
 | 6 | Worker | Else fetch `{firmware}_firmware.bin` (cache or GitHub), check it against the asset's GitHub `sha256` digest (**502** on mismatch), serve → **200** |
-| 7 | Worker | Set `X-Firmware-MD5` to the MD5 of that exact body |
+| 7 | Worker | Set `X-Firmware-MD5`, computed once when the file is downloaded and stored with the cached copy |
 | 8 | ESP32 | Flash via `Update` API, reject the image if the MD5 does not match, then restart |
 | 9 | ESP32 | New image boots `PENDING_VERIFY`; confirmed after `OTA_VERIFY_CONFIRM_MS` of `loop()`, reverted if it reboots first |
 
@@ -122,8 +122,11 @@ sequenceDiagram
 |-----------------|-----------|--------|
 | Worker's copy from GitHub corrupted | Worker checks it against the asset's GitHub `sha256` | **502**, never cached; device retries and the worker refetches |
 | Transfer truncated | `written != fileSize` | Retry; running firmware untouched |
-| Body corrupted between worker and device | `Update.setMD5` against `X-Firmware-MD5` | Retry, then `FAIL_CORRUPT_DOWNLOAD`; boot partition never switched |
+| Cached copy or body corrupted after the worker verified it | `Update.setMD5` against `X-Firmware-MD5` | Retry, then `FAIL_CORRUPT_DOWNLOAD`; boot partition never switched |
 | Image corrupt past the MD5 (e.g. bad flash write) | Bootloader image verification | Boots the other slot |
 | Image can't boot (crash / boot loop in setup or early tasks) | Bootloader sees `PENDING_VERIFY` on the reboot | Boots the previous slot |
 | Image hangs before it is confirmed | Bootloader, on the next reboot or power cycle | Boots the previous slot |
 | Image boots but misbehaves | Not covered -- releases are tested before publishing | Stays installed |
+
+Every GitHub request that fails to connect or returns a non-2xx status is logged with `console.error` as
+`GitHub <request> rejected: HTTP <status> ...`, so it shows up in the worker's Cloudflare logs.
