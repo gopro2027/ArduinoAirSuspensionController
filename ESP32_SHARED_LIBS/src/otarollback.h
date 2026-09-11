@@ -11,4 +11,10 @@
 // Call every loop().
 void otaVerifyLoop();
 
+// True while the running image is a new OTA that has not been confirmed yet.
+bool otaVerifyIsPending();
+
+// Confirm now, for code that reboots on purpose before loop() has had its 5 seconds.
+void otaVerifyConfirmNow();
+
 #endif
