@@ -1,5 +1,7 @@
 #include "directdownload.h"
 
+#include <esp_ota_ops.h>
+
 // PlatformIO release envs pass -D RELEASE_TAG_NAME=${sysenv.release_tag_name}.
 // When that env var is unset, the macro is defined but empty — treat like missing.
 #define RELEASE_TAG_NAME_EMPTY_HELPER(x) x##1
@@ -296,6 +298,19 @@ int installFirmware(String &url)
     ESP.restart();
 
     return download_firmware_response_success;
+}
+
+void checkUpdateRolledBack()
+{
+    // After a rollback the slot we installed into is marked invalid and we are running from the other one.
+    const esp_partition_t *invalid = esp_ota_get_last_invalid_partition();
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    if (getupdateResult() == UPDATE_STATUS::UPDATE_STATUS_SUCCESS && invalid != NULL && running != NULL &&
+        invalid->address != running->address)
+    {
+        log_i("The last update was rolled back by the bootloader");
+        setupdateResult(UPDATE_STATUS::UPDATE_STATUS_FAIL_ROLLED_BACK);
+    }
 }
 
 void downloadUpdate(String SSID, String PASS)

@@ -90,6 +90,7 @@ void setup()
     dimScreenTime = millis() + getScreenDimTimeMs();
 
 #if defined(OTA_SUPPORTED)
+    checkUpdateRolledBack();
     byte updateResult = getupdateResult();
     if (updateResult != UPDATE_STATUS::UPDATE_STATUS_NONE)
     {
@@ -126,6 +127,10 @@ void setup()
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_WEAK_CONNECTION:
             showDialog("Update failed (weak connection)", lv_color_hex(0xFF0000));
             currentScr->showMsgBox("Update failed", "The download timed out because of a weak or poor connection. Please move closer to your wifi and try again", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_ROLLED_BACK:
+            showDialog("Update reverted", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update reverted", "The new firmware did not start up correctly, so your device went back to the previous version", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
             showDialog("Update not needed", lv_color_hex(0xFFFF00));
