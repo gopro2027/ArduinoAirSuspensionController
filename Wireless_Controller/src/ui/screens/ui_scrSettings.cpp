@@ -1092,7 +1092,7 @@ void ScrSettings::init(lv_obj_t *parent)
 #if defined(OTA_SUPPORTED)
                 runNextFrame([]() -> void
                 {
-                    currentScr->showMsgBox("Updating in progress...",
+                    currentScr->showMsgBox("Updating in progress",
                         "Both the manifold & controller are installing their updates. Both will reboot when completed.",
                         NULL, "OK", []() -> void {}, []() -> void {}, false);
                     runNextFrame([]() -> void
@@ -1104,7 +1104,7 @@ void ScrSettings::init(lv_obj_t *parent)
                     log_i("Attempted to download update");
                 });
 #else
-                currentScr->showMsgBox("Updating in progress...",
+                currentScr->showMsgBox("Updating in progress",
                     "The manifold is installing the latest update. Your controller does not support OTA updates. Please go to http://oasman.dev on your computer to flash the latest update to your controller.",
                     NULL, "OK",
                     []() -> void { ESP.restart(); },
