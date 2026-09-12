@@ -243,8 +243,8 @@ struct ResetAIPacket : BTOasPacket
 {
     ResetAIPacket();
 };
-// SSIDs are at most 32 bytes, so the last byte of the 50-byte SSID field is free; 1 = allow a one-time insecure HTTP update.
-#define STARTWEB_INSECURE_FLAG_INDEX 49
+// args[0..32] SSID (max 32 chars), args[33..97] password (max 64 chars), both NUL-terminated; was a 50/50 split
+#define STARTWEB_INSECURE_FLAG_INDEX 98 // 1 = allow a one-time insecure HTTP update (was 49)
 struct StartwebPacket : BTOasPacket
 {
     StartwebPacket(String ssid, String password);
