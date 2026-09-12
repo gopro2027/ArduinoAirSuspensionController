@@ -89,14 +89,6 @@ AssignRecipientPacket::AssignRecipientPacket(int assignmentNumber)
     this->args32()[0].i = assignmentNumber;
 }
 
-MessagePacket::MessagePacket(short recipient, std::string message)
-{
-    this->cmd = MESSAGE;
-    this->sender = 0;
-    this->recipient = recipient;
-    memcpy(this->args, (uint8_t *)message.data(), message.length());
-}
-
 // Incoming packets
 DetectPressureSensorsPacket::DetectPressureSensorsPacket()
 {
@@ -146,16 +138,16 @@ ResetAIPacket::ResetAIPacket()
 StartwebPacket::StartwebPacket(String ssid, String password)
 {
     this->cmd = STARTWEB;
-    strcpy((char *)&this->args[0], ssid.c_str());
-    strcpy((char *)&this->args[50], password.c_str());
+    strncpy((char *)&this->args[0], ssid.c_str(), 32); // args is pre-zeroed, so each field stays NUL-terminated
+    strncpy((char *)&this->args[33], password.c_str(), 64);
 }
 String StartwebPacket::getSSID()
 {
-    return String((char *)&this->args[0]);
+    return String((char *)&this->args[0], strnlen((char *)&this->args[0], 33));
 }
 String StartwebPacket::getPassword()
 {
-    return String((char *)&this->args[50]);
+    return String((char *)&this->args[33], strnlen((char *)&this->args[33], 65));
 }
 void StartwebPacket::setAllowInsecure(bool allow)
 {
@@ -320,14 +312,12 @@ UpdateStatusRequestPacket::UpdateStatusRequestPacket(String status)
 }
 String UpdateStatusRequestPacket::getStatus()
 {
-    return String((char *)&this->args[0]);
+    return String((char *)this->args, strnlen((char *)this->args, sizeof(this->args))); // peer may send args with no NUL
 }
 void UpdateStatusRequestPacket::setStatus(String status)
 {
-    int len = status.length();
-    if (len > sizeof(this->args))
-        len = sizeof(this->args);
-    strncpy((char *)&this->args[0], status.c_str(), len);
+    strncpy((char *)this->args, status.c_str(), sizeof(this->args) - 1); // zero-pads, clearing any previously received status
+    this->args[sizeof(this->args) - 1] = 0;
 }
 
 RfCommandPacket::RfCommandPacket(RfCommandType commandType, int commandValueOne, int commandValueTwo)

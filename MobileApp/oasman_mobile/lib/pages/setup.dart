@@ -2183,7 +2183,7 @@ class SettingsPageState extends State<SettingsPage> {
                   wifiPassController,
                   obscureText: true,
                   onChanged: (_) => setState(() {}),
-                  limitChar: 49,
+                  limitChar: 64,
                   tooltipTitle: 'Wi-Fi password',
                   tooltip: 'Saved on this phone when you save settings.',
                   saveWhenKeyboardDone: true,

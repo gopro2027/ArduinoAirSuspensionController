@@ -431,8 +431,11 @@ AuthPacket packet(passkey, AUTHRESULT_WAITING);
 
 **Structure**:
 
-- `args[0-49]`: `char[]` - WiFi SSID (null-terminated, max 50 chars)
-- `args[50-99]`: `char[]` - WiFi Password (null-terminated, max 50 chars)
+- `args[0-32]`: `char[]` - WiFi SSID (null-terminated, max 32 bytes)
+- `args[33-97]`: `char[]` - WiFi Password (null-terminated, max 64 bytes; longer input is truncated)
+- `args[98]`: `uint8_t` - `1` = allow a one-time insecure HTTP update (`STARTWEB_INSECURE_FLAG_INDEX`)
+
+Breaking change from the old 50/50 split (`args[0-49]` / `args[50-99]`): manifold, controller and app must run matching firmware for STARTWEB.
 
 **Example**:
 
@@ -1030,7 +1033,7 @@ enum BTOasIdentifier {
     CALIBRATE = 13,
     STARTWEB = 14,
     ASSIGNRECEPIENT = 15,
-    MESSAGE = 16,
+    // 16 retired (formerly MessagePacket); do not reuse
     SAVECURRENTPRESSURESTOPROFILE = 17,
     PRESETREPORT = 18,
     GETCONFIGVALUES = 21,

@@ -35,7 +35,7 @@ class BTOasIdentifier {
   static const int CALIBRATE = 13;
   static const int STARTWEB = 14;
   static const int ASSIGNRECEPIENT = 15;
-  static const int MESSAGE = 16;
+  // 16 retired (formerly MESSAGE); do not reuse
   static const int SAVECURRENTPRESSURESTOPROFILE = 17;
   static const int PRESETREPORT = 18;
   static const int GETCONFIGVALUES = 21;
@@ -861,19 +861,19 @@ class BLEManager extends ChangeNotifier {
     sendRfCommand(rfCommandChipCmd, rfCmdLearnMomentary, 0);
   }
 
-  /// OTA / Wi-Fi download (StartwebPacket): SSID in args[0..49], password in args[50..99].
+  /// OTA / Wi-Fi download (StartwebPacket): SSID in args[0..32] (max 32 bytes), password in args[33..97] (max 64 bytes).
   void sendStartWebUpdate(String ssid, String password, {bool allowInsecure = false}) {
     final args = List<int>.filled(100, 0);
     final s = utf8.encode(ssid);
     final p = utf8.encode(password);
-    for (var i = 0; i < s.length && i < 49; i++) {
+    for (var i = 0; i < s.length && i < 32; i++) {
       args[i] = s[i];
     }
-    for (var i = 0; i < p.length && i < 49; i++) {
-      args[50 + i] = p[i];
+    for (var i = 0; i < p.length && i < 64; i++) {
+      args[33 + i] = p[i];
     }
-    // SSIDs are at most 32 bytes, so args[49] is free: 1 = allow a one-time insecure HTTP update.
-    args[49] = allowInsecure ? 1 : 0;
+    // args[98] (STARTWEB_INSECURE_FLAG_INDEX): 1 = allow a one-time insecure HTTP update.
+    args[98] = allowInsecure ? 1 : 0;
     sendRestCommand(
         [..._encodeInt32(BTOasIdentifier.STARTWEB), ...args]);
   }
