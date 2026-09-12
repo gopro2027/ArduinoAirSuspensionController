@@ -21,7 +21,7 @@ enum BTOasIdentifier
     CALIBRATE = 13,
     STARTWEB = 14,
     ASSIGNRECEPIENT = 15,
-    MESSAGE = 16,
+    // 16 retired (formerly MessagePacket); do not reuse
     SAVECURRENTPRESSURESTOPROFILE = 17,
     PRESETREPORT = 18,
     GETCONFIGVALUES = 21,
@@ -189,11 +189,6 @@ struct AssignRecipientPacket : BTOasPacket
 struct IdlePacket : BTOasPacket
 {
     IdlePacket();
-};
-
-struct MessagePacket : BTOasPacket
-{
-    MessagePacket(short recipient, std::string message);
 };
 
 // Incoming packets

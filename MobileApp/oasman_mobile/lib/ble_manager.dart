@@ -35,7 +35,7 @@ class BTOasIdentifier {
   static const int CALIBRATE = 13;
   static const int STARTWEB = 14;
   static const int ASSIGNRECEPIENT = 15;
-  static const int MESSAGE = 16;
+  // 16 retired (formerly MESSAGE); do not reuse
   static const int SAVECURRENTPRESSURESTOPROFILE = 17;
   static const int PRESETREPORT = 18;
   static const int GETCONFIGVALUES = 21;

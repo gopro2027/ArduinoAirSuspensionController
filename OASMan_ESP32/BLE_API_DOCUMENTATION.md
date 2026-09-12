@@ -1030,7 +1030,7 @@ enum BTOasIdentifier {
     CALIBRATE = 13,
     STARTWEB = 14,
     ASSIGNRECEPIENT = 15,
-    MESSAGE = 16,
+    // 16 retired (formerly MessagePacket); do not reuse
     SAVECURRENTPRESSURESTOPROFILE = 17,
     PRESETREPORT = 18,
     GETCONFIGVALUES = 21,

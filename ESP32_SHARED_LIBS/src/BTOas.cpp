@@ -89,14 +89,6 @@ AssignRecipientPacket::AssignRecipientPacket(int assignmentNumber)
     this->args32()[0].i = assignmentNumber;
 }
 
-MessagePacket::MessagePacket(short recipient, std::string message)
-{
-    this->cmd = MESSAGE;
-    this->sender = 0;
-    this->recipient = recipient;
-    strncpy((char *)this->args, message.c_str(), sizeof(this->args) - 1); // args zeroed by BTOasPacket(), so this stays NUL-terminated
-}
-
 // Incoming packets
 DetectPressureSensorsPacket::DetectPressureSensorsPacket()
 {
