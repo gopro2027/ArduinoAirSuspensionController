@@ -431,8 +431,8 @@ AuthPacket packet(passkey, AUTHRESULT_WAITING);
 
 **Structure**:
 
-- `args[0-32]`: `char[]` - WiFi SSID (null-terminated, max 32 bytes)
-- `args[33-97]`: `char[]` - WiFi Password (null-terminated, max 64 bytes; longer input is truncated)
+- `args[0-32]`: `char[]` - WiFi SSID (null-terminated, max `WIFI_SSID_MAX_LEN` = 32 bytes)
+- `args[33-97]`: `char[]` - WiFi Password at `STARTWEB_PASSWORD_INDEX` (null-terminated, max `WIFI_PASSWORD_MAX_LEN` = 64 bytes; longer input is truncated)
 - `args[98]`: `uint8_t` - `1` = allow a one-time insecure HTTP update (`STARTWEB_INSECURE_FLAG_INDEX`)
 
 Breaking change from the old 50/50 split (`args[0-49]` / `args[50-99]`): manifold, controller and app must run matching firmware for STARTWEB.

@@ -243,8 +243,11 @@ struct ResetAIPacket : BTOasPacket
 {
     ResetAIPacket();
 };
-// args[0..32] SSID (max 32 chars), args[33..97] password (max 64 chars), both NUL-terminated; was a 50/50 split
-#define STARTWEB_INSECURE_FLAG_INDEX 98 // 1 = allow a one-time insecure HTTP update (was 49)
+#define WIFI_SSID_MAX_LEN 32     // 802.11 SSID limit
+#define WIFI_PASSWORD_MAX_LEN 64 // WPA passphrase is 8-63 chars; 64 = raw hex PSK
+// StartwebPacket args: SSID + NUL, password + NUL, then the insecure flag; was a 50/50 split
+#define STARTWEB_PASSWORD_INDEX (WIFI_SSID_MAX_LEN + 1)                                    // 33
+#define STARTWEB_INSECURE_FLAG_INDEX (STARTWEB_PASSWORD_INDEX + WIFI_PASSWORD_MAX_LEN + 1) // 98; 1 = allow a one-time insecure HTTP update (was 49)
 struct StartwebPacket : BTOasPacket
 {
     StartwebPacket(String ssid, String password);

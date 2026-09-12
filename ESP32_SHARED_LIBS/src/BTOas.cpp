@@ -138,16 +138,16 @@ ResetAIPacket::ResetAIPacket()
 StartwebPacket::StartwebPacket(String ssid, String password)
 {
     this->cmd = STARTWEB;
-    strncpy((char *)&this->args[0], ssid.c_str(), 32); // args is pre-zeroed, so each field stays NUL-terminated
-    strncpy((char *)&this->args[33], password.c_str(), 64);
+    strncpy((char *)&this->args[0], ssid.c_str(), WIFI_SSID_MAX_LEN); // args is pre-zeroed, so each field stays NUL-terminated
+    strncpy((char *)&this->args[STARTWEB_PASSWORD_INDEX], password.c_str(), WIFI_PASSWORD_MAX_LEN);
 }
 String StartwebPacket::getSSID()
 {
-    return String((char *)&this->args[0], strnlen((char *)&this->args[0], 33));
+    return String((char *)&this->args[0], strnlen((char *)&this->args[0], WIFI_SSID_MAX_LEN + 1));
 }
 String StartwebPacket::getPassword()
 {
-    return String((char *)&this->args[33], strnlen((char *)&this->args[33], 65));
+    return String((char *)&this->args[STARTWEB_PASSWORD_INDEX], strnlen((char *)&this->args[STARTWEB_PASSWORD_INDEX], WIFI_PASSWORD_MAX_LEN + 1));
 }
 void StartwebPacket::setAllowInsecure(bool allow)
 {

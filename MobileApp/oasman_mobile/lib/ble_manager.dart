@@ -19,6 +19,18 @@ const int btoasPacketSize = 104;
 /// Args payload size inside a [BTOasPacket].
 const int btoasArgsSize = 100;
 
+/// Max Wi-Fi SSID bytes (802.11 limit). Mirrors WIFI_SSID_MAX_LEN in BTOas.h.
+const int wifiSsidMaxLen = 32;
+
+/// Max Wi-Fi password bytes (WPA passphrase or hex PSK). Mirrors WIFI_PASSWORD_MAX_LEN in BTOas.h.
+const int wifiPasswordMaxLen = 64;
+
+/// StartwebPacket password offset in args. Mirrors STARTWEB_PASSWORD_INDEX in BTOas.h.
+const int startWebPasswordIndex = wifiSsidMaxLen + 1;
+
+/// StartwebPacket insecure-update flag offset in args. Mirrors STARTWEB_INSECURE_FLAG_INDEX in BTOas.h.
+const int startWebInsecureFlagIndex = startWebPasswordIndex + wifiPasswordMaxLen + 1;
+
 class BTOasIdentifier {
   static const int IDLE = 0;
   static const int STATUSREPORT = 1;
@@ -861,19 +873,19 @@ class BLEManager extends ChangeNotifier {
     sendRfCommand(rfCommandChipCmd, rfCmdLearnMomentary, 0);
   }
 
-  /// OTA / Wi-Fi download (StartwebPacket): SSID in args[0..32] (max 32 bytes), password in args[33..97] (max 64 bytes).
+  /// OTA / Wi-Fi download (StartwebPacket): SSID, password at [startWebPasswordIndex], insecure flag at [startWebInsecureFlagIndex].
   void sendStartWebUpdate(String ssid, String password, {bool allowInsecure = false}) {
     final args = List<int>.filled(100, 0);
     final s = utf8.encode(ssid);
     final p = utf8.encode(password);
-    for (var i = 0; i < s.length && i < 32; i++) {
+    for (var i = 0; i < s.length && i < wifiSsidMaxLen; i++) {
       args[i] = s[i];
     }
-    for (var i = 0; i < p.length && i < 64; i++) {
-      args[33 + i] = p[i];
+    for (var i = 0; i < p.length && i < wifiPasswordMaxLen; i++) {
+      args[startWebPasswordIndex + i] = p[i];
     }
-    // args[98] (STARTWEB_INSECURE_FLAG_INDEX): 1 = allow a one-time insecure HTTP update.
-    args[98] = allowInsecure ? 1 : 0;
+    // 1 = allow a one-time insecure HTTP update.
+    args[startWebInsecureFlagIndex] = allowInsecure ? 1 : 0;
     sendRestCommand(
         [..._encodeInt32(BTOasIdentifier.STARTWEB), ...args]);
   }

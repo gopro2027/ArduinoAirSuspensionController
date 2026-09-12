@@ -994,7 +994,7 @@ void ScrSettings::init(lv_obj_t *parent)
     // --- Wifi / Update page ---
     lv_obj_t *wifi_update_page = this->addSettingsPage(pages_container, true);
 
-    char buf[65]; // WPA passphrase/PSK max 64 chars + NUL (was 50)
+    char buf[WIFI_PASSWORD_MAX_LEN + 1]; // (was 50)
 
     // SSID selection is a dropdown that scans for nearby networks when opened.
     // The first option is always the currently saved SSID (so the closed value stays put when
