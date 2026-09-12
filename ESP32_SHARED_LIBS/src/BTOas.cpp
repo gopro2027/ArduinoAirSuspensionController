@@ -94,7 +94,7 @@ MessagePacket::MessagePacket(short recipient, std::string message)
     this->cmd = MESSAGE;
     this->sender = 0;
     this->recipient = recipient;
-    memcpy(this->args, (uint8_t *)message.data(), message.length());
+    strncpy((char *)this->args, message.c_str(), sizeof(this->args) - 1); // args zeroed by BTOasPacket(), so this stays NUL-terminated
 }
 
 // Incoming packets
@@ -320,14 +320,12 @@ UpdateStatusRequestPacket::UpdateStatusRequestPacket(String status)
 }
 String UpdateStatusRequestPacket::getStatus()
 {
-    return String((char *)&this->args[0]);
+    return String((char *)this->args, strnlen((char *)this->args, sizeof(this->args))); // peer may send args with no NUL
 }
 void UpdateStatusRequestPacket::setStatus(String status)
 {
-    int len = status.length();
-    if (len > sizeof(this->args))
-        len = sizeof(this->args);
-    strncpy((char *)&this->args[0], status.c_str(), len);
+    strncpy((char *)this->args, status.c_str(), sizeof(this->args) - 1); // zero-pads, clearing any previously received status
+    this->args[sizeof(this->args) - 1] = 0;
 }
 
 RfCommandPacket::RfCommandPacket(RfCommandType commandType, int commandValueOne, int commandValueTwo)
