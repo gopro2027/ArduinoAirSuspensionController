@@ -205,6 +205,17 @@ void bootButtonFunctionality() {
     return;
 #else
     auto const now = millis();
+    static bool lastBootButtonState = digitalRead(BootButtonPin);
+    if (isDriveLockActive()) {
+        bootButtonLoadPresetStarted = false;
+        if (digitalRead(BootButtonPin) != lastBootButtonState) {
+            rejectIfDriveLocked(); // show dialog
+            wakeScreenFromDim();
+        }
+        lastBootButtonState = digitalRead(BootButtonPin);
+        return;
+    }
+    
     if (digitalRead(BootButtonPin) == LOW && BootButtonState == 0) {
         wakeScreenFromDim();
         BootButtonState = 1;
@@ -213,7 +224,7 @@ void bootButtonFunctionality() {
         // if so, start air up
         if (bootBtnHoldTime < bootButtonCutoffTime && !bootButtonLoadPresetStarted) {
             // if the current press is within 750ms of the last press, start the air up procesure
-            if (now - bootBtnLastPressed < beginAirUpAfterQuickPressActivationPeriod && !rejectIfDriveLocked()) {
+            if (now - bootBtnLastPressed < beginAirUpAfterQuickPressActivationPeriod) {
                 bootButtonControllingAirUp = true;
                 showDialog("Airing up while held", lv_color_hex(0x00FF00));
                 // air up
@@ -272,8 +283,6 @@ void bootButtonFunctionality() {
         // check if button is released for longer than 1000ms (stopped changing preset numbers)
         if (now - bootBtnLastReleased > beginPresetLoadingAfterNoInputPeriod) {
             bootButtonLoadPresetStarted = false;
-            if (rejectIfDriveLocked())
-                return;
             if (bootButtonPresetCount >= 1 && bootButtonPresetCount <= getPresetCount()) {
                 // send the preset first to the manifold
                 AirupQuickPacket pkt(bootButtonPresetCount - 1);
@@ -297,6 +306,7 @@ void bootButtonFunctionality() {
             }
         }
     }
+    lastBootButtonState = digitalRead(BootButtonPin);
 #endif // USE_BOOT_BUTTON_FUNCTIONALITY
 }
 

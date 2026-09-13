@@ -256,14 +256,18 @@ void closeValves()
 bool isDriveLockActive()
 {
     if (getdisableControlDriving())
+    {
         return (statusBittset & (1 << StatusPacketBittset::EBRAKE_STATUS_ON)) == 0;
+    }
     return false;
 }
 bool rejectIfDriveLocked()
 {
-    if (isDriveLockActive())
+    if (isDriveLockActive()) 
+    {
         showDialog("Disabled, driving", lv_color_hex(0xFF0000));
         return true;
+    }
     return false;
 }
 #pragma endregion
