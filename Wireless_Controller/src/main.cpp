@@ -208,6 +208,9 @@ void bootButtonFunctionality() {
     static bool lastBootButtonState = digitalRead(BootButtonPin);
     if (isDriveLockActive()) {
         bootButtonLoadPresetStarted = false;
+        bootButtonControllingAirUp = false;
+        BootButtonState = 0;
+        bootBtnLastReleased = now;
         if (digitalRead(BootButtonPin) != lastBootButtonState) {
             rejectIfDriveLocked(); // show dialog
             wakeScreenFromDim();
