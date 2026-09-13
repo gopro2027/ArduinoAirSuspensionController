@@ -89,6 +89,8 @@ static void calculatePillDimensions() {
 static void pill_button_pressed_cb(lv_event_t *e) {
     lv_event_code_t event_code = lv_event_get_code(e);
     if (event_code == LV_EVENT_PRESSED) {
+        if (rejectIfDriveLocked())
+            return;
         int valveBit = (int)lv_event_get_user_data(e);
         setValveBit(valveBit);
     }

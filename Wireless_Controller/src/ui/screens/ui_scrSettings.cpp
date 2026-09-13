@@ -774,6 +774,23 @@ void ScrSettings::init(lv_obj_t *parent)
         runNextFrame([]() { reinitializeScreens(); });
     }, (void *)presetCountOpts));
 
+    allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Safety", {.STRING = ""}));
+    this->ui_driveLock = new Option(screen_settings_page, OptionType::ON_OFF, "Disable control when ebrake off", {.INT = getdisableControlDriving() ? 1 : 0}, [](void *data)
+    {
+        if (!(bool)data)
+        {
+            setdisableControlDriving(false);
+            return;
+        }
+        // v2/v3 manifolds never set the ebrake bit, so this would lock out all control there
+        currentScr->showMsgBox("Requires e-brake wire",
+            "Presets, manual air up/down and the physical button will be disabled whenever the manifold reports the e-brake off. Requires a manifold with the e-brake wire connected. If control stops responding, turn this back off here.",
+            "Enable", "Cancel",
+            []() -> void { setdisableControlDriving(true); },
+            []() -> void { scrSettings.ui_driveLock->setBooleanValue(false, false); },
+            true);
+    });
+
 #if HAS_BATTERY_SENSE_READING
     allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Status Bar", {.STRING = ""}));
     allOptions.push_back(new Option(screen_settings_page, OptionType::ON_OFF, "Show Battery", {.INT = getshowBattery() ? 1 : 0}, [](void *data)
@@ -1374,6 +1391,7 @@ void ScrSettings::cleanup()
     delete ui_mac;
     delete ui_volts;
     delete ui_brightnessSlider;
+    delete ui_driveLock;
 #if SUPPORTS_ROTATION == 1
     delete ui_screenRotation;
 #endif

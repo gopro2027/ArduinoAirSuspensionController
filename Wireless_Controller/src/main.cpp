@@ -213,7 +213,7 @@ void bootButtonFunctionality() {
         // if so, start air up
         if (bootBtnHoldTime < bootButtonCutoffTime && !bootButtonLoadPresetStarted) {
             // if the current press is within 750ms of the last press, start the air up procesure
-            if (now - bootBtnLastPressed < beginAirUpAfterQuickPressActivationPeriod) {
+            if (now - bootBtnLastPressed < beginAirUpAfterQuickPressActivationPeriod && !rejectIfDriveLocked()) {
                 bootButtonControllingAirUp = true;
                 showDialog("Airing up while held", lv_color_hex(0x00FF00));
                 // air up
@@ -272,6 +272,8 @@ void bootButtonFunctionality() {
         // check if button is released for longer than 1000ms (stopped changing preset numbers)
         if (now - bootBtnLastReleased > beginPresetLoadingAfterNoInputPeriod) {
             bootButtonLoadPresetStarted = false;
+            if (rejectIfDriveLocked())
+                return;
             if (bootButtonPresetCount >= 1 && bootButtonPresetCount <= getPresetCount()) {
                 // send the preset first to the manifold
                 AirupQuickPacket pkt(bootButtonPresetCount - 1);
