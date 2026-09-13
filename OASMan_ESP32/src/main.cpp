@@ -31,8 +31,10 @@ void setup()
     if (getupdateMode())
     {
         setupdateMode(false);
+        const bool allowInsecure = getotaInsecure();
+        setotaInsecure(false); // applies to one update only
         Serial.println("Gonna try to download update");
-        downloadUpdate(getwifiSSID(), getwifiPassword());
+        downloadUpdate(getwifiSSID(), getwifiPassword(), allowInsecure);
         return;
     }
 

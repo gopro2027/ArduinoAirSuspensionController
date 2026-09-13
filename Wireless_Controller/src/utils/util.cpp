@@ -282,6 +282,7 @@ void beginSaveData()
     _SaveData.wifiSSID.loadString("wifiSSID", "");
     _SaveData.wifiPassword.loadString("wifiPassword", "");
     _SaveData.updateResult.load("updateResult", 0);
+    _SaveData.otaInsecure.load("otaInsecure", false);
     _SaveData.brightness.load("brightness", 80);
     _SaveData.screenRotation.load("screenRotation", 0);
     _SaveData.autoRotate.load("autoRotate", true);
@@ -309,6 +310,7 @@ createSaveFuncInt(updateMode, bool);
 createSaveFuncString(wifiSSID);
 createSaveFuncString(wifiPassword);
 createSaveFuncInt(updateResult, byte);
+createSaveFuncInt(otaInsecure, bool);
 createSaveFuncInt(brightness, byte);
 createSaveFuncInt(screenRotation, byte);
 createSaveFuncInt(autoRotate, bool);

@@ -110,6 +110,7 @@ class SettingsPageState extends State<SettingsPage> {
   late TextEditingController compressorCrankOffsetController;
   late TextEditingController wifiSsidController;
   late TextEditingController wifiPassController;
+  bool _allowInsecureUpdate = false;
   late TextEditingController auxPulseDurationController;
   late TextEditingController auxIntervalCyclesController;
 
@@ -2148,7 +2149,7 @@ class SettingsPageState extends State<SettingsPage> {
               'Enter manually',
               wifiSsidController,
               onChanged: (_) => setState(() {}),
-              limitChar: 49,
+              limitChar: wifiSsidMaxLen,
               saveWhenKeyboardDone: true,
             ),
           ],
@@ -2182,11 +2183,13 @@ class SettingsPageState extends State<SettingsPage> {
                   wifiPassController,
                   obscureText: true,
                   onChanged: (_) => setState(() {}),
-                  limitChar: 49,
+                  limitChar: wifiPasswordMaxLen,
                   tooltipTitle: 'Wi-Fi password',
                   tooltip: 'Saved on this phone when you save settings.',
                   saveWhenKeyboardDone: true,
                 ),
+                _buildSwitch('Allow insecure update', _allowInsecureUpdate,
+                    (v) => setState(() => _allowInsecureUpdate = v)),
                 const SizedBox(height: 8),
                 ElevatedButton(
                   onPressed: !canUpdate
@@ -2200,7 +2203,11 @@ class SettingsPageState extends State<SettingsPage> {
                               bm.sendStartWebUpdate(
                                 wifiSsidController.text.trim(),
                                 wifiPassController.text.trim(),
+                                allowInsecure: _allowInsecureUpdate,
                               );
+                              if (mounted) {
+                                setState(() => _allowInsecureUpdate = false);
+                              }
                               _persistPhoneSettings();
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(

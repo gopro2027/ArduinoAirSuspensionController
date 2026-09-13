@@ -691,8 +691,6 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         break;
     case BTOasIdentifier::ASSIGNRECEPIENT: // ignore from server
         break;
-    case BTOasIdentifier::MESSAGE: // ignore from server
-        break;
     case BTOasIdentifier::SAVECURRENTPRESSURESTOPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
         Serial.println("Calling Save Current Pressures To Profile!");
         savePressuresToProfile(((SaveCurrentPressuresToProfilePacket *)packet)->getProfileIndex(), getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue());
@@ -730,6 +728,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         Serial.println(F("Starting OTA..."));
         setwifiSSID(((StartwebPacket *)packet)->getSSID());
         setwifiPassword(((StartwebPacket *)packet)->getPassword());
+        setotaInsecure(((StartwebPacket *)packet)->getAllowInsecure());
         setupdateMode(true);
         setinternalReboot(true);
         break;
@@ -878,6 +877,9 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ROLLED_BACK:
             pkt.setStatus("[F] Rollback");
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_SECURE_CONNECTION:
+            pkt.setStatus("[F] Cert");
             break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
         case UPDATE_STATUS::UPDATE_STATUS_NONE:
