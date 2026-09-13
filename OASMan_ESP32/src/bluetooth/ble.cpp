@@ -691,8 +691,6 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         break;
     case BTOasIdentifier::ASSIGNRECEPIENT: // ignore from server
         break;
-    case BTOasIdentifier::MESSAGE: // ignore from server
-        break;
     case BTOasIdentifier::SAVECURRENTPRESSURESTOPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
         Serial.println("Calling Save Current Pressures To Profile!");
         savePressuresToProfile(((SaveCurrentPressuresToProfilePacket *)packet)->getProfileIndex(), getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue());
