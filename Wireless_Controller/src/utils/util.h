@@ -181,6 +181,9 @@ void setValveBit(int bit);
 void unsetValveBit(int bit);
 void closeValves();
 
+bool isDriveLockActive();
+bool rejectIfDriveLocked(); // shows "Disabled, driving" and returns true when locked
+
 #ifdef HAS_ROTARY_ENCODER
 #include "bidi_switch_knob.h"
 extern knob_handle_t g_knob_handle;
@@ -219,6 +222,8 @@ public:
     Preferencable showBattery;
     // Presets
     Preferencable presetButtonCount;
+    // Safety
+    Preferencable disableControlDriving;
 };
 
 extern SaveData _SaveData;
@@ -239,6 +244,7 @@ headerDefineSaveFunc(themeColorMedium, uint32_t);
 headerDefineSaveFunc(swipeNavigation, bool);
 headerDefineSaveFunc(showBattery, bool);
 headerDefineSaveFunc(presetButtonCount, byte);
+headerDefineSaveFunc(disableControlDriving, bool);
 /** Saved preset count clamped to [1, MAX_PROFILE_COUNT]; always use this to bound preset UI/indices. */
 int getPresetCount();
 

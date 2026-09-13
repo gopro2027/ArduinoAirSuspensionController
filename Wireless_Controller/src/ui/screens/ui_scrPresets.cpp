@@ -452,6 +452,8 @@ void ScrPresets::showPresetDialog()
 
 void loadSelectedPreset()
 {
+    if (rejectIfDriveLocked())
+        return;
     Serial.println("load preset");
     AirupQuickPacket pkt(currentPreset - 1);
     sendRestPacket(&pkt);

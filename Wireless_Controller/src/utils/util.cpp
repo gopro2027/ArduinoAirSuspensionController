@@ -252,6 +252,22 @@ void closeValves()
 }
 #pragma endregion
 
+#pragma region driveLock
+bool isDriveLockActive()
+{
+    if (!getdisableControlDriving())
+        return false;
+    return (statusBittset & (1 << StatusPacketBittset::EBRAKE_STATUS_ON)) == 0;
+}
+bool rejectIfDriveLocked()
+{
+    if (!isDriveLockActive())
+        return false;
+    showDialog("Disabled, driving", lv_color_hex(0xFF0000));
+    return true;
+}
+#pragma endregion
+
 void setupPressureLabel(lv_obj_t *parent, lv_obj_t **label, int x, int y, lv_align_t align, const char *defaultText)
 {
     *label = lv_label_create(parent);
@@ -291,6 +307,7 @@ void beginSaveData()
     _SaveData.swipeNavigation.load("swipeNav", false);
     _SaveData.showBattery.load("showBattery", true);
     _SaveData.presetButtonCount.load("presetBtnCount", MAX_PROFILE_COUNT);
+    _SaveData.disableControlDriving.load("dsblCtrlDrive", false);
 }
 
 createSaveFuncInt(unitsMode, int);
@@ -315,6 +332,7 @@ createSaveFuncInt(themeColorMedium, uint32_t);
 createSaveFuncInt(swipeNavigation, bool);
 createSaveFuncInt(showBattery, bool);
 createSaveFuncInt(presetButtonCount, byte);
+createSaveFuncInt(disableControlDriving, bool);
 
 // NVS can hand back a value written by other firmware or a corrupt key, so clamp here rather
 // than at every call site — callers index profilePressures[] with the result.
