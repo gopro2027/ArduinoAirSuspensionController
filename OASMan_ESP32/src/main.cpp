@@ -11,6 +11,7 @@
 #include "airSuspensionUtil.h"
 #include "tasks/tasks.h"
 #include <directdownload.h>
+#include <otarollback.h>
 
 #include <SPIFFS.h>
 
@@ -30,10 +31,14 @@ void setup()
     if (getupdateMode())
     {
         setupdateMode(false);
+        const bool allowInsecure = getotaInsecure();
+        setotaInsecure(false); // applies to one update only
         Serial.println("Gonna try to download update");
-        downloadUpdate(getwifiSSID(), getwifiPassword());
+        downloadUpdate(getwifiSSID(), getwifiPassword(), allowInsecure);
         return;
     }
+
+    checkUpdateRolledBack();
 
 #ifdef FORCE_UPDATE_TEST
     for (int i = 0; i < 10; i++)
@@ -112,6 +117,8 @@ void setup()
 
 void loop()
 {
+    otaVerifyLoop();
+
     accessoryWireLoop();
     ebrakeWireLoop();
     if (getinternalReboot() == true)

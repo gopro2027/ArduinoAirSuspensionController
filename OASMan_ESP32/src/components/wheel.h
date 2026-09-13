@@ -90,4 +90,5 @@ float readPinPressure(InputType *pin, bool heightMode);
 void setupWheelLockSem();
 
 extern Manifold *getManifold(); // defined in airSuspensionUtil.h
+extern bool isVehicleOn();      // defined in airSuspensionUtil.h
 #endif

@@ -600,6 +600,13 @@ void Wheel::goalRoutine() {
 }
 
 void Wheel::maintainPressure() {
+    #if BOARD_ALWAYS_ON_ACC_UNUSED_USE_BT_CONN_AS_VEHICLE_ON 
+    if (!isVehicleOn())
+    {
+        return;
+    }
+    #endif
+
     // Maintain Pressure code
     if (getmaintainPressure())
     {

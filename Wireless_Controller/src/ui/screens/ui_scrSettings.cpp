@@ -1,5 +1,8 @@
 #include "device_lib_exports.h"
 #include "ui_scrSettings.h"
+#include "utils/imu.h"
+#include "utils/auto_rotate.h"
+#include "utils/wake_on_movement.h"
 #include <stdint.h>
 
 #ifndef SCREEN_MODE_CIRCLE
@@ -48,6 +51,11 @@ static void alignWifiSsidList(lv_obj_t *dropdown)
     if (!list)
         return;
 
+    // Measure at natural width; the marquee's fixed width below would otherwise pin the list.
+    lv_obj_t *listLabel = lv_obj_get_child(list, 0);
+    if (listLabel)
+        lv_obj_set_width(listLabel, LV_SIZE_CONTENT);
+
     lv_obj_update_layout(list);
 
     const int margin = scaledX(10);
@@ -60,6 +68,14 @@ static void alignWifiSsidList(lv_obj_t *dropdown)
         w = ddW;
     lv_obj_set_width(list, w);
 
+    // One label holds every option; a fixed width lets scroll mode marquee it without wrapping (wrapping breaks row hit-testing).
+    if (listLabel)
+    {
+        lv_obj_update_layout(list);
+        lv_label_set_long_mode(listLabel, LV_LABEL_LONG_MODE_SCROLL);
+        lv_obj_set_width(listLabel, lv_obj_get_content_width(list));
+    }
+
     // Preserve whether LVGL decided to drop the list up or down (compare absolute coords,
     // since the list is parented to the screen but the dropdown is not).
     lv_area_t listCoords, ddCoords;
@@ -67,6 +83,24 @@ static void alignWifiSsidList(lv_obj_t *dropdown)
     lv_obj_get_coords(dropdown, &ddCoords);
     const bool openedUp = listCoords.y1 < ddCoords.y1;
     lv_obj_align_to(list, dropdown, openedUp ? LV_ALIGN_OUT_TOP_RIGHT : LV_ALIGN_OUT_BOTTOM_RIGHT, 0, 0);
+}
+
+// A closed dropdown draws its own text and has no label to scroll, so overlay one. Call after any selection change.
+static void setWifiSsidValueLabel(lv_obj_t *dropdown)
+{
+    lv_obj_t *lbl = lv_obj_get_child(dropdown, 0);
+    if (lbl == NULL)
+    {
+        lv_dropdown_set_text_static(dropdown, ""); // stop the widget drawing the value itself
+        lbl = lv_label_create(dropdown);
+        lv_label_set_long_mode(lbl, LV_LABEL_LONG_MODE_SCROLL);
+        lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 0, 0);
+        lv_obj_set_width(lbl, LV_PCT(85)); // the rest of the row is the dropdown's own arrow
+    }
+
+    char buf[64];
+    lv_dropdown_get_selected_str(dropdown, buf, sizeof(buf));
+    lv_label_set_text(lbl, buf);
 }
 
 // Current page tracking
@@ -686,6 +720,21 @@ void ScrSettings::init(lv_obj_t *parent)
         setscreenDimTimeM((uint32_t)data);
     }));
 
+    #if WAKE_ON_MOVEMENT_SUPPORTED == 1
+    // Sits with the dim timeout it modifies, and deliberately outside the SUPPORTS_ROTATION
+    // block below - this needs an IMU, not a rotatable panel. Same two-level gate as Auto
+    // Rotate: the define says the board can have an IMU, imuAvailable() says this unit does.
+    if (imuAvailable())
+    {
+        allOptions.push_back(new Option(screen_settings_page, OptionType::ON_OFF, "Wake on Movement",
+            {.INT = getwakeOnMovement() ? 1 : 0}, [](void *data)
+        {
+            setwakeOnMovement((bool)data);
+        }));
+    }
+    #endif
+
+#if HAS_BRIGHTNESS_ADJUSTMENT
     this->ui_brightnessSlider = new Option(screen_settings_page, OptionType::SLIDER, "Brightness", {.INT = getbrightness()}, [](void *data)
     {
         log_i("Brightness %i", ((uint32_t)data));
@@ -693,6 +742,10 @@ void ScrSettings::init(lv_obj_t *parent)
         set_brightness(getBrightnessFloat());
     });
     ((Option *)this->ui_brightnessSlider)->setSliderParams(1, 100, false, LV_EVENT_VALUE_CHANGED);
+#else
+    // On/off backlight only -- a slider here would do nothing. See HAS_BRIGHTNESS_ADJUSTMENT.
+    this->ui_brightnessSlider = nullptr;
+#endif
 
     allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Presets", {.STRING = ""}));
 
@@ -738,6 +791,7 @@ void ScrSettings::init(lv_obj_t *parent)
             true);
     });
 
+#if HAS_BATTERY_SENSE_READING
     allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Status Bar", {.STRING = ""}));
     allOptions.push_back(new Option(screen_settings_page, OptionType::ON_OFF, "Show Battery", {.INT = getshowBattery() ? 1 : 0}, [](void *data)
     {
@@ -749,6 +803,7 @@ void ScrSettings::init(lv_obj_t *parent)
         globalStatusbar.setBatteryVisible(enabled);
 #endif
     }));
+#endif
 
 #ifndef SCREEN_MODE_CIRCLE
     allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Navigation", {.STRING = ""}));
@@ -766,20 +821,56 @@ void ScrSettings::init(lv_obj_t *parent)
     allOptions.push_back(new Option(screen_settings_page, OptionType::HEADER, "Screen Orientation", {.STRING = ""}));
 
     
-    this->ui_screenRotation = new Option(screen_settings_page, OptionType::BUTTON,
-        getscreenRotation() == 0 ? "Switch to Landscape" : "Switch to Portrait",
-        {.STRING = ""}, [](void *data)
+    // Entry order IS the saved rotation value (0 portrait, 1 landscape, 2 portrait flipped,
+    // 3 landscape flipped), so the dropdown index needs no translation either way.
+    // ; was: a BUTTON that toggled portrait<->landscape, which could not reach the two
+    // flipped orientations auto rotate now uses
+    static const char *orientationOptions = "Portrait\nLandscape\nPortrait 180\nLandscape 180";
+    this->ui_screenRotation = new Option(screen_settings_page, OptionType::DROPDOWN_SELECT, "Orientation",
+        {.INT = getscreenRotation() & 0x03}, [](void *data)
     {
-        byte currentRotation = getscreenRotation();
-        byte newRotation = (currentRotation == 0) ? 1 : 0;
+        byte newRotation = (byte)((uintptr_t)data & 0x03);
+
+        // Choosing an orientation by hand is a request to keep it, so auto rotate stands down
+        // rather than overriding the choice five seconds later.
+        bool turnedOffAutoRotate = false;
+        if (getautoRotate())
+        {
+            setautoRotate(false);
+            turnedOffAutoRotate = true;
+        }
+
+        if (newRotation == getscreenRotation())
+        {
+            // Same orientation already applied, so no rebuild to repaint the switch for.
+            // Sync it here instead; setBooleanValue does not re-enter the switch's own callback.
+            if (turnedOffAutoRotate && scrSettings.ui_autoRotate != NULL)
+                scrSettings.ui_autoRotate->setBooleanValue(false);
+            if (turnedOffAutoRotate)
+                showDialog("Auto rotate off", lv_color_hex(0xFFFF00));
+            return;
+        }
+
         setscreenRotation(newRotation);
-        ScrSettings *settings = (ScrSettings *)currentScr;
-        settings->ui_screenRotation->setRightHandText(newRotation == 0 ? "Switch to Landscape" : "Switch to Portrait");
         // Schedule screen reinit for next frame to allow rotation to complete
         runNextFrame([]() -> void {
             reinitializeScreens();
         });
-    });
+    }, (void *)orientationOptions);
+
+    #if AUTO_ROTATE_SUPPORTED == 1
+    // Only offer auto rotate if an IMU actually answered at boot. The define alone is not
+    // enough - it says the board *can* have one, imuAvailable() says this unit does.
+    if (imuAvailable())
+    {
+        this->ui_autoRotate = new Option(screen_settings_page, OptionType::ON_OFF, "Auto Rotate",
+            {.INT = getautoRotate() ? 1 : 0}, [](void *data)
+        {
+            setautoRotate((bool)data);
+        });
+        allOptions.push_back(this->ui_autoRotate);
+    }
+    #endif
     #endif
 
     // Theme colors setting
@@ -920,7 +1011,7 @@ void ScrSettings::init(lv_obj_t *parent)
     // --- Wifi / Update page ---
     lv_obj_t *wifi_update_page = this->addSettingsPage(pages_container, true);
 
-    char buf[50];
+    char buf[WIFI_PASSWORD_MAX_LEN + 1]; // (was 50)
 
     // SSID selection is a dropdown that scans for nearby networks when opened.
     // The first option is always the currently saved SSID (so the closed value stays put when
@@ -943,6 +1034,7 @@ void ScrSettings::init(lv_obj_t *parent)
     {
         uint32_t idx = (uint32_t)(uintptr_t)data;
         ScrSettings *s = (ScrSettings *)currentScr;
+        setWifiSsidValueLabel(s->ui_wifiSSID->rightHandObj);
         // Ignore the "Select network" placeholder (empty string); only real SSIDs are saved.
         if (idx < s->scannedSSIDs.size())
         {
@@ -963,6 +1055,9 @@ void ScrSettings::init(lv_obj_t *parent)
         lv_obj_set_width(this->ui_wifiSSID->text, labelW);
         lv_obj_set_width(this->ui_wifiSSID->rightHandObj, getScreenWidth() - margin * 3 - labelW);
     }
+
+    // Long SSIDs still overflow the widened row, so the closed value gets a scrolling label.
+    setWifiSsidValueLabel(this->ui_wifiSSID->rightHandObj);
 
     // Right-align the open list after LVGL opens it (this user callback runs after the
     // dropdown's own class handler, which opens the list on release).
@@ -985,7 +1080,7 @@ void ScrSettings::init(lv_obj_t *parent)
         WiFi.scanNetworks(true /* async */, false /* show hidden */);
     }, LV_EVENT_CLICKED, this);
 
-    strncpy(buf, getwifiPassword().c_str(), sizeof(buf));
+    snprintf(buf, sizeof(buf), "%s", getwifiPassword().c_str());
     OptionValue wifiOptionValue;
     wifiOptionValue.STRING = buf;
 
@@ -1001,6 +1096,14 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_textarea_set_password_mode(pass->rightHandObj, true);
     lv_textarea_set_password_show_time(pass->rightHandObj, 10000);
 
+    // Escape hatch for when HTTPS can't be verified (e.g. a device's certificates went stale); cleared after one update.
+    Option *insecureUpdate = new Option(wifi_update_page, OptionType::ON_OFF, "Allow insecure update", {.INT = 0}, [](void *data)
+    {
+        setotaInsecure((bool)data);
+    });
+    insecureUpdate->setBooleanValue(getotaInsecure(), false);
+    allOptions.push_back(insecureUpdate);
+
     this->ui_updateBtn = new Option(wifi_update_page, OptionType::BUTTON, "Start Software Update", {.STRING = test}, [](void *data)
     {
         currentScr->showMsgBox("Begin update wifi service?",
@@ -1009,12 +1112,13 @@ void ScrSettings::init(lv_obj_t *parent)
             []() -> void
             {
                 StartwebPacket pkt(getwifiSSID(), getwifiPassword());
+                pkt.setAllowInsecure(getotaInsecure());
                 sendRestPacket(&pkt);
                 log_i("Starting web service");
 #if defined(OTA_SUPPORTED)
                 runNextFrame([]() -> void
                 {
-                    currentScr->showMsgBox("Updating in progress...",
+                    currentScr->showMsgBox("Updating in progress",
                         "Both the manifold & controller are installing their updates. Both will reboot when completed.",
                         NULL, "OK", []() -> void {}, []() -> void {}, false);
                     runNextFrame([]() -> void
@@ -1026,7 +1130,7 @@ void ScrSettings::init(lv_obj_t *parent)
                     log_i("Attempted to download update");
                 });
 #else
-                currentScr->showMsgBox("Updating in progress...",
+                currentScr->showMsgBox("Updating in progress",
                     "The manifold is installing the latest update. Your controller does not support OTA updates. Please go to http://oasman.dev on your computer to flash the latest update to your controller.",
                     NULL, "OK",
                     []() -> void { ESP.restart(); },
@@ -1037,7 +1141,24 @@ void ScrSettings::init(lv_obj_t *parent)
     });
 
     updateUpdateButtonVisbility();
-    this->ui_manifoldUpdateStatus = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Manifold:", {.STRING = test});
+
+    // Version and info
+    this->ui_manifoldUpdateStatus = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Manifold Version:", {.STRING = "Not connected"});
+
+    OptionValue versionValue;
+#ifdef OFFICIAL_RELEASE
+    versionValue.STRING = EVALUATE_AND_STRINGIFY(RELEASE_VERSION);
+#else
+    versionValue.STRING = "DEVELOPMENT";
+#endif
+    allOptions.push_back(new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Controller Version:", versionValue));
+    this->ui_mac = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Manifold MAC:", {.STRING = ble_getMAC()});
+#if HAS_BATTERY_SENSE_READING
+    this->ui_volts = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Battery:", {.STRING = getBatteryVoltageString()});
+#else
+    // Nothing to report -- this board has no battery sense. See HAS_BATTERY_SENSE_READING.
+    this->ui_volts = nullptr;
+#endif
 
     // QR Code - scaled for display size
     const int qrSize = scaledX(100);
@@ -1050,20 +1171,9 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_qrcode_set_dark_color(this->ui_qrcode, lv_color_black());
     lv_qrcode_set_light_color(this->ui_qrcode, lv_color_white());
 
-    const char *qr_data = "https://oasman.dev";
+    const char *qr_data = "https://oasman.co";
     lv_qrcode_update(this->ui_qrcode, qr_data, strlen(qr_data));
     lv_obj_set_x(this->ui_qrcode, scrW / 2 - qrSize / 2);
-
-    // Version and info
-    OptionValue versionValue;
-#ifdef OFFICIAL_RELEASE
-    versionValue.STRING = EVALUATE_AND_STRINGIFY(RELEASE_VERSION);
-#else
-    versionValue.STRING = "DEVELOPMENT";
-#endif
-    allOptions.push_back(new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Version:", versionValue));
-    this->ui_mac = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Manifold:", {.STRING = ble_getMAC()});
-    this->ui_volts = new Option(wifi_update_page, OptionType::TEXT_WITH_VALUE, "Battery:", {.STRING = getBatteryVoltageString()});
 
     // Restore previously selected page (or default to Status)
     if (saved_page_index < 0 || saved_page_index >= this->settingsPageCount) {
@@ -1147,6 +1257,7 @@ void ScrSettings::loop()
             lv_dropdown_set_options(this->ui_wifiSSID->rightHandObj, opts.c_str());
             // Keep the pinned saved SSID / placeholder (index 0) selected so the closed value stays put.
             lv_dropdown_set_selected(this->ui_wifiSSID->rightHandObj, 0);
+            setWifiSsidValueLabel(this->ui_wifiSSID->rightHandObj);
 
             // Refresh the open list so the scanned results replace "Scanning...".
             if (lv_dropdown_is_open(this->ui_wifiSSID->rightHandObj))
@@ -1187,7 +1298,8 @@ void ScrSettings::loop()
     this->ui_aiPercentage->setRightHandText(buf);
 
     this->ui_mac->setRightHandText(ble_getMAC());
-    this->ui_volts->setRightHandText(getBatteryVoltageString());
+    if (this->ui_volts)
+        this->ui_volts->setRightHandText(getBatteryVoltageString());
 
     // Update config values
     if (*util_configValues._setValues())
@@ -1304,6 +1416,8 @@ void ScrSettings::cleanup()
     for (RadioOption* opt : allRadioOptions) {
         delete opt;
     }
+    // Non-owning alias into allOptions above; drop it so it cannot dangle before init() runs.
+    ui_autoRotate = nullptr;
     allOptions.clear();
     allRadioOptions.clear();
 }

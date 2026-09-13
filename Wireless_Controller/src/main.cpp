@@ -4,10 +4,14 @@
 #if defined(OTA_SUPPORTED)
 #include <directdownload.h>
 #endif
+#include <otarollback.h> // not behind OTA_SUPPORTED: any build may be running an unconfirmed image
 
 #include <ui/ui.h>
 
 #include "utils/touch_lib.h"
+#include "utils/imu.h"
+#include "utils/auto_rotate.h"
+#include "utils/wake_on_movement.h"
 #include "tasks/tasks.h"
 
 #include "utils/util.h"
@@ -22,7 +26,10 @@ unsigned long dimScreenTime = 0;
 bool dimmed = false;
 
 // set pin number for the boot button
-const int BootButtonPin = 0; 
+// Not usable as a runtime input on every board: on ws4p3 GPIO0 is also an RGB data line, so
+// USE_BOOT_BUTTON_FUNCTIONALITY is 0 there and every use below compiles out.
+// See src/utils/util.h for the default.
+const int BootButtonPin = 0;
 
 void setup()
 {
@@ -46,9 +53,13 @@ void setup()
     if (getupdateMode())
     {
         setupdateMode(false);
+        const bool allowInsecure = getotaInsecure();
+        setotaInsecure(false); // applies to one update only
         Serial.println("Gonna try to download update");
     #if defined(OTA_SUPPORTED)
-        downloadUpdate(getwifiSSID(), getwifiPassword());
+        downloadUpdate(getwifiSSID(), getwifiPassword(), allowInsecure);
+    #else
+        (void)allowInsecure;
     #endif
         return;
     }
@@ -56,6 +67,11 @@ void setup()
     setup_tasks();
 
     board_drivers_init();
+
+    // After board_drivers_init() because it owns I2C_Init(), and before ui_init() because the
+    // settings screen asks imuAvailable() whether to show the auto rotate switch. The driver
+    // itself is feature-agnostic; auto rotate is just its first consumer.
+    imuInit();
 
 #ifndef SCREEN_MODE_CIRCLE
     loadCustomImagesFromSpiffs();
@@ -78,6 +94,7 @@ void setup()
     dimScreenTime = millis() + getScreenDimTimeMs();
 
 #if defined(OTA_SUPPORTED)
+    checkUpdateRolledBack();
     byte updateResult = getupdateResult();
     if (updateResult != UPDATE_STATUS::UPDATE_STATUS_NONE)
     {
@@ -99,22 +116,55 @@ void setup()
             showDialog("Update failed (wifi connection)", lv_color_hex(0xFF0000));
             currentScr->showMsgBox("Update failed", "Could not connect to wifi network. Please check your wifi SSID and password", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_PASSWORD:
+            showDialog("Update failed (wifi password)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "The wifi network rejected the password. Please check your wifi password and try again", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_NO_NETWORK:
+            showDialog("Update failed (wifi not found)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "Could not find that wifi network. Please check your wifi SSID and that the network is in range", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_CORRUPT_DOWNLOAD:
+            showDialog("Update failed (corrupt download)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "The downloaded firmware did not match its checksum, so it was not installed. Your device is untouched. Please try again", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WEAK_CONNECTION:
+            showDialog("Update failed (weak connection)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "The download timed out because of a weak or poor connection. Please move closer to your wifi and try again", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_ROLLED_BACK:
+            showDialog("Update reverted", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update reverted", "The new firmware did not start up correctly, so your device went back to the previous version", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_SECURE_CONNECTION:
+            showDialog("Update failed (secure connection)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "Could not verify a secure connection to the update server. If this keeps happening, turn on Allow insecure update in the update settings and try again", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
             showDialog("Update not needed", lv_color_hex(0xFFFF00));
             currentScr->showMsgBox("Update aborted", "You are already on the latest release", NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
+        {
             showDialog("Update success!", lv_color_hex(0x00FF00));
             char buf[170];
             snprintf(buf, sizeof(buf), "Welcome to version %s!\nPlease check the manifold update status in the update section of settings to verify the manifold was updated successfully too.", EVALUATE_AND_STRINGIFY(RELEASE_VERSION));
             currentScr->showMsgBox("Update success!", buf, NULL, "OK", []() -> void {}, []() -> void {}, false);
             break;
         }
+        default:
+            // A status written by a newer firmware than this UI knows about.
+            showDialog("Update failed (unknown)", lv_color_hex(0xFF0000));
+            currentScr->showMsgBox("Update failed", "Unknown update status", NULL, "OK", []() -> void {}, []() -> void {}, false);
+            break;
+        }
         setupdateResult(0);
     }
 #endif
     set_brightness(getBrightnessFloat());
-    pinMode(BootButtonPin, INPUT); 
+#if USE_BOOT_BUTTON_FUNCTIONALITY
+    pinMode(BootButtonPin, INPUT);
+#endif
 }
 
 // auto lv_last_tick = millis();
@@ -150,6 +200,10 @@ int beginAirUpAfterQuickPressActivationPeriod = 750; // the time after a quick p
 int beginPresetLoadingAfterNoInputPeriod = 1000; // the time after the last button press that we will start loading the preset procedure
 
 void bootButtonFunctionality() {
+#if !USE_BOOT_BUTTON_FUNCTIONALITY
+    // No usable BOOT button on this board -- see the note by BootButtonPin above.
+    return;
+#else
     auto const now = millis();
     if (digitalRead(BootButtonPin) == LOW && BootButtonState == 0) {
         wakeScreenFromDim();
@@ -243,11 +297,14 @@ void bootButtonFunctionality() {
             }
         }
     }
+#endif // USE_BOOT_BUTTON_FUNCTIONALITY
 }
 
 void loop()
 {
     auto const now = millis();
+
+    otaVerifyLoop();
 
     bootButtonFunctionality();
 
@@ -281,6 +338,13 @@ void loop()
     screenLoop();
     dialogLoop();
     safetyModeMsgBoxCheck();
+
+    // Rebuilds the whole UI when it fires, so it has to run on this task (LVGL is
+    // single-threaded here) and outside any LVGL event callback.
+    autoRotateLoop();
+
+    // After the dim check above, so it sees the dim edge in the iteration it happens.
+    wakeOnMovementLoop();
 
 
     // Update the ticker

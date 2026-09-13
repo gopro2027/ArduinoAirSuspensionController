@@ -52,6 +52,7 @@ public:
     Preferencable wifiSSID;
     Preferencable wifiPassword;
     Preferencable updateResult;
+    Preferencable otaInsecure;
 
     Preferencable pressureInputFrontPassenger;
     Preferencable pressureInputRearPassenger;
@@ -116,6 +117,7 @@ headerDefineSaveFunc(updateMode, bool);
 headerDefineSaveFunc(wifiSSID, String);
 headerDefineSaveFunc(wifiPassword, String);
 headerDefineSaveFunc(updateResult, byte);
+headerDefineSaveFunc(otaInsecure, bool);
 
 // pressure sensor values
 headerDefineSaveFunc(pressureInputFrontPassenger, byte);

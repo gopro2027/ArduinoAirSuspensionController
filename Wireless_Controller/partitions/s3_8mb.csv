@@ -1,0 +1,21 @@
+# 8 MB flash layout for the ESP32-S3-Touch-LCD-4.3 (ESP32-S3-WROOM-1-N8R8).
+# The other controllers are N16R8 and use partitions/s3_16mb.csv; this board only has
+# half the flash, so the two OTA slots shrink 0x400000 -> 0x370000 (4 MB -> 3.4375 MB)
+# and the filesystem shrinks to 1 MB. Keep both app slots the same size -- the OTA client
+# writes whichever slot is inactive, so the smaller of the two is the real firmware ceiling.
+#
+# Layout check (must total 0x800000):
+#   0x009000 nvs      0x005000
+#   0x00E000 otadata  0x002000
+#   0x010000 ota_0    0x370000   (app slots must start on a 0x10000 boundary)
+#   0x380000 ota_1    0x370000
+#   0x6F0000 coredump 0x010000
+#   0x700000 littlefs 0x100000   -> ends exactly at 0x800000
+#
+# Name    ,  Type  ,  SubType  ,  Offset  ,    Size    ,    Flags
+nvs       ,  data  ,  nvs      ,  0x9000  ,    0x5000  ,
+otadata   ,  data  ,  ota      ,          ,    0x2000  ,
+ota_0     ,  app   ,  ota_0    ,          ,  0x370000  ,
+ota_1     ,  app   ,  ota_1    ,          ,  0x370000  ,
+coredump  ,  data  ,  coredump ,          ,  0x10000   ,
+littlefs  ,  data  ,  spiffs   ,          ,  0x100000  ,

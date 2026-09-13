@@ -225,6 +225,7 @@ void CircleMenu::showStatus()
     lv_obj_set_style_text_color(title, lv_color_hex(THEME_COLOR_LIGHT), 0);
     lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
 
+#if HAS_BATTERY_SENSE_READING
     char *battStr = getBatteryVoltageString();
     bool charging = isBatteryCharging();
     static char battBuf[32];
@@ -234,6 +235,7 @@ void CircleMenu::showStatus()
     lv_label_set_text(battLine, battBuf);
     lv_obj_set_style_text_color(battLine, lv_color_white(), 0);
     lv_obj_set_style_text_font(battLine, &lv_font_montserrat_14, 0);
+#endif
 
     static char bleBuf[32];
     bool connected = isConnectedToManifold();

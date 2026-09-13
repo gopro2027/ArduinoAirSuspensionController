@@ -78,6 +78,19 @@ namespace packetMover
         giveRestSemaphore();
     }
 
+    void clearPacketsForHandle(hci_con_handle_t con_handle)
+    {
+        waitRestSemaphore();
+        for (int i = 0; i < BTOASPACKETCOUNT; i++)
+        {
+            if (packets[i].taken && packets[i].con_handle == con_handle)
+            {
+                packets[i].taken = false;
+            }
+        }
+        giveRestSemaphore();
+    }
+
 };
 
 #pragma endregion
@@ -118,6 +131,14 @@ bool isAuthed(hci_con_handle_t conn_id)
 void addAuthed(hci_con_handle_t conn_id)
 {
     authedClients.insert(conn_id);
+}
+
+__attribute__((noinline))   // This is to prevent LTO from trying to inline this function and realizing that authedClients is never called from the same thread (explained below) and defaulting it to constant 0.
+                            // Specifically in the 'is vehicle on' call when BOARD_ALWAYS_ON_ACC_UNUSED_USE_BT_CONN_AS_VEHICLE_ON is true this function is used, and it is the only use in that thread so the threat of compiling as a const 0 is possible depending on the compiler. 
+                            // The reason this exists is because this is technically not a thread safe usage, but the risk is very low on the .size() call (no crash risk, just plus or minus 1 of the actual value in an edge case, and it's only compared to 0 in a sample of 5 so it is basically zero risk when used in that case).
+int getBLEConnectedClientCount()
+{
+    return authedClients.size();
 }
 
 // code for checking if a client auth times out
@@ -415,7 +436,11 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
     {
     case HCI_EVENT_DISCONNECTION_COMPLETE:
         log_i("Client disconnected!");
-        removeAuthed(hci_event_disconnection_complete_get_connection_handle(packet));
+        {
+            hci_con_handle_t disconnected = hci_event_disconnection_complete_get_connection_handle(packet);
+            removeAuthed(disconnected);
+            packetMover::clearPacketsForHandle(disconnected);
+        }
         // don't leave a valve open because the client disconnected mid-hold
         releaseBleHeldValves();
         gap_advertisements_enable(1);
@@ -515,7 +540,7 @@ void ble_setup()
 void ble_loop()
 {
     static int prevConnectedCount = -1;
-    int connectedCount = authedClients.size();
+    int connectedCount = getBLEConnectedClientCount();
     if (connectedCount != prevConnectedCount)
     {
         Serial.printf("connectedCount: %d\n", connectedCount);
@@ -528,11 +553,15 @@ void ble_loop()
 
 uint8_t att_server_notify_SAFE(hci_con_handle_t con_handle, uint16_t attribute_handle, const uint8_t *value, uint16_t value_len)
 {
-
+    const unsigned long start = millis();
+    const unsigned long timeoutMs = 500;
     while (!att_server_can_send_packet_now(con_handle))
     {
-        // log_i("\n\n\nCAN'T SEND PACKET\n\n\n");
-        delay(10);
+        if (millis() - start >= timeoutMs)
+        {
+            return ERROR_CODE_CONNECTION_TIMEOUT;
+        }
+        delay(5);
     }
     return att_server_notify(con_handle, attribute_handle, value, value_len);
 }
@@ -574,8 +603,15 @@ void ble_notify()
         delay(40); // This feels really shitty but it wants some delay here in-between packets or it won't send. So there is various delay's throught this file
         packet.dump();
         memcpy(rest_characteristic_data, packet.tx(), BTOAS_PACKET_SIZE);
-        att_server_notify_SAFE(rest_con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
-        Serial.println("Sent rest packet!");
+        uint8_t res = att_server_notify_SAFE(rest_con_handle, rest_characteristic_value_handle, rest_characteristic_data, BTOAS_PACKET_SIZE);
+        if (res == ERROR_CODE_CONNECTION_TIMEOUT) {
+            //Serial.println("Connection timeout, dropping packets for this connection!");
+            packetMover::clearPacketsForHandle(rest_con_handle); // clear here so it doesn't get stuck waiting 500ms for every packet in att_server_notify_SAFE
+        } else if (res == ERROR_CODE_SUCCESS) {
+            //Serial.println("Sent rest packet!");
+        } else {
+            //Serial.println("Error sending rest packet!");
+        }
         delay(40);
     }
 
@@ -655,8 +691,6 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         break;
     case BTOasIdentifier::ASSIGNRECEPIENT: // ignore from server
         break;
-    case BTOasIdentifier::MESSAGE: // ignore from server
-        break;
     case BTOasIdentifier::SAVECURRENTPRESSURESTOPROFILE: // add if (profileIndex > MAX_PROFILE_COUNT)
         Serial.println("Calling Save Current Pressures To Profile!");
         savePressuresToProfile(((SaveCurrentPressuresToProfilePacket *)packet)->getProfileIndex(), getWheel(WHEEL_FRONT_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_REAR_PASSENGER)->getSelectedInputValue(), getWheel(WHEEL_FRONT_DRIVER)->getSelectedInputValue(), getWheel(WHEEL_REAR_DRIVER)->getSelectedInputValue());
@@ -694,6 +728,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         Serial.println(F("Starting OTA..."));
         setwifiSSID(((StartwebPacket *)packet)->getSSID());
         setwifiPassword(((StartwebPacket *)packet)->getPassword());
+        setotaInsecure(((StartwebPacket *)packet)->getAllowInsecure());
         setupdateMode(true);
         setinternalReboot(true);
         break;
@@ -828,10 +863,32 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_CONNECTION:
             pkt.setStatus("[F] No WiFi");
             break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_PASSWORD:
+            pkt.setStatus("[F] Password");
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WIFI_NO_NETWORK:
+            pkt.setStatus("[F] No SSID");
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_CORRUPT_DOWNLOAD:
+            pkt.setStatus("[F] Corrupt");
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_WEAK_CONNECTION:
+            pkt.setStatus("[F] Timeout");
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_ROLLED_BACK:
+            pkt.setStatus("[F] Rollback");
+            break;
+        case UPDATE_STATUS::UPDATE_STATUS_FAIL_SECURE_CONNECTION:
+            pkt.setStatus("[F] Cert");
+            break;
         case UPDATE_STATUS::UPDATE_STATUS_FAIL_ALREADY_UP_TO_DATE:
         case UPDATE_STATUS::UPDATE_STATUS_NONE:
         case UPDATE_STATUS::UPDATE_STATUS_SUCCESS:
             pkt.setStatus("v" EVALUATE_AND_STRINGIFY(RELEASE_VERSION));
+            break;
+        default:
+            // This can only happen if they downgrade their firmware or a corrupted flash
+            pkt.setStatus("[F] Unknown");
             break;
         }
 

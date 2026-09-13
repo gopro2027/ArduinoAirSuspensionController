@@ -10,6 +10,7 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "esp_sleep.h"
+#include <otarollback.h>
 
 
 // Boards that can't wake themselves from light sleep opt out of it entirely
@@ -28,6 +29,7 @@
 static uint8_t Booted_From_State = 0; // 0:no power, 1:key held at boot, 2:booted from usb plugged in
 static uint8_t Device_State = 0;      // 0:none, 1:sleep, 2:shutdown
 static uint16_t Long_Press = 0;
+static bool Holding_For_Ota = false; // first boot of a new OTA image: keep power until it is confirmed
 
 
 
@@ -36,8 +38,11 @@ auto woke_up = true;
 void PWR_Init(void)
 {
 
+    // The reboot after an OTA has no key held and may have no cord; hold power until the update is confirmed or it reverts.
+    Holding_For_Ota = otaVerifyIsPending();
     power_key_setup();
-    power_latch_off();
+    if (Holding_For_Ota)
+        power_latch_on();
     vTaskDelay(pdMS_TO_TICKS(10));
 
     if (power_key_pressed())
@@ -48,13 +53,23 @@ void PWR_Init(void)
     else
     {
         Booted_From_State = 2; // booted without key (e.g., USB)
-        // power_latch_on();    // we can uncomment this if we want the device to stay on when the usb is unplugged. Personally I prefer the device turn off on it's own due to the nature of our system being in a car. The device may turn on when the car is turned on, then turn off when the car is turned off.
+        if (!Holding_For_Ota)
+            power_latch_off();    // controller will turn off on it's own when the usb is unplugged
     }
     woke_up = true;
 }
 
 void PWR_Loop(void)
 {
+    // reset to default behaviour for usb mode, so unplugging the usb makes the device turn off.
+    // If we didn't have this if statement here, everything would work normal except if the device did ota over usb, when i unplug it the device would stay on. So I mean guess we may as well put this code here to keep it consistent with the intended behaviour
+    if (Holding_For_Ota && !otaVerifyIsPending())
+    {
+        Holding_For_Ota = false;
+        // here, if the usb was used to power the device on, we can now go back to the default behaviour of turning off when the usb is unplugged.
+        if (Booted_From_State == 2)
+            power_latch_off();
+    }
 
     if (power_key_pressed())
     {

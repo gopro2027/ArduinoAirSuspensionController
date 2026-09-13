@@ -66,6 +66,12 @@ const DEVICES: Device[] = [
 		link: "https://www.waveshare.com/esp32-s3-touch-lcd-3.5b.htm?sku=31137",
 	},
 	{
+		id: "controller_ws4p3",
+		name: '4.3" Waveshare Controller',
+		group: "Controller",
+		link: "https://www.waveshare.com/esp32-s3-touch-lcd-4.3.htm",
+	},
+	{
 		id: "controller_ws1p8knob",
 		name: '1.8" Rotary Gauge Waveshare Controller',
 		group: "Controller",

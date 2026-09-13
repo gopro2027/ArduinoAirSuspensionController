@@ -51,7 +51,10 @@ void lvgl_touch_hook(lv_indev_t *indev, lv_indev_data_t *data)
         byte rotation = getscreenRotation();
 
         // Get actual LCD dimensions for proper touch transformation
-        const int32_t lcdWidth = LCD_WIDTH;   // Native portrait width
+        // The panel always reports raw touches in its native portrait frame, so every
+        // rotation below maps that frame onto the rotated screen frame.
+        const int32_t lcdWidth = LCD_WIDTH;    // Native portrait width
+        const int32_t lcdHeight = LCD_HEIGHT;  // Native portrait height
 
         switch (rotation)
         {
@@ -64,6 +67,14 @@ void lvgl_touch_hook(lv_indev_t *indev, lv_indev_data_t *data)
             // Transform to landscape screen coordinates
             touchX_ = rawY;
             touchY_ = (lcdWidth - 1) - rawX;  // Dynamic based on actual LCD width
+            break;
+        case 2: // Portrait upside down - 180 degrees
+            touchX_ = (lcdWidth - 1) - rawX;
+            touchY_ = (lcdHeight - 1) - rawY;
+            break;
+        case 3: // Landscape the other way - 270 degrees CW (case 1 flipped 180)
+            touchX_ = (lcdHeight - 1) - rawY;
+            touchY_ = rawX;
             break;
         default:
             touchX_ = rawX;

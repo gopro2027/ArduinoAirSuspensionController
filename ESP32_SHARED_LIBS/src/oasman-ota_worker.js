@@ -2,9 +2,11 @@
  * OASMan unified OTA worker
  * GET ?firmware=<FIRMWARE_RELEASE_NAME>&tag=<RELEASE_TAG_NAME>
  * - 204 if newest release (for that firmware) tag matches tag (already up to date)
- * - 200 + firmware binary if a newer release is available
+ * - 200 + firmware binary if a newer release is available, plus X-Firmware-MD5 of that body
+ * - 502 if the binary fetched from GitHub does not match the asset's sha256 digest
  * - blank/missing tag is treated as outdated (serve the newest matching binary)
  * Deploy as: oasman-ota → http://oasman-ota.gopro2027.workers.dev/
+ * Optional GITHUB_TOKEN (Worker secret or Secrets Store binding; fine-grained, public repos read-only) lifts the GitHub API limit from 60/hr per IP to 5000/hr.
  */
 
 /**
@@ -21,9 +23,36 @@ const BINARY_URL_PREFIX =
 const FIRMWARE_NAME_RE = /^[a-zA-Z0-9_]+$/;
 const CACHE_TTL_MS = 30 * 60 * 1000;
 /** Bump when binary cache/response format changes (v1 streamed bodies broke ESP32 HTTPClient). */
-const BINARY_CACHE_VERSION = 'v2-buffered';
+const BINARY_CACHE_VERSION = 'v3-md5';
 
 const FIRMWARE_BIN_SUFFIX = '_firmware.bin';
+
+// Worker secret (a string) or Secrets Store binding (an object with get()); githubToken() handles both.
+const GITHUB_TOKEN_BINDING = 'GITHUB_TOKEN';
+
+function toHex(digest) {
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** MD5 for the device's Update.setMD5(), computed once per download and stored with the cached copy. Null if unavailable. */
+async function firmwareMd5Hex(body) {
+  try {
+    return toHex(await crypto.subtle.digest('MD5', body));
+  } catch (err) {
+    console.log(`MD5 unavailable, serving firmware without an integrity header: ${err}`);
+    return null;
+  }
+}
+
+/** Check firmware bytes against GitHub's asset digest ("sha256:<hex>"). No digest = unverifiable, allowed. */
+async function matchesGithubDigest(buffer, expectedDigest) {
+  if (!expectedDigest?.startsWith('sha256:')) {
+    console.log(`No sha256 digest from GitHub (${expectedDigest}), serving firmware unverified`);
+    return true;
+  }
+  const actual = toHex(await crypto.subtle.digest('SHA-256', buffer));
+  return actual === expectedDigest.slice('sha256:'.length).toLowerCase();
+}
 
 function binaryCacheRequest(downloadUrl) {
   return new Request(`${downloadUrl}#${BINARY_CACHE_VERSION}`, { method: 'GET' });
@@ -68,7 +97,56 @@ function releasesTagFromCache(cachedResponse, releases) {
   return cachedResponse?.headers.get('X-Release-Tag') || newestReleaseTag(releases);
 }
 
-async function fetchCachedReleasesJson() {
+/** Every GitHub request goes through here so any rejection or connection failure lands in the Cloudflare logs. */
+async function githubFetch(what, url, init) {
+  let response;
+  try {
+    response = await fetch(url, init);
+  } catch (err) {
+    console.error(`GitHub ${what} failed to connect: ${err} ${url}`);
+    throw err;
+  }
+  if (!response.ok) {
+    const detail = ['x-ratelimit-remaining', 'x-ratelimit-reset', 'retry-after']
+      .filter((k) => response.headers.has(k))
+      .map((k) => `${k}=${response.headers.get(k)}`)
+      .join(' ');
+    console.error(`GitHub ${what} rejected: HTTP ${response.status} ${detail ? detail + ' ' : ''}${url}`);
+  }
+  return response;
+}
+
+async function githubToken(env) {
+  const secret = env?.[GITHUB_TOKEN_BINDING];
+  if (typeof secret?.get === 'function') {
+    try {
+      return await secret.get();
+    } catch (err) {
+      console.error(`Could not read ${GITHUB_TOKEN_BINDING} from the Secrets Store: ${err}`);
+      return null;
+    }
+  }
+  return secret || null;
+}
+
+// Only the API call is authenticated; release downloads redirect off github.com and must never carry the token.
+async function fetchReleasesFromGithub(env) {
+  const headers = { 'User-Agent': 'OASMan-OTA/1.0', Accept: 'application/vnd.github+json' };
+  const token = await githubToken(env);
+  if (token) {
+    const authed = await githubFetch('releases API (token)', RELEASES_LIST_URL, {
+      headers: { ...headers, Authorization: `Bearer ${token}` },
+    });
+    if (authed.status !== 401) {
+      return authed;
+    }
+    await authed.body?.cancel();
+    console.warn('GitHub token rejected (expired or revoked?), falling back to unauthenticated');
+  }
+  return githubFetch('releases API', RELEASES_LIST_URL, { headers });
+}
+
+async function fetchCachedReleasesJson(env) {
   const cacheKey = new Request(RELEASES_LIST_URL, { method: 'GET' });
   const cache = caches.default;
   const cachedResponse = await cache.match(cacheKey);
@@ -85,12 +163,11 @@ async function fetchCachedReleasesJson() {
     }
   }
 
-  const response = await fetch(RELEASES_LIST_URL, {
-    headers: {
-      'User-Agent': 'OASMan-OTA/1.0',
-      Accept: 'application/vnd.github+json',
-    },
-  });
+  const response = await fetchReleasesFromGithub(env);
+  if (response.ok) {
+    // 5000 means the token is in use, 60 means these calls are unauthenticated.
+    console.log(`GitHub releases API ${response.status}, rate limit ${response.headers.get('x-ratelimit-limit')}/hr`);
+  }
 
   const buffer = await response.arrayBuffer();
   const now = Date.now();
@@ -176,9 +253,12 @@ function findReleaseWithFirmware(releases, firmware) {
  * Fixed-length firmware body for ESP32 HTTPClient (must not use chunked Transfer-Encoding).
  * Body is a Uint8Array copy so Content-Length always matches bytes on the wire.
  */
-function binaryResponse(buffer, extraHeaders = {}) {
+function binaryResponse(buffer, md5, extraHeaders = {}) {
   const body = new Uint8Array(buffer);
   const headers = new Headers(extraHeaders);
+  if (md5) {
+    headers.set('X-Firmware-MD5', md5);
+  }
   headers.set('Content-Type', 'application/octet-stream');
   headers.set('Content-Length', String(body.byteLength));
   headers.set('Connection', 'close');
@@ -187,20 +267,23 @@ function binaryResponse(buffer, extraHeaders = {}) {
   return new Response(body, { status: 200, headers });
 }
 
-async function proxyBinary(downloadUrl, ctx) {
+async function proxyBinary(downloadUrl, expectedDigest, ctx) {
   if (!downloadUrl || !downloadUrl.startsWith(BINARY_URL_PREFIX)) {
     return new Response('Invalid download URL', { status: 400 });
   }
 
   const cacheKey = binaryCacheRequest(downloadUrl);
   const cache = caches.default;
-  let cachedResponse = await cache.match(cacheKey);
+  const cachedResponse = await cache.match(cacheKey);
+  // Entries without a stored MD5 predate this format and are treated as a miss.
+  const cachedMd5 = cachedResponse?.headers.get('X-Firmware-MD5');
 
-  if (cachedResponse) {
+  // No hashing on a hit: bytes were verified before caching, and the stored MD5 lets the device catch corruption.
+  if (cachedResponse && cachedMd5) {
     const cacheExpiry = cachedResponse.headers.get('X-Cache-Expiry');
     if (cacheExpiry && Date.now() < parseInt(cacheExpiry, 10)) {
       const buffer = await cachedResponse.arrayBuffer();
-      return binaryResponse(buffer, {
+      return binaryResponse(buffer, cachedMd5, {
         'X-Cache-Hit': 'true',
         'X-Cache-Time': cachedResponse.headers.get('X-Cache-Time'),
         'X-Cache-Expiry': cacheExpiry,
@@ -208,15 +291,15 @@ async function proxyBinary(downloadUrl, ctx) {
     }
   }
 
-  const response = await fetch(downloadUrl);
+  const response = await githubFetch('firmware download', downloadUrl);
   const now = Date.now();
   const cacheExpiry = now + CACHE_TTL_MS;
   const rateLimitReset = response.headers.get('x-ratelimit-reset');
 
   if (response.status === 403 || response.status === 429) {
-    if (cachedResponse) {
+    if (cachedResponse && cachedMd5) {
       const buffer = await cachedResponse.arrayBuffer();
-      return binaryResponse(buffer, {
+      return binaryResponse(buffer, cachedMd5, {
         'X-Cache-Hit': 'true',
         'X-Cache-Time': cachedResponse.headers.get('X-Cache-Time'),
         'X-Rate-Limited': 'true',
@@ -250,19 +333,28 @@ async function proxyBinary(downloadUrl, ctx) {
   }
 
   const buffer = await response.arrayBuffer();
-  const responseToCache = new Response(buffer, {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/octet-stream',
-      'Content-Length': String(buffer.byteLength),
-      'X-Cache-Expiry': cacheExpiry.toString(),
-      'X-Cache-Time': new Date(now).toISOString(),
-      'Cache-Control': 'public, max-age=1800',
-    },
-  });
-  ctx.waitUntil(cache.put(cacheKey, responseToCache));
+  // Never cache or serve a bad download; a non-200 makes the device retry, which refetches.
+  if (!(await matchesGithubDigest(buffer, expectedDigest))) {
+    console.error(`Downloaded firmware failed its sha256 check against GitHub: ${downloadUrl}`);
+    return new Response(
+      JSON.stringify({ error: 'Downloaded firmware did not match the GitHub sha256 digest' }),
+      { status: 502, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+  const md5 = await firmwareMd5Hex(buffer);
+  const cacheHeaders = {
+    'Content-Type': 'application/octet-stream',
+    'Content-Length': String(buffer.byteLength),
+    'X-Cache-Expiry': cacheExpiry.toString(),
+    'X-Cache-Time': new Date(now).toISOString(),
+    'Cache-Control': 'public, max-age=1800',
+  };
+  if (md5) {
+    cacheHeaders['X-Firmware-MD5'] = md5;
+  }
+  ctx.waitUntil(cache.put(cacheKey, new Response(buffer, { status: 200, headers: cacheHeaders })));
 
-  return binaryResponse(buffer, {
+  return binaryResponse(buffer, md5, {
     'X-Cache-Hit': 'false',
     'X-Cache-Time': new Date(now).toISOString(),
   });
@@ -296,7 +388,7 @@ export default {
       });
     }
 
-    const releaseResult = await fetchCachedReleasesJson();
+    const releaseResult = await fetchCachedReleasesJson(env);
     if (!releaseResult.ok) {
       const headers = { 'Content-Type': 'application/json' };
       if (releaseResult.status === 429) {
@@ -328,6 +420,6 @@ export default {
       });
     }
 
-    return proxyBinary(match.asset.browser_download_url, ctx);
+    return proxyBinary(match.asset.browser_download_url, match.asset.digest, ctx);
   },
 };

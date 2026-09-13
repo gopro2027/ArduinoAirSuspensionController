@@ -1,5 +1,6 @@
 #include "board_driver_util.h"
 #include "../utils/util.h"
+#include <otarollback.h>
 
 #ifndef SCREEN_MODE_CIRCLE
 #include "../custom_car_storage.h"
@@ -159,6 +160,7 @@ void board_drivers_init()
         if (SPIFFS.begin(true))
         {
             log_i("SPIFFS formatted successfully, rebooting");
+            otaVerifyConfirmNow(); // this reboot comes before loop(), so it would otherwise revert a new OTA image. This is very unlikely to be needed, but in the odd case an update required a spiffs reformat this would handle it gracefully now
             ESP.restart();
         }
         
