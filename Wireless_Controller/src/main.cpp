@@ -209,6 +209,7 @@ void bootButtonFunctionality() {
     if (isDriveLockActive()) {
         bootButtonLoadPresetStarted = false;
         bootButtonControllingAirUp = false;
+        closeValves();
         BootButtonState = 0;
         bootBtnLastReleased = now;
         if (digitalRead(BootButtonPin) != lastBootButtonState) {
