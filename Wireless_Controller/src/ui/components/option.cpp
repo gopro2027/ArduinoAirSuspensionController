@@ -254,10 +254,16 @@ Option::Option(lv_obj_t *parent, OptionType type, const char *text, OptionValue 
     }
     else if (type == OptionType::ON_OFF)
     {
+        const int switchWidth = scaledX(40);
         this->ui_switch = lv_switch_create(this->root);
-        lv_obj_set_size(this->ui_switch, scaledX(40), scaledY(22));
+        lv_obj_set_size(this->ui_switch, switchWidth, scaledY(22));
         lv_obj_set_align(this->ui_switch, LV_ALIGN_RIGHT_MID);
         lv_obj_set_x(this->ui_switch, -MARGIN);
+
+        const int textMaxWidth = getScreenWidth() - (MARGIN * 2 + switchWidth) - scaledX(6);
+        lv_obj_set_width(this->text, textMaxWidth);
+        lv_label_set_long_mode(this->text, LV_LABEL_LONG_WRAP);
+        this->fitHeightToWrappedLabel(textMaxWidth);
 
         // Style the switch - off state (background)
         lv_obj_set_style_bg_color(this->ui_switch, lv_color_hex(GENERIC_GREY_DARK), LV_PART_MAIN);

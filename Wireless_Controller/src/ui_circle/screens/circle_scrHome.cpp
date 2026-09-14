@@ -19,6 +19,8 @@ static bool s_skipNextPresetClick = false;
 
 static void loadSelectedPreset()
 {
+    if (rejectIfDriveLocked())
+        return;
     AirupQuickPacket pkt(currentPreset - 1);
     sendRestPacket(&pkt);
     static char buf[30];
@@ -320,6 +322,8 @@ void ScrHome::processKnob()
     }
 
     if (anyCornerSelected) {
+        if (rejectIfDriveLocked())
+            return;
         knobActiveUntil_ = millis() + KNOB_HOLD_MS;
         for (int i = 0; i < 4; i++) {
             Corner &c = corners_[i];

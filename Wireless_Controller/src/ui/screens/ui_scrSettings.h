@@ -64,6 +64,7 @@ public:
     Option *ui_mac;  // MAC address (text with value)
     Option *ui_volts;  // Battery voltage (text with value)
     Option *ui_brightnessSlider;  // Brightness (slider)
+    Option *ui_driveLock;  // Disable control when ebrake off (on/off)
     Option *ui_screenRotation;  // Screen orientation dropdown (index == saved rotation value)
     // Auto rotate switch. Non-owning - it lives in allOptions, which cleanup() deletes.
     // Stays null on boards without rotation support or without an IMU fitted.

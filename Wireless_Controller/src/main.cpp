@@ -205,6 +205,21 @@ void bootButtonFunctionality() {
     return;
 #else
     auto const now = millis();
+    static bool lastBootButtonState = digitalRead(BootButtonPin);
+    if (isDriveLockActive()) {
+        bootButtonLoadPresetStarted = false;
+        bootButtonControllingAirUp = false;
+        closeValves();
+        BootButtonState = 0;
+        bootBtnLastReleased = now;
+        if (digitalRead(BootButtonPin) != lastBootButtonState) {
+            rejectIfDriveLocked(); // show dialog
+            wakeScreenFromDim();
+        }
+        lastBootButtonState = digitalRead(BootButtonPin);
+        return;
+    }
+    
     if (digitalRead(BootButtonPin) == LOW && BootButtonState == 0) {
         wakeScreenFromDim();
         BootButtonState = 1;
@@ -295,6 +310,7 @@ void bootButtonFunctionality() {
             }
         }
     }
+    lastBootButtonState = digitalRead(BootButtonPin);
 #endif // USE_BOOT_BUTTON_FUNCTIONALITY
 }
 
