@@ -3,6 +3,10 @@
 
 #define NUM_WHEEL_THREADS 4
 std::atomic<bool> flagStartPressureGoalRoutine[NUM_WHEEL_THREADS];
+std::atomic<bool> flagAbortPressureGoalRoutine[NUM_WHEEL_THREADS]; // set when a new goal replaces a running routine
+
+void wheelThreadLock();
+void wheelThreadUnlock();
 
 extern bool isVehicleParked(bool dontTrustEBrakeAlone = false, bool requireBothAccAndEbrake_or_GPS = false); // defined in airSuspensionUtil.cpp
 extern bool isAnyWheelActive();            // defined in airSuspensionUtil.cpp
@@ -26,6 +30,7 @@ Wheel::Wheel(int solenoidInPin, int solenoidOutPin, InputType *pressurePin, Inpu
     this->routineStartTime = 0;
     // this->flagStartPressureGoalRoutine = false;
     flagStartPressureGoalRoutine[thisWheelNum] = false;
+    flagAbortPressureGoalRoutine[thisWheelNum] = false;
 }
 
 Solenoid *Wheel::getInSolenoid()
@@ -175,11 +180,17 @@ bool Wheel::initPressureGoal(int newPressure, bool onlyAirUp, std::function<void
         }
         if (pressureDif < 0 || !tankIsLowerThanBag)
         {
+            wheelThreadLock();
+            if (flagStartPressureGoalRoutine[thisWheelNum].load())
+            {
+                flagAbortPressureGoalRoutine[thisWheelNum] = true; // abort the running routine so it restarts on the new goal
+            }
             this->pressureGoal = newPressure;
             this->routineStartTime = millis();
             this->onlyAirUp = onlyAirUp;
             this->onPressureGoalComplete = onComplete;
             flagStartPressureGoalRoutine[thisWheelNum] = true;
+            wheelThreadUnlock();
             return true;
         }
     }
@@ -372,7 +383,7 @@ bool Wheel::achieveFineGoal()
 
     for (;;)
     {
-        if (millis() > this->routineStartTime + ROUTINE_TIMEOUT_MS)
+        if (millis() > this->routineStartTime + ROUTINE_TIMEOUT_MS || flagAbortPressureGoalRoutine[thisWheelNum].load())
         {
             return false;
         }
@@ -463,7 +474,7 @@ void Wheel::goalRoutine() {
             const ModeTuning modeTune = getModeTuning(heightMode);
 
             // 10 second timeout in case the tank doesn't have enough air, a sensor is stuck, etc.
-            if (millis() > this->routineStartTime + ROUTINE_TIMEOUT_MS)
+            if (millis() > this->routineStartTime + ROUTINE_TIMEOUT_MS || flagAbortPressureGoalRoutine[thisWheelNum].load())
             {
                 break;
             }
@@ -563,14 +574,17 @@ void Wheel::goalRoutine() {
         getOutSolenoid()->close();
 
         // Rendezvous: every active corner has finished the main routine and closed its valves -> all idle.
-        goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS);
+        if (!flagAbortPressureGoalRoutine[thisWheelNum].load())
+        {
+            goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS);
+        }
 
         // Final cross-corner re-check: a sibling finishing later can nudge an already-done corner (through
         // the shared manifold in pressure mode, through the chassis in level mode), so with everyone idle,
         // re-read and re-correct for FINAL_RECHECK_ROUNDS synchronized rounds (a barrier per round keeps the
         // reads clean). See AI_TRAINING.md.
         const ModeTuning modeTune = getModeTuning(getheightSensorMode());
-        for (int rc = 0; rc < FINAL_RECHECK_ROUNDS; rc++)
+        for (int rc = 0; rc < FINAL_RECHECK_ROUNDS && !flagAbortPressureGoalRoutine[thisWheelNum].load(); rc++)
         {
             double trueVal = this->waitForStableReading(modeTune.settleBand);
             if (abs(this->pressureGoal - (int)lround(trueVal)) > modeTune.deadband)
@@ -588,13 +602,23 @@ void Wheel::goalRoutine() {
 
         goalSyncLeave();
 
-        flagStartPressureGoalRoutine[thisWheelNum] = false;
-
-        if (this->onPressureGoalComplete)
+        std::function<void()> cb = nullptr;
+        wheelThreadLock();
+        if (flagAbortPressureGoalRoutine[thisWheelNum].load())
         {
-            auto cb = std::move(this->onPressureGoalComplete);
+            flagAbortPressureGoalRoutine[thisWheelNum] = false; // aborted: leave the start flag set so the next loop restarts on the new goal
+        }
+        else
+        {
+            flagStartPressureGoalRoutine[thisWheelNum] = false;
+            cb = std::move(this->onPressureGoalComplete);
             this->onPressureGoalComplete = nullptr;
-            cb();
+        }
+        wheelThreadUnlock();
+
+        if (cb)
+        {
+            cb(); // called unlocked: the callback may call initPressureGoal
         }
     }
 }
