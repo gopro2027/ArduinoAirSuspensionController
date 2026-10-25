@@ -1158,6 +1158,34 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  /// Mirrors the controller: asks in both directions, no tap-away dismiss.
+  Future<void> _confirmAdsAddressSwapChange(BLEManager bm, bool value) async {
+    if (value == bm.adsAddressSwap) return;
+    final go = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Swap ADS A/B Addresses?'),
+        content: const Text(
+            'Only for boards wired with the ADS address pins reversed. The manifold will reboot. Are you sure you wish to continue?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    if (go != true || !mounted) return;
+    bm.adsAddressSwap = value;
+    bm.refreshFromUi();
+    _saveManifoldConfigNow();
+  }
+
   Widget _buildConfigSection(BuildContext context) {
     final bm = bleManager;
     return Padding(
@@ -1244,11 +1272,14 @@ class SettingsPageState extends State<SettingsPage> {
                 // heightSensorMode is part of the selector so the bag-stretch
                 // rows appear/disappear as soon as the levelling mode changes,
                 // matching updateLevelModeOptionsVisibility() on the controller.
-                Selector<BLEManager, (bool, bool)>(
-                  selector: (_, m) =>
-                      (m.connectedDevice != null, m.heightSensorMode),
+                Selector<BLEManager, (bool, bool, bool)>(
+                  selector: (_, m) => (
+                        m.connectedDevice != null,
+                        m.heightSensorMode,
+                        m.adsAddressSwap
+                      ),
                   builder: (context, sel, _) {
-                    final (hasDevice, heightSensorMode) = sel;
+                    final (hasDevice, heightSensorMode, adsAddressSwap) = sel;
                     if (!hasDevice) return const SizedBox.shrink();
                     final m = context.read<BLEManager>();
                     return Column(
@@ -1361,6 +1392,44 @@ class SettingsPageState extends State<SettingsPage> {
                               ],
                             );
                           },
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Flexible(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  const Flexible(
+                                    child: Text(
+                                      'Swap ADS A/B Addresses',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.help_outline,
+                                        size: 20, color: Colors.grey),
+                                    onPressed: () {
+                                      showInfoDialog(
+                                        context,
+                                        'Swap ADS A/B Addresses',
+                                        'Swaps which I2C address the pressure-sensor and height-sensor ADS1115 chips use. Only for boards or harnesses wired with the two ADS address pins reversed. The manifold reboots to apply it.',
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            _buildSwitch(
+                              '',
+                              adsAddressSwap,
+                              (value) =>
+                                  _confirmAdsAddressSwapChange(m, value),
+                            ),
+                          ],
                         ),
                       ],
                     );

@@ -583,6 +583,8 @@ ConfigValuesPacket buildCurrentConfigValuesPacket()
         configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE);
     if (getsensorlessLeveling())
         configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING);
+    if (getadsAddressSwap())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SWAP_ADS_ADDRESS);
 
     AuxillaryOutputModePayload auxillaryOutputConfig;
     auxillaryOutputConfig.mode = (AuxillaryOutputMode)getauxillaryOutputMode();
@@ -789,6 +791,9 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
             if (getheightSensorMode()) {
                 setsensorlessLeveling(false);
             }
+
+            // last, because changing it schedules a reboot (the addresses only bind at boot)
+            setadsAddressSwap((flags & (1 << ConfigFlagsBit::CONFIG_SWAP_ADS_ADDRESS)) != 0);
         }
         ConfigValuesPacket pkt = buildCurrentConfigValuesPacket();
         if (*recpkt->_setValues())

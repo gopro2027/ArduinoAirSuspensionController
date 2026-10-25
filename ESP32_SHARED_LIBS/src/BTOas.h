@@ -58,7 +58,8 @@ enum ConfigFlagsBit
     CONFIG_HEIGHT_SENSOR_MODE = 3,
     CONFIG_SAFETY_MODE = 4,
     CONFIG_AI_STATUS_ENABLED = 5, // retired: manifold/controller no longer use it; bit reserved (mobile app may still read it). Do not reuse.
-    CONFIG_SENSORLESS_LEVELING = 6
+    CONFIG_SENSORLESS_LEVELING = 6,
+    CONFIG_SWAP_ADS_ADDRESS = 7 // swap which I2C address ADS A (pressure) and ADS B (height) bind to
 };
 
 enum AuthResult

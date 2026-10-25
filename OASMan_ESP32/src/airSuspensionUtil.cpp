@@ -46,7 +46,11 @@ Wheel *getWheel(int i)
 
 void initializeADS()
 {
-    if (!ADS1115A.begin(ADS_A_ADDRESS))
+    // Swapped for boards/harnesses wired with the two ADS address pins the other way round
+    const uint8_t adsAAddr = getadsAddressSwap() ? ADS_B_ADDRESS : ADS_A_ADDRESS;
+    const uint8_t adsBAddr = getadsAddressSwap() ? ADS_A_ADDRESS : ADS_B_ADDRESS;
+
+    if (!ADS1115A.begin(adsAAddr))
     {
         Serial.println(F("Failed to initialize ADS A (pressure sensors)"));
 #if ADS_MOCK_BYPASS == false
@@ -54,7 +58,7 @@ void initializeADS()
 #endif
     }
 
-    if (!ADS1115B.begin(ADS_B_ADDRESS))
+    if (!ADS1115B.begin(adsBAddr))
     {
         Serial.println(F("Failed to initialize ADS B (height sensors)"));
 #if ADS_MOCK_BYPASS == false
@@ -272,8 +276,13 @@ static void initPressureGoalWithStretch(byte wheelNum, int goal)
         goal > w->getSelectedInputValue() && // only run if we are airing up
         w->getSelectedInputValue() < belowP) // only run if the current pressure is below the AirUpBagStretchTriggerBelowPressure
     {
-        w->initPressureGoal(goal + unroll, true, [w, goal]()
+        bool reachable = w->initPressureGoal(goal + unroll, true, [w, goal]()
                             { w->initPressureGoal(goal); }); //this could technically be initPressureGoalWithStretch (recursive) but with a chance of an infinite loop, so we will go straight to initPressureGoal for now unless we want to add more functionality and failsafe checks to initPressureGoalWithStretch in the future
+        if (reachable == false)
+        {
+            // The goal + unroll is probably higher than the max pressure or something, so just go to the goal directly as if unroll didn't exist.
+            w->initPressureGoal(goal);
+        }
     }
     else
     {
