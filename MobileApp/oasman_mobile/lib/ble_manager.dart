@@ -100,6 +100,7 @@ class ConfigFlagsBit {
   static const int CONFIG_SAFETY_MODE = 4;
   static const int CONFIG_AI_STATUS_ENABLED = 5; // retired: reserved on the wire, no longer used by app/manifold. Do not reuse.
   static const int CONFIG_SENSORLESS_LEVELING = 6;
+  static const int CONFIG_SWAP_ADS_ADDRESS = 7;
 }
 
 class BLEByte {
@@ -274,6 +275,9 @@ class BLEManager extends ChangeNotifier {
   bool safetyMode = true;
   /// Mirrors ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE (preserved on save).
   bool heightSensorMode = false;
+  /// Mirrors ConfigFlagsBit::CONFIG_SWAP_ADS_ADDRESS, a controller-only setting.
+  /// Tracked here so a config save from the app does not clear it.
+  bool adsAddressSwap = false;
   String bleBroadcastName = '';
 
   /// Incremented when a GETCONFIGVALUES packet updates local config fields.
@@ -1055,6 +1059,9 @@ class BLEManager extends ChangeNotifier {
           heightSensorMode = (configFlagsBits &
                   (1 << ConfigFlagsBit.CONFIG_HEIGHT_SENSOR_MODE)) !=
               0;
+          adsAddressSwap = (configFlagsBits &
+                  (1 << ConfigFlagsBit.CONFIG_SWAP_ADS_ADDRESS)) !=
+              0;
 
           configRevision++;
 
@@ -1243,6 +1250,7 @@ class BLEManager extends ChangeNotifier {
     if (heightSensorMode) {
       bits |= (1 << ConfigFlagsBit.CONFIG_HEIGHT_SENSOR_MODE);
     }
+    if (adsAddressSwap) bits |= (1 << ConfigFlagsBit.CONFIG_SWAP_ADS_ADDRESS);
     return bits;
   }
 

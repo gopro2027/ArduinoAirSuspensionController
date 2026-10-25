@@ -30,6 +30,7 @@ void beginSaveData()
     _SaveData.sensorlessLeveling.load("sensorlessLevel", false);
     _SaveData.airOutOnShutoff.load("airOutOnShutoff", false);
     _SaveData.heightSensorMode.load("heightSensorMode", false);
+    _SaveData.adsAddressSwap.load("adsAddrSwap", false);
     _SaveData.baseProfile.load("baseProfile", 2);
     _SaveData.raiseOnPressure.load("raiseOnPressure", false);
     _SaveData.internalReboot.load("internalReboot", false);
@@ -131,6 +132,19 @@ void setheightSensorMode(bool value)
         _SaveData.heightSensorMode.set(value);
         Serial.println("Sensor mode changed, clearing AI samples (psi and height data can't be mixed)");
         clearPressureData(); // Must wipe samples when switching. See AI_TRAINING.md.
+    }
+}
+
+bool getadsAddressSwap()
+{
+    return _SaveData.adsAddressSwap.get().i;
+}
+void setadsAddressSwap(bool value)
+{
+    if (getadsAddressSwap() != value)
+    {
+        _SaveData.adsAddressSwap.set(value);
+        setinternalReboot(true); // the addresses only bind in initializeADS() at boot
     }
 }
 
