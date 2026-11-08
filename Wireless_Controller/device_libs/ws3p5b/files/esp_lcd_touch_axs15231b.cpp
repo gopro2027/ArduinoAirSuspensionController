@@ -1,7 +1,7 @@
 // esp_lcd_touch_axs15231b.cpp - OPTIMIZED VERSION
 // Improvements:
 // - Throttled I2C reads to reduce bus contention during scrolling
-// - Higher I2C clock speed (800kHz) for faster transactions
+// - I2C clock held at the 400kHz the rest of the shared bus is rated for
 // - Cached touch data to minimize redundant reads
 // - Better error handling and recovery
 
@@ -18,7 +18,7 @@
 
 // I2C clock speed for touch controller
 #ifndef TOUCH_I2C_FREQ_HZ
-  #define TOUCH_I2C_FREQ_HZ 800000  // 800kHz (try 600000 if unstable)
+  #define TOUCH_I2C_FREQ_HZ 400000  // shared bus: AXP2101 and TCA9554 are 400kHz parts ; was: 800000
 #endif
 
 // I2C timeout for touch transactions (shorter than PMIC)
@@ -144,8 +144,8 @@ void bsp_touch_read(void)
 
   // Execute I2C transaction
   if (!touch_i2c_write_read(AXS5106L_ADDR, cmd, 11, data, 14)) {
-    // I2C error - keep using last valid touch data
-    // Don't spam errors, just track them
+    // Fail released: holding the last press here latched valves open ; was: return with stale data
+    g_touch_data.touch_num = 0;
     return;
   }
 
