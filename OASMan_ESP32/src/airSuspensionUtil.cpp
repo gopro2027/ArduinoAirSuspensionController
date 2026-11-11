@@ -48,12 +48,8 @@ Wheel *getWheel(int i)
 
 void initializeADS()
 {
-    // Swapped for boards/harnesses wired with the two ADS address pins the other way round
-    const uint8_t adsAAddr = getadsAddressSwap() ? ADS_B_ADDRESS : ADS_A_ADDRESS;
-    const uint8_t adsBAddr = getadsAddressSwap() ? ADS_A_ADDRESS : ADS_B_ADDRESS;
-
     // A or B missing no longer reboots; their inputs just read 0 instead (see InputType::analogRead)
-    if (!ADS1115A.begin(adsAAddr))
+    if (!ADS1115A.begin(ADS_A_ADDRESS))
     {
         ADS1115A_exists = false;
         Serial.println(F("Failed to initialize ADS A (pressure sensors)"));
@@ -61,7 +57,7 @@ void initializeADS()
         ADS1115A_exists = true;
     }
 
-    if (!ADS1115B.begin(adsBAddr))
+    if (!ADS1115B.begin(ADS_B_ADDRESS))
     {
         ADS1115B_exists = false;
         Serial.println(F("Failed to initialize ADS B (height sensors)"));
