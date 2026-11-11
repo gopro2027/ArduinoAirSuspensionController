@@ -1319,7 +1319,7 @@ void ScrSettings::loop()
         this->ui_rfbuttonC->setRightHandText(itoa(*util_configValues._rfButtonC() + 1, buf, 10));
         this->ui_rfbuttonD->setRightHandText(itoa(*util_configValues._rfButtonD() + 1, buf, 10));
 
-        uint8_t flags = *util_configValues._configFlagsBits();
+        uint32_t flags = *util_configValues._configFlagsBits();
         this->ui_riseonstart->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_RISE_ON_START)) != 0, false);
         this->ui_maintainprssure->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_MAINTAIN_PRESSURE)) != 0, false);
         this->ui_sensorlessleveling->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING)) != 0, false);
