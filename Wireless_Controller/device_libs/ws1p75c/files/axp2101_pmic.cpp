@@ -39,14 +39,16 @@ static inline void ensure_meas_fresh() {
   I2C_LOCK(10);
   float vbus_mV = g_pmu.getVbusVoltage();
   float batt_mV = g_pmu.getBattVoltage();
-  int   pct     = g_pmu.isBatteryConnect() ? (int)g_pmu.getBatteryPercent() : -1;
+  // isBatteryConnect() is an I2C read too, so it belongs inside the lock.
+  bool  batt_in = g_pmu.isBatteryConnect();
+  int   pct     = batt_in ? (int)g_pmu.getBatteryPercent() : -1;
   I2C_UNLOCK();
 
-  // Basic sanity: reject obviously bad reads
-  bool bad =
-      !isfinite(vbus_mV) ||
-      !isfinite(batt_mV) ||
-      (vbus_mV <= 0.0f && !g_pmu.isVbusIn());
+  // Only the battery reading has to be sane. An absent VBUS is the NORMAL state on battery power,
+  // so it must not void the sample: doing so left batt_v at its initial NAN, which surfaced as
+  // 0.00V and a 0% readout the moment the USB cable came out.
+  // ; was: bad also when (vbus_mV <= 0.0f && !g_pmu.isVbusIn())
+  const bool bad = !isfinite(batt_mV) || batt_mV <= 0.0f;
 
   if (bad) {
     static uint32_t bad_count = 0;
@@ -57,7 +59,7 @@ static inline void ensure_meas_fresh() {
     return;
   }
 
-  s_meas_cache.vbus_v       = vbus_mV / 1000.0f;
+  s_meas_cache.vbus_v       = isfinite(vbus_mV) ? vbus_mV / 1000.0f : 0.0f;
   s_meas_cache.batt_v       = batt_mV / 1000.0f;
   s_meas_cache.batt_pct     = pct;
   s_meas_cache.batt_present = (pct >= 0);
