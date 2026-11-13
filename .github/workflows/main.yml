@@ -92,6 +92,23 @@ jobs:
       run: ./build_firmware.sh "Wireless_Controller" "controller_ws1p75c"
 
 
+    - name: Generate release notes
+      if: success()
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GROQ_API_KEY: ${{ secrets.GROQ_OASMAN_SUMMARY_API_KEY }} # optional. Unset = PR/commit list with no AI summary
+        RELEASE_SHA: ${{ github.sha }}
+        RELEASE_TAG: build-${{ github.run_number }}
+        VERSION_NUM: ${{ inputs.version_num }}
+        BUILD_NUMBER: ${{ github.run_number }}
+        RELEASE_NOTES_FILE: release_notes.md
+      continue-on-error: true # notes are cosmetic, never block a release over them
+      run: |
+        python ./.github/scripts/release_notes.py || true
+        # guard against the script not running at all
+        [ -s release_notes.md ] || printf 'Automated build from commit %s\n\nRelease ID: %s\nBuild number: %s\n' \
+          "${RELEASE_SHA}" "${VERSION_NUM}" "${BUILD_NUMBER}" > release_notes.md
+
     - name: Create Release
        # && github.event_name == 'push'
       if: success() # && github.ref == 'refs/heads/main'
@@ -99,14 +116,7 @@ jobs:
       with:
         tag_name: build-${{ github.run_number }} # do not ever change this. It is used in the update process to decide if the current build is already installed
         name: Release ${{ inputs.version_num }} (Build ${{ github.run_number }})
-        body: |
-          Automated build from commit ${{ github.sha }}
-
-          Release ID: ${{ inputs.version_num }}
-          Build number: ${{ github.run_number }}
-          
-          **Commit:** ${{ github.event.head_commit.message }}
-          **Date:** ${{ github.event.head_commit.timestamp }}
+        body_path: release_notes.md # was: an inline body with the head commit message
         files: bins/*.bin
         prerelease: false
       env:
