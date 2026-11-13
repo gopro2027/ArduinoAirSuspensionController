@@ -25,6 +25,11 @@ GROQ_URL = os.environ.get("GROQ_URL", "https://api.groq.com/openai/v1/chat/compl
 PR_RE = re.compile(r"Merge pull request #(\d+)|\(#(\d+)\)")
 NOISE_RE = re.compile(r"^(merge branch|merge remote|revert \"revert)", re.I)
 PLUMBING_BRANCHES = {"dev", "main", "master"}
+# a commit touching only these ships nothing to a device, so it stays out of
+# the notes. Anything we cannot classify is kept.
+NON_FIRMWARE_PREFIXES = (".github/", ".claude/", "docs/", "tutorial/", "PCB/",
+                         "3d Prints/", "builds/")
+MAX_PATH_CHECKS = 60  # one API call each, so give up on very large releases
 
 SYSTEM_PROMPT = (
     "You write release notes for OAS-Man, an open-source DIY ESP32 air suspension "
@@ -91,15 +96,36 @@ def commit_list(prev):
     return [], 0
 
 
+def touches_firmware(path):
+    """True unless every file the change touches is non-firmware."""
+    data = github(path)
+    files = data.get("files") if isinstance(data, dict) else data
+    if not isinstance(files, list) or not files:
+        return True  # cannot tell, so keep it
+    return any(not (f.get("filename") or "").startswith(NON_FIRMWARE_PREFIXES)
+               for f in files)
+
+
 def subjects(commits):
-    out = []
+    entries = []
     for c in commits:
         if len(c.get("parents", [])) > 1:
             continue  # merge commit
         subject = (c.get("commit", {}).get("message") or "").split("\n")[0].strip()
         if subject and not NOISE_RE.match(subject):
-            out.append(subject)
-    return out
+            entries.append((c.get("sha", ""), subject))
+
+    if len(entries) > MAX_PATH_CHECKS:
+        note("too many commits to check paths, keeping all " + str(len(entries)))
+        return [s for _, s in entries]
+
+    kept = []
+    for sha, subject in entries:
+        if not sha or touches_firmware("/commits/" + sha):
+            kept.append(subject)
+        else:
+            note("skipping non-firmware commit: " + subject)
+    return kept
 
 
 def pull_requests(commits):
@@ -116,6 +142,9 @@ def pull_requests(commits):
             continue
         if (pr.get("head", {}).get("ref") or "") in PLUMBING_BRANCHES:
             continue  # the dev -> main merge, its content is in the commits above
+        if not touches_firmware("/pulls/" + n + "/files?per_page=100"):
+            note("skipping non-firmware PR #" + n)
+            continue
         prs.append((n, pr["title"].strip()))
     return prs
 
@@ -156,9 +185,17 @@ def main():
     prs = pull_requests(commits)
     summary = groq_summary(prs, changes)
 
+    if prev:
+        changelog_url = ("https://github.com/" + REPO + "/compare/" + prev + "..." +
+                         (TAG or SHA))
+    else:
+        changelog_url = "https://github.com/" + REPO + "/commits/" + (TAG or SHA)
+
     parts = []
     if summary:
-        parts.append("## What's new\n\n" + summary)
+        parts.append("## What's new\n\n" + summary + "\n\n" +
+                     "_This summary is AI-generated and may contain mistakes. See the " +
+                     "[full changelog on GitHub](" + changelog_url + ") for every change._")
     if prs:
         parts.append("## Pull requests\n\n" +
                      "\n".join("- " + t + " (#" + n + ")" for n, t in prs))
@@ -173,8 +210,7 @@ def main():
               "Build number: " + os.environ.get("BUILD_NUMBER", "unknown"),
               "Built from commit " + SHA]
     if prev:
-        footer.append("Full changelog: https://github.com/" + REPO + "/compare/" +
-                      prev + "..." + (TAG or SHA))
+        footer.append("Full changelog: " + changelog_url)
     parts.append("---\n\n" + "\n".join(footer))
 
     body = "\n\n".join(parts) + "\n"
