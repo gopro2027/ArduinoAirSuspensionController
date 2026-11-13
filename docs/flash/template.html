@@ -220,7 +220,17 @@
 				border-color: var(--accent);
 				box-shadow: 0 0 0 3px var(--accent-soft);
 			}
-			.device-card-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+			.device-thumb {
+				flex: 0 0 auto;
+				width: 58px;
+				height: 58px;
+				object-fit: contain;
+				background: #fff; /* product shots ship on white; keep the tile white in both themes */
+				border: 1px solid var(--border);
+				border-radius: 8px;
+				padding: 3px;
+			}
+			.device-card-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
 			.device-name { font-weight: 600; font-size: 15px; }
 			.device-desc { font-size: 12.5px; color: var(--text-dim); }
 			.device-link { font-size: 12.5px; margin-top: 2px; width: fit-content; }

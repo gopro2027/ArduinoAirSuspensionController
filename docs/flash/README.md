@@ -51,6 +51,7 @@ template.html ─┘
 | To change…                                   | Edit…           |
 | -------------------------------------------- | --------------- |
 | App behavior / steps / device list           | `app.tsx`       |
+| Device photos on device cards                | `img/` + the `img:` field in `app.tsx` |
 | Styling, meta tags, favicon, which scripts load | `template.html` |
 | Manifest / flash offsets                      | `manifestgen.js`|
 
@@ -66,5 +67,6 @@ After editing, run `npm run build` to regenerate `index.html`.
 | `manifestgen.js`           | yes        | Manifest generator                     |
 | `index.html`               | yes        | **Generated** — do not hand-edit       |
 | `boot_app0.bin`            | yes        | Referenced by the manifest             |
+| `img/`                     | yes        | Device photos for the device cards     |
 | `index_legacy_raw_html.html` | yes      | Previous plain-HTML installer (archive)|
 | `node_modules/`            | no         | gitignored                             |

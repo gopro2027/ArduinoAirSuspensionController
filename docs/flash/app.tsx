@@ -27,6 +27,7 @@ interface Device {
 	group: DeviceGroup;
 	desc?: string;
 	link?: string;
+	img?: string; // product photo, relative to this page (see img/)
 }
 
 // Note: the CYD boards are legacy *controllers*, so they live under the
@@ -46,42 +47,49 @@ const DEVICES: Device[] = [
 		name: '2.8" Waveshare Controller',
 		group: "Controller",
 		link: "https://www.waveshare.com/esp32-s3-touch-lcd-2.8.htm?sku=27690",
+		img: "img/controller_ws2p8.jpg",
 	},
 	{
 		id: "controller_ws2p8b",
 		name: '2.8" B Model Waveshare Controller',
 		group: "Controller",
 		link: "https://www.waveshare.com/esp32-s3-touch-lcd-2.8b.htm?sku=30103",
+		img: "img/controller_ws2p8b.jpg",
 	},
 	{
 		id: "controller_ws3p5",
 		name: '3.5" Waveshare Controller',
 		group: "Controller",
 		link: "https://www.waveshare.com/esp32-s3-touch-lcd-3.5.htm?sku=30733",
+		img: "img/controller_ws3p5.jpg",
 	},
 	{
 		id: "controller_ws3p5b",
 		name: '3.5" B Model Waveshare Controller',
 		group: "Controller",
 		link: "https://www.waveshare.com/esp32-s3-touch-lcd-3.5b.htm?sku=31137",
+		img: "img/controller_ws3p5b.jpg",
 	},
 	{
 		id: "controller_ws4p3",
 		name: '4.3" Waveshare Controller',
 		group: "Controller",
 		link: "https://www.waveshare.com/esp32-s3-touch-lcd-4.3.htm",
+		img: "img/controller_ws4p3.jpg",
 	},
 	{
 		id: "controller_ws1p8knob",
 		name: '1.8" Rotary Gauge Waveshare Controller',
 		group: "Controller",
 		link: "https://www.waveshare.com/esp32-s3-knob-touch-lcd-1.8.htm?sku=31623",
+		img: "img/controller_ws1p8knob.jpg",
 	},
 	{
 		id: "controller_ws1p75c",
 		name: '1.75" Round AMOLED Waveshare Controller',
 		group: "Controller",
 		link: "https://www.waveshare.com/esp32-s3-touch-amoled-1.75c.htm",
+		img: "img/controller_ws1p75c.jpg",
 	},
 	{ id: "controller_cyd3p2", name: '3.2" CYD Capacitive Controller', group: "Legacy" },
 	{ id: "controller_cyd3p2_resistive", name: '3.2" CYD Resistive Controller', group: "Legacy" },
@@ -333,6 +341,9 @@ function DeviceStep({
 								className={"device-card" + (selected?.id === d.id ? " selected" : "")}
 								onClick={() => onSelect(d)}
 							>
+								{d.img && (
+									<img className="device-thumb" src={d.img} alt="" loading="lazy" />
+								)}
 								<div className="device-card-main">
 									<span className="device-name">{d.name}</span>
 									{d.desc && <span className="device-desc">{d.desc}</span>}
