@@ -1,0 +1,30 @@
+{
+  "name": "ws1p75c",
+  "version": "1.0",
+  "includeDir": "files/",
+  "build": {
+		"includeDir": "files/",
+        "srcFilter": [
+            "-<*>",
+            "+<images/*>",
+            "+<files/Display_CO5300.cpp>",
+            "+<files/Touch_CST9217.cpp>",
+            "+<files/LVGL_Driver.cpp>",
+            "+<files/I2C_Driver.cpp>",
+            "+<files/BAT_Driver.cpp>",
+            "+<files/PWR_Key.cpp>",
+            "+<files/i2c_guard.cpp>",
+            "+<files/pmic_cache.cpp>",
+            "+<files/axp2101_pmic.cpp>",
+            "+<files/PMU_AXP2101.cpp>"
+        ]
+	},
+  "frameworks": "arduino",
+  "platforms": "espressif32",
+  "dependencies": {
+    "Wire":"",
+    "lvgl/lvgl":"^9.4.0",
+    "lewisxhe/XPowersLib":"0.2.6",
+    "lewisxhe/SensorLib":"0.4.1"
+  }
+}

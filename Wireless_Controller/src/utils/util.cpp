@@ -1,5 +1,7 @@
 #include "util.h"
 
+#include <math.h>
+
 #ifdef HAS_ROTARY_ENCODER
 knob_handle_t g_knob_handle = nullptr;
 #endif
@@ -24,6 +26,21 @@ int getScreenHeight() {
 bool isLandscape() {
     return getScreenWidth() > getScreenHeight();
 }
+
+#ifdef SCREEN_MODE_CIRCLE
+int circleChordWidth(int y, int margin) {
+    const int w = getScreenWidth();
+    const int h = getScreenHeight();
+    const float r = (float)(w < h ? w : h) / 2.0f;
+    const float dy = fabsf((float)y - (float)h / 2.0f);
+    if (dy >= r)
+        return 0;
+    int width = (int)(2.0f * sqrtf(r * r - dy * dy)) - 2 * margin;
+    if (width < 0)
+        width = 0;
+    return width;
+}
+#endif
 
 // Get base resolution for scaling calculations
 // This detects the smallest dimension in portrait mode

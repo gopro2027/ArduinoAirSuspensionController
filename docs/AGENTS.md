@@ -8,7 +8,7 @@ This document is the master roster. Each agent also exists as a standalone file 
 
 ## Project At A Glance (shared context for every agent)
 
-- **Two firmwares, two chips, two stacks:** the **manifold board** (`OASMan_ESP32`, ESP32-WROOM, `espressif32@6.10.0` + Bluepad32 fork, default env `manifold_v4_dev`) and the **wireless controller** (`Wireless_Controller`, ESP32-S3 Waveshare touch LCDs, `pioarduino 55.03.37`, envs `controller_ws2p8/ws2p8b/ws3p5/ws3p5b/ws1p8knob_dev`). Shared code in `ESP32_SHARED_LIBS`.
+- **Two firmwares, two chips, two stacks:** the **manifold board** (`OASMan_ESP32`, ESP32-WROOM, `espressif32@6.10.0` + Bluepad32 fork, default env `manifold_v4_dev`) and the **wireless controller** (`Wireless_Controller`, ESP32-S3 Waveshare touch LCDs, `pioarduino 55.03.37`, envs `controller_ws2p8/ws2p8b/ws3p5/ws3p5b/ws4p3/ws1p8knob/ws1p75c_dev`). Shared code in `ESP32_SHARED_LIBS`.
 - **Clients of the manifold:** the touchscreen controller and the **Flutter mobile app** (`MobileApp/oasman_mobile`), both speaking the **`BTOasPacket`** protocol (104-byte `cmd`/`sender`/`recipient`/`args[100]`, enum `BTOasIdentifier`) over BLE service `679425c8-d3b4-4491-9eb2-3e3d15b625f0`.
 - **Delivery:** OTA via Cloudflare workers + the `oasman.dev/flash` web flasher; a multi-variant release matrix.
 - **Hardware:** custom JLCPCB manifold PCB (revisions V2.x→V3.x) + off-the-shelf Waveshare controllers + 3D-printed enclosures.
