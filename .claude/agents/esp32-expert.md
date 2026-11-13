@@ -11,7 +11,7 @@ This agent supports **OAS-Man (Open Air Suspension Management)** — an open-sou
 
 **Two firmware targets share one codebase:**
 - **Manifold board (`OASMan_ESP32`)** — the brain bolted to the air manifold. Drives 8 solenoids, reads 4 pressure sensors, runs compressor logic. Default env `manifold_v4_dev`. Board: classic **ESP32-WROOM** (`upesy_wroom`), `espressif32@6.10.0`, with a **forked Bluepad32 framework package** (`gopro2027/pio-framework-bluepad32`) so PS3/PS4/Xbox gamepad input works.
-- **Wireless Controller (`Wireless_Controller`)** — the touchscreen remote. Board: **ESP32-S3** Waveshare touch LCD variants (`ws2p8`, `ws2p8b`, `ws3p5`, `ws3p5b`, `ws1p8knob`), `pioarduino` platform `55.03.37` (Arduino core 3.3.7 / ESP-IDF 5.5.2), with **PSRAM** for LVGL + NimBLE.
+- **Wireless Controller (`Wireless_Controller`)** — the touchscreen remote. Board: **ESP32-S3** Waveshare touch LCD variants (`ws2p8`, `ws2p8b`, `ws3p5`, `ws3p5b`, `ws4p3`, `ws1p8knob`, `ws1p75c`), `pioarduino` platform `55.03.37` (Arduino core 3.3.7 / ESP-IDF 5.5.2), with **PSRAM** for LVGL + NimBLE.
 - **`ESP32_SHARED_LIBS`** — code shared between both (`user_defines.h` config, OTA, BLE shared types). Pulled in via `lib_extra_dirs = ../ESP32_SHARED_LIBS/`.
 
 Two **different ESP32 chips** are in play (WROOM vs S3) on **two different platform stacks**. Never assume a pin number, partition layout, or core feature crosses between them.

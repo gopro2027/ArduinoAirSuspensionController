@@ -14,6 +14,8 @@ Adafruit_ADS1115 ADS1115A;
 Adafruit_ADS1115 ADS1115B;
 Adafruit_ADS1115 ADS1115C;
 Adafruit_ADS1115 ADS1115D;
+bool ADS1115A_exists;
+bool ADS1115B_exists;
 bool ADS1115C_exists;
 bool ADS1115D_exists;
 
@@ -46,24 +48,21 @@ Wheel *getWheel(int i)
 
 void initializeADS()
 {
-    // Swapped for boards/harnesses wired with the two ADS address pins the other way round
-    const uint8_t adsAAddr = getadsAddressSwap() ? ADS_B_ADDRESS : ADS_A_ADDRESS;
-    const uint8_t adsBAddr = getadsAddressSwap() ? ADS_A_ADDRESS : ADS_B_ADDRESS;
-
-    if (!ADS1115A.begin(adsAAddr))
+    // A or B missing no longer reboots; their inputs just read 0 instead (see InputType::analogRead)
+    if (!ADS1115A.begin(ADS_A_ADDRESS))
     {
+        ADS1115A_exists = false;
         Serial.println(F("Failed to initialize ADS A (pressure sensors)"));
-#if ADS_MOCK_BYPASS == false
-        ESP.restart();
-#endif
+    } else {
+        ADS1115A_exists = true;
     }
 
-    if (!ADS1115B.begin(adsBAddr))
+    if (!ADS1115B.begin(ADS_B_ADDRESS))
     {
+        ADS1115B_exists = false;
         Serial.println(F("Failed to initialize ADS B (height sensors)"));
-#if ADS_MOCK_BYPASS == false
-        ESP.restart();
-#endif
+    } else {
+        ADS1115B_exists = true;
     }
 
     if (!ADS1115C.begin(ADS_C_ADDRESS))

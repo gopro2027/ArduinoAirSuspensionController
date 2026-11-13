@@ -64,7 +64,6 @@ public:
     Preferencable sensorlessLeveling;
     Preferencable airOutOnShutoff;
     Preferencable heightSensorMode;
-    Preferencable adsAddressSwap;
     Preferencable bagMaxPressure;
     Preferencable blePasskey;
     Preferencable bleName;
@@ -109,7 +108,6 @@ headerDefineSaveFunc(maintainPressure, bool);
 headerDefineSaveFunc(sensorlessLeveling, bool);
 headerDefineSaveFunc(airOutOnShutoff, bool);
 headerDefineSaveFunc(heightSensorMode, bool);
-headerDefineSaveFunc(adsAddressSwap, bool);
 headerDefineSaveFunc(baseProfile, byte);
 headerDefineSaveFunc(raiseOnPressure, bool);
 headerDefineSaveFunc(internalReboot, bool);

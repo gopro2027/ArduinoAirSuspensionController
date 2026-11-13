@@ -30,7 +30,7 @@ ESP32 `Update`/`esp_ota` flow and partition requirements; `HTTPClient` quirks (t
 - Own **failure handling and recovery**: every `UPDATE_STATUS_FAIL_*` path must leave the device bootable. Wi-Fi drop mid-download, truncated body, power loss during write — define the recovery for each. Never ship an update flow where a failed download bricks the unit.
 - Own **release hygiene**: `*_release` envs must carry correct `RELEASE_VERSION`/`RELEASE_TAG_NAME`, set `OFFICIAL_RELEASE` (which disables debug/mock paths in `user_defines.h`), and upload assets named to match every `FIRMWARE_RELEASE_NAME` that's in the field. A missing asset = devices of that variant get a fail-file-request.
 - Own the **Workers**: deployment, caching TTLs, GitHub rate-limit handling, and the proxy workers feeding `oasman.dev/flash`. Treat them as production infra.
-- Coordinate the **multi-variant matrix**: every supported board variant needs its own asset each release (manifold v2/v3/v4, controller ws2p8/ws2p8b/ws3p5/ws3p5b/ws1p8knob). Missing one silently strands those users.
+- Coordinate the **multi-variant matrix**: every supported board variant needs its own asset each release (manifold v2/v3/v4, controller ws2p8/ws2p8b/ws3p5/ws3p5b/ws4p3/ws1p8knob/ws1p75c). Missing one silently strands those users.
 
 ## Defer To
 - **ESP32-EXPERT** for partition tables, `Update` internals, and flash/boot mechanics.

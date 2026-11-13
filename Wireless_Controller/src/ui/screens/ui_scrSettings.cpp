@@ -207,25 +207,6 @@ static void safety_mode_handler(void *data)
     log_i("Pressed safetymode %i", value);
 }
 
-static void ads_address_swap_handler(void *data)
-{
-    const bool value = (bool)data;
-    currentScr->showMsgBox("Swap ADS A/B Addresses?",
-        "Only for boards wired with the ADS address pins reversed. The manifold will reboot. Are you sure you wish to continue?",
-        "OK", "Cancel",
-        [value]() -> void
-        {
-            setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_SWAP_ADS_ADDRESS, value);
-            log_i("Pressed ads address swap %i", value);
-        },
-        [value]() -> void
-        {
-            // Cancelled: the switch already moved itself, so put it back.
-            if (scrSettings.ui_adsSwap != NULL)
-                scrSettings.ui_adsSwap->setBooleanValue(!value, false);
-        }, true); // forceButtonPress: a tap-outside dismiss runs neither callback and would strand the switch
-}
-
 
 static void aux_output_switch_handler(void *data)
 {
@@ -402,7 +383,11 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_t *dropdown = lv_dropdown_create(menu_bar);
     lv_dropdown_set_options(dropdown, s_sectionDropdownOpts);
 #ifdef SCREEN_MODE_CIRCLE
-    lv_obj_set_width(dropdown, scrW - 100);
+    // Round panel: the binding constraint is the chord at the dropdown's TOP row, not the screen
+    // width -- at y=topInset the glass is far narrower than scrW, so scrW-100 ran off both sides.
+    // ; was: lv_obj_set_width(dropdown, scrW - 100)
+    const int ddMaxW = circleChordWidth(topInset, 6);
+    lv_obj_set_width(dropdown, ddMaxW < containerW ? ddMaxW : containerW);
     lv_obj_set_height(dropdown, 40);
 #else
     lv_obj_set_width(dropdown, scrW - scaledX(12));
@@ -1027,9 +1012,6 @@ void ScrSettings::init(lv_obj_t *parent)
         alertValueUpdated();
     });
 
-    // Confirmed in ads_address_swap_handler; the manifold reboots to apply it
-    this->ui_adsSwap = new Option(config_page, OptionType::ON_OFF, "Swap ADS A/B Addresses", {.INT = 0}, ads_address_swap_handler);
-
     // --- Wifi / Update page ---
     lv_obj_t *wifi_update_page = this->addSettingsPage(pages_container, true);
 
@@ -1349,7 +1331,6 @@ void ScrSettings::loop()
         this->ui_airoutonshutoff->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF)) != 0, false);
 #endif
         this->ui_safetymode->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0, false);
-        this->ui_adsSwap->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_SWAP_ADS_ADDRESS)) != 0, false);
         bool heightSensorMode = (flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0;
         this->ui_heightsensormode->setSelectedOption(heightSensorMode ? 1 : 0);
         this->updateLevelModeOptionsVisibility(heightSensorMode);
@@ -1409,7 +1390,6 @@ void ScrSettings::cleanup()
     delete ui_config7;
     delete ui_config8;
     delete ui_config9;
-    delete ui_adsSwap;
     delete ui_updateBtn;
     delete ui_manifoldUpdateStatus;
     delete ui_mac;

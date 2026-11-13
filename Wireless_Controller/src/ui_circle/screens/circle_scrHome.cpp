@@ -43,6 +43,29 @@ static void openSaveCurrentHeightConfirm()
                        []() {}, false);
 }
 
+#ifndef HAS_ROTARY_ENCODER
+/** Stands in for a knob detent. Holding keeps a selected corner's valve open; preset stepping
+ *  stays one step per press, since PRESSING repeats every frame. */
+static void scrollBtnEventCb(lv_event_t *e)
+{
+    const int dir = (int)(intptr_t)lv_event_get_user_data(e);
+    switch (lv_event_get_code(e)) {
+    case LV_EVENT_PRESSED:
+        scrHome.applyScrollDelta(dir);
+        break;
+    case LV_EVENT_PRESSING:
+        if (scrHome.anyCornerSelected())
+            scrHome.applyScrollDelta(dir);
+        break;
+    case LV_EVENT_RELEASED:
+        scrHome.releaseScrollHold();
+        break;
+    default:
+        break;
+    }
+}
+#endif
+
 static void centerPresetEventCb(lv_event_t *e)
 {
     const lv_event_code_t code = lv_event_get_code(e);
@@ -236,6 +259,49 @@ void ScrHome::init(lv_obj_t *parent)
 
     lv_obj_move_foreground(presetSelectBtn_);
 
+#ifndef HAS_ROTARY_ENCODER
+    /* Down on the left, up on the right. The widest point of a round panel is its vertical centre,
+     * and the corner touch zones stop well short of the edges, so these sit clear of everything. */
+    const int scrollBtnSz = 64;
+    const int scrollBtnInset = 10;
+    struct ScrollBtn {
+        lv_obj_t **slot;
+        lv_align_t align;
+        int dx;
+        const char *symbol;
+        int dir;
+    };
+    const ScrollBtn scrollBtns[] = {
+        {&scrollDownBtn_, LV_ALIGN_LEFT_MID, scrollBtnInset, LV_SYMBOL_DOWN, -1},
+        {&scrollUpBtn_, LV_ALIGN_RIGHT_MID, -scrollBtnInset, LV_SYMBOL_UP, 1},
+    };
+
+    for (const ScrollBtn &b : scrollBtns) {
+        lv_obj_t *btn = lv_btn_create(scr);
+        lv_obj_set_size(btn, scrollBtnSz, scrollBtnSz);
+        lv_obj_set_style_radius(btn, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(btn, lv_color_hex(GENERIC_GREY_DARK), 0);
+        lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
+        lv_obj_set_style_border_width(btn, 2, 0);
+        lv_obj_set_style_border_color(btn, lv_color_hex(THEME_COLOR_DARK), 0);
+        lv_obj_set_style_shadow_width(btn, 0, 0);
+        lv_obj_align(btn, b.align, b.dx, 0);
+        lv_obj_add_event_cb(btn, scrollBtnEventCb, LV_EVENT_PRESSED, (void *)(intptr_t)b.dir);
+        lv_obj_add_event_cb(btn, scrollBtnEventCb, LV_EVENT_PRESSING, (void *)(intptr_t)b.dir);
+        lv_obj_add_event_cb(btn, scrollBtnEventCb, LV_EVENT_RELEASED, (void *)(intptr_t)b.dir);
+
+        lv_obj_t *lbl = lv_label_create(btn);
+        lv_label_set_text(lbl, b.symbol);
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_24, 0);
+        lv_obj_set_style_text_color(lbl, lv_color_white(), 0);
+        lv_obj_remove_flag(lbl, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_center(lbl);
+
+        lv_obj_move_foreground(btn);
+        *b.slot = btn;
+    }
+#endif
+
 #ifdef HAS_ROTARY_ENCODER
     if (g_knob_handle)
         lastKnobCount_ = iot_knob_get_count_value(g_knob_handle);
@@ -283,45 +349,33 @@ void ScrHome::showPresetDialog()
                false);
 }
 
-void ScrHome::processKnob()
+bool ScrHome::anyCornerSelected() const
 {
-#ifdef HAS_ROTARY_ENCODER
-    if (!g_knob_handle)
-        return;
-
-    int current = iot_knob_get_count_value(g_knob_handle);
-    int delta = current - lastKnobCount_;
-
-    if (delta == 0) {
-        if (knobActiveUntil_ && millis() > knobActiveUntil_) {
-            for (int i = 0; i < 4; i++) {
-                Corner &c = corners_[i];
-                if (c.selected) {
-                    unsetValveBit(c.inValve);
-                    unsetValveBit(c.outValve);
-                }
-            }
-            knobActiveUntil_ = 0;
-        }
-        return;
-    }
-
-    if (isMsgBoxDisplayed()) {
-        lastKnobCount_ = current;
-        return;
-    }
-
-    lastKnobCount_ = current;
-
-    bool anyCornerSelected = false;
     for (int i = 0; i < 4; i++) {
-        if (corners_[i].selected) {
-            anyCornerSelected = true;
-            break;
+        if (corners_[i].selected)
+            return true;
+    }
+    return false;
+}
+
+void ScrHome::releaseScrollHold()
+{
+    for (int i = 0; i < 4; i++) {
+        Corner &c = corners_[i];
+        if (c.selected) {
+            unsetValveBit(c.inValve);
+            unsetValveBit(c.outValve);
         }
     }
+    knobActiveUntil_ = 0;
+}
 
-    if (anyCornerSelected) {
+void ScrHome::applyScrollDelta(int delta)
+{
+    if (delta == 0 || isMsgBoxDisplayed())
+        return;
+
+    if (anyCornerSelected()) {
         if (rejectIfDriveLocked())
             return;
         knobActiveUntil_ = millis() + KNOB_HOLD_MS;
@@ -353,6 +407,26 @@ void ScrHome::processKnob()
         p = pMax;
     if (p != currentPreset)
         setPreset(p);
+}
+
+void ScrHome::processKnob()
+{
+    // Valves opened by a scroll step are held only while steps keep arriving, so this timeout is
+    // what closes them -- for the buttons as much as for the encoder.
+    if (knobActiveUntil_ && millis() > knobActiveUntil_)
+        releaseScrollHold();
+
+#ifdef HAS_ROTARY_ENCODER
+    if (!g_knob_handle)
+        return;
+
+    int current = iot_knob_get_count_value(g_knob_handle);
+    int delta = current - lastKnobCount_;
+    if (delta == 0)
+        return;
+
+    lastKnobCount_ = current;
+    applyScrollDelta(delta);
 #endif
 }
 
@@ -431,20 +505,14 @@ void ScrHome::loop()
 
 void ScrHome::cleanup()
 {
-#ifdef HAS_ROTARY_ENCODER
-    if (knobActiveUntil_) {
-        for (int i = 0; i < 4; i++) {
-            Corner &c = corners_[i];
-            if (c.selected) {
-                unsetValveBit(c.inValve);
-                unsetValveBit(c.outValve);
-            }
-        }
-        knobActiveUntil_ = 0;
-    }
-#endif
+    if (knobActiveUntil_)
+        releaseScrollHold();
 
     s_skipNextPresetClick = false;
+#ifndef HAS_ROTARY_ENCODER
+    scrollDownBtn_ = nullptr;
+    scrollUpBtn_ = nullptr;
+#endif
     presetSelectBtn_ = nullptr;
     presetNumberLabel_ = nullptr;
     tankLabel_ = nullptr;

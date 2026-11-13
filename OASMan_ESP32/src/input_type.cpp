@@ -115,6 +115,12 @@ int InputType::analogRead()
         }
 #if ADS_MOCK_BYPASS == false
 
+        // ADS A/B failed to init at boot, report 0psi/0% instead of hammering a dead i2c address
+        if ((this->adc == &ADS1115A && !ADS1115A_exists) || (this->adc == &ADS1115B && !ADS1115B_exists))
+        {
+            return (int)pressureZeroAnalogValue;
+        }
+
         int value = -1;
         while (xSemaphoreTake(adcReadMutex, 1) != pdTRUE)
         {

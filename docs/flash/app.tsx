@@ -77,6 +77,12 @@ const DEVICES: Device[] = [
 		group: "Controller",
 		link: "https://www.waveshare.com/esp32-s3-knob-touch-lcd-1.8.htm?sku=31623",
 	},
+	{
+		id: "controller_ws1p75c",
+		name: '1.75" Round AMOLED Waveshare Controller',
+		group: "Controller",
+		link: "https://www.waveshare.com/esp32-s3-touch-amoled-1.75c.htm",
+	},
 	{ id: "controller_cyd3p2", name: '3.2" CYD Capacitive Controller', group: "Legacy" },
 	{ id: "controller_cyd3p2_resistive", name: '3.2" CYD Resistive Controller', group: "Legacy" },
 ];
