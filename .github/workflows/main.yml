@@ -61,6 +61,9 @@ jobs:
     - name: Build PlatformIO manifold v4
       run: ./build_firmware.sh "OASMan_ESP32" "manifold_v4"
 
+    - name: Build PlatformIO manifold v5
+      run: ./build_firmware.sh "OASMan_ESP32" "manifold_v5"
+
     # - name: Build PlatformIO controller cyd3p2
     #   run: ./build_firmware.sh "Wireless_Controller" "controller_cyd3p2"
 

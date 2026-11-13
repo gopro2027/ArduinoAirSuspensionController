@@ -55,7 +55,7 @@ Official firmware is cut by the GitHub Actions workflow `.github/workflows/main.
   ```bash
   version_num=test release_tag_name=build-local pio run -e manifold_v4_release
   ```
-- Every in-field variant needs its asset in every release (manifold v2/v3/v4 + controller ws2p8/ws2p8b/ws3p5/ws3p5b/ws4p3/ws1p8knob/ws1p75c). A missing asset strands those users on a fail-file-request.
+- Every in-field variant needs its asset in every release (manifold v2/v3/v4/v5 + controller ws2p8/ws2p8b/ws3p5/ws3p5b/ws4p3/ws1p8knob/ws1p75c). A missing asset strands those users on a fail-file-request.
 
 ## Tests & verification
 
