@@ -34,7 +34,8 @@ interface Device {
 // Controller category (group "Legacy") alongside the current controllers.
 
 const DEVICES: Device[] = [
-	{ id: "manifold_v4", name: "Board V4 Manifold", group: "Manifold", desc: "Latest manifold board" },
+	{ id: "manifold_v5", name: "Board V5 Manifold", group: "Manifold", desc: "Latest manifold board" },
+	{ id: "manifold_v4", name: "Board V4 Manifold", group: "Manifold" },
 	{ id: "manifold_v3", name: "Board V3 Manifold", group: "Manifold" },
 	{
 		id: "manifold_v2",
