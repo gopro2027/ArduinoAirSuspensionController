@@ -16,7 +16,7 @@ This agent owns the **physical hardware** of **OAS-Man** — the board, the encl
 - **Power:** buck converter + power switches; a single switch and a double switch select 5V-from-buck vs 12V to power the ESP32. Solenoids/compressor are the high-current loads.
 - **Peripherals on board:** **ADS1115** I²C ADC (4 pressure sensors), 128×64 **SSD1306** OLED (I²C `0x3C`), RF receiver option, FastLED-driven LED(s), accessory/e-brake wires (v4).
 - **Enclosures (`3d Prints/`):** manifold base/lid/hat variants (tall/short, screen/no-screen), Waveshare 2.8" controller cases, tank-manifold attachment. STLs + a STEP.
-- **Controller hardware** is off-the-shelf **Waveshare ESP32-S3 touch LCD** modules (`ws2p8`/`ws3p5`/`ws1p8knob`) — not a custom PCB.
+- **Controller hardware** is off-the-shelf **Waveshare ESP32-S3 touch LCD** modules (`ws2p8`/`ws3p5`/`ws4p3`/`ws1p8knob`/`ws1p75c`) — not a custom PCB.
 
 ## Role
 Electronics & Physical Build Authority — owns the schematic, PCB, BOM/assembly, wiring harness, power, and enclosures.

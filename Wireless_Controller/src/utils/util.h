@@ -20,6 +20,14 @@ int getScreenWidth();
 int getScreenHeight();
 bool isLandscape();
 
+#ifdef SCREEN_MODE_CIRCLE
+// Widest a horizontally centred element can be at screen row `y` and still clear the round bezel,
+// less `margin` on each side. On a circular panel the screen width is only available at the
+// vertical centre; anything near the top or bottom has far less, so sizing from getScreenWidth()
+// there draws outside the glass.
+int circleChordWidth(int y, int margin);
+#endif
+
 // Scaled dimension helpers - scales from 240×320 reference
 inline int scaled(int referenceValue) {
     return (int)(referenceValue * getScaleX());

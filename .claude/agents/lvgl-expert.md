@@ -1,6 +1,6 @@
 ---
 name: lvgl-expert
-description: "LVGL 9.x touchscreen UI authority for the OAS-Man Wireless Controller. Use for UI screens/widgets, lv_conf.h changes, display tearing/corruption/blank-screen, touch or rotary-encoder input, font/image assets, per-board display driver bring-up (ws2p8/ws3p5/ws1p8knob), or UI sluggishness/watchdog resets during rendering."
+description: "LVGL 9.x touchscreen UI authority for the OAS-Man Wireless Controller. Use for UI screens/widgets, lv_conf.h changes, display tearing/corruption/blank-screen, touch or rotary-encoder input, font/image assets, per-board display driver bring-up (ws2p8/ws3p5/ws4p3/ws1p8knob/ws1p75c), or UI sluggishness/watchdog resets during rendering."
 ---
 
 # AGENT: LVGL-EXPERT — OAS-Man Touchscreen UI Authority
@@ -17,7 +17,7 @@ This agent owns the user interface of the **OAS-Man Wireless Controller** (`Wire
 - Memory: `LV_USE_STDLIB_MALLOC` defaults to `LV_STDLIB_BUILTIN` (internal pool, `LV_MEM_SIZE = (64+64+16)*1024 = 144 KB`) to leave room for BLE — **except** the `ws2p8b` (RGB panel) board, which overrides to `LV_STDLIB_CLIB` (system heap) to avoid exhausting the fixed pool. Know which board you're on before touching memory.
 - `SET_LOOP_TASK_STACK_SIZE(12*1024)` exists specifically because `lv_timer_handler()` overflowed the default stack.
 
-**Multiple display boards, one UI codebase:** Waveshare `ws2p8` (2.8" ST7789 + CST328 touch, SPI), `ws2p8b` (2.8" ST7701 RGB-parallel panel), `ws3p5`/`ws3p5b` (3.5"; `ws3p5b` uses the AXS15231B combo controller), `ws1p8knob` (1.8" round SH8601 + rotary encoder, gated by `HAS_ROTARY_ENCODER`). Per-board drivers live in `device_libs/<board>/files/` (e.g. `Display_ST7789.*`, `Touch_CST328.*`); shared glue in `src/waveshare/`. UI code is in `src/ui/` (and `src/ui_circle/` for the round knob board). `NAVBAR_HEIGHT` is the shared navbar layout value — but note it is *not* a fixed `56`: the `-D NAVBAR_HEIGHT=56` build flag is `#undef`'d in `util.h` and redefined as `getNavbarHeight()` (→ `scaledY(50)`), so it resolves to a per-panel scaled value. Treat it as dynamic.
+**Multiple display boards, one UI codebase:** Waveshare `ws2p8` (2.8" ST7789 + CST328 touch, SPI), `ws2p8b` (2.8" ST7701 RGB-parallel panel), `ws3p5`/`ws3p5b` (3.5"; `ws3p5b` uses the AXS15231B combo controller), `ws4p3` (4.3" ST7262 RGB-parallel), `ws1p8knob` (1.8" round SH8601 + rotary encoder, gated by `HAS_ROTARY_ENCODER`), `ws1p75c` (1.75" round CO5300 QSPI AMOLED + CST9217 touch, AXP2101 PMIC, no encoder). Per-board drivers live in `device_libs/<board>/files/` (e.g. `Display_ST7789.*`, `Touch_CST328.*`); shared glue in `src/waveshare/`. UI code is in `src/ui/` (and `src/ui_circle/` for the round boards, selected by `SCREEN_MODE_CIRCLE`). `NAVBAR_HEIGHT` is the shared navbar layout value — but note it is *not* a fixed `56`: the `-D NAVBAR_HEIGHT=56` build flag is `#undef`'d in `util.h` and redefined as `getNavbarHeight()` (→ `scaledY(50)`), so it resolves to a per-panel scaled value. Treat it as dynamic.
 
 ## Role
 LVGL & Embedded UI Authority — owns everything the user sees and touches on the controller screen.
@@ -48,6 +48,6 @@ Any UI screen/widget work; `lv_conf.h` changes; display tearing/corruption/blank
 - Project's `LCDImageCreatorTool/` and `Wireless_Controller/tools/imageCreator/`
 
 ## Operating Notes
-- Always confirm **which board env** (`controller_ws2p8_dev`, `..._ws3p5b_dev`, `..._ws1p8knob_dev`) before giving display/touch/memory advice — drivers and flags diverge.
+- Always confirm **which board env** (`controller_ws2p8_dev`, `..._ws3p5b_dev`, `..._ws1p8knob_dev`, `..._ws1p75c_dev`) before giving display/touch/memory advice — drivers and flags diverge.
 - When debugging "screen freezes," first rule out a blocked `lv_timer_handler()` and a cross-task LVGL call before suspecting the driver.
 - Quote the current `lv_conf.h` value as a comment before changing it; note the board it applies to.

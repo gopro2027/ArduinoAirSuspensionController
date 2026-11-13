@@ -30,7 +30,7 @@ pio run -e manifold_v4_dev                 # build
 pio run -e manifold_v4_dev -t upload       # build + flash
 pio device monitor                         # serial @ 115200 (esp32_exception_decoder is on)
 
-# Controller (ESP32-S3).    Dev envs: controller_{ws2p8,ws2p8b,ws3p5,ws3p5b,ws1p8knob}_dev
+# Controller (ESP32-S3).    Dev envs: controller_{ws2p8,ws2p8b,ws3p5,ws3p5b,ws4p3,ws1p8knob,ws1p75c}_dev
 pio run -e controller_ws2p8_dev
 pio run -e controller_ws2p8_dev -t upload
 ```
@@ -55,7 +55,7 @@ Official firmware is cut by the GitHub Actions workflow `.github/workflows/main.
   ```bash
   version_num=test release_tag_name=build-local pio run -e manifold_v4_release
   ```
-- Every in-field variant needs its asset in every release (manifold v2/v3/v4 + controller ws2p8/ws2p8b/ws3p5/ws3p5b/ws1p8knob). A missing asset strands those users on a fail-file-request.
+- Every in-field variant needs its asset in every release (manifold v2/v3/v4 + controller ws2p8/ws2p8b/ws3p5/ws3p5b/ws4p3/ws1p8knob/ws1p75c). A missing asset strands those users on a fail-file-request.
 
 ## Tests & verification
 

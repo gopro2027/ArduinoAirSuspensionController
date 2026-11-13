@@ -383,7 +383,11 @@ void ScrSettings::init(lv_obj_t *parent)
     lv_obj_t *dropdown = lv_dropdown_create(menu_bar);
     lv_dropdown_set_options(dropdown, s_sectionDropdownOpts);
 #ifdef SCREEN_MODE_CIRCLE
-    lv_obj_set_width(dropdown, scrW - 100);
+    // Round panel: the binding constraint is the chord at the dropdown's TOP row, not the screen
+    // width -- at y=topInset the glass is far narrower than scrW, so scrW-100 ran off both sides.
+    // ; was: lv_obj_set_width(dropdown, scrW - 100)
+    const int ddMaxW = circleChordWidth(topInset, 6);
+    lv_obj_set_width(dropdown, ddMaxW < containerW ? ddMaxW : containerW);
     lv_obj_set_height(dropdown, 40);
 #else
     lv_obj_set_width(dropdown, scrW - scaledX(12));

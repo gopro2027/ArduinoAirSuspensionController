@@ -18,6 +18,13 @@ public:
     void setPreset(int num);
     void showPresetDialog();
 
+    /** One scroll step: airs a selected corner up/down, or steps the preset when none is selected.
+     *  Shared by the rotary encoder and, on boards without one, the on-screen up/down buttons. */
+    void applyScrollDelta(int delta);
+    /** Close any valve a scroll step opened. */
+    void releaseScrollHold();
+    bool anyCornerSelected() const;
+
 private:
 
     struct Corner {
@@ -38,6 +45,12 @@ private:
     /* Center preset: tap = dialog (OK / save height); long-press = load */
     lv_obj_t *presetSelectBtn_ = nullptr;
     lv_obj_t *presetNumberLabel_ = nullptr;
+
+#ifndef HAS_ROTARY_ENCODER
+    /* Stand-ins for the rotary encoder this board does not have. */
+    lv_obj_t *scrollDownBtn_ = nullptr;
+    lv_obj_t *scrollUpBtn_ = nullptr;
+#endif
 
     int lastKnobCount_ = 0;
     unsigned long knobActiveUntil_ = 0;
