@@ -136,6 +136,15 @@ void Compressor::loop()
         return;
     }
 
+#ifdef BOARD_VERSION_5
+    // no tank ADS means no tank reading (it reads 0psi), so never run the compressor blind
+    if (!ADS1115D_exists)
+    {
+        this->s_trigger.close();
+        return;
+    }
+#endif
+
     // no matter which state compressor is in, check if it is up to max psi and turn it off if needed and return without any further execution. This is most important tank check and should ideally be ran first to turn off in any case where pressure is too high.
     if (this->getTankPressure() >= getcompressorOffPSI())
     {

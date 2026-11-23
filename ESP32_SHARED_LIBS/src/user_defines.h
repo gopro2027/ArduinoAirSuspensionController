@@ -164,8 +164,11 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 #define pressureSensorInput1 new InputType(3, &ADS1115A)             // ADSA/3   Previous: D35/A3      Default: pressureInputRearPassenger
 #define pressureSensorInput2 new InputType(2, &ADS1115A)             // ADSA/2   Previous: D34/A2      Default: pressureInputFrontDriver
 #define pressureSensorInput3 new InputType(1, &ADS1115A)             // ADSA/1   Previous: D39/VN/A7   Default: pressureInputRearDriver
-#define pressureSensorInput4_directesp32 new InputType(32, INPUT)    // D32/A0, pressure sensor        Default: pressureInputTank
-#define pressureSensorInput4_adsd1115d new InputType(0, &ADS1115D)   // ADSD/0, tank pressure sensor on 4.2 boards   Default: pressureInputTank
+#ifdef BOARD_VERSION_5
+#define pressureSensorInput4 new InputType(0, &ADS1115D)             // ADSD/0, v5 only (GPIO32 is GPS TX)   Default: pressureInputTank
+#else
+#define pressureSensorInput4 new InputType(32, INPUT)                // D32/A0, pressure sensor        Default: pressureInputTank
+#endif
 
 /* Compressor/tank */
 #define compressorRelayPin new InputType(13, OUTPUT) // D13, solenoid
@@ -234,7 +237,9 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 
 // LED Configuration
 #define LED_PIN     16
-#define LED_NUM    6        // Change this if you add more LEDs
+#ifndef LED_NUM
+#define LED_NUM    4        // Change this if you add more LEDs
+#endif
 #define LED_TYPE    SK6812
 #define LED_COLOR_ORDER GRB
 

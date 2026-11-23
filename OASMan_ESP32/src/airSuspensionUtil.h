@@ -25,6 +25,7 @@ extern Adafruit_ADS1115 ADS1115C;
 extern Adafruit_ADS1115 ADS1115D;
 extern bool ADS1115A_exists;
 extern bool ADS1115B_exists;
+extern bool ADS1115D_exists;
 
 Manifold *getManifold();
 Compressor *getCompressor();
