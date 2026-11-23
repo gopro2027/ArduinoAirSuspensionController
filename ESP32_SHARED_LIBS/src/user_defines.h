@@ -166,6 +166,7 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 #define pressureSensorInput3 new InputType(1, &ADS1115A)             // ADSA/1   Previous: D39/VN/A7   Default: pressureInputRearDriver
 #ifdef BOARD_VERSION_5
 #define pressureSensorInput4 new InputType(0, &ADS1115D)             // ADSD/0, v5 only (GPIO32 is GPS TX)   Default: pressureInputTank
+#define HW_VERSION_PIN 39                                            // D39/VN, board revision divider, see board_version.cpp
 #else
 #define pressureSensorInput4 new InputType(32, INPUT)                // D32/A0, pressure sensor        Default: pressureInputTank
 #endif
