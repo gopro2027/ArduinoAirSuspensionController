@@ -2,6 +2,7 @@
 #include "airSuspensionUtil.h"
 #include "manifoldSaveData.h"
 #include "aiPressureUtil.h"
+#include "components/motion_detect.h"
 
 bool bp32ServiceStarted = false;
 
@@ -100,6 +101,15 @@ void task_wheel(void *parameters)
     }
 }
 
+void task_motion(void *parameters)
+{
+    for (;;)
+    {
+        motionDetectLoop();
+        delay(33); // ~30Hz
+    }
+}
+
 void task_trainAI(void *parameters)
 {
     trainOffsetModels(); // boot: refit all 4 from stored samples
@@ -177,6 +187,18 @@ void setup_tasks()
         NULL,
         1000,
         NULL);
+
+    // IMU moving/parked detection Task, only if an IMU was found at boot
+    if (motionImuPresent())
+    {
+        xTaskCreate(
+            task_motion,
+            "Motion IMU",
+            512 * 4,
+            NULL,
+            1000,
+            NULL);
+    }
 
     //  Train AI Task
     xTaskCreate(

@@ -93,6 +93,7 @@ void initializeADS()
 void setupManifold()
 {
     initializeADS();
+    motionDetectInit(); // optional IMU, ignored if not found
 
 #if SIX_VALVE_MANIFOLD == false
 
@@ -210,6 +211,10 @@ bool isGPSCurrentlyAccurate() { // this will error on the side of caution, so we
 // 'dontTrustEBrakeAlone' will make it so it skips the ebrake check by ittself, because in a stricter moder we may not want to trust only the ebrake
 // 'requireBothAccAndEbrake' will make it so it requires both the accessory wire and the ebrake to be on to return true. GPS will still return true on it's own tho if it is working. 
 bool isVehicleParked(bool dontTrustEBrakeAlone, bool requireBothAccAndEbrake_or_GPS) {
+
+    if (motionImuPresent() && !motionImuSaysStationary()) {
+        return false; // IMU sees motion, never parked. No IMU found means this is skipped
+    }
 
     if (requireBothAccAndEbrake_or_GPS) {
         dontTrustEBrakeAlone = true; // we are pairing both the acc and ebrake together, so skip the single ebrake check.

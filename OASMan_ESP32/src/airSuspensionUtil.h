@@ -11,6 +11,7 @@
 #include "components/rf_receiver.h"
 #include <FastLED.h>
 #include "board_version.h"
+#include "components/motion_detect.h"
 
 extern InputType *pressureInputs[5];
 extern Manifold *manifold;

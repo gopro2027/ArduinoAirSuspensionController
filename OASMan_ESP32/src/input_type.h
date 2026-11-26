@@ -29,5 +29,7 @@ public:
 };
 
 void setupADCReadMutex();
+void i2cBusLock();
+void i2cBusUnlock();
 
 #endif
