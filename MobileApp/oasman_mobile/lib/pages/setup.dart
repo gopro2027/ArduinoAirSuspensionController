@@ -1100,16 +1100,18 @@ class SettingsPageState extends State<SettingsPage> {
                 bool,
                 bool,
                 bool,
+                String,
               )>(
             selector: (_, m) => (
               m.compressorFrozen,
               m.vehicleOn,
               m.ebrakeOn,
               m.compressorOn,
+              m.vehicleVoltageText,
             ),
             builder: (context, status, _) {
               final bm = context.read<BLEManager>();
-              final (frozen, accOn, ebrake, compOn) = status;
+              final (frozen, accOn, ebrake, compOn, vehicleVoltage) = status;
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 decoration: BoxDecoration(
@@ -1132,6 +1134,8 @@ class SettingsPageState extends State<SettingsPage> {
                       'E-Brake Status:',
                       ebrake ? 'On' : 'Off',
                     ),
+                    if (vehicleVoltage.isNotEmpty)
+                      _readOnlyStatusRow('Vehicle Battery:', vehicleVoltage),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [

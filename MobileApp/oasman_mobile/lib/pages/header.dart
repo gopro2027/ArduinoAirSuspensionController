@@ -235,6 +235,18 @@ class Header extends StatelessWidget {
             ),
           ),
         _buildTankPressureRow(bleManager, unitProvider),
+        // vehicle battery voltage, hidden when the manifold reports 0 (older board)
+        if (bleManager.vehicleVoltageText.isNotEmpty)
+          Text(
+            bleManager.vehicleVoltageText,
+            style: TextStyle(
+              fontFamily: 'Bebas Neue',
+              color: bleManager.vehicleVoltageLow
+                  ? const Color(0xFFFF6B6B)
+                  : Colors.white70,
+              fontSize: 16,
+            ),
+          ),
       ],
     );
   }
