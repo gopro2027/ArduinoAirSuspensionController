@@ -1,7 +1,4 @@
 #include "qmi8658.h"
-
-#ifdef HAS_MOTION_IMU
-
 #include <Wire.h>
 #include "input_type.h"
 
@@ -71,7 +68,7 @@ bool QMI8658_Init()
 
     if (s_addr == 0)
     {
-        log_w("QMI8658 not found (last WHO_AM_I=0x%02X)", whoami);
+        Serial.println(F("No QMI8658 IMU found, motion detection disabled"));
         return false;
     }
 
@@ -126,5 +123,3 @@ bool QMI8658_ReadAccelGyro(float *ax, float *ay, float *az, float *gx, float *gy
 
     return true;
 }
-
-#endif

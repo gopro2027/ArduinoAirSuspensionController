@@ -1,7 +1,4 @@
 #include "motion_detect.h"
-
-#ifdef HAS_MOTION_IMU
-
 #include <math.h>
 #include "qmi8658.h"
 
@@ -13,7 +10,7 @@ static const float ACTIVITY_MOVING_THRESH = 0.05f;
 static const float ACTIVITY_PARKED_THRESH = 0.02f;
 static const uint32_t MOTION_MOVING_CONFIRM_MS = 1000;
 static const uint32_t MOTION_PARKED_CONFIRM_MS = 7000; // must be continuously quiet this long
-static const uint8_t IMU_INIT_MAX_ATTEMPTS = 10;       // ~1s apart, then give up
+static const uint8_t IMU_MAX_READ_FAILURES = 30;       // ~1s of failed reads, then ignore the IMU
 
 static volatile bool imuPresent = false;
 static volatile bool vehicleMoving = true; // not stationary until the IMU proves it
@@ -23,32 +20,33 @@ static float gyroBiasX = 0.0f, gyroBiasY = 0.0f, gyroBiasZ = 0.0f;
 static float activityAvg = 0.0f;
 static bool biasInit = false;
 
+void motionDetectInit()
+{
+    imuPresent = QMI8658_Init();
+}
+
 void motionDetectLoop()
 {
     static uint32_t conditionStart = 0; // when the opposing condition began
-    static uint32_t nextInitAttempt = 0;
-    static uint8_t initAttempts = 0;
     static uint32_t nextDebugLog = 0;
+    static uint8_t readFailures = 0;
     uint32_t now = millis();
 
     if (!imuPresent)
-    {
-        if (initAttempts >= IMU_INIT_MAX_ATTEMPTS || now < nextInitAttempt)
-            return;
-        nextInitAttempt = now + 1000;
-        initAttempts++;
-        imuPresent = QMI8658_Init();
-        if (!imuPresent)
-        {
-            if (initAttempts >= IMU_INIT_MAX_ATTEMPTS)
-                log_e("IMU not found, isVehicleParked will always be false");
-            return;
-        }
-    }
+        return;
 
     float ax, ay, az, gx, gy, gz;
     if (!QMI8658_ReadAccelGyro(&ax, &ay, &az, &gx, &gy, &gz))
+    {
+        if (++readFailures >= IMU_MAX_READ_FAILURES)
+        {
+            imuPresent = false; // fail open, parked logic goes back to ignoring the IMU
+            vehicleMoving = true;
+            Serial.println(F("IMU stopped responding, motion detection disabled"));
+        }
         return;
+    }
+    readFailures = 0;
 
     if (!biasInit) // seed offsets on the first sample to avoid a startup spike
     {
@@ -130,7 +128,5 @@ bool motionImuPresent()
 
 bool motionImuSaysStationary()
 {
-    return imuPresent && !vehicleMoving;
+    return !vehicleMoving;
 }
-
-#endif

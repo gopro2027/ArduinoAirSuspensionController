@@ -101,7 +101,6 @@ void task_wheel(void *parameters)
     }
 }
 
-#ifdef HAS_MOTION_IMU
 void task_motion(void *parameters)
 {
     for (;;)
@@ -110,7 +109,6 @@ void task_motion(void *parameters)
         delay(33); // ~30Hz
     }
 }
-#endif
 
 void task_trainAI(void *parameters)
 {
@@ -190,16 +188,17 @@ void setup_tasks()
         1000,
         NULL);
 
-#ifdef HAS_MOTION_IMU
-    // IMU moving/parked detection Task
-    xTaskCreate(
-        task_motion,
-        "Motion IMU",
-        512 * 4,
-        NULL,
-        1000,
-        NULL);
-#endif
+    // IMU moving/parked detection Task, only if an IMU was found at boot
+    if (motionImuPresent())
+    {
+        xTaskCreate(
+            task_motion,
+            "Motion IMU",
+            512 * 4,
+            NULL,
+            1000,
+            NULL);
+    }
 
     //  Train AI Task
     xTaskCreate(

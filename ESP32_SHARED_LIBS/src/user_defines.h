@@ -169,7 +169,6 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 #define HW_VERSION_PIN 39                                            // D39/VN, board revision divider, see board_version.cpp
 #define BATTERY_VOLTAGE_PIN 36                                       // D36/VP, vehicle 12v sense
 #define BATTERY_VOLTAGE_DIVIDER_RATIO (62.0f / 532.0f)               // R139 470k / R140 62k
-#define HAS_MOTION_IMU 1                                             // U23 QMI8658A on the shared I2C bus, gates isVehicleParked
 #else
 #define pressureSensorInput4 new InputType(32, INPUT)                // D32/A0, pressure sensor        Default: pressureInputTank
 #endif
