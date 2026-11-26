@@ -4,7 +4,7 @@
 #define NUM_WHEEL_THREADS 4
 std::atomic<bool> flagStartPressureGoalRoutine[NUM_WHEEL_THREADS];
 
-extern bool isVehicleParked(bool dontTrustEBrakeAlone = false); // defined in airSuspensionUtil.cpp
+extern bool isVehicleStationary(); // defined in airSuspensionUtil.cpp
 extern bool isAnyWheelActive();            // defined in airSuspensionUtil.cpp
 
 int getMinValveOpenPSI()
@@ -668,11 +668,11 @@ void Wheel::heightsensorlessLevelling() {
         float current = this->getSelectedInputValue();
 
         // Two independent gates must BOTH be satisfied before acting:
-        //  1. Non-moving: parked (e-brake/GPS/Accessory wire -
+        //  1. Non-moving: isVehicleStationary() (GPS/IMU/acc/e-brake)
         //     continuously for SENSORLESS_LEVEL_PARKED_DWELL_MS.
         //  2. Pressure stable: the reading has stayed within the band for SENSORLESS_LEVEL_PRESSURE_STABLE_MS.
         // Pressure is only readable with valves closed and no fill routine running.
-        if (!isVehicleParked())
+        if (!isVehicleStationary())
         {
             this->slParkedSince = millis(); // not parked -> set time since last park to current time 
             return;

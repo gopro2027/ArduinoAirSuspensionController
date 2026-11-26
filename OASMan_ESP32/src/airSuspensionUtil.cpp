@@ -130,6 +130,7 @@ const int ebrakeSampleSize = AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE == true ? 2 : 2
 bool ebrakeHistory[ebrakeSampleSize];
 int ebrakeCounter = 0;
 bool ebrakeOn = false;
+unsigned long ebrakeOnSince = 0;
 
 InputType *ebrakeWire;
 void ebrakeWireSetup()
@@ -142,6 +143,8 @@ void ebrakeWireLoop()
     // when e brake is not engaged, the 3.3v through the 10k resistor goes to the esp32. That means we get a high reading when ebrake is off. When ebrake is on, we get a low reading
     bool previousReading = ebrakeOn;
     sampleReading(ebrakeOn, ebrakeWire->digitalRead() == LOW, ebrakeHistory, ebrakeCounter, ebrakeSampleSize);
+    if (ebrakeOn && !previousReading)
+        ebrakeOnSince = millis();
 
 #if ENABLE_AIR_OUT_ON_SHUTOFF
 #if AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE
@@ -179,6 +182,11 @@ bool isEBrakeOn()
     return ebrakeOn;
 }
 
+bool isEBrakeOnFor(unsigned long ms)
+{
+    return isEBrakeOn() && millis() - ebrakeOnSince >= ms;
+}
+
 #else
 
 void ebrakeWireSetup()
@@ -188,6 +196,10 @@ void ebrakeWireLoop()
 {
 }
 bool isEBrakeOn()
+{
+    return false;
+}
+bool isEBrakeOnFor(unsigned long ms)
 {
     return false;
 }
@@ -207,41 +219,64 @@ bool isGPSCurrentlyAccurate() { // this will error on the side of caution, so we
     return true;
 }
 
-// This function should not be used as a trigger on it's own, it should only be used as a check upon user interaction.
-// 'dontTrustEBrakeAlone' will make it so it skips the ebrake check by ittself, because in a stricter moder we may not want to trust only the ebrake
-bool isVehicleParked(bool dontTrustEBrakeAlone) {
+#define GPS_STOPPED_DWELL_MS 5000   // gps must read <= 1mph this long to count as stopped
+#define ACC_OFF_PARKED_DWELL_MS 3000 // must stay under AIR_OUT_AFTER_SHUTDOWN_MS or fall on shutdown never sees the car as off
+#define EBRAKE_PARKED_DWELL_MS 5000
 
-    if (motionImuPresent() && !motionImuSaysStationary()) {
-        return false; // IMU sees motion, never parked. No IMU found means this is skipped
+enum GpsMotionState
+{
+    GPS_MOTION_UNKNOWN, // no gps, bad fix, 1-3mph, or not stopped long enough yet
+    GPS_MOTION_MOVING,
+    GPS_MOTION_STOPPED
+};
+
+// good gps fix: > 3mph is moving, <= 1mph for GPS_STOPPED_DWELL_MS is stopped
+static GpsMotionState getGPSMotionState() {
+    static unsigned long gpsStoppedSince = 0;
+    if (!gps_exists || !isGPSCurrentlyAccurate()) {
+        gpsStoppedSince = 0;
+        return GPS_MOTION_UNKNOWN;
+    }
+    int speed = getVehicleSpeed();
+    if (speed > 3) {
+        gpsStoppedSince = 0;
+        return GPS_MOTION_MOVING;
+    }
+    if (speed > 1) {
+        gpsStoppedSince = 0;
+        return GPS_MOTION_UNKNOWN; // if it's bewteen 1 and 3 just say unknown so it can get external secondary checks try to confirm instead. Essentially the thinking is GPS_MOTION_MOVING is the strictest 'we know we are driving' and GPS_MOTION_UNKNOWN is the general 'we just can't tell from the gps, do further checks to confirm'
+    }
+    if (gpsStoppedSince == 0)
+        gpsStoppedSince = millis();
+    return millis() - gpsStoppedSince >= GPS_STOPPED_DWELL_MS ? GPS_MOTION_STOPPED : GPS_MOTION_UNKNOWN;
+}
+
+// Not moving (or barely moving). Checks the most accurate source available: GPS -> IMU -> acc/ebrake. This should NOT be used when we need 100% certainty that the vehicle is parked.
+bool isVehicleStationary() {
+
+    // When the GPS is working, we trust the accuracy of this the most in regards to whether the vehicle is at a safe state to execute slightly unsafe functions.
+    GpsMotionState gps = getGPSMotionState();
+    if (gps != GPS_MOTION_UNKNOWN) {
+        // gps is either moving or stopped with certainty, so return the result of the gps check
+        return gps == GPS_MOTION_STOPPED;
     }
 
-    // pretty simple, if gps is working and we are moving less than 3mph, we will assume we are parked. This is highly reliable since we have essentially 100% accuracy knowing if the gps is working or not.
-    if (gps_exists && isGPSCurrentlyAccurate()) {
-        if (getVehicleSpeed() < 4) {
-            return true; // vehicle is parked if less than 5mph
-        } else {
-            return false; // vehicle is moving more than 5mph, so it is not parked.
-        }
+    // When the GPS is uncertain, we here trust the IMU to give us a more accurate result.
+    if (motionImuPresent()) {
+        return motionImuSaysStationary(); // Simply return the result of the imu
     }
 
-    // don't trust e-brake if we are in strict mode
-    if (dontTrustEBrakeAlone == false && getebrakeConnected()) { // ebrake wire not connected means this is skipped
-        // ebrake is slightly less of a reliable source of whether or not the vehicle is parked because it is highly likely a user may try to bypass it, so we put it after the gps check.
-        if (isEBrakeOn()) { //I consider this safe because for isEBrakeOn to return true, it must have been on for at least 2 seconds. 
-            return true; // if the ebrake is on, we can assume the vehicle is parked
-        }
-        if (!isEBrakeOn()) {
-            // ebrake being disengaged doesn't necessarily mean the vehicle is driving or parked, it could be either, so don't return anything here.
-        }
-    }
+    // On a board like the v5 this will actually never be called because the IMU is always present, but essentially all v4 and older are expected to hit this, which will require either the car is off for 3 seconds or the ebrake is pulled for 5 seconds.
+    return isVehicleDefinitelyParked(false);
+}
 
-    #if ACCESSORY_WIRE_FUNCTIONALITY
-    // We can assume that if the vehicle is off, it is parked, and if it is on, it is not parked.
-    return isVehicleOn() == false;
-    #endif
-
-    // We don't know basically anything, so return false. This is for v2 firmwares because they don't have acc.
-    return false;
+// 100% certainty checks only: car off for a few seconds and/or ebrake (if connected) pulled for a few seconds. v2 is the only board that will essentially never return true for isVehicleDefinitelyParked or getGPSMotionState, and that is expected.
+bool isVehicleDefinitelyParked(bool requireBothCarOffAndEbrake) {
+    bool carOff = isVehicleOffFor(ACC_OFF_PARKED_DWELL_MS);
+    bool ebrakePulled = getebrakeConnected() && isEBrakeOnFor(EBRAKE_PARKED_DWELL_MS);
+    if (requireBothCarOffAndEbrake)
+        return carOff && ebrakePulled;
+    return carOff || ebrakePulled;
 
 }
 
@@ -307,8 +342,10 @@ void airOutWithSafetyCheck()
 {
 #if ENABLE_AIR_OUT_ON_SHUTOFF
 #if !AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE
-    // strict: parked by acc/gps/imu, AND the ebrake wire must be connected and the ebrake pulled
-    if (isVehicleParked(true) && getebrakeConnected() && isEBrakeOn())
+    // The first call to isVehicleStationary is mostly redundant and mostly only acts as an additional safety check on the boards with more safety support like the v5.
+    // This mostly is reliant on the second isVehicleDefinitelyParked(true) which verifies that both the car is off and ebrake is pulled for a few seconds.
+    // So this feature (shutdown on air out) is only really intended to work on v4+ boards, since v3 doesn't have ebrake input and v2 doesn't have acc wire input.
+    if (isVehicleStationary() && isVehicleDefinitelyParked(true))
     {
         if (getairOutOnShutoff())
         {
@@ -324,10 +361,16 @@ void airOutWithSafetyCheck()
 #pragma region accessory_wire
 
 bool vehicleOn = true; // want this to be true to begin so it sets the current time first thing so it knows it was on and doesn't run the off routine first.
+unsigned long vehicleOffSince = 0;
 unsigned long lastTimeLive = 0;
 bool isVehicleOn()
 {
     return vehicleOn;
+}
+
+bool isVehicleOffFor(unsigned long ms)
+{
+    return !vehicleOn && millis() - vehicleOffSince >= ms;
 }
 
 bool isKeepAliveTimerExpired()
@@ -382,6 +425,8 @@ void accessoryWireLoop()
     }
     else
     {
+        if (previousVehicleOn)
+            vehicleOffSince = millis();
         // vehicle is off... first check if 5 seconds have passed
         if (isKeepAliveTimeReadyForShutdownRoutine())
         {
