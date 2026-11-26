@@ -211,6 +211,8 @@ class SettingsPageState extends State<SettingsPage> {
     await prefs.setString('_passkeyText', passkeyText);
     await prefs.setBool(
         '_showAllBluetoothDevices', globalSettings!.showAllBluetoothDevices);
+    await prefs.setBool(AppSettings.disableControlDrivingKey,
+        globalSettings!.disableControlDriving);
     await prefs.setString('_wifiSsid', wifiSsidController.text);
     await prefs.setString('_wifiPass', wifiPassController.text);
   }
@@ -1245,6 +1247,42 @@ class SettingsPageState extends State<SettingsPage> {
                     ),
                   ],
                 ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Flexible(
+                      child: Text(
+                        'Disable control when ebrake off',
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ),
+                    _buildSwitch(
+                      '',
+                      globalSettings!.disableControlDriving,
+                      (value) async {
+                        Future<void> apply(bool v) async {
+                          setState(() => globalSettings!.disableControlDriving = v);
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool(
+                              AppSettings.disableControlDrivingKey, v);
+                        }
+
+                        if (!value) {
+                          await apply(false);
+                          return;
+                        }
+                        // v2/v3 manifolds never set the ebrake bit, so this would lock out all control there
+                        await _showConfirm(
+                          title: 'Requires e-brake wire',
+                          message:
+                              'Presets and manual air up/down will be disabled whenever the manifold reports the e-brake off. Requires a manifold with the e-brake wire connected. If control stops responding, turn this back off here.',
+                          confirmLabel: 'Enable',
+                          onConfirm: () => apply(true),
+                        );
+                      },
+                    ),
+                  ],
+                ),
                 // heightSensorMode is part of the selector so the bag-stretch
                 // rows appear/disappear as soon as the levelling mode changes,
                 // matching updateLevelModeOptionsVisibility() on the controller.
@@ -2237,7 +2275,7 @@ class SettingsPageState extends State<SettingsPage> {
                   selector: (_, m) => m.updateStatus,
                   builder: (context, statusText, _) {
                     return _readOnlyStatusRow(
-                      'Manifold Update Status:',
+                      'Manifold Version:',
                       statusText.isEmpty ? '—' : statusText,
                     );
                   },

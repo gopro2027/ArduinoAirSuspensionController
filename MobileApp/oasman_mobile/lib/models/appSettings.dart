@@ -13,6 +13,10 @@ class AppSettings {
   /// finds nothing for them.
   bool showAllBluetoothDevices = false;
 
+  /// "Disable control when ebrake off", app-local like the Wireless_Controller's dsblCtrlDrive pref.
+  bool disableControlDriving = false;
+  static const String disableControlDrivingKey = '_disableControlDriving';
+
   /// Selected colour theme, stored as the `ThemePreset.id` (matches the
   /// Wireless_Controller's `ThemePreset` enum values). See lib/theme/app_theme.dart.
   int themePreset = defaultThemePreset;
@@ -29,6 +33,7 @@ class AppSettings {
     required this.pairedManifoldId,
     required this.showAllBluetoothDevices,
     required this.themePreset,
+    this.disableControlDriving = false,
   });
 
   factory AppSettings.fromPrefs(SharedPreferences prefs) {
@@ -41,6 +46,7 @@ class AppSettings {
       showAllBluetoothDevices:
           prefs.getBool('_showAllBluetoothDevices') ?? false,
       themePreset: prefs.getInt(themePresetKey) ?? defaultThemePreset,
+      disableControlDriving: prefs.getBool(disableControlDrivingKey) ?? false,
     );
   }
 }
@@ -60,5 +66,7 @@ Future<void> loadGlobalSettings() async {
           prefs.getBool('_showAllBluetoothDevices') ?? false,
       themePreset: prefs.getInt(AppSettings.themePresetKey) ??
           AppSettings.defaultThemePreset,
+      disableControlDriving:
+          prefs.getBool(AppSettings.disableControlDrivingKey) ?? false,
   );
 }

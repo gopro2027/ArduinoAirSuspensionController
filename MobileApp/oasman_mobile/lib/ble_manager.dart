@@ -401,6 +401,10 @@ class BLEManager extends ChangeNotifier {
     writeValveValue(valveControlValue);
   }
 
+  /// Mirrors isDriveLockActive() on the Wireless_Controller: setting on and manifold reports e-brake off.
+  bool get isDriveLockActive =>
+      (globalSettings?.disableControlDriving ?? false) && !ebrakeOn;
+
   /// Valve control is a 4-byte little-endian uint32 (matches Wireless_Controller).
   Future<void> writeValveValue(int value) async {
     if (valveControlCharacteristic != null) {
@@ -1203,6 +1207,9 @@ class BLEManager extends ChangeNotifier {
       if (data.length >= StatusPacketLayout.BITTSET + 4) {
         handleStatusBittset(data.sublist(
             StatusPacketLayout.BITTSET, StatusPacketLayout.BITTSET + 4));
+        if (isDriveLockActive && valveControlValue != 0) {
+          closeValves(); // drive lock just became active, close any held valve
+        }
       }
       manifoldBatteryMilliVolts = data.length >= StatusPacketLayout.BATTERY_MV + 2
           ? _decodeShort(data, StatusPacketLayout.BATTERY_MV)
