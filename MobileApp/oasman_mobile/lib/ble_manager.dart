@@ -310,7 +310,7 @@ class BLEManager extends ChangeNotifier {
 
   /// "12.6V" rounded to 0.1V like the Wireless_Controller, empty when there is no reading.
   String get vehicleVoltageText {
-    final deciVolts = (manifoldBatteryMilliVolts + 50) ~/ 100;
+    final deciVolts = (manifoldBatteryMilliVolts + 50) ~/ 100; // +50 rounds to the nearest 0.1V instead of truncating
     return deciVolts == 0 ? '' : '${deciVolts ~/ 10}.${deciVolts % 10}V';
   }
 

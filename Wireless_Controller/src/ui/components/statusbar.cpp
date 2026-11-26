@@ -406,7 +406,7 @@ void Statusbar::update() {
 }
 
 void Statusbar::updateVehicleBattery() {
-    uint16_t deciVolts = (manifoldBatteryMilliVolts + 50) / 100;
+    uint16_t deciVolts = (manifoldBatteryMilliVolts + 50) / 100; // +50 rounds to the nearest 0.1V instead of truncating
     if (deciVolts == cachedVehicleDeciVolts) return;
     cachedVehicleDeciVolts = deciVolts;
 
