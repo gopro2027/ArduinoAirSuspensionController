@@ -40,7 +40,35 @@ void CircleStatusbarMini::create(lv_obj_t *parent)
     lv_obj_set_style_text_font(batteryLabel, &lv_font_montserrat_10, 0);
     lv_obj_set_style_text_color(batteryLabel, lv_color_hex(0xC0C0C0), 0);
 
+    vehicleVoltageLabel = lv_label_create(container);
+    lv_label_set_text(vehicleVoltageLabel, "");
+    lv_obj_set_style_text_font(vehicleVoltageLabel, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_color(vehicleVoltageLabel, lv_color_hex(0xC0C0C0), 0);
+    lv_obj_add_flag(vehicleVoltageLabel, LV_OBJ_FLAG_HIDDEN);
+    cachedVehicleDeciVolts = 0xFFFF;
+
     setBatteryVisible(showBatteryReadout());
+}
+
+void CircleStatusbarMini::refreshVehicleBattery()
+{
+    if (!vehicleVoltageLabel)
+        return;
+
+    uint16_t deciVolts = (manifoldBatteryMilliVolts + 50) / 100; // +50 rounds to the nearest 0.1V instead of truncating
+    if (deciVolts == cachedVehicleDeciVolts)
+        return;
+    cachedVehicleDeciVolts = deciVolts;
+
+    if (deciVolts == 0) // manifold has no battery reading (older board or broken sense)
+    {
+        lv_obj_add_flag(vehicleVoltageLabel, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    lv_label_set_text_fmt(vehicleVoltageLabel, "%u.%uV", deciVolts / 10, deciVolts % 10);
+    lv_obj_set_style_text_color(vehicleVoltageLabel, lv_color_hex(manifoldBatteryMilliVolts < BATTERY_SHUTDOWN_MV ? 0xFF6B6B : 0xC0C0C0), 0);
+    lv_obj_remove_flag(vehicleVoltageLabel, LV_OBJ_FLAG_HIDDEN);
 }
 
 void CircleStatusbarMini::setBatteryVisible(bool batteryVisible)
@@ -101,6 +129,7 @@ void CircleStatusbarMini::refreshBattery()
 void CircleStatusbarMini::update()
 {
     refreshBattery();
+    refreshVehicleBattery();
 
     if (alertDot) {
         if (isGlobalAlertActive() && !isGlobalAlertDismissed())
@@ -112,7 +141,8 @@ void CircleStatusbarMini::update()
 
 void CircleStatusbarMini::cleanup()
 {
-    batteryIcon = batteryLabel = alertDot = nullptr;
+    batteryIcon = batteryLabel = alertDot = vehicleVoltageLabel = nullptr;
+    cachedVehicleDeciVolts = 0xFFFF;
     container = nullptr;
 }
 

@@ -399,6 +399,26 @@ void accessoryWireLoop()
     // vehicle on/off is driven by bluetooth connectivity, so keep the accessory output latched high
     outputKeepESPAlive->digitalWrite(HIGH);
 #else
+    // acc off with a low battery for a while, shut down to protect the battery (overrides bluetooth keep alive)
+    static unsigned long lowBatterySince = 0;
+    uint16_t batteryMv = getBatteryMilliVolts();
+    if (!isVehicleOn() && batteryMv > 0 && batteryMv < BATTERY_SHUTDOWN_MV)
+    {
+        if (lowBatterySince == 0)
+        {
+            lowBatterySince = millis();
+        }
+        else if (millis() - lowBatterySince > BATTERY_SHUTDOWN_DELAY_MS)
+        {
+            Serial.printf("Low battery shutdown (%u mV)\n", batteryMv);
+            forceShutoff = true;
+        }
+    }
+    else
+    {
+        lowBatterySince = 0;
+    }
+
     if (isKeepAliveTimerExpired() || forceShutoff)
     {
         Serial.println("Shutting down");
@@ -423,6 +443,38 @@ void accessoryWireLoop()
     vehicleOn = true;
 }
 #endif
+
+#pragma endregion
+
+#pragma region battery_voltage
+
+#ifdef BATTERY_VOLTAGE_PIN
+const int batteryVoltageSampleSize = 10; // called every 100ms, so a 1 second average
+float batteryVoltageHistory[batteryVoltageSampleSize];
+int batteryVoltageCounter = 0;
+float batteryMilliVolts = 0; // stays 0 until the first full average
+#endif
+
+void batteryVoltageLoop()
+{
+#ifdef BATTERY_VOLTAGE_PIN
+    sampleReading(batteryMilliVolts, analogReadMilliVolts(BATTERY_VOLTAGE_PIN) / BATTERY_VOLTAGE_DIVIDER_RATIO, batteryVoltageHistory, batteryVoltageCounter, batteryVoltageSampleSize);
+#endif
+}
+
+// Smoothed vehicle battery mV, or 0 when the board has no sense pin or the reading is broken
+uint16_t getBatteryMilliVolts()
+{
+#ifdef BATTERY_VOLTAGE_PIN
+    if (batteryMilliVolts < BATTERY_MIN_VALID_MV)
+    {
+        return 0;
+    }
+    return (uint16_t)batteryMilliVolts;
+#else
+    return 0;
+#endif
+}
 
 #pragma endregion
 

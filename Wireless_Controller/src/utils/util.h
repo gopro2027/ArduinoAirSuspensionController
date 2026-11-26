@@ -191,6 +191,7 @@ void handleFunctionRunOnNextFrame();
 extern int currentPressures[5];
 extern uint32_t statusBittset;
 extern uint8_t AIPercentage;
+extern uint16_t manifoldBatteryMilliVolts; // vehicle battery from the status packet, 0 = manifold has no reading
 extern int profilePressures[5][4];
 extern bool profileUpdated;
 extern int currentPreset;

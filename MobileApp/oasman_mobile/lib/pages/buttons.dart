@@ -425,6 +425,7 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
 
   void _confirmLoadPreset(BuildContext context) {
     if (bleManager.connectedDevice == null || _selectedPreset < 1) return;
+    if (_rejectIfDriveLocked(context)) return;
     if (_selectedPreset == 1) {
       showDialog<bool>(
         context: context,
@@ -517,7 +518,21 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
     );
   }
 
+  /// Mirrors rejectIfDriveLocked() on the Wireless_Controller.
+  bool _rejectIfDriveLocked(BuildContext context) {
+    if (!bleManager.isDriveLockActive) return false;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(
+        content: Text('Disabled, driving'),
+        backgroundColor: Color(0xFFFF0000),
+        duration: Duration(seconds: 2),
+      ));
+    return true;
+  }
+
   void openValve(BuildContext context, int bit) {
+    if (_rejectIfDriveLocked(context)) return;
     if (bleManager.connectedDevice != null) {
       bleManager.setValveBit(bit);
     } else {
@@ -529,6 +544,7 @@ class _ButtonsPageState extends State<ButtonsPage> with WidgetsBindingObserver {
   }
 
   void openValvesMask(BuildContext context, int mask) {
+    if (_rejectIfDriveLocked(context)) return;
     if (bleManager.connectedDevice != null) {
       bleManager.setValveMask(mask);
     } else {

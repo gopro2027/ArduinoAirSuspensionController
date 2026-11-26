@@ -91,6 +91,19 @@ class StatusPacketBittset {
   static const int ADJUSTMENT_IN_PROGRESS = 6;
 }
 
+/// STATUSREPORT byte offsets in the 104-byte packet. Mirrors the _STATUS_*_INDEX defines in BTOas.h.
+class StatusPacketLayout {
+  static const int WHEEL_PRESSURES = 4; // args16 0-3, FP/RP/FD/RD
+  static const int TANK_PRESSURE = 12; // args16 _TANK_INDEX (4)
+  static const int AI_PERCENTAGE = 14; // args8 _STATUS_AI_PERCENTAGE_INDEX (10)
+  static const int RESERVED = 15; // args8 _STATUS_RESERVED_INDEX (11), formerly AIReadyBittset
+  static const int BITTSET = 16; // args32 _STATUS_BITTSET_INDEX (3)
+  static const int BATTERY_MV = 20; // args16 _STATUS_BATTERY_MV_INDEX (8), 0 = no reading
+}
+
+/// Mirrors BATTERY_SHUTDOWN_MV in user_defines.h, used to show the vehicle voltage in red.
+const int batteryShutdownMilliVolts = 11800;
+
 /// Config flags in ConfigValuesPacket.configFlagsBits (GETCONFIGVALUES).
 class ConfigFlagsBit {
   static const int CONFIG_MAINTAIN_PRESSURE = 0;
@@ -291,7 +304,20 @@ class BLEManager extends ChangeNotifier {
 
   /// From STATUSREPORT args (AI learning UI).
   int aiLearnPercent = 0;
-  // args8()[11] (byte 15) is reserved on the wire - it used to carry an
+
+  /// Vehicle battery mV from STATUSREPORT, 0 = manifold has no reading (older board or broken sense).
+  int manifoldBatteryMilliVolts = 0;
+
+  /// "12.6V" rounded to 0.1V like the Wireless_Controller, empty when there is no reading.
+  String get vehicleVoltageText {
+    final deciVolts = (manifoldBatteryMilliVolts + 50) ~/ 100; // +50 rounds to the nearest 0.1V instead of truncating
+    return deciVolts == 0 ? '' : '${deciVolts ~/ 10}.${deciVolts % 10}V';
+  }
+
+  bool get vehicleVoltageLow =>
+      manifoldBatteryMilliVolts > 0 &&
+      manifoldBatteryMilliVolts < batteryShutdownMilliVolts;
+  // StatusPacketLayout.RESERVED (byte 15) is reserved on the wire - it used to carry an
   // "AI ready" bittset per solenoid, but the manifold now always writes 0 and
   // neither client displays it. Do not resurrect it without a firmware change.
 
@@ -374,6 +400,10 @@ class BLEManager extends ChangeNotifier {
     valveControlValue = 0;
     writeValveValue(valveControlValue);
   }
+
+  /// Mirrors isDriveLockActive() on the Wireless_Controller: setting on and manifold reports e-brake off.
+  bool get isDriveLockActive =>
+      (globalSettings?.disableControlDriving ?? false) && !ebrakeOn;
 
   /// Valve control is a 4-byte little-endian uint32 (matches Wireless_Controller).
   Future<void> writeValveValue(int value) async {
@@ -1149,7 +1179,7 @@ class BLEManager extends ChangeNotifier {
       if (packetId != BTOasIdentifier.STATUSREPORT) {
         return;
       }
-      if (data.length < 14) return;
+      if (data.length < StatusPacketLayout.TANK_PRESSURE + 2) return;
 
       final prevFrozen = compressorFrozen;
       final prevCompOn = compressorOn;
@@ -1157,6 +1187,7 @@ class BLEManager extends ChangeNotifier {
       final prevEb = ebrakeOn;
       final prevAdjusting = adjustmentInProgress;
       final prevAiLearn = aiLearnPercent;
+      final prevVoltageText = vehicleVoltageText; // compare at 0.1V so mV jitter doesn't rebuild the UI
       final prevFl = pressureValues['frontLeft'];
       final prevFr = pressureValues['frontRight'];
       final prevRl = pressureValues['rearLeft'];
@@ -1164,18 +1195,25 @@ class BLEManager extends ChangeNotifier {
       final prevTank = pressureValues['tankPressure'];
 
       final wheelPressures = [
-        _decodeShort(data, 4),
-        _decodeShort(data, 6),
-        _decodeShort(data, 8),
-        _decodeShort(data, 10),
+        _decodeShort(data, StatusPacketLayout.WHEEL_PRESSURES),
+        _decodeShort(data, StatusPacketLayout.WHEEL_PRESSURES + 2),
+        _decodeShort(data, StatusPacketLayout.WHEEL_PRESSURES + 4),
+        _decodeShort(data, StatusPacketLayout.WHEEL_PRESSURES + 6),
       ];
-      final tankPressure = _decodeShort(data, 12);
-      if (data.length >= 15) {
-        aiLearnPercent = data[14] & 0xFF; // args8()[10]
+      final tankPressure = _decodeShort(data, StatusPacketLayout.TANK_PRESSURE);
+      if (data.length > StatusPacketLayout.AI_PERCENTAGE) {
+        aiLearnPercent = data[StatusPacketLayout.AI_PERCENTAGE] & 0xFF;
       }
-      if (data.length >= 20) {
-        handleStatusBittset(data.sublist(16, 20));
+      if (data.length >= StatusPacketLayout.BITTSET + 4) {
+        handleStatusBittset(data.sublist(
+            StatusPacketLayout.BITTSET, StatusPacketLayout.BITTSET + 4));
+        if (isDriveLockActive && valveControlValue != 0) {
+          closeValves(); // drive lock just became active, close any held valve
+        }
       }
+      manifoldBatteryMilliVolts = data.length >= StatusPacketLayout.BATTERY_MV + 2
+          ? _decodeShort(data, StatusPacketLayout.BATTERY_MV)
+          : 0;
 
       pressureValues = {
         "frontLeft": wheelPressures[2].toString(),
@@ -1191,6 +1229,7 @@ class BLEManager extends ChangeNotifier {
           prevEb != ebrakeOn ||
           prevAdjusting != adjustmentInProgress ||
           prevAiLearn != aiLearnPercent ||
+          prevVoltageText != vehicleVoltageText ||
           prevFl != pressureValues['frontLeft'] ||
           prevFr != pressureValues['frontRight'] ||
           prevRl != pressureValues['rearLeft'] ||

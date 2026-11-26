@@ -38,7 +38,7 @@ void BTOasPacket::dump()
 }
 
 // Outgoing packets
-StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage)
+StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage, uint16_t batteryMilliVolts)
 {
     this->cmd = STATUSREPORT;
     // 0 through 4
@@ -47,9 +47,10 @@ StatusPacket::StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REA
     this->args16()[WHEEL_FRONT_DRIVER].i = WHEEL_FRONT_DRIVER_PRESSURE;       // getWheel(WHEEL_FRONT_DRIVER)->getPressure();
     this->args16()[WHEEL_REAR_DRIVER].i = WHEEL_REAR_DRIVER_PRESSURE;         // getWheel(WHEEL_REAR_DRIVER)->getPressure();
     this->args16()[_TANK_INDEX].i = TANK_PRESSURE;                            // getCompressor()->getTankPressure();
-    this->args8()[10].i = AIPercentage;
-    this->args8()[11].i = 0; // reserved (formerly AIReadyBittset); kept written so the wire layout is unchanged for the mobile app
-    this->args32()[3].i = bittset;
+    this->args8()[_STATUS_AI_PERCENTAGE_INDEX].i = AIPercentage;
+    this->args8()[_STATUS_RESERVED_INDEX].i = 0; // reserved (formerly AIReadyBittset); kept written so the wire layout is unchanged for the mobile app
+    this->args32()[_STATUS_BITTSET_INDEX].i = bittset;
+    this->args16()[_STATUS_BATTERY_MV_INDEX].i = batteryMilliVolts;
 
     // doesn't matter for this because it is generic broadcasted for everyone
     this->sender = 0;

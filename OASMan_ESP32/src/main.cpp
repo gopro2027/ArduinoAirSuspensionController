@@ -115,6 +115,7 @@ void loop()
 {
     otaVerifyLoop();
 
+    batteryVoltageLoop();
     accessoryWireLoop();
     ebrakeWireLoop();
     if (getinternalReboot() == true)

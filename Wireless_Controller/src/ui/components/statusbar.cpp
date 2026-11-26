@@ -34,6 +34,7 @@ Statusbar::Statusbar() {
     batteryLabel = nullptr;
     alertIcon = nullptr;
     adjustmentLabel = nullptr;
+    vehicleVoltageLabel = nullptr;
     overlay = nullptr;
     pullDownPanel = nullptr;
     batterySection = nullptr;
@@ -50,6 +51,7 @@ Statusbar::Statusbar() {
     accStatusLabel = nullptr;
     ebrakeStatusLabel = nullptr;
     compressorStatusLabel = nullptr;
+    vehicleBatteryStatusLabel = nullptr;
     visible = true;
     panelOpen = false;
     hasActiveAlert = false;
@@ -57,6 +59,7 @@ Statusbar::Statusbar() {
     cachedBattIcon = nullptr;
     cachedBattColor = 0;
     cachedStatusBits = 0xFF; // Force first update
+    cachedVehicleDeciVolts = 0xFFFF; // Force first update
 }
 
 void Statusbar::create(lv_obj_t* parent) {
@@ -90,6 +93,15 @@ void Statusbar::create(lv_obj_t* parent) {
     lv_obj_set_style_text_font(adjustmentLabel, getScaledFont(10), 0);
     lv_obj_align(adjustmentLabel, LV_ALIGN_LEFT_MID, padding + scaledX(18), 0);
     lv_obj_add_flag(adjustmentLabel, LV_OBJ_FLAG_HIDDEN);
+
+    // Vehicle battery voltage from the manifold (right side, left of the controller battery; hidden until reported)
+    vehicleVoltageLabel = lv_label_create(container);
+    lv_label_set_text(vehicleVoltageLabel, "");
+    lv_obj_set_style_text_color(vehicleVoltageLabel, lv_color_hex(STATUSBAR_TEXT_COLOR), 0);
+    lv_obj_set_style_text_font(vehicleVoltageLabel, getScaledFont(10), 0);
+    lv_obj_align(vehicleVoltageLabel, LV_ALIGN_RIGHT_MID, -padding, 0);
+    lv_obj_add_flag(vehicleVoltageLabel, LV_OBJ_FLAG_HIDDEN);
+    cachedVehicleDeciVolts = 0xFFFF;
 
 #if HAS_BATTERY_SENSE_READING
     // Battery icon (right side)
@@ -296,6 +308,8 @@ void Statusbar::createPullDownPanel(lv_obj_t* parent) {
     accStatusLabel = createStatusRow(statusSection, LV_SYMBOL_POWER, "ACC: --");
     ebrakeStatusLabel = createStatusRow(statusSection, LV_SYMBOL_STOP, "E-Brake: --");
     compressorStatusLabel = createStatusRow(statusSection, LV_SYMBOL_REFRESH, "Compressor: --");
+    vehicleBatteryStatusLabel = createStatusRow(statusSection, LV_SYMBOL_CHARGE, "Vehicle Battery: --");
+    lv_obj_add_flag(lv_obj_get_parent(vehicleBatteryStatusLabel), LV_OBJ_FLAG_HIDDEN); // shown once the manifold reports a voltage
 
     // ========== HANDLE BAR AREA (for swipe gesture) ==========
     // Create handle area as sibling to panel (on parent), positioned at bottom when panel is open
@@ -388,6 +402,41 @@ void Statusbar::update() {
     updateBatteryStatus();
     updateAlertStatus();
     updateStatusSection();
+    updateVehicleBattery();
+}
+
+void Statusbar::updateVehicleBattery() {
+    uint16_t deciVolts = (manifoldBatteryMilliVolts + 50) / 100; // +50 rounds to the nearest 0.1V instead of truncating
+    if (deciVolts == cachedVehicleDeciVolts) return;
+    cachedVehicleDeciVolts = deciVolts;
+
+    bool show = deciVolts > 0; // 0 = manifold has no battery reading (older board or broken sense)
+    lv_color_t color = lv_color_hex(manifoldBatteryMilliVolts < BATTERY_SHUTDOWN_MV ? 0xFF6B6B : STATUSBAR_TEXT_COLOR);
+    char buf[32];
+
+    if (vehicleVoltageLabel) {
+        if (show) {
+            snprintf(buf, sizeof(buf), "%u.%uV", deciVolts / 10, deciVolts % 10);
+            lv_label_set_text(vehicleVoltageLabel, buf);
+            lv_obj_set_style_text_color(vehicleVoltageLabel, color, 0);
+            lv_obj_align(vehicleVoltageLabel, LV_ALIGN_RIGHT_MID, (showBatteryReadout() ? -scaledX(70) : -scaledX(8)), 0); // sit left of the controller battery when it is shown
+            lv_obj_remove_flag(vehicleVoltageLabel, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(vehicleVoltageLabel, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+
+    if (vehicleBatteryStatusLabel) {
+        lv_obj_t* row = lv_obj_get_parent(vehicleBatteryStatusLabel);
+        if (show) {
+            snprintf(buf, sizeof(buf), "Vehicle Battery: %u.%uV", deciVolts / 10, deciVolts % 10);
+            lv_label_set_text(vehicleBatteryStatusLabel, buf);
+            lv_obj_set_style_text_color(vehicleBatteryStatusLabel, color, 0);
+            lv_obj_remove_flag(row, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(row, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
 }
 
 void Statusbar::updateBatteryStatus() {
@@ -580,6 +629,7 @@ void Statusbar::hide() {
 }
 
 void Statusbar::setBatteryVisible(bool batteryVisible) {
+    cachedVehicleDeciVolts = 0xFFFF; // re-place the vehicle voltage label on the next update
     if (batteryIcon) {
         if (batteryVisible) {
             lv_obj_remove_flag(batteryIcon, LV_OBJ_FLAG_HIDDEN);
@@ -618,6 +668,9 @@ void Statusbar::cleanup() {
     accStatusLabel = nullptr;
     ebrakeStatusLabel = nullptr;
     compressorStatusLabel = nullptr;
+    vehicleVoltageLabel = nullptr;
+    vehicleBatteryStatusLabel = nullptr;
+    cachedVehicleDeciVolts = 0xFFFF;
     visible = false;
     panelOpen = false;
     hasActiveAlert = false;

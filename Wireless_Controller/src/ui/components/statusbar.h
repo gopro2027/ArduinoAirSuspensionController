@@ -16,6 +16,7 @@ public:
     lv_obj_t* batteryLabel;       // Battery percentage text
     lv_obj_t* alertIcon;          // Alert warning icon (left side)
     lv_obj_t* adjustmentLabel;    // "Adjustment in progress" text (shown while a corner is actively adjusting)
+    lv_obj_t* vehicleVoltageLabel; // Manifold's vehicle battery voltage (hidden when the manifold reports 0)
 
     // Pull-down panel elements
     lv_obj_t* overlay;            // Dark overlay behind panel
@@ -36,6 +37,7 @@ public:
     lv_obj_t* accStatusLabel;
     lv_obj_t* ebrakeStatusLabel;
     lv_obj_t* compressorStatusLabel;
+    lv_obj_t* vehicleBatteryStatusLabel;
 
     Statusbar();
 
@@ -74,9 +76,11 @@ private:
     const char* cachedBattIcon;   // Last battery icon symbol
     uint32_t cachedBattColor;     // Last battery icon color
     uint8_t cachedStatusBits;     // Last status bitmask
+    uint16_t cachedVehicleDeciVolts; // Last vehicle battery reading in 0.1V steps
 
     void createPullDownPanel(lv_obj_t* parent);
     void updateBatteryStatus();
+    void updateVehicleBattery();
     void updateAlertStatus();
     void updateStatusSection();
 };
