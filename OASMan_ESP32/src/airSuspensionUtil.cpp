@@ -406,7 +406,7 @@ void accessoryWireLoop()
     {
         if (lowBatterySince == 0)
         {
-            lowBatterySince = millis() == 0 ? 1 : millis();
+            lowBatterySince = millis();
         }
         else if (millis() - lowBatterySince > BATTERY_SHUTDOWN_DELAY_MS)
         {
