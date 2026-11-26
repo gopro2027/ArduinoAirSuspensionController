@@ -44,7 +44,7 @@ void ebrakeWireLoop();
 bool isEBrakeOn();
 void notifyKeepAlive();
 bool isVehicleOn();
-bool isVehicleParked(bool dontTrustEBrakeAlone = false, bool requireBothAccAndEbrake_or_GPS = false);
+bool isVehicleParked(bool dontTrustEBrakeAlone = false);
 bool isKeepAliveTimerExpired();
 void batteryVoltageLoop();
 uint16_t getBatteryMilliVolts();

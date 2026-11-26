@@ -209,17 +209,12 @@ bool isGPSCurrentlyAccurate() { // this will error on the side of caution, so we
 
 // This function should not be used as a trigger on it's own, it should only be used as a check upon user interaction.
 // 'dontTrustEBrakeAlone' will make it so it skips the ebrake check by ittself, because in a stricter moder we may not want to trust only the ebrake
-// 'requireBothAccAndEbrake' will make it so it requires both the accessory wire and the ebrake to be on to return true. GPS will still return true on it's own tho if it is working. 
-bool isVehicleParked(bool dontTrustEBrakeAlone, bool requireBothAccAndEbrake_or_GPS) {
+bool isVehicleParked(bool dontTrustEBrakeAlone) {
 
     if (motionImuPresent() && !motionImuSaysStationary()) {
         return false; // IMU sees motion, never parked. No IMU found means this is skipped
     }
 
-    if (requireBothAccAndEbrake_or_GPS) {
-        dontTrustEBrakeAlone = true; // we are pairing both the acc and ebrake together, so skip the single ebrake check.
-    }
-        
     // pretty simple, if gps is working and we are moving less than 3mph, we will assume we are parked. This is highly reliable since we have essentially 100% accuracy knowing if the gps is working or not.
     if (gps_exists && isGPSCurrentlyAccurate()) {
         if (getVehicleSpeed() < 4) {
@@ -242,7 +237,7 @@ bool isVehicleParked(bool dontTrustEBrakeAlone, bool requireBothAccAndEbrake_or_
 
     #if ACCESSORY_WIRE_FUNCTIONALITY
     // We can assume that if the vehicle is off, it is parked, and if it is on, it is not parked.
-    return isVehicleOn() == false && ((requireBothAccAndEbrake_or_GPS == true && getebrakeConnected()) ? isEBrakeOn() : true); // ebrake wire not connected means acc alone decides
+    return isVehicleOn() == false;
     #endif
 
     // We don't know basically anything, so return false. This is for v2 firmwares because they don't have acc.
@@ -312,8 +307,8 @@ void airOutWithSafetyCheck()
 {
 #if ENABLE_AIR_OUT_ON_SHUTOFF
 #if !AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE
-    // regarding the second parameter, true means we require both the accessory wire and the ebrake to be on to return true. This function already executes within the acc being off, but we need that double check of the ebrake also being enabled. If we didn't have the hard ebrake check then this would always return true because the acc is off, but we want to be extremely strict here and verify that both the car is off and the ebrake is pulled. (GPS will still return true on it's own tho if it is enabled)
-    if (isVehicleParked(true, true))
+    // strict: parked by acc/gps/imu, AND the ebrake wire must be connected and the ebrake pulled
+    if (isVehicleParked(true) && getebrakeConnected() && isEBrakeOn())
     {
         if (getairOutOnShutoff())
         {

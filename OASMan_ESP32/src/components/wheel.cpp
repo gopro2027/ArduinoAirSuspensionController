@@ -4,7 +4,7 @@
 #define NUM_WHEEL_THREADS 4
 std::atomic<bool> flagStartPressureGoalRoutine[NUM_WHEEL_THREADS];
 
-extern bool isVehicleParked(bool dontTrustEBrakeAlone = false, bool requireBothAccAndEbrake_or_GPS = false); // defined in airSuspensionUtil.cpp
+extern bool isVehicleParked(bool dontTrustEBrakeAlone = false); // defined in airSuspensionUtil.cpp
 extern bool isAnyWheelActive();            // defined in airSuspensionUtil.cpp
 
 int getMinValveOpenPSI()
