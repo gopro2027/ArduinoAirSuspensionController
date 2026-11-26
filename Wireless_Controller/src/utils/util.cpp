@@ -97,6 +97,7 @@ void scale_img(lv_obj_t *obj, lv_image_dsc_t img) {
 int currentPressures[5];
 uint32_t statusBittset = 0;
 uint8_t AIPercentage = 0;
+uint16_t manifoldBatteryMilliVolts = 0;
 int profilePressures[5][4];
 bool profileUpdated = false;
 int currentPreset = -1;

@@ -11,6 +11,7 @@ public:
     lv_obj_t *batteryIcon = nullptr;
     lv_obj_t *batteryLabel = nullptr;
     lv_obj_t *alertDot = nullptr;
+    lv_obj_t *vehicleVoltageLabel = nullptr; // manifold's vehicle battery voltage, hidden when it reports 0
 
     void create(lv_obj_t *parent);
     void update();
@@ -20,7 +21,9 @@ public:
     void setBatteryVisible(bool batteryVisible);
 
 private:
+    uint16_t cachedVehicleDeciVolts = 0xFFFF;
     void refreshBattery();
+    void refreshVehicleBattery();
 };
 
 extern CircleStatusbarMini circleStatusbarMini;

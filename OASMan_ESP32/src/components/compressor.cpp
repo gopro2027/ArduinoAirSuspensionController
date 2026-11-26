@@ -98,6 +98,7 @@ void Compressor::enableDisableOverride(bool enable)
     }
 }
 
+// This is basically for the periodic check if the compressor isn't building value. It will compare to freezeTimerLastReadValue and uses lastFreezeTime to determins when to check next
 void Compressor::updateFreezeTimer(unsigned long curTime)
 {
     this->lastFreezeTime = curTime;
@@ -173,6 +174,15 @@ void Compressor::loop()
     {
         // compressor is not on OR one of the wheels is active (we don't want to bother trying to figure out if it's frozen if it's actively moving around pressures), update value just right now then.
         this->updateFreezeTimer(curTime);
+    }
+
+    // battery too low to start, or sagging too low while running, pause the compressor (reported as frozen)
+    uint16_t batteryMv = getBatteryMilliVolts(); // 0 = no reading, skip battery checks
+    uint16_t minBatteryMv = this->s_trigger.isOpen() ? COMPRESSOR_MIN_RUN_BATTERY_MV : COMPRESSOR_MIN_START_BATTERY_MV;
+    if (batteryMv > 0 && batteryMv < minBatteryMv)
+    {
+        this->pauseExecutionUntilTime = curTime + COMPRESSOR_LOW_VOLTAGE_PAUSE_MS;
+        this->updateFreezeTimer(millis());
     }
 
     // part 2 of freeze check code. pause execution if our pauseExecutionUntilTime is in the future

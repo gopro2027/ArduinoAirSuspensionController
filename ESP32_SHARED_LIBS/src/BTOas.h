@@ -169,10 +169,12 @@ struct BTOasPacket
 
 #define BTOAS_PACKET_SIZE sizeof(BTOasPacket)
 
+#define _STATUS_BATTERY_MV_INDEX 8 // args16 slot (arg bytes 16-17) for manifold battery mV, 0 = no reading (older manifolds always send 0)
+
 // Outgoing packets
 struct StatusPacket : BTOasPacket
 {
-    StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage);
+    StatusPacket(float WHEEL_FRONT_PASSENGER_PRESSURE, float WHEEL_REAR_PASSENGER_PRESSURE, float WHEEL_FRONT_DRIVER_PRESSURE, float WHEEL_REAR_DRIVER_PRESSURE, float TANK_PRESSURE, uint32_t bittset, uint8_t AIPercentage, uint16_t batteryMilliVolts);
 };
 
 struct PresetPacket : BTOasPacket

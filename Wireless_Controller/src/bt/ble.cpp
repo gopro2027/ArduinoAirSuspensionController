@@ -163,6 +163,7 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
             if (isDriveLockActive()) // this check is based off the statusBittset so we check this after the status bittset is updated
                 closeValves(); // in case pill button happens to have a valve open, close it when drive lock becomes active
             AIPercentage = status->args8()[10].i;
+            manifoldBatteryMilliVolts = status->args16()[_STATUS_BATTERY_MV_INDEX].i;
         }
     }
     if (pBLERemoteCharacteristic->getUUID().toString() == charUUID_Rest.toString())

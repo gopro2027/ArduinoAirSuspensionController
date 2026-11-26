@@ -167,6 +167,8 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 #ifdef BOARD_VERSION_5
 #define pressureSensorInput4 new InputType(0, &ADS1115D)             // ADSD/0, v5 only (GPIO32 is GPS TX)   Default: pressureInputTank
 #define HW_VERSION_PIN 39                                            // D39/VN, board revision divider, see board_version.cpp
+#define BATTERY_VOLTAGE_PIN 36                                       // D36/VP, vehicle 12v sense
+#define BATTERY_VOLTAGE_DIVIDER_RATIO (62.0f / 532.0f)               // R139 470k / R140 62k
 #else
 #define pressureSensorInput4 new InputType(32, INPUT)                // D32/A0, pressure sensor        Default: pressureInputTank
 #endif
@@ -181,6 +183,14 @@ Wiring for 6 valve manifold on the boards valve connector. This will be the same
 #define outputKeepAlivePin new InputType(12, OUTPUT) // D12, output high while accessory input is low to keep input on. Should always output high while accessory is on. Output low when accessory is low to turn off system.
 #define accessoryInput new InputType(35, INPUT)      // D35 because it's adc1 input only //D14, digital in high or low. 0 = acc on, 1 = acc off (it's on a pullup resistor)
 #define SYSTEM_SHUTOFF_TIME_M 15                     // 15 minutes
+
+/* Vehicle battery voltage (boards with a battery sense pin only) */
+#define BATTERY_MIN_VALID_MV 6000              // below this the sense circuit is broken, report 0 and skip protections
+#define BATTERY_SHUTDOWN_MV 11800              // acc off and below this for BATTERY_SHUTDOWN_DELAY_MS shuts the system down
+#define BATTERY_SHUTDOWN_DELAY_MS 30000
+#define COMPRESSOR_MIN_START_BATTERY_MV 11500  // compressor won't start below this
+#define COMPRESSOR_MIN_RUN_BATTERY_MV 10500    // running compressor pauses below this
+#define COMPRESSOR_LOW_VOLTAGE_PAUSE_MS 30000
 #define BOARD_ALWAYS_ON_ACC_UNUSED_USE_BT_CONN_AS_VEHICLE_ON false     // if true, bluetooth connectivity will be used to determine if the vehicle is on or off.
                                                      // if false, the accessory wire will be used instead
 
