@@ -11,6 +11,20 @@ void setupADCReadMutex()
     adcReadMutex = xSemaphoreCreateMutex();
 }
 
+// shared I2C bus lock, also used by the IMU driver
+void i2cBusLock()
+{
+    while (xSemaphoreTake(adcReadMutex, 1) != pdTRUE)
+    {
+        delay(1);
+    }
+}
+
+void i2cBusUnlock()
+{
+    xSemaphoreGive(adcReadMutex);
+}
+
 int voltageToESP32AnalogValue5v(float voltage)
 {
     return voltage / 5.0f * 4096.0f;
@@ -122,12 +136,9 @@ int InputType::analogRead()
         }
 
         int value = -1;
-        while (xSemaphoreTake(adcReadMutex, 1) != pdTRUE)
-        {
-            delay(1);
-        }
+        i2cBusLock();
         value = AnalogADCToESP32Value(this->adc, this->adc->readADC_SingleEnded(this->pin));
-        xSemaphoreGive(adcReadMutex);
+        i2cBusUnlock();
 
         return value;
 #else
