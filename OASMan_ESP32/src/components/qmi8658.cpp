@@ -21,7 +21,7 @@
 static const float ACCEL_LSB_PER_G = 8192.0f; // 32768 / 4g
 static const float GYRO_LSB_PER_DPS = 64.0f;  // 32768 / 512dps
 
-static uint8_t s_addr = 0; // resolved 7-bit address, 0 = not found
+static const uint8_t s_addr = QMI8658_ADDR;
 static bool s_present = false;
 
 static bool readReg(uint8_t reg, uint8_t *data, uint8_t len)
@@ -52,21 +52,9 @@ static bool writeReg(uint8_t reg, uint8_t value)
 bool QMI8658_Init()
 {
     s_present = false;
-    s_addr = 0;
 
-    const uint8_t candidates[2] = {QMI8658_ADDR_SA0_LOW, QMI8658_ADDR_SA0_HIGH};
     uint8_t whoami = 0;
-    for (uint8_t i = 0; i < 2; i++)
-    {
-        s_addr = candidates[i];
-        if (readReg(QMI8658_REG_WHO_AM_I, &whoami, 1) && whoami == QMI8658_WHO_AM_I_VAL)
-        {
-            break;
-        }
-        s_addr = 0;
-    }
-
-    if (s_addr == 0)
+    if (!readReg(QMI8658_REG_WHO_AM_I, &whoami, 1) || whoami != QMI8658_WHO_AM_I_VAL)
     {
         Serial.println(F("No QMI8658 IMU found, motion detection disabled"));
         return false;
