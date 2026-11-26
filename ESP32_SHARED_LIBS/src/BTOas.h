@@ -58,7 +58,8 @@ enum ConfigFlagsBit
     CONFIG_HEIGHT_SENSOR_MODE = 3,
     CONFIG_SAFETY_MODE = 4,
     CONFIG_AI_STATUS_ENABLED = 5, // retired: manifold/controller no longer use it; bit reserved (mobile app may still read it). Do not reuse.
-    CONFIG_SENSORLESS_LEVELING = 6
+    CONFIG_SENSORLESS_LEVELING = 6,
+    CONFIG_EBRAKE_CONNECTED = 7 // off = ebrake wire not plugged in, manifold ignores the ebrake input
 };
 
 enum AuthResult

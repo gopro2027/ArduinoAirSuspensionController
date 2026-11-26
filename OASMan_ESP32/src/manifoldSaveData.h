@@ -63,6 +63,7 @@ public:
     Preferencable maintainPressure;
     Preferencable sensorlessLeveling;
     Preferencable airOutOnShutoff;
+    Preferencable ebrakeConnected;
     Preferencable heightSensorMode;
     Preferencable bagMaxPressure;
     Preferencable blePasskey;
@@ -107,6 +108,7 @@ headerDefineSaveFunc(riseOnStart, bool);
 headerDefineSaveFunc(maintainPressure, bool);
 headerDefineSaveFunc(sensorlessLeveling, bool);
 headerDefineSaveFunc(airOutOnShutoff, bool);
+headerDefineSaveFunc(ebrakeConnected, bool);
 headerDefineSaveFunc(heightSensorMode, bool);
 headerDefineSaveFunc(baseProfile, byte);
 headerDefineSaveFunc(raiseOnPressure, bool);

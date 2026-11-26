@@ -113,6 +113,7 @@ class ConfigFlagsBit {
   static const int CONFIG_SAFETY_MODE = 4;
   static const int CONFIG_AI_STATUS_ENABLED = 5; // retired: reserved on the wire, no longer used by app/manifold. Do not reuse.
   static const int CONFIG_SENSORLESS_LEVELING = 6;
+  static const int CONFIG_EBRAKE_CONNECTED = 7;
 }
 
 class BLEByte {
@@ -285,6 +286,8 @@ class BLEManager extends ChangeNotifier {
   bool sensorlessLeveling = false;
   bool airOutOnShutoff = false;
   bool safetyMode = true;
+  /// Mirrors ConfigFlagsBit::CONFIG_EBRAKE_CONNECTED.
+  bool ebrakeConnected = false;
   /// Mirrors ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE (preserved on save).
   bool heightSensorMode = false;
   String bleBroadcastName = '';
@@ -403,7 +406,9 @@ class BLEManager extends ChangeNotifier {
 
   /// Mirrors isDriveLockActive() on the Wireless_Controller: setting on and manifold reports e-brake off.
   bool get isDriveLockActive =>
-      (globalSettings?.disableControlDriving ?? false) && !ebrakeOn;
+      (globalSettings?.disableControlDriving ?? false) &&
+      ebrakeConnected &&
+      !ebrakeOn;
 
   /// Valve control is a 4-byte little-endian uint32 (matches Wireless_Controller).
   Future<void> writeValveValue(int value) async {
@@ -1082,6 +1087,9 @@ class BLEManager extends ChangeNotifier {
               0;
           safetyMode =
               (configFlagsBits & (1 << ConfigFlagsBit.CONFIG_SAFETY_MODE)) != 0;
+          ebrakeConnected = (configFlagsBits &
+                  (1 << ConfigFlagsBit.CONFIG_EBRAKE_CONNECTED)) !=
+              0;
           heightSensorMode = (configFlagsBits &
                   (1 << ConfigFlagsBit.CONFIG_HEIGHT_SENSOR_MODE)) !=
               0;
@@ -1279,6 +1287,9 @@ class BLEManager extends ChangeNotifier {
     if (airOutOnShutoff)
       bits |= (1 << ConfigFlagsBit.CONFIG_AIR_OUT_ON_SHUTOFF);
     if (safetyMode) bits |= (1 << ConfigFlagsBit.CONFIG_SAFETY_MODE);
+    if (ebrakeConnected) {
+      bits |= (1 << ConfigFlagsBit.CONFIG_EBRAKE_CONNECTED);
+    }
     if (heightSensorMode) {
       bits |= (1 << ConfigFlagsBit.CONFIG_HEIGHT_SENSOR_MODE);
     }

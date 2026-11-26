@@ -590,7 +590,7 @@ void Statusbar::updateStatusSection() {
     // E-Brake Status
     if (ebrakeStatusLabel) {
         bool ebrakeOn = statusBittset & (1 << StatusPacketBittset::EBRAKE_STATUS_ON);
-        lv_label_set_text(ebrakeStatusLabel, ebrakeOn ? "E-Brake: On" : "E-Brake: Off");
+        lv_label_set_text(ebrakeStatusLabel, !isEbrakeConnected() ? "E-Brake: N/C" : ebrakeOn ? "E-Brake: On" : "E-Brake: Off");
         lv_obj_t* row = lv_obj_get_parent(ebrakeStatusLabel);
         lv_obj_t* icon = lv_obj_get_child(row, 0);
         if (icon) {

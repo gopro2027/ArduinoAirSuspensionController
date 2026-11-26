@@ -207,6 +207,13 @@ static void safety_mode_handler(void *data)
     log_i("Pressed safetymode %i", value);
 }
 
+static void ebrake_connected_handler(void *data)
+{
+    bool value = (bool)data;
+    setManifoldConfigValuesFlag(ConfigFlagsBit::CONFIG_EBRAKE_CONNECTED, value);
+    log_i("Pressed ebrake connected %i", value);
+}
+
 
 static void aux_output_switch_handler(void *data)
 {
@@ -502,6 +509,7 @@ void ScrSettings::init(lv_obj_t *parent)
 #endif
 
     this->ui_safetymode = new Option(basic_settings_page, OptionType::ON_OFF, "Safety Mode", {.INT = 0}, safety_mode_handler);
+    this->ui_ebrakeConnected = new Option(basic_settings_page, OptionType::ON_OFF, "Ebrake connected", {.INT = 0}, ebrake_connected_handler);
 
 #if ENABLE_DETECT_PRESSURE_SENSORS_BUTTON
     allOptions.push_back(new Option(basic_settings_page, OptionType::BUTTON, "Detect Pressure Sensors", {.STRING = test}, [](void *data)
@@ -1281,7 +1289,7 @@ void ScrSettings::loop()
     // Update status text labels
     this->ui_s1->setRightHandText(statusBittset & (1 << StatusPacketBittset::COMPRESSOR_FROZEN) ? "Yes" : "No");
     this->ui_s3->setRightHandText(statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON) ? "On" : "Off");
-    this->ui_ebrakeStatus->setRightHandText(statusBittset & (1 << StatusPacketBittset::EBRAKE_STATUS_ON) ? "On" : "Off");
+    this->ui_ebrakeStatus->setRightHandText(!isEbrakeConnected() ? "N/C" : statusBittset & (1 << StatusPacketBittset::EBRAKE_STATUS_ON) ? "On" : "Off");
 
     // Update reboot button text
     this->ui_rebootbutton->setRightHandText(statusBittset & (1 << StatusPacketBittset::ACC_STATUS_ON) ? "Reboot" : "Shut Down");
@@ -1331,6 +1339,7 @@ void ScrSettings::loop()
         this->ui_airoutonshutoff->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_AIR_OUT_ON_SHUTOFF)) != 0, false);
 #endif
         this->ui_safetymode->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0, false);
+        this->ui_ebrakeConnected->setBooleanValue((flags & (1 << ConfigFlagsBit::CONFIG_EBRAKE_CONNECTED)) != 0, false);
         bool heightSensorMode = (flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0;
         this->ui_heightsensormode->setSelectedOption(heightSensorMode ? 1 : 0);
         this->updateLevelModeOptionsVisibility(heightSensorMode);
@@ -1377,6 +1386,7 @@ void ScrSettings::cleanup()
     delete ui_airoutonshutoff;
 #endif
     delete ui_safetymode;
+    delete ui_ebrakeConnected;
     delete ui_heightsensormode;
     s_heightSensorModeRadio = NULL;
     delete ui_calibrateMinHeight;

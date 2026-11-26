@@ -230,7 +230,7 @@ bool isVehicleParked(bool dontTrustEBrakeAlone, bool requireBothAccAndEbrake_or_
     }
 
     // don't trust e-brake if we are in strict mode
-    if (dontTrustEBrakeAlone == false) {
+    if (dontTrustEBrakeAlone == false && getebrakeConnected()) { // ebrake wire not connected means this is skipped
         // ebrake is slightly less of a reliable source of whether or not the vehicle is parked because it is highly likely a user may try to bypass it, so we put it after the gps check.
         if (isEBrakeOn()) { //I consider this safe because for isEBrakeOn to return true, it must have been on for at least 2 seconds. 
             return true; // if the ebrake is on, we can assume the vehicle is parked
@@ -242,7 +242,7 @@ bool isVehicleParked(bool dontTrustEBrakeAlone, bool requireBothAccAndEbrake_or_
 
     #if ACCESSORY_WIRE_FUNCTIONALITY
     // We can assume that if the vehicle is off, it is parked, and if it is on, it is not parked.
-    return isVehicleOn() == false && (requireBothAccAndEbrake_or_GPS == true ? isEBrakeOn() : true);
+    return isVehicleOn() == false && ((requireBothAccAndEbrake_or_GPS == true && getebrakeConnected()) ? isEBrakeOn() : true); // ebrake wire not connected means acc alone decides
     #endif
 
     // We don't know basically anything, so return false. This is for v2 firmwares because they don't have acc.

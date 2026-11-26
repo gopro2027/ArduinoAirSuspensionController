@@ -200,6 +200,7 @@ extern ConfigValuesPacket util_configValues;
 extern UpdateStatusRequestPacket util_statusRequestPacket;
 void sendConfigValuesPacket(bool saveToManifold);
 void setManifoldConfigValuesFlag(ConfigFlagsBit configFlagBit, bool value);
+bool isEbrakeConnected();
 void onBLEConnectionCompleted();
 
 // returns 0 if none to send
