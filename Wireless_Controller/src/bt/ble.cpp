@@ -159,10 +159,10 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,
             currentPressures[WHEEL_FRONT_DRIVER] = status->args16()[WHEEL_FRONT_DRIVER].i;
             currentPressures[WHEEL_REAR_DRIVER] = status->args16()[WHEEL_REAR_DRIVER].i;
             currentPressures[_TANK_INDEX] = status->args16()[_TANK_INDEX].i;
-            statusBittset = status->args32()[3].i;
+            statusBittset = status->args32()[_STATUS_BITTSET_INDEX].i;
             if (isDriveLockActive()) // this check is based off the statusBittset so we check this after the status bittset is updated
                 closeValves(); // in case pill button happens to have a valve open, close it when drive lock becomes active
-            AIPercentage = status->args8()[10].i;
+            AIPercentage = status->args8()[_STATUS_AI_PERCENTAGE_INDEX].i;
             manifoldBatteryMilliVolts = status->args16()[_STATUS_BATTERY_MV_INDEX].i;
         }
     }

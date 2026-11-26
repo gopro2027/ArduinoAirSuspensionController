@@ -169,6 +169,10 @@ struct BTOasPacket
 
 #define BTOAS_PACKET_SIZE sizeof(BTOasPacket)
 
+// StatusPacket layout. Pressures use args16 slots WHEEL_* (0-3) and _TANK_INDEX (4), arg bytes 0-9
+#define _STATUS_AI_PERCENTAGE_INDEX 10 // args8 slot (arg byte 10) for AI percentage
+#define _STATUS_RESERVED_INDEX 11      // args8 slot (arg byte 11), reserved, formerly AIReadyBittset
+#define _STATUS_BITTSET_INDEX 3        // args32 slot (arg bytes 12-15) for the StatusPacketBittset flags
 #define _STATUS_BATTERY_MV_INDEX 8 // args16 slot (arg bytes 16-17) for manifold battery mV, 0 = no reading (older manifolds always send 0)
 
 // Outgoing packets
