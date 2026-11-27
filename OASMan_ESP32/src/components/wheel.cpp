@@ -574,6 +574,8 @@ void Wheel::goalRoutine() {
         getOutSolenoid()->close();
 
         // Rendezvous: every active corner has finished the main routine and closed its valves -> all idle.
+        // Only sync up if we aren't being qued to abort though, because for example if 3 corners are aborting and one isn't, we don't want those 3 that are aborting to wait up here for 6 seconds while the one that didn't have flagAbortPressureGoalRoutine set never finishes.
+        // So this check here ensures that an aborted thread is given the fast pass through and does not trigger hit sync barriers.
         if (!flagAbortPressureGoalRoutine[thisWheelNum].load())
         {
             goalSyncBarrier(GOAL_SYNC_BARRIER_TIMEOUT_MS);
@@ -604,15 +606,10 @@ void Wheel::goalRoutine() {
 
         std::function<void()> cb = nullptr;
         wheelThreadLock();
-        if (flagAbortPressureGoalRoutine[thisWheelNum].load())
-        {
-            flagAbortPressureGoalRoutine[thisWheelNum] = false; // aborted: leave the start flag set so the next loop restarts on the new goal
-        }
-        else
+        if (!flagAbortPressureGoalRoutine[thisWheelNum].exchange(false)) // aborted: leave the start flag set so the next loop restarts on the new goal
         {
             flagStartPressureGoalRoutine[thisWheelNum] = false;
-            cb = std::move(this->onPressureGoalComplete);
-            this->onPressureGoalComplete = nullptr;
+            cb.swap(this->onPressureGoalComplete);
         }
         wheelThreadUnlock();
 
