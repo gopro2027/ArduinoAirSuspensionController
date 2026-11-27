@@ -266,13 +266,8 @@ bool isVehicleStationary() {
         return motionImuSaysStationary(); // Simply return the result of the imu
     }
 
-    // Lastly we can check how stable the actual bags are right now, basically checking if the suspension is moving. If we are parked or driving very slowly this will not be moving.
-    if (!areAllWheelsStable()) {
-        return false;
-    }
-
-    // On a board like the v5 this will actually never be called because the IMU is always present, but essentially all v4 and older are expected to hit this, which will require either the car is off for 3 seconds or the ebrake is pulled for 5 seconds.
-    return isVehicleDefinitelyParked(false);
+    // No GPS/IMU (v4 and older): stable bags on all corners means it's safe to make accurate adjustments. // was: also required isVehicleDefinitelyParked(false)
+    return areAllWheelsStable();
 }
 
 // 100% certainty checks only: car off for a few seconds and/or ebrake (if connected) pulled for a few seconds. v2 is the only board that will essentially never return true for isVehicleDefinitelyParked or getGPSMotionState, and that is expected.
