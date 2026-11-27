@@ -29,6 +29,7 @@ void beginSaveData()
     _SaveData.maintainPressure.load("maintainPressure", false);
     _SaveData.sensorlessLeveling.load("sensorlessLevel", false);
     _SaveData.airOutOnShutoff.load("airOutOnShutoff", false);
+    _SaveData.ebrakeConnected.load("ebrakeConnected", false);
     _SaveData.heightSensorMode.load("heightSensorMode", false);
     _SaveData.baseProfile.load("baseProfile", 2);
     _SaveData.raiseOnPressure.load("raiseOnPressure", false);
@@ -112,6 +113,7 @@ createSaveFuncInt(riseOnStart, bool);
 createSaveFuncInt(maintainPressure, bool);
 createSaveFuncInt(sensorlessLeveling, bool);
 createSaveFuncInt(airOutOnShutoff, bool);
+createSaveFuncInt(ebrakeConnected, bool);
 createSaveFuncInt(baseProfile, byte);
 createSaveFuncInt(raiseOnPressure, bool);
 createSaveFuncInt(internalReboot, bool);

@@ -271,9 +271,13 @@ void closeValves()
 #pragma endregion
 
 #pragma region driveLock
+bool isEbrakeConnected()
+{
+    return (*util_configValues._configFlagsBits() & (1 << ConfigFlagsBit::CONFIG_EBRAKE_CONNECTED)) != 0;
+}
 bool isDriveLockActive()
 {
-    if (getdisableControlDriving())
+    if (getdisableControlDriving() && isEbrakeConnected())
     {
         return (statusBittset & (1 << StatusPacketBittset::EBRAKE_STATUS_ON)) == 0;
     }

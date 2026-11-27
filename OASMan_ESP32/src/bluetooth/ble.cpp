@@ -583,6 +583,8 @@ ConfigValuesPacket buildCurrentConfigValuesPacket()
         configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE);
     if (getsensorlessLeveling())
         configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_SENSORLESS_LEVELING);
+    if (getebrakeConnected())
+        configFlagsBits |= (1 << ConfigFlagsBit::CONFIG_EBRAKE_CONNECTED);
 
     AuxillaryOutputModePayload auxillaryOutputConfig;
     auxillaryOutputConfig.mode = (AuxillaryOutputMode)getauxillaryOutputMode();
@@ -653,7 +655,7 @@ void ble_notify()
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::ACC_STATUS_ON);
         }
-        if (isEBrakeOn())
+        if (getebrakeConnected() && isEBrakeOn())
         {
             statusBittset = statusBittset | (1 << StatusPacketBittset::EBRAKE_STATUS_ON);
         }
@@ -767,6 +769,7 @@ void runReceivedPacket(hci_con_handle_t con_handle, BTOasPacket *packet)
 #endif
             setheightSensorMode((flags & (1 << ConfigFlagsBit::CONFIG_HEIGHT_SENSOR_MODE)) != 0);
             setsafetyMode((flags & (1 << ConfigFlagsBit::CONFIG_SAFETY_MODE)) != 0);
+            setebrakeConnected((flags & (1 << ConfigFlagsBit::CONFIG_EBRAKE_CONNECTED)) != 0);
             saveAuxillaryOutputPreference(*recpkt->_auxillaryOutputConfig());
 
 

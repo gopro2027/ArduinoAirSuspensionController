@@ -35,6 +35,7 @@ public:
     Option *ui_s2;  // Compressor Status (switch)
     Option *ui_s3;  // ACC Status (text with value)
     Option *ui_ebrakeStatus;  // E-Brake Status (text with value)
+    Option *ui_ebrakeConnected;  // Ebrake connected (on/off, manifold config flag)
     Option *ui_rebootbutton;  // Reboot button
     Option *ui_aiPercentage;  // AI Percentage (text with value)
     Option *ui_maintainprssure;  // Maintain Pressure (switch)

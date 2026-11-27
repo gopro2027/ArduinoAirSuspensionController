@@ -50,7 +50,7 @@ void RfReceiver::loop()
     // if in debug mode, don't care if vehicle is on
     #else
     // if vehicle is driving disable rf receiver
-    if (!isVehicleParked())
+    if (!isVehicleStationary())
     {
         return;
     }

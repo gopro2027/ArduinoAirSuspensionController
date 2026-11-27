@@ -493,7 +493,7 @@ StartwebPacket packet("MyWiFi", "password123");
 - `args8()[12+10]`: `uint8_t compressorCrankOffset` - Seconds the compressor is held off after accessory power arrives (default 5)
 - `args32()[6]`: `AuxillaryOutputModePayload auxillaryOutputConfig` - Auxillary output mode/timeUnit/time/interval (4 bytes)
 
-**ConfigFlagsBit** (bits in `configFlagsBits`): Bit 0 = CONFIG_MAINTAIN_PRESSURE, 1 = CONFIG_RISE_ON_START, 2 = CONFIG_AIR_OUT_ON_SHUTOFF, 3 = CONFIG_HEIGHT_SENSOR_MODE, 4 = CONFIG_SAFETY_MODE, 5 = CONFIG_AI_STATUS_ENABLED (retired, reserved), 6 = CONFIG_SENSORLESS_LEVELING.
+**ConfigFlagsBit** (bits in `configFlagsBits`): Bit 0 = CONFIG_MAINTAIN_PRESSURE, 1 = CONFIG_RISE_ON_START, 2 = CONFIG_AIR_OUT_ON_SHUTOFF, 3 = CONFIG_HEIGHT_SENSOR_MODE, 4 = CONFIG_SAFETY_MODE, 5 = CONFIG_AI_STATUS_ENABLED (retired, reserved), 6 = CONFIG_SENSORLESS_LEVELING, 7 = CONFIG_EBRAKE_CONNECTED (off = manifold ignores the e-brake input, default off).
 
 **Usage**:
 

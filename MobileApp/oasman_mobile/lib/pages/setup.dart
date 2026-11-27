@@ -1062,6 +1062,7 @@ class SettingsPageState extends State<SettingsPage> {
           bool,
           bool,
           bool,
+          bool,
           int,
           int,
           int,
@@ -1073,6 +1074,7 @@ class SettingsPageState extends State<SettingsPage> {
         m.riseOnStart,
         m.airOutOnShutoff,
         m.safetyMode,
+        m.ebrakeConnected,
         m.heightSensorMode,
         m.rfButtonAPreset,
         m.rfButtonBPreset,
@@ -1102,18 +1104,20 @@ class SettingsPageState extends State<SettingsPage> {
                 bool,
                 bool,
                 bool,
+                bool,
                 String,
               )>(
             selector: (_, m) => (
               m.compressorFrozen,
               m.vehicleOn,
               m.ebrakeOn,
+              m.ebrakeConnected,
               m.compressorOn,
               m.vehicleVoltageText,
             ),
             builder: (context, status, _) {
               final bm = context.read<BLEManager>();
-              final (frozen, accOn, ebrake, compOn, vehicleVoltage) = status;
+              final (frozen, accOn, ebrake, ebrakeConnected, compOn, vehicleVoltage) = status;
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 decoration: BoxDecoration(
@@ -1134,7 +1138,7 @@ class SettingsPageState extends State<SettingsPage> {
                     ),
                     _readOnlyStatusRow(
                       'E-Brake Status:',
-                      ebrake ? 'On' : 'Off',
+                      !ebrakeConnected ? 'N/C' : (ebrake ? 'On' : 'Off'),
                     ),
                     if (vehicleVoltage.isNotEmpty)
                       _readOnlyStatusRow('Vehicle Battery:', vehicleVoltage),
@@ -1608,6 +1612,27 @@ class SettingsPageState extends State<SettingsPage> {
                       bm.safetyMode,
                       (value) {
                         bm.safetyMode = value;
+                        bm.refreshFromUi();
+                        _saveManifoldConfigNow();
+                      },
+                    ),
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Ebrake connected',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                    _buildSwitch(
+                      '',
+                      bm.ebrakeConnected,
+                      (value) {
+                        bm.ebrakeConnected = value;
                         bm.refreshFromUi();
                         _saveManifoldConfigNow();
                       },
