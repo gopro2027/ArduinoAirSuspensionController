@@ -460,11 +460,6 @@ static void hci_event_handler(uint8_t packet_type, uint16_t channel, uint8_t *pa
         if (btstack_event_state_get_state(packet) == HCI_STATE_WORKING)
         {
             log_i("BTstack activated, start advertising");
-            // raise BLE TX power from the +3 dBm controller default to the +9 dBm max
-            esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
-            esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
-            esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_SCAN, ESP_PWR_LVL_P9);
-            log_i("BLE TX power level default=%d adv=%d (7 = +9 dBm)", esp_ble_tx_power_get(ESP_BLE_PWR_TYPE_DEFAULT), esp_ble_tx_power_get(ESP_BLE_PWR_TYPE_ADV));
             gap_advertisements_enable(1);
         }
         break;
@@ -500,6 +495,12 @@ void generateAdvData(String name)
 void ble_setup()
 {
     packetMover::setupRestSemaphore();
+
+    // raise BLE TX power from the +3 dBm default to +9 dBm max; BTstack is already up here so the STATE event is missed
+    esp_err_t pwrDefault = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
+    esp_err_t pwrAdv = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
+    esp_err_t pwrScan = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_SCAN, ESP_PWR_LVL_P9);
+    Serial.printf("BLE TX power set err=%d/%d/%d level default=%d adv=%d (7 = +9 dBm)\n", pwrDefault, pwrAdv, pwrScan, esp_ble_tx_power_get(ESP_BLE_PWR_TYPE_DEFAULT), esp_ble_tx_power_get(ESP_BLE_PWR_TYPE_ADV));
 
     // Initialize ATT Server with our database
     att_server_init(profile_data, att_read_callback, att_write_callback);
