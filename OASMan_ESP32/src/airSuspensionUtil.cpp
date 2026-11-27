@@ -355,22 +355,29 @@ void loadProfileAirUp(int profileIndex)
     initPressureGoalWithStretch(WHEEL_REAR_DRIVER, p.pressure[WHEEL_REAR_DRIVER]);
 }
 
-void airOutWithSafetyCheck()
+#define AIR_OUT_ON_SHUTOFF_GIVE_UP_MS 30000 // stop retrying this long after key-off so it can't air out unexpectedly later
+
+// returns true once there is nothing left to do (aired out, feature off, or gave up), false if the safety checks aren't met yet so the caller retries
+bool tryAirOutOnShutoff()
 {
 #if ENABLE_AIR_OUT_ON_SHUTOFF
 #if !AIR_OUT_ON_SHUTOFF_DOUBLE_LOCK_MODE
+    if (!getairOutOnShutoff() || isVehicleOffFor(AIR_OUT_ON_SHUTOFF_GIVE_UP_MS))
+    {
+        return true;
+    }
     // The first call to isVehicleStationary is mostly redundant and mostly only acts as an additional safety check on the boards with more safety support like the v5.
     // This mostly is reliant on the second isVehicleDefinitelyParked(true) which verifies that both the car is off and ebrake is pulled for a few seconds.
     // So this feature (shutdown on air out) is only really intended to work on v4+ boards, since v3 doesn't have ebrake input and v2 doesn't have acc wire input.
     if (isVehicleStationary() && isVehicleDefinitelyParked(true))
     {
-        if (getairOutOnShutoff())
-        {
-            loadProfileAirUp(0); // packet 0 should be the lowest setting!
-        }
+        loadProfileAirUp(0); // packet 0 should be the lowest setting!
+        return true;
     }
+    return false;
 #endif
 #endif
+    return true;
 }
 
 #pragma endregion
@@ -423,6 +430,7 @@ const int accessoryWireSampleSize = 5;
 bool vehicleOnHistory[accessoryWireSampleSize];
 int vehicleOnCounter = 0;
 bool hasJustShutoff = true;
+bool airOutOnShutoffPending = false; // retried every loop while the car stays off, until the safety checks pass
 void accessoryWireLoop()
 {
     bool previousVehicleOn = vehicleOn;
@@ -439,6 +447,7 @@ void accessoryWireLoop()
         // accessory wire is supplying 12v (car on)
         notifyKeepAlive();
         hasJustShutoff = false;
+        airOutOnShutoffPending = false;
     }
     else
     {
@@ -451,10 +460,14 @@ void accessoryWireLoop()
             if (hasJustShutoff == false)
             {
                 hasJustShutoff = true;
-                // actually check if air out code is enabled and do as asked
-                airOutWithSafetyCheck();
+                airOutOnShutoffPending = true;
                 getAuxillaryOutput()->setDoShutdownEvent(true);
             }
+        }
+        // actually check if air out code is enabled and do as asked, keeps retrying since the car may not be stationary/parked yet (ex: bags still settling)
+        if (airOutOnShutoffPending && tryAirOutOnShutoff())
+        {
+            airOutOnShutoffPending = false;
         }
     }
 #if BOARD_ALWAYS_ON_ACC_UNUSED_USE_BT_CONN_AS_VEHICLE_ON
