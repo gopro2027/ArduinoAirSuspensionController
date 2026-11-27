@@ -66,9 +66,12 @@ Load preset → initPressureGoal(target) per corner → flag set → wheel task 
 - Pressure mode: refuses to start an air-up the tank can't deliver (tank pressure below current bag).
 - Sets `pressureGoal`, `routineStartTime`, and the per-corner start flag; the four wheel FreeRTOS
   tasks each pick it up in `Wheel::loop()` → `goalRoutine()`.
-- `onlyAirUp` (used by maintain-pressure) forbids venting anywhere in the routine — an overshoot is
+- `onlyAirUp` (used by maintain's anti-leak tier) forbids venting anywhere in the routine — an overshoot is
   accepted rather than corrected downward.
-
+- Maintain (pressure or height) has two tiers in `Wheel::maintainPressure()`: a deviation of
+  `MAINTAIN_STABLE_THRESHOLD_*` either way is corrected once `isVehicleStationary()` has held for
+  `SENSORLESS_LEVEL_PARKED_DWELL_MS` and the reading is stable; a drop of `ANTI_LEAK_THRESHOLD_*`
+  held for `ANTI_LEAK_CONFIRM_MS` airs up immediately (`onlyAirUp`), even while driving.
 ### 2.2 Coarse phase (`goalRoutine`)
 
 **Pressure and height mode run the same loop, predictor, models, fine phase and re-check.** The per-mode

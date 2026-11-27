@@ -398,7 +398,7 @@ bool Wheel::achieveFineGoal()
         int8_t dir = (err > 0) ? FLOW_UP : FLOW_DOWN;
         if (dir == FLOW_DOWN && this->onlyAirUp)
         {
-            return true; // maintain-pressure never vents; accept where we are
+            return true; // air-up-only goal (maintain anti-leak) never vents; accept where we are
         }
 
         // Stuck detector: the true reading isn't moving between bursts (tank/bag exhausted) -> give up rather
@@ -628,46 +628,63 @@ void Wheel::maintainPressure() {
     }
     #endif
 
-    // Maintain Pressure code
-    if (getmaintainPressure())
+    // Maintain: stationary tier corrects both ways once parked; anti-leak tier airs up (only) right away on a big drop.
+    if (!getmaintainPressure() || this->isActive())
     {
-        if (this->slBaselineCaptured) 
+        this->mpLowSince = 0;
+        return; // feature is disabled or the wheel is active, so return here
+    }
+
+    const bool heightMode = getheightSensorMode();
+    int target;
+
+    if (this->slBaselineCaptured)                      target = this->directlySetPressure; // use the watchdog's directly set pressure as the target
+    else if (haveValvesBeenClosedForSomeTime(10000))   target = this->pressureGoal; // no settled baseline (leaky bag, or driving) -> fall back to the last goal. TODO: This really should not be here, it should be part of the watchdog that sets directlySetPressure, so it should be inside that logic so we don't have to have this else if check here.
+    else
+    {
+        this->mpLowSince = 0;
+        return; // Haven't decidedd on what pressure this bag should be at, so return here
+    }
+
+    if (target <= (heightMode ? MAINTAIN_PRESSURE_MIN_ACTIVATION_LEVEL : MAINTAIN_PRESSURE_MIN_ACTIVATION_PSI))
+    {
+        this->mpLowSince = 0;
+        return; // target is below the minimum activation level, so return here
+    }
+
+    float dif = target - this->getSelectedInputValue(); // positive = below target
+
+    // Anti-leak tier: sustained big drop -> air up now, no stability wait. Never vents, never auto-disables.
+    if (dif >= (heightMode ? ANTI_LEAK_THRESHOLD_LEVEL : ANTI_LEAK_THRESHOLD_PSI))
+    {
+        if (this->mpLowSince == 0)     this->mpLowSince = millis();
+        else if (millis() - this->mpLowSince >= ANTI_LEAK_CONFIRM_MS)
         {
-            // if we are in pressure mode, we don't care about stable values. we only want to go up to prevent a leaky bag. If we are in height sensor mode though, we care about stability as this is more meant as a weight levelling function not a leak detector.
-            if (!getheightSensorMode() || isPressureStable()) {
-                if (this->directlySetPressure > (getheightSensorMode() ? MAINTAIN_PRESSURE_MIN_ACTIVATION_LEVEL : MAINTAIN_PRESSURE_MIN_ACTIVATION_PSI))
-                {
-                    float dif = this->directlySetPressure - this->getSelectedInputValue();
-                    if (getheightSensorMode()) {
-                        dif = fabs(dif);
-                    }
-                    if (dif >= (getheightSensorMode() ? MAINTAIN_PRESSURE_THRESHOLD_LEVEL : MAINTAIN_PRESSURE_THRESHOLD_PSI))
-                    {
-                        bool success = this->initPressureGoal(this->directlySetPressure, !getheightSensorMode()); // try to go back to the desired pressure
-                        if (!success) {
-                            Serial.println("Maintain pressure auto-disabled: failed to init pressure goal");
-                            setmaintainPressure(false);
-                            requestSendConfigBT(); // because we setsensorlessLeveling, ask BLE task to re-broadcast config so UIs reflect OFF
-                        }
-                    }
-                }
-            }
-        } else {
-            // TODO: This whole else statement could be removed if we removed isPressureStable() from pressureCaptureBaseline() but i am not sure if that would be ok to do
-            // bag potentially too leaky to settle and grab a baselinem need specifial logic to sync to last preset instead of the baseline since we can't grab one
-            if (!getheightSensorMode() && haveValvesBeenClosedForSomeTime(10000)) {
-                // We are in pressure mode and we haven't captured a baseline and valves have been closed for 10 seconds longer than the time required to capture a baseline, lets do a more aggressive check for leaks solely based off the last loaded preset (ie the old way to do this)
-                int pressureDif = this->pressureGoal - this->getSelectedInputValue();
-                if (pressureDif >= MAINTAIN_PRESSURE_THRESHOLD_PSI) {
-                    bool success = initPressureGoal(this->pressureGoal, true);
-                    if (!success) {
-                        Serial.println("Maintain pressure auto-disabled (no baseline): failed to init pressure goal");
-                        setmaintainPressure(false);
-                        requestSendConfigBT(); // because we setsensorlessLeveling, ask BLE task to re-broadcast config so UIs reflect OFF
-                    }
-                }
-            }
+            this->mpLowSince = 0; // re-arm: a failed init (e.g. tank below bag) retries after another confirm window
+            if (!this->initPressureGoal(target, true))   Serial.println("Maintain anti-leak: failed to init pressure goal, will retry");
         }
+        return;
+    }
+    this->mpLowSince = 0;
+
+    // Stationary tier: small deviation either way, only once parked long enough and the reading has settled.
+    bool parkedLongEnough = (millis() - this->slParkedSince) >= SENSORLESS_LEVEL_PARKED_DWELL_MS; // trackParked() resets this whenever not stationary
+    if (parkedLongEnough &&   isPressureStable() /*kind of redundant*/    && fabs(dif) >= (heightMode ? MAINTAIN_STABLE_THRESHOLD_LEVEL : MAINTAIN_STABLE_THRESHOLD_PSI))
+    {
+        if (!this->initPressureGoal(target, false))
+        {
+            Serial.println("Maintain pressure auto-disabled: failed to init pressure goal");
+            setmaintainPressure(false);
+            requestSendConfigBT(); // ask BLE task to re-broadcast config so UIs reflect OFF
+        }
+    }
+}
+
+void Wheel::trackParked()
+{
+    if (!isVehicleStationary())
+    {
+        this->slParkedSince = millis(); // not parked -> restart the parked dwell clock
     }
 }
 
@@ -689,16 +706,10 @@ void Wheel::heightsensorlessLevelling() {
         float current = this->getSelectedInputValue();
 
         // Two independent gates must BOTH be satisfied before acting:
-        //  1. Non-moving: isVehicleStationary() (GPS/IMU/acc/e-brake)
+        //  1. Stable for adjustments: isVehicleStationary() (GPS/IMU, else all-wheels-stable)
         //     continuously for SENSORLESS_LEVEL_PARKED_DWELL_MS.
         //  2. Pressure stable: the reading has stayed within the band for SENSORLESS_LEVEL_PRESSURE_STABLE_MS.
         // Pressure is only readable with valves closed and no fill routine running.
-        if (!isVehicleStationary())
-        {
-            this->slParkedSince = millis(); // not parked -> set time since last park to current time 
-            return;
-        }
-
         bool parkedLongEnough = ((millis() - this->slParkedSince) >= SENSORLESS_LEVEL_PARKED_DWELL_MS); // 1. make sure we are parked for 10 seconds
 
         // Non-moving long enough AND pressure settled long enough AND past cooldown -> evaluate.
@@ -794,6 +805,7 @@ void Wheel::loop()
     this->readInputs();
     this->goalRoutine();
     this->trackPressureStability();
+    this->trackParked();
     this->pressureCaptureBaseline();
     this->maintainPressure();
     this->heightsensorlessLevelling();

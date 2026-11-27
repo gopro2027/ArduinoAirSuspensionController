@@ -41,6 +41,8 @@ private:
     unsigned long slValvesClosedSince = 0; // when all valves last became closed (0 = a valve is open)
     bool slBaselineCaptured = false;       // captured the baseline once for the current valve-close event
     byte directlySetPressure = 0; // This is the 'real' pressure that is read after any valve movement. This is our 'expected' pressure in a sense. This is tracked by the sensorlessCaptureBaseline and is only usable when slBaselineCaptured is true.
+    unsigned long mpLowSince = 0; // maintain anti-leak: when the reading first fell below the leak line (0 = not below)
+    void trackParked();
 
     void goalRoutine();
     // Fine precision phase: short valve bursts to the exact pressure. True = landed on goal.
