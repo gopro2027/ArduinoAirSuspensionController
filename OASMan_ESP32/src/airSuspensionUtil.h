@@ -36,6 +36,7 @@ Wheel *getWheel(int i);
 void initializeADS();
 void setupManifold();
 bool isAnyWheelActive();
+bool areAllWheelsPressureStable();
 void loadProfileAirUp(int profileIndex);
 void accessoryWireSetup();
 void accessoryWireLoop();

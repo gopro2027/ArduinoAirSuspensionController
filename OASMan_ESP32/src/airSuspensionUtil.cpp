@@ -266,6 +266,11 @@ bool isVehicleStationary() {
         return motionImuSaysStationary(); // Simply return the result of the imu
     }
 
+    // Lastly we can check how stable the actual bags are right now, basically checking if the suspension is moving. If we are parked or driving very slowly this will not be moving.
+    if (!areAllWheelsStable()) {
+        return false;
+    }
+
     // On a board like the v5 this will actually never be called because the IMU is always present, but essentially all v4 and older are expected to hit this, which will require either the car is off for 3 seconds or the ebrake is pulled for 5 seconds.
     return isVehicleDefinitelyParked(false);
 }
@@ -294,6 +299,18 @@ bool isAnyWheelActive()
         }
     }
     return false;
+}
+
+bool areAllWheelsStable()
+{
+    for (int i = 0; i < 4; i++)
+    {
+        if (!getWheel(i)->isPressureStable())
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 // function renamed to 'bag stretch'

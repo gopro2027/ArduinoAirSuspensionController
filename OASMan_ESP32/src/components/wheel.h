@@ -65,7 +65,6 @@ private:
     bool onlyAirUp = false;
     std::function<void()> onPressureGoalComplete;
     void trackPressureStability();
-    bool isPressureStable();
 
     float readLevelSensorNormalized();
     bool haveValvesBeenClosedForSomeTime(uint32_t additionalTimeMS = 0);
@@ -80,6 +79,7 @@ public:
     float readLevelSensorRaw();
     float getSelectedInputValue();
     bool isActive();
+    bool isPressureStable();
     Solenoid *getInSolenoid();
     Solenoid *getOutSolenoid();
     InputType *getPressurePin();
