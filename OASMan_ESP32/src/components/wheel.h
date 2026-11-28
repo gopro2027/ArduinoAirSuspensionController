@@ -59,6 +59,8 @@ private:
     uint8_t manualFlowBag = 0, manualFlowTank = 0;
     SOLENOID_AI_INDEX manualAiIndex = AI_MODEL_UNDEFINED;
     void maintainPressure();
+    bool antiLeak(bool heightMode, int minActivation, float current);
+    void maintainSettledBaseline(bool heightMode, int minActivation, float current);
     void heightsensorlessLevelling();
     void pressureCaptureBaseline();
     void nullifySensorlessBaseline();

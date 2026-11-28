@@ -639,7 +639,14 @@ void Wheel::maintainPressure() {
     const int minActivation = heightMode ? MAINTAIN_PRESSURE_MIN_ACTIVATION_LEVEL : MAINTAIN_PRESSURE_MIN_ACTIVATION_PSI;
     const float current = this->getSelectedInputValue();
 
-    // Anti-leak tier: target is the settled baseline, or the last goal if the bag never settles (a leaking bag rarely does).
+    if (this->antiLeak(heightMode, minActivation, current)) return; // below the leak line (confirming or just fired) -> anti-leak wins, skip the parked tier
+    this->maintainSettledBaseline(heightMode, minActivation, current);
+}
+
+// Anti-leak tier: returns true while the corner is below the leak line (the parked tier is skipped).
+bool Wheel::antiLeak(bool heightMode, int minActivation, float current)
+{
+    // Target is the settled baseline, or the last goal if the bag never settles (a leaking bag rarely does).
     int leakTarget = 0;
     if (this->slBaselineCaptured)                      leakTarget = this->directlySetPressure;
     else if (haveValvesBeenClosedForSomeTime(10000))   leakTarget = this->pressureGoal;
@@ -653,11 +660,15 @@ void Wheel::maintainPressure() {
             this->mpLowSince = 0; // re-arm: a failed init (e.g. tank below bag) retries after another confirm window
             if (!this->initPressureGoal(leakTarget, true))   Serial.println("Maintain anti-leak: failed to init pressure goal, will retry");
         }
-        return;
+        return true;
     }
     this->mpLowSince = 0;
+    return false;
+}
 
-    // Stationary tier: only on a real settled baseline, small deviation either way, once parked long enough and settled.
+// Stationary tier: only on a real settled baseline, small deviation either way, once parked long enough and settled.
+void Wheel::maintainSettledBaseline(bool heightMode, int minActivation, float current)
+{
     if (!this->slBaselineCaptured || this->directlySetPressure <= minActivation)
     {
         return;
