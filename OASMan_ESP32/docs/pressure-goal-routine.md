@@ -72,6 +72,19 @@ Load preset → initPressureGoal(target) per corner → flag set → wheel task 
   `MAINTAIN_STABLE_THRESHOLD_*` either way is corrected once `isVehicleStationary()` has held for
   `SENSORLESS_LEVEL_PARKED_DWELL_MS` and the reading is stable; a drop of `ANTI_LEAK_THRESHOLD_*`
   held for `ANTI_LEAK_CONFIRM_MS` airs up immediately (`onlyAirUp`), even while driving.
+- Maintain's target is `directlySetPressure`, captured by `Wheel::pressureCaptureBaseline()` only from a
+  settled (stable) reading. The parked tier acts **only** on that real baseline. Anti-leak alone may fall back
+  to `pressureGoal` when no baseline exists 12 s after the valves close (a leaking bag rarely settles); it
+  only ever airs up, so a stale `pressureGoal` can't vent the car down.
+- **Known issue (accepted):** a slow leak below `ANTI_LEAK_THRESHOLD_*` on a road too rough to settle
+  (e.g. -5 psi over a minute of gravel) is captured as the new baseline once parked, so Maintain holds the
+  leaked level. If the leak continues, anti-leak still catches it `ANTI_LEAK_THRESHOLD_*` below that baseline.
+- **Rejected fix — `droppedBelowFallback`:** refusing to capture a settled reading that is
+  ≥ `MAINTAIN_STABLE_THRESHOLD_*` below the last goal would correct that leak, but it would also undo a manual drop of
+  5–10 psi made while driving at the next stop, since manual valve moves don't update `pressureGoal`, so the
+  fallback can't tell an intentional drop from a leak. Not fighting the user's own adjustments was judged more
+  important than this rare leak case. (Averaging unsettled readings as the fallback was also rejected: the
+  baseline must come from a stable reading.)
 ### 2.2 Coarse phase (`goalRoutine`)
 
 **Pressure and height mode run the same loop, predictor, models, fine phase and re-check.** The per-mode

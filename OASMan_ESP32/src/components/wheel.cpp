@@ -636,42 +636,37 @@ void Wheel::maintainPressure() {
     }
 
     const bool heightMode = getheightSensorMode();
-    int target;
+    const int minActivation = heightMode ? MAINTAIN_PRESSURE_MIN_ACTIVATION_LEVEL : MAINTAIN_PRESSURE_MIN_ACTIVATION_PSI;
+    const float current = this->getSelectedInputValue();
 
-    if (this->slBaselineCaptured)                      target = this->directlySetPressure; // use the watchdog's directly set pressure as the target
-    else if (haveValvesBeenClosedForSomeTime(10000))   target = this->pressureGoal; // no settled baseline (leaky bag, or driving) -> fall back to the last goal. TODO: This really should not be here, it should be part of the watchdog that sets directlySetPressure, so it should be inside that logic so we don't have to have this else if check here.
-    else
-    {
-        this->mpLowSince = 0;
-        return; // Haven't decidedd on what pressure this bag should be at, so return here
-    }
+    // Anti-leak tier: target is the settled baseline, or the last goal if the bag never settles (a leaking bag rarely does).
+    int leakTarget = 0;
+    if (this->slBaselineCaptured)                      leakTarget = this->directlySetPressure;
+    else if (haveValvesBeenClosedForSomeTime(10000))   leakTarget = this->pressureGoal;
 
-    if (target <= (heightMode ? MAINTAIN_PRESSURE_MIN_ACTIVATION_LEVEL : MAINTAIN_PRESSURE_MIN_ACTIVATION_PSI))
-    {
-        this->mpLowSince = 0;
-        return; // target is below the minimum activation level, so return here
-    }
-
-    float dif = target - this->getSelectedInputValue(); // positive = below target
-
-    // Anti-leak tier: sustained big drop -> air up now, no stability wait. Never vents, never auto-disables.
-    if (dif >= (heightMode ? ANTI_LEAK_THRESHOLD_LEVEL : ANTI_LEAK_THRESHOLD_PSI))
+    // Sustained big drop -> air up now, no stability wait. Never vents, never auto-disables.
+    if (leakTarget > minActivation && (leakTarget - current /*dif*/) >= (heightMode ? ANTI_LEAK_THRESHOLD_LEVEL : ANTI_LEAK_THRESHOLD_PSI))
     {
         if (this->mpLowSince == 0)     this->mpLowSince = millis();
         else if (millis() - this->mpLowSince >= ANTI_LEAK_CONFIRM_MS)
         {
             this->mpLowSince = 0; // re-arm: a failed init (e.g. tank below bag) retries after another confirm window
-            if (!this->initPressureGoal(target, true))   Serial.println("Maintain anti-leak: failed to init pressure goal, will retry");
+            if (!this->initPressureGoal(leakTarget, true))   Serial.println("Maintain anti-leak: failed to init pressure goal, will retry");
         }
         return;
     }
     this->mpLowSince = 0;
 
-    // Stationary tier: small deviation either way, only once parked long enough and the reading has settled.
-    bool parkedLongEnough = (millis() - this->slParkedSince) >= SENSORLESS_LEVEL_PARKED_DWELL_MS; // trackParked() resets this whenever not stationary
-    if (parkedLongEnough &&   isPressureStable() /*kind of redundant*/    && fabs(dif) >= (heightMode ? MAINTAIN_STABLE_THRESHOLD_LEVEL : MAINTAIN_STABLE_THRESHOLD_PSI))
+    // Stationary tier: only on a real settled baseline, small deviation either way, once parked long enough and settled.
+    if (!this->slBaselineCaptured || this->directlySetPressure <= minActivation)
     {
-        if (!this->initPressureGoal(target, false))
+        return;
+    }
+    float dif = this->directlySetPressure - current; // positive = below target
+    bool parkedLongEnough = (millis() - this->slParkedSince) >= SENSORLESS_LEVEL_PARKED_DWELL_MS; // trackParked() resets this whenever not stationary
+    if (parkedLongEnough &&   isPressureStable()    && fabs(dif) >= (heightMode ? MAINTAIN_STABLE_THRESHOLD_LEVEL : MAINTAIN_STABLE_THRESHOLD_PSI))
+    {
+        if (!this->initPressureGoal(this->directlySetPressure, false))
         {
             Serial.println("Maintain pressure auto-disabled: failed to init pressure goal");
             setmaintainPressure(false);
@@ -794,7 +789,7 @@ void Wheel::pressureCaptureBaseline()
                 // we are in height sensor mode and the current height is less than the minimum ride height. We don't want to capture a baseline in this case because it will cause the car to try to stabalize below a ride height
                 return;
             }
-            this->directlySetPressure = (byte)this->getSelectedInputValue();
+            this->directlySetPressure = (byte)this->getSelectedInputValue(); // known slow-leak tradeoff: docs/pressure-goal-routine.md
             this->slBaselineCaptured = true;
         }
     }
