@@ -22,9 +22,12 @@
 
 // maintain pressure tunables
 #define MAINTAIN_PRESSURE_MIN_ACTIVATION_PSI 10 // the minimum pressure that maintain pressure will ever even try to go to 
-#define MAINTAIN_PRESSURE_THRESHOLD_PSI 10 // how divergent the current pressure has to be (lower than the selected pressure) before it will try to air up
+#define ANTI_LEAK_THRESHOLD_PSI 10 // drop below target that airs up immediately, even while driving // was: MAINTAIN_PRESSURE_THRESHOLD_PSI
 #define MAINTAIN_PRESSURE_MIN_ACTIVATION_LEVEL 1 // the minimum height that maintain level will ever even try to go to
-#define MAINTAIN_PRESSURE_THRESHOLD_LEVEL 5 // how divergent the current height has to be (lower than the selected height) before it will try to air up
+#define ANTI_LEAK_THRESHOLD_LEVEL 7 // drop below target (height %) that airs up immediately // was: MAINTAIN_PRESSURE_THRESHOLD_LEVEL 5
+#define MAINTAIN_STABLE_THRESHOLD_PSI 5 // deviation (either direction) corrected once the vehicle is stationary
+#define MAINTAIN_STABLE_THRESHOLD_LEVEL 5 // same as above for height sensor mode
+#define ANTI_LEAK_CONFIRM_MS 3000 // reading must stay below the anti-leak line this long before airing up (filters bumps)
 
 
 // Set this to true if you want to enable this feature. Requires compiling both the board and manifold.
